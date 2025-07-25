@@ -52,6 +52,10 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				// Titans.fitness text hierarchy
+				'text-primary': 'hsl(var(--text-primary))',
+				'text-navigation': 'hsl(var(--text-navigation))',
+				'text-secondary': 'hsl(var(--text-secondary))',
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
@@ -62,12 +66,6 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				}
-			},
-			backgroundImage: {
-				'gradient-bg': 'var(--gradient-bg)',
-			},
-			boxShadow: {
-				'glow': '0 0 50px hsl(var(--glow-primary) / 0.3)',
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
