@@ -1,17 +1,10 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ArrowLeft, BarChart3, TrendingUp, Calendar, Plus, Camera, Eye, X } from 'lucide-react';
+import { ArrowLeft, BarChart3, TrendingUp, Calendar, Plus, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -37,91 +30,31 @@ interface AvaliacaoFisica {
   cintura?: number;
   quadril?: number;
   coxa_direita?: number;
+  coxa_esquerda?: number;
   braco_direito?: number;
+  braco_esquerdo?: number;
+  antebraco_direito?: number;
+  antebraco_esquerdo?: number;
+  panturrilha_direita?: number;
+  panturrilha_esquerda?: number;
   observacoes?: string;
   foto_frente_url?: string;
   foto_lado_url?: string;
   foto_costas_url?: string;
 }
 
-interface NovaAvaliacaoForm {
-  peso: number;
-  altura: number;
-  peito_busto?: number;
-  cintura?: number;
-  quadril?: number;
-  coxa_direita?: number;
-  braco_direito?: number;
-  observacoes?: string;
-}
-
 const AlunosAvaliacoes = () => {
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBydmZ2bHl6ZnlwcmpsaXFuaWtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkwNjk5MjUsImV4cCI6MjA2NDY0NTkyNX0.R3TRC1-FOlEuihuIW7oDTNGYYalpzC4v7qn46wOa1dw';
-  const UPLOAD_IMAGE_ENDPOINT = 'https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/upload-imagem';
-  const GET_IMAGE_URL_ENDPOINT = 'https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/get-image-url';
-  const DELETE_IMAGE_ENDPOINT = 'https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/delete-image';
-
-  async function uploadImage(filename: string, imageBase64: string, alunoId: string, tipo: 'frente' | 'lado' | 'costas'): Promise<string> {
-    try {
-      const response = await axios.post<{ success: boolean; url: string; filename: string }>(UPLOAD_IMAGE_ENDPOINT, {
-        filename,
-        image_base64: imageBase64,
-        aluno_id: alunoId,
-        tipo,
-        bucket_type: 'avaliacoes'
-      });
-      return response.data.url;
-    } catch (error) {
-      console.error('Erro ao enviar imagem:', error);
-      throw error;
-    }
-  }
-
-  async function getImageUrl(filename: string): Promise<string> {
-    try {
-      const response = await axios.post<{ success: boolean; url: string; expires_in: number; filename: string }>(GET_IMAGE_URL_ENDPOINT, {
-        filename,
-        bucket_type: 'avaliacoes'
-      });
-      return response.data.url;
-    } catch (error) {
-      console.error('Erro ao obter URL da imagem:', error);
-      throw error;
-    }
-  }
-
-  async function deleteImage(fileUrl: string): Promise<void> {
-    try {
-      await axios.post<{ success: boolean; message: string }>(DELETE_IMAGE_ENDPOINT, {
-        file_url: fileUrl,
-        bucket_type: 'avaliacoes'
-      });
-    } catch (error) {
-      console.error('Erro ao deletar imagem:', error);
-      throw error;
-    }
-  }
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  
+  // Estados principais
   const [aluno, setAluno] = useState<AlunoInfo | null>(null);
   const [avaliacoes, setAvaliacoes] = useState<AvaliacaoFisica[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [selectedAvaliacao, setSelectedAvaliacao] = useState<AvaliacaoFisica | null>(null);
-  const [showIntervalWarning, setShowIntervalWarning] = useState(false);
-  const [intervalDays, setIntervalDays] = useState(0);
-  const [pendingFormData, setPendingFormData] = useState<NovaAvaliacaoForm | null>(null);
-  const [imageFiles, setImageFiles] = useState<{
-    frente?: File;
-    lado?: File;
-    costas?: File;
-  }>({});
 
-  const form = useForm<NovaAvaliacaoForm>();
-
+  // useEffect principal para buscar dados
   useEffect(() => {
     const fetchDados = async () => {
       if (!id || !user) return;
@@ -137,6 +70,12 @@ const AlunosAvaliacoes = () => {
 
         if (alunoError) {
           console.error('Erro ao buscar aluno:', alunoError);
+          toast({
+            title: "Erro",
+            description: "Aluno não encontrado.",
+            variant: "destructive",
+          });
+          navigate('/alunos');
           return;
         }
 
@@ -147,7 +86,7 @@ const AlunosAvaliacoes = () => {
           .from('avaliacoes_fisicas')
           .select('*')
           .eq('aluno_id', id)
-          .order('data_avaliacao', { ascending: false });
+          .order('created_at', { ascending: false }); // Ordenar por created_at (mais recente primeiro)
 
         if (avaliacoesError) {
           console.error('Erro ao buscar avaliações:', avaliacoesError);
@@ -157,13 +96,18 @@ const AlunosAvaliacoes = () => {
 
       } catch (error) {
         console.error('Erro ao buscar dados:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao carregar dados do aluno.",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
     };
 
     fetchDados();
-  }, [id, user]);
+  }, [id, user, navigate, toast]);
 
   const renderAvatar = () => {
     if (!aluno) return null;
@@ -182,184 +126,12 @@ const AlunosAvaliacoes = () => {
     );
   };
 
-  const calcularIMC = (peso: number, altura: number) => {
-    const alturaM = altura / 100;
-    return peso / (alturaM * alturaM);
-  };
-
   const getIMCClassification = (imc: number) => {
     if (imc < 18.5) return { text: 'Abaixo do peso', color: 'bg-blue-500' };
     if (imc < 25) return { text: 'Normal', color: 'bg-green-500' };
     if (imc < 30) return { text: 'Sobrepeso', color: 'bg-yellow-500' };
     return { text: 'Obesidade', color: 'bg-red-500' };
   };
-
-  const checkIntervalAndSave = async (data: NovaAvaliacaoForm) => {
-    if (avaliacoes.length > 0) {
-      const ultimaAvaliacao = new Date(avaliacoes[0].data_avaliacao);
-      const hoje = new Date();
-      const diffTime = Math.abs(hoje.getTime() - ultimaAvaliacao.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      if (diffDays < 30) {
-        setIntervalDays(diffDays);
-        setPendingFormData(data);
-        setShowIntervalWarning(true);
-        return;
-      }
-    }
-
-    await salvarAvaliacao(data);
-  };
-
-  const salvarAvaliacao = async (data: NovaAvaliacaoForm) => {
-    try {
-      const imc = calcularIMC(data.peso, data.altura);
-      const hoje = new Date().toISOString().split('T')[0];
-
-      // Se já temos 4 avaliações, remover a mais antiga (incluindo imagens)
-      if (avaliacoes.length >= 4) {
-        const maisAntiga = avaliacoes[avaliacoes.length - 1];
-        // Deletar imagens associadas à avaliação antiga
-        await deletarImagensDaAvaliacao(maisAntiga);
-        // Remover avaliação antiga do banco
-        await supabase
-          .from('avaliacoes_fisicas')
-          .delete()
-          .eq('id', maisAntiga.id);
-      }
-
-      // Upload das imagens (se existirem)
-      const imageUrls: { frente?: string; lado?: string; costas?: string } = {};
-      for (const tipo of ['frente', 'lado', 'costas'] as const) {
-        const file = imageFiles[tipo];
-        if (file) {
-          // Converter para base64
-          const toBase64 = (file: File) => new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve((reader.result as string).split(',')[1]);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          });
-          const base64 = await toBase64(file);
-          const filename = `${id}_${tipo}_${Date.now()}.${file.name.split('.').pop()}`;
-          imageUrls[tipo] = await uploadImage(filename, base64, id!, tipo);
-        }
-      }
-
-      // Salvar nova avaliação com URLs das imagens
-      const { data: novaAvaliacao, error } = await supabase
-        .from('avaliacoes_fisicas')
-        .insert([{
-          aluno_id: id,
-          data_avaliacao: hoje,
-          peso: data.peso,
-          altura: data.altura,
-          imc: imc,
-          peito_busto: data.peito_busto || null,
-          cintura: data.cintura || null,
-          quadril: data.quadril || null,
-          coxa_direita: data.coxa_direita || null,
-          braco_direito: data.braco_direito || null,
-          observacoes: data.observacoes || null,
-          foto_frente_url: imageUrls.frente || null,
-          foto_lado_url: imageUrls.lado || null,
-          foto_costas_url: imageUrls.costas || null,
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Recarregar avaliações
-      const { data: avaliacoesData } = await supabase
-        .from('avaliacoes_fisicas')
-        .select('*')
-        .eq('aluno_id', id)
-        .order('data_avaliacao', { ascending: false });
-
-      setAvaliacoes(avaliacoesData || []);
-      setIsModalOpen(false);
-      form.reset();
-      setImageFiles({});
-      toast({
-        title: "Avaliação criada",
-        description: "A avaliação física foi registrada com sucesso.",
-      });
-
-    } catch (error) {
-      console.error('Erro ao salvar avaliação:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao salvar a avaliação. Tente novamente.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleImageChange = (tipo: 'frente' | 'lado' | 'costas', file: File | null) => {
-    setImageFiles(prev => ({
-      ...prev,
-      [tipo]: file || undefined
-    }));
-  };
-
-  // Função para deletar imagens de uma avaliação
-  const deletarImagensDaAvaliacao = async (avaliacao: AvaliacaoFisica) => {
-    const promises = [];
-    if (avaliacao.foto_frente_url) {
-      promises.push(fetch(DELETE_IMAGE_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-        },
-        body: JSON.stringify({
-          file_url: avaliacao.foto_frente_url,
-          bucket_type: 'avaliacoes'
-        })
-      }));
-    }
-    if (avaliacao.foto_lado_url) {
-      promises.push(fetch(DELETE_IMAGE_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-        },
-        body: JSON.stringify({
-          file_url: avaliacao.foto_lado_url,
-          bucket_type: 'avaliacoes'
-        })
-      }));
-    }
-    if (avaliacao.foto_costas_url) {
-      promises.push(fetch(DELETE_IMAGE_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-        },
-        body: JSON.stringify({
-          file_url: avaliacao.foto_costas_url,
-          bucket_type: 'avaliacoes'
-        })
-      }));
-    }
-    try {
-      const results = await Promise.allSettled(promises);
-      results.forEach((result, index) => {
-        const tipo = ['frente', 'lado', 'costas'][index];
-        if (result.status === 'fulfilled') {
-          console.log(`Imagem de ${tipo} deletada com sucesso.`);
-        } else {
-          console.error(`Falha ao deletar imagem de ${tipo}:`, result.reason);
-        }
-      });
-    } catch (err) {
-      console.error("Erro geral ao deletar imagens:", err);
-    }
-  }
 
   const calcularProgressoPeso = () => {
     if (avaliacoes.length < 2) return null;
@@ -375,6 +147,15 @@ const AlunosAvaliacoes = () => {
   };
 
   const progressoPeso = calcularProgressoPeso();
+
+  // Navegação para páginas dedicadas
+  const handleNovaAvaliacao = () => {
+    navigate(`/alunos-avaliacoes/${id}/nova`);
+  };
+
+  const handleVerDetalhes = (avaliacaoId: string) => {
+    navigate(`/alunos-avaliacoes/${id}/${avaliacaoId}`);
+  };
 
   if (loading) {
     return (
@@ -418,169 +199,23 @@ const AlunosAvaliacoes = () => {
   return (
     <div className="space-y-6">
       {/* Cabeçalho */}
-      <div className="flex items-center justify-between">
+      <div className="space-y-4">
+        {/* Linha 1: Título e botão voltar */}
         <div className="flex items-center gap-4">
           <Button variant="ghost" onClick={() => navigate('/alunos')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Avaliações</h1>
-            <p className="text-muted-foreground">Histórico de avaliações físicas e evolução</p>
+            <h1 className="text-2xl md:text-3xl font-bold">Avaliações</h1>
+            <p className="text-sm text-muted-foreground">Histórico de avaliações físicas e evolução</p>
           </div>
         </div>
-        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Avaliação
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Nova Avaliação Física</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={form.handleSubmit(checkIntervalAndSave)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="peso">Peso (kg) *</Label>
-                  <Input
-                    id="peso"
-                    type="number"
-                    step="0.1"
-                    {...form.register('peso', { required: true, min: 1 })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="altura">Altura (cm) *</Label>
-                  <Input
-                    id="altura"
-                    type="number"
-                    {...form.register('altura', { required: true, min: 1 })}
-                  />
-                </div>
-              </div>
-
-              {/* Campos de upload de imagem */}
-              <div className="space-y-2">
-                <h4 className="font-medium">Fotos (opcional)</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {['frente', 'lado', 'costas'].map((tipo) => (
-                    <div key={tipo} className="flex flex-col items-center">
-                      <Label htmlFor={`foto_${tipo}`} className="mb-2 capitalize">Foto {tipo}</Label>
-                      <input
-                        id={`foto_${tipo}`}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={e => {
-                          const file = e.target.files?.[0] || null;
-                          handleImageChange(tipo as 'frente' | 'lado' | 'costas', file);
-                        }}
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => document.getElementById(`foto_${tipo}`)?.click()}
-                        className="w-32 h-32 flex flex-col items-center justify-center"
-                      >
-                        {imageFiles[tipo as 'frente' | 'lado' | 'costas'] ? (
-                          <img
-                            src={URL.createObjectURL(imageFiles[tipo as 'frente' | 'lado' | 'costas'] as File)}
-                            alt={`Preview ${tipo}`}
-                            className="w-full h-full object-cover rounded"
-                          />
-                        ) : (
-                          <Camera className="w-8 h-8 mb-2 text-muted-foreground" />
-                        )}
-                        <span className="text-xs">Selecionar</span>
-                      </Button>
-                      {imageFiles[tipo as 'frente' | 'lado' | 'costas'] && (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          className="mt-2 text-xs"
-                          onClick={() => handleImageChange(tipo as 'frente' | 'lado' | 'costas', null)}
-                        >
-                          <X className="w-3 h-3 mr-1" /> Remover
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="font-medium">Medidas Corporais (cm) - Opcional</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="peito_busto">Peito/Busto</Label>
-                    <Input
-                      id="peito_busto"
-                      type="number"
-                      step="0.1"
-                      {...form.register('peito_busto')}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="cintura">Cintura</Label>
-                    <Input
-                      id="cintura"
-                      type="number"
-                      step="0.1"
-                      {...form.register('cintura')}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="quadril">Quadril</Label>
-                    <Input
-                      id="quadril"
-                      type="number"
-                      step="0.1"
-                      {...form.register('quadril')}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="coxa_direita">Coxa Direita</Label>
-                    <Input
-                      id="coxa_direita"
-                      type="number"
-                      step="0.1"
-                      {...form.register('coxa_direita')}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="braco_direito">Braço Direito</Label>
-                    <Input
-                      id="braco_direito"
-                      type="number"
-                      step="0.1"
-                      {...form.register('braco_direito')}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="observacoes">Observações</Label>
-                <Textarea
-                  id="observacoes"
-                  {...form.register('observacoes')}
-                  rows={3}
-                />
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit">
-                  Salvar Avaliação
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        
+        {/* Linha 2: Botão Nova Avaliação em largura total */}
+        <Button onClick={handleNovaAvaliacao} className="w-full h-12">
+          <Plus className="h-4 w-4 mr-2" />
+          Nova Avaliação
+        </Button>
       </div>
 
       {/* Informações do Aluno */}
@@ -642,7 +277,7 @@ const AlunosAvaliacoes = () => {
               <p className="text-muted-foreground mb-4">
                 As avaliações físicas realizadas aparecerão aqui. Recomendamos um intervalo mínimo de 30 dias entre avaliações para resultados mais precisos.
               </p>
-              <Button onClick={() => setIsModalOpen(true)}>
+              <Button onClick={handleNovaAvaliacao}>
                 <Plus className="h-4 w-4 mr-2" />
                 Criar primeira avaliação
               </Button>
@@ -663,10 +298,7 @@ const AlunosAvaliacoes = () => {
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        onClick={() => {
-                          setSelectedAvaliacao(avaliacao);
-                          setIsDetailsModalOpen(true);
-                        }}
+                        onClick={() => handleVerDetalhes(avaliacao.id)}
                       >
                         <Eye className="h-4 w-4 mr-2" />
                         Detalhes
@@ -691,7 +323,47 @@ const AlunosAvaliacoes = () => {
                           </Badge>
                         </div>
                       </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Medidas</p>
+                        <p className="text-xs text-muted-foreground">
+                          {[
+                            avaliacao.peito_busto && 'Peito',
+                            avaliacao.cintura && 'Cintura', 
+                            avaliacao.quadril && 'Quadril',
+                            avaliacao.braco_direito && 'Braços',
+                            avaliacao.coxa_direita && 'Coxas'
+                          ].filter(Boolean).join(' • ') || 'Nenhuma medida'}
+                        </p>
+                      </div>
                     </div>
+
+                    {/* Preview rápido das fotos */}
+                    {(avaliacao.foto_frente_url || avaliacao.foto_lado_url || avaliacao.foto_costas_url) && (
+                      <div className="mt-3 pt-3 border-t">
+                        <p className="text-xs text-muted-foreground mb-1">Fotos disponíveis:</p>
+                        <div className="flex gap-1">
+                          {avaliacao.foto_frente_url && (
+                            <span className="text-xs bg-muted px-2 py-1 rounded">Frente</span>
+                          )}
+                          {avaliacao.foto_lado_url && (
+                            <span className="text-xs bg-muted px-2 py-1 rounded">Lado</span>
+                          )}
+                          {avaliacao.foto_costas_url && (
+                            <span className="text-xs bg-muted px-2 py-1 rounded">Costas</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Observações preview */}
+                    {avaliacao.observacoes && (
+                      <div className="mt-3 pt-3 border-t">
+                        <p className="text-xs text-muted-foreground mb-1">Observações:</p>
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {avaliacao.observacoes}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -699,117 +371,6 @@ const AlunosAvaliacoes = () => {
           )}
         </CardContent>
       </Card>
-
-      {/* Modal de Detalhes */}
-      <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              Avaliação de {selectedAvaliacao && formatters.date(selectedAvaliacao.data_avaliacao)}
-            </DialogTitle>
-          </DialogHeader>
-          {selectedAvaliacao && (
-            <div className="space-y-6">
-              {/* Fotos */}
-              <div>
-                <h4 className="font-medium mb-2">Fotos</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {['frente', 'lado', 'costas'].map(tipo => (
-                    <div key={tipo} className="flex flex-col items-center">
-                      <span className="text-xs mb-1 capitalize">{tipo}</span>
-                      {selectedAvaliacao[`foto_${tipo}_url` as keyof AvaliacaoFisica] ? (
-                        <img
-                          src={selectedAvaliacao[`foto_${tipo}_url` as keyof AvaliacaoFisica] as string}
-                          alt={`Foto ${tipo}`}
-                          className="w-32 h-32 object-cover rounded border"
-                        />
-                      ) : (
-                        <Camera className="w-16 h-16 text-muted-foreground border rounded bg-muted flex items-center justify-center" />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Medidas corporais */}
-              <div>
-                <h4 className="font-medium mb-2">Medidas Corporais</h4>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Peso</p>
-                    <p className="font-semibold">{selectedAvaliacao.peso ? `${selectedAvaliacao.peso} kg` : '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Altura</p>
-                    <p className="font-semibold">{selectedAvaliacao.altura ? `${selectedAvaliacao.altura} cm` : '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">IMC</p>
-                    <p className="font-semibold">{selectedAvaliacao.imc ? selectedAvaliacao.imc.toFixed(1) : '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Peito/Busto</p>
-                    <p className="font-semibold">{selectedAvaliacao.peito_busto ? `${selectedAvaliacao.peito_busto} cm` : '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Cintura</p>
-                    <p className="font-semibold">{selectedAvaliacao.cintura ? `${selectedAvaliacao.cintura} cm` : '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Quadril</p>
-                    <p className="font-semibold">{selectedAvaliacao.quadril ? `${selectedAvaliacao.quadril} cm` : '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Coxa Direita</p>
-                    <p className="font-semibold">{selectedAvaliacao.coxa_direita ? `${selectedAvaliacao.coxa_direita} cm` : '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Braço Direito</p>
-                    <p className="font-semibold">{selectedAvaliacao.braco_direito ? `${selectedAvaliacao.braco_direito} cm` : '—'}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Observações */}
-              {selectedAvaliacao.observacoes && (
-                <div>
-                  <h4 className="font-medium mb-2">Observações</h4>
-                  <p className="text-sm bg-muted p-3 rounded">{selectedAvaliacao.observacoes}</p>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal de Aviso de Intervalo */}
-      <AlertDialog open={showIntervalWarning} onOpenChange={setShowIntervalWarning}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Intervalo entre avaliações</AlertDialogTitle>
-            <AlertDialogDescription>
-              Última avaliação há {intervalDays} dias. Recomendamos aguardar mais {30 - intervalDays} dias para resultados mais precisos. Deseja criar uma nova avaliação mesmo assim?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setShowIntervalWarning(false);
-              setPendingFormData(null);
-            }}>
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              if (pendingFormData) {
-                salvarAvaliacao(pendingFormData);
-              }
-              setShowIntervalWarning(false);
-              setPendingFormData(null);
-            }}>
-              Criar mesmo assim
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };

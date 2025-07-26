@@ -40,6 +40,8 @@ import DetalhesAluno from "./pages/DetalhesAluno";
 import AlunosParQ from "./pages/AlunosParQ";
 import AlunosAvaliacoes from "./pages/AlunosAvaliacoes";
 import AlunosRotinas from "./pages/AlunosRotinas";
+import AlunosAvaliacaoNova from "./pages/AlunosAvaliacaoNova";
+import AlunosAvaliacaoDetalhes from "./pages/AlunosAvaliacaoDetalhes";
 
 const queryClient = new QueryClient();
 
@@ -93,6 +95,12 @@ const App = () => (
               </Route>
               <Route path="/alunos-avaliacoes/:id" element={<PTLayout />}>
                 <Route index element={<AlunosAvaliacoes />} />
+              </Route>
+              <Route path="/alunos-avaliacoes/:id/nova" element={<PTLayout />}>
+                <Route index element={<AlunosAvaliacaoNova />} />
+              </Route>
+              <Route path="/alunos-avaliacoes/:id/:avaliacaoId" element={<PTLayout />}>
+                <Route index element={<AlunosAvaliacaoDetalhes />} />
               </Route>
               <Route path="/alunos-rotinas/:id" element={<PTLayout />}>
                 <Route index element={<AlunosRotinas />} />

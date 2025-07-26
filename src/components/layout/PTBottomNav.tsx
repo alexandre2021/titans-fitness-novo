@@ -15,7 +15,7 @@ const PTBottomNav = () => {
     },
     {
       title: "Alunos",
-      href: "/alunos-pt",
+      href: "/alunos",
       icon: Users,
     },
     {
