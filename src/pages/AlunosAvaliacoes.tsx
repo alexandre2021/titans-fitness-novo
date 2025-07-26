@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,6 +56,51 @@ interface NovaAvaliacaoForm {
 }
 
 const AlunosAvaliacoes = () => {
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBydmZ2bHl6ZnlwcmpsaXFuaWtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkwNjk5MjUsImV4cCI6MjA2NDY0NTkyNX0.R3TRC1-FOlEuihuIW7oDTNGYYalpzC4v7qn46wOa1dw';
+  const UPLOAD_IMAGE_ENDPOINT = 'https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/upload-imagem';
+  const GET_IMAGE_URL_ENDPOINT = 'https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/get-image-url';
+  const DELETE_IMAGE_ENDPOINT = 'https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/delete-image';
+
+  async function uploadImage(filename: string, imageBase64: string, alunoId: string, tipo: 'frente' | 'lado' | 'costas'): Promise<string> {
+    try {
+      const response = await axios.post<{ success: boolean; url: string; filename: string }>(UPLOAD_IMAGE_ENDPOINT, {
+        filename,
+        image_base64: imageBase64,
+        aluno_id: alunoId,
+        tipo,
+        bucket_type: 'avaliacoes'
+      });
+      return response.data.url;
+    } catch (error) {
+      console.error('Erro ao enviar imagem:', error);
+      throw error;
+    }
+  }
+
+  async function getImageUrl(filename: string): Promise<string> {
+    try {
+      const response = await axios.post<{ success: boolean; url: string; expires_in: number; filename: string }>(GET_IMAGE_URL_ENDPOINT, {
+        filename,
+        bucket_type: 'avaliacoes'
+      });
+      return response.data.url;
+    } catch (error) {
+      console.error('Erro ao obter URL da imagem:', error);
+      throw error;
+    }
+  }
+
+  async function deleteImage(fileUrl: string): Promise<void> {
+    try {
+      await axios.post<{ success: boolean; message: string }>(DELETE_IMAGE_ENDPOINT, {
+        file_url: fileUrl,
+        bucket_type: 'avaliacoes'
+      });
+    } catch (error) {
+      console.error('Erro ao deletar imagem:', error);
+      throw error;
+    }
+  }
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -67,7 +113,7 @@ const AlunosAvaliacoes = () => {
   const [selectedAvaliacao, setSelectedAvaliacao] = useState<AvaliacaoFisica | null>(null);
   const [showIntervalWarning, setShowIntervalWarning] = useState(false);
   const [intervalDays, setIntervalDays] = useState(0);
-  const [pendingFormData, setPendingFormData] = useState<any>(null);
+  const [pendingFormData, setPendingFormData] = useState<NovaAvaliacaoForm | null>(null);
   const [imageFiles, setImageFiles] = useState<{
     frente?: File;
     lado?: File;
@@ -171,16 +217,37 @@ const AlunosAvaliacoes = () => {
       const imc = calcularIMC(data.peso, data.altura);
       const hoje = new Date().toISOString().split('T')[0];
 
-      // Se já temos 4 avaliações, remover a mais antiga
+      // Se já temos 4 avaliações, remover a mais antiga (incluindo imagens)
       if (avaliacoes.length >= 4) {
         const maisAntiga = avaliacoes[avaliacoes.length - 1];
+        // Deletar imagens associadas à avaliação antiga
+        await deletarImagensDaAvaliacao(maisAntiga);
+        // Remover avaliação antiga do banco
         await supabase
           .from('avaliacoes_fisicas')
           .delete()
           .eq('id', maisAntiga.id);
       }
 
-      // Salvar nova avaliação
+      // Upload das imagens (se existirem)
+      const imageUrls: { frente?: string; lado?: string; costas?: string } = {};
+      for (const tipo of ['frente', 'lado', 'costas'] as const) {
+        const file = imageFiles[tipo];
+        if (file) {
+          // Converter para base64
+          const toBase64 = (file: File) => new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve((reader.result as string).split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          const base64 = await toBase64(file);
+          const filename = `${id}_${tipo}_${Date.now()}.${file.name.split('.').pop()}`;
+          imageUrls[tipo] = await uploadImage(filename, base64, id!, tipo);
+        }
+      }
+
+      // Salvar nova avaliação com URLs das imagens
       const { data: novaAvaliacao, error } = await supabase
         .from('avaliacoes_fisicas')
         .insert([{
@@ -195,6 +262,9 @@ const AlunosAvaliacoes = () => {
           coxa_direita: data.coxa_direita || null,
           braco_direito: data.braco_direito || null,
           observacoes: data.observacoes || null,
+          foto_frente_url: imageUrls.frente || null,
+          foto_lado_url: imageUrls.lado || null,
+          foto_costas_url: imageUrls.costas || null,
         }])
         .select()
         .single();
@@ -233,6 +303,63 @@ const AlunosAvaliacoes = () => {
       [tipo]: file || undefined
     }));
   };
+
+  // Função para deletar imagens de uma avaliação
+  const deletarImagensDaAvaliacao = async (avaliacao: AvaliacaoFisica) => {
+    const promises = [];
+    if (avaliacao.foto_frente_url) {
+      promises.push(fetch(DELETE_IMAGE_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({
+          file_url: avaliacao.foto_frente_url,
+          bucket_type: 'avaliacoes'
+        })
+      }));
+    }
+    if (avaliacao.foto_lado_url) {
+      promises.push(fetch(DELETE_IMAGE_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({
+          file_url: avaliacao.foto_lado_url,
+          bucket_type: 'avaliacoes'
+        })
+      }));
+    }
+    if (avaliacao.foto_costas_url) {
+      promises.push(fetch(DELETE_IMAGE_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({
+          file_url: avaliacao.foto_costas_url,
+          bucket_type: 'avaliacoes'
+        })
+      }));
+    }
+    try {
+      const results = await Promise.allSettled(promises);
+      results.forEach((result, index) => {
+        const tipo = ['frente', 'lado', 'costas'][index];
+        if (result.status === 'fulfilled') {
+          console.log(`Imagem de ${tipo} deletada com sucesso.`);
+        } else {
+          console.error(`Falha ao deletar imagem de ${tipo}:`, result.reason);
+        }
+      });
+    } catch (err) {
+      console.error("Erro geral ao deletar imagens:", err);
+    }
+  }
 
   const calcularProgressoPeso = () => {
     if (avaliacoes.length < 2) return null;
@@ -330,6 +457,56 @@ const AlunosAvaliacoes = () => {
                     type="number"
                     {...form.register('altura', { required: true, min: 1 })}
                   />
+                </div>
+              </div>
+
+              {/* Campos de upload de imagem */}
+              <div className="space-y-2">
+                <h4 className="font-medium">Fotos (opcional)</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {['frente', 'lado', 'costas'].map((tipo) => (
+                    <div key={tipo} className="flex flex-col items-center">
+                      <Label htmlFor={`foto_${tipo}`} className="mb-2 capitalize">Foto {tipo}</Label>
+                      <input
+                        id={`foto_${tipo}`}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={e => {
+                          const file = e.target.files?.[0] || null;
+                          handleImageChange(tipo as 'frente' | 'lado' | 'costas', file);
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => document.getElementById(`foto_${tipo}`)?.click()}
+                        className="w-32 h-32 flex flex-col items-center justify-center"
+                      >
+                        {imageFiles[tipo as 'frente' | 'lado' | 'costas'] ? (
+                          <img
+                            src={URL.createObjectURL(imageFiles[tipo as 'frente' | 'lado' | 'costas'] as File)}
+                            alt={`Preview ${tipo}`}
+                            className="w-full h-full object-cover rounded"
+                          />
+                        ) : (
+                          <Camera className="w-8 h-8 mb-2 text-muted-foreground" />
+                        )}
+                        <span className="text-xs">Selecionar</span>
+                      </Button>
+                      {imageFiles[tipo as 'frente' | 'lado' | 'costas'] && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="mt-2 text-xs"
+                          onClick={() => handleImageChange(tipo as 'frente' | 'lado' | 'costas', null)}
+                        >
+                          <X className="w-3 h-3 mr-1" /> Remover
+                        </Button>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -533,54 +710,70 @@ const AlunosAvaliacoes = () => {
           </DialogHeader>
           {selectedAvaliacao && (
             <div className="space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Peso</p>
-                  <p className="font-semibold">{selectedAvaliacao.peso} kg</p>
+              {/* Fotos */}
+              <div>
+                <h4 className="font-medium mb-2">Fotos</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {['frente', 'lado', 'costas'].map(tipo => (
+                    <div key={tipo} className="flex flex-col items-center">
+                      <span className="text-xs mb-1 capitalize">{tipo}</span>
+                      {selectedAvaliacao[`foto_${tipo}_url` as keyof AvaliacaoFisica] ? (
+                        <img
+                          src={selectedAvaliacao[`foto_${tipo}_url` as keyof AvaliacaoFisica] as string}
+                          alt={`Foto ${tipo}`}
+                          className="w-32 h-32 object-cover rounded border"
+                        />
+                      ) : (
+                        <Camera className="w-16 h-16 text-muted-foreground border rounded bg-muted flex items-center justify-center" />
+                      )}
+                    </div>
+                  ))}
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Altura</p>
-                  <p className="font-semibold">{selectedAvaliacao.altura} cm</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">IMC</p>
-                  <p className="font-semibold">{selectedAvaliacao.imc.toFixed(1)}</p>
-                </div>
-                {selectedAvaliacao.peito_busto && (
+              </div>
+
+              {/* Medidas corporais */}
+              <div>
+                <h4 className="font-medium mb-2">Medidas Corporais</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Peso</p>
+                    <p className="font-semibold">{selectedAvaliacao.peso ? `${selectedAvaliacao.peso} kg` : '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Altura</p>
+                    <p className="font-semibold">{selectedAvaliacao.altura ? `${selectedAvaliacao.altura} cm` : '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">IMC</p>
+                    <p className="font-semibold">{selectedAvaliacao.imc ? selectedAvaliacao.imc.toFixed(1) : '—'}</p>
+                  </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Peito/Busto</p>
-                    <p className="font-semibold">{selectedAvaliacao.peito_busto} cm</p>
+                    <p className="font-semibold">{selectedAvaliacao.peito_busto ? `${selectedAvaliacao.peito_busto} cm` : '—'}</p>
                   </div>
-                )}
-                {selectedAvaliacao.cintura && (
                   <div>
                     <p className="text-sm text-muted-foreground">Cintura</p>
-                    <p className="font-semibold">{selectedAvaliacao.cintura} cm</p>
+                    <p className="font-semibold">{selectedAvaliacao.cintura ? `${selectedAvaliacao.cintura} cm` : '—'}</p>
                   </div>
-                )}
-                {selectedAvaliacao.quadril && (
                   <div>
                     <p className="text-sm text-muted-foreground">Quadril</p>
-                    <p className="font-semibold">{selectedAvaliacao.quadril} cm</p>
+                    <p className="font-semibold">{selectedAvaliacao.quadril ? `${selectedAvaliacao.quadril} cm` : '—'}</p>
                   </div>
-                )}
-                {selectedAvaliacao.coxa_direita && (
                   <div>
                     <p className="text-sm text-muted-foreground">Coxa Direita</p>
-                    <p className="font-semibold">{selectedAvaliacao.coxa_direita} cm</p>
+                    <p className="font-semibold">{selectedAvaliacao.coxa_direita ? `${selectedAvaliacao.coxa_direita} cm` : '—'}</p>
                   </div>
-                )}
-                {selectedAvaliacao.braco_direito && (
                   <div>
                     <p className="text-sm text-muted-foreground">Braço Direito</p>
-                    <p className="font-semibold">{selectedAvaliacao.braco_direito} cm</p>
+                    <p className="font-semibold">{selectedAvaliacao.braco_direito ? `${selectedAvaliacao.braco_direito} cm` : '—'}</p>
                   </div>
-                )}
+                </div>
               </div>
-              
+
+              {/* Observações */}
               {selectedAvaliacao.observacoes && (
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2">Observações</p>
+                  <h4 className="font-medium mb-2">Observações</h4>
                   <p className="text-sm bg-muted p-3 rounded">{selectedAvaliacao.observacoes}</p>
                 </div>
               )}
