@@ -22,6 +22,7 @@ interface AlunoDetalhes {
   avatar_color: string;
   onboarding_completo: boolean;
   endereco?: string;
+  descricao_pessoal?: string;
 }
 
 const DetalhesAluno = () => {
@@ -138,7 +139,10 @@ const DetalhesAluno = () => {
             </Avatar>
             <div className="space-y-2">
               <h3 className="text-2xl font-semibold">{aluno.nome_completo}</h3>
-              <Badge variant={aluno.onboarding_completo ? "default" : "secondary"}>
+              <Badge 
+                variant={aluno.onboarding_completo ? "default" : "secondary"}
+                className={aluno.onboarding_completo ? "bg-green-600 hover:bg-green-700" : "bg-yellow-500 hover:bg-yellow-600 text-white"}
+              >
                 {aluno.onboarding_completo ? "Ativo" : "Pendente"}
               </Badge>
             </div>
@@ -189,6 +193,7 @@ const DetalhesAluno = () => {
                 </div>
               )}
 
+
               {aluno.endereco && (
                 <div className="flex items-start gap-3">
                   <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
@@ -199,6 +204,14 @@ const DetalhesAluno = () => {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Descrição Pessoal */}
+          <div className="col-span-full">
+            <label className="text-sm font-medium text-muted-foreground">Descrição Pessoal</label>
+            <p className="text-sm mt-1">
+              {aluno.descricao_pessoal || "Não informado"}
+            </p>
           </div>
 
           {/* Nota Informativa */}

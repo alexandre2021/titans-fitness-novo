@@ -78,11 +78,7 @@ const AlunosParQ = () => {
     );
   };
 
-  const renderResposta = (resposta: boolean | undefined) => {
-    if (resposta === undefined) {
-      return <span className="text-muted-foreground">Não respondido</span>;
-    }
-    
+  const renderResposta = (resposta: boolean) => {
     return (
       <div className="flex items-center gap-2">
         {resposta ? (
