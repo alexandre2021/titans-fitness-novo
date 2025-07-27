@@ -139,8 +139,8 @@ export const ExercicioCard = ({
     <>
       <Card className="hover:shadow-md transition-shadow">
         <CardContent className="p-4">
-          <div className="flex items-start justify-between">
-            <div className="flex-1 min-w-0 pr-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0 pr-2 md:pr-4">
               <h3 className="font-semibold text-foreground truncate mb-2">
                 {exercicio.nome}
               </h3>
@@ -151,7 +151,7 @@ export const ExercicioCard = ({
                 </p>
               )}
               
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1 md:gap-2">
                 {exercicio.grupo_muscular && (
                   <Badge 
                     className="text-xs border-0"
