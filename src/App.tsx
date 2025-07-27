@@ -1,4 +1,8 @@
 import React from "react";
+import NovoExercicio from "./pages/NovoExercicio";
+import CopiaExercicio from "./pages/CopiaExercicio";
+import EditarExercicio from "./pages/EditarExercicio";
+import DetalhesExercicio from "./pages/DetalhesExercicio";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -74,6 +78,18 @@ const App = () => (
               </Route>
               <Route path="/exercicios-pt" element={<PTLayout />}>
                 <Route index element={<ExerciciosPT />} />
+              </Route>
+              <Route path="/exercicios-pt/novo" element={<PTLayout />}>
+                <Route index element={<NovoExercicio />} />
+              </Route>
+              <Route path="/exercicios-pt/copia/:id" element={<PTLayout />}>
+                <Route index element={<CopiaExercicio />} />
+              </Route>
+              <Route path="/exercicios-pt/editar/:id" element={<PTLayout />}>
+                <Route index element={<EditarExercicio />} />
+              </Route>
+              <Route path="/exercicios-pt/detalhes/:id" element={<PTLayout />}>
+                <Route index element={<DetalhesExercicio />} />
               </Route>
               <Route path="/agenda-pt" element={<PTLayout />}>
                 <Route index element={<AgendaPT />} />
