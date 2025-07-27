@@ -11,42 +11,36 @@ const PlansSection = () => {
       description: "Perfeito para começar",
       features: [
         "Até 5 alunos",
-        "Biblioteca básica de exercícios",
-        "Suporte por email",
-        "Dashboard básico"
+        "Até 50 exercícios personalizados",
+        "Suporte por email"
       ],
       isPopular: false,
       ctaText: "Começar Grátis"
     },
     {
-      name: "Profissional",
+      name: "Essencial",
       price: "R$ 49",
       period: "/mês",
       description: "Para Personal Trainers estabelecidos",
       features: [
-        "Até 30 alunos",
+        "Até 50 alunos",
+        "Até 500 exercícios personalizados",
         "IA para criação de treinos",
-        "Biblioteca completa de exercícios",
-        "Relatórios avançados",
-        "Suporte prioritário",
-        "App mobile completo"
+        "Suporte prioritário"
       ],
       isPopular: true,
       ctaText: "Começar Teste Grátis"
     },
     {
-      name: "Estúdio",
+      name: "Pró",
       price: "R$ 129",
       period: "/mês",
       description: "Para estúdios e academias",
       features: [
         "Alunos ilimitados",
-        "Múltiplos personal trainers",
-        "IA avançada personalizada",
-        "Integração com wearables",
-        "Dashboard executivo",
-        "Suporte dedicado",
-        "White-label disponível"
+        "Exercícios personalizados ilimitados",
+        "IA para criação de treinos",
+        "Suporte prioritário"
       ],
       isPopular: false,
       ctaText: "Falar com Vendas"

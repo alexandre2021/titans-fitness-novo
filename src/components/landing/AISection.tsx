@@ -54,15 +54,6 @@ const AISection = () => {
             </Button>
           </div>
           
-          <div className="relative">
-            <div className="bg-gradient-to-br from-primary/10 to-secondary/10 rounded-2xl p-8 h-96 flex items-center justify-center">
-              <div className="text-center">
-                <Brain className="w-24 h-24 text-primary mx-auto mb-4" />
-                <h3 className="text-2xl font-bold text-text-primary mb-2">IA em Ação</h3>
-                <p className="text-text-secondary">Visualização da interface de IA</p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </section>

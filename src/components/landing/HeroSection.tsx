@@ -16,19 +16,12 @@ const HeroSection = () => {
           acompanhamento inteligente e muito mais.
         </p>
         
-        <div className="space-y-4 sm:space-y-0 sm:space-x-4 sm:flex sm:justify-center">
+        <div className="flex justify-center">
           <Link to="/cadastro">
             <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg">
               Começar Gratuitamente
             </Button>
           </Link>
-          <Button 
-            variant="outline" 
-            size="lg" 
-            className="border-secondary text-secondary hover:bg-secondary hover:text-secondary-foreground px-8 py-4 text-lg"
-          >
-            Ver Demonstração
-          </Button>
         </div>
         
         <p className="text-text-secondary mt-6 text-sm">
