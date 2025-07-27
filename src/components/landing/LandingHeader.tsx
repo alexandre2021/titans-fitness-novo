@@ -10,7 +10,7 @@ const LandingHeader = () => {
             <img 
               src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets//TitansFitnessLogo.png" 
               alt="Titans.fitness" 
-              className="h-12"
+              className="h-16"
             />
           </div>
           
