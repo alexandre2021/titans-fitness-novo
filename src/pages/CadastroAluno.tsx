@@ -204,9 +204,12 @@ export default function CadastroAluno() {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center mb-8">
-          <Link to="/" className="flex items-center gap-3">
-            <img src="/src/assets/titans-logo.png" alt="Titans.fitness" className="w-12 h-12" />
-            <span className="text-2xl font-bold text-primary">Titans.fitness</span>
+          <Link to="/" className="flex items-center">
+            <img 
+              src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets//TitansFitnessLogo.png" 
+              alt="Titans.fitness" 
+              className="h-12"
+            />
           </Link>
         </div>
 

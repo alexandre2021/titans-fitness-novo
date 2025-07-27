@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Mail } from "lucide-react";
-import titansLogo from "@/assets/titans-logo.png";
+
 
 const ConfirmacaoEmail = () => {
   return (
@@ -10,9 +10,12 @@ const ConfirmacaoEmail = () => {
       {/* Header */}
       <header className="border-b border-border">
         <div className="container mx-auto px-6 py-4">
-          <Link to="/" className="flex items-center space-x-3">
-            <img src={titansLogo} alt="Titans.fitness" className="h-10 w-10" />
-            <span className="text-2xl font-bold text-text-primary">Titans.fitness</span>
+          <Link to="/" className="flex items-center">
+            <img 
+              src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets//TitansFitnessLogo.png" 
+              alt="Titans.fitness" 
+              className="h-12"
+            />
           </Link>
         </div>
       </header>

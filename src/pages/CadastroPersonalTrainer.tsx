@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import titansLogo from "@/assets/titans-logo.png";
+
 
 const formSchema = z.object({
   nomeCompleto: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
@@ -111,9 +111,12 @@ const CadastroPersonalTrainer = () => {
       {/* Header */}
       <header className="border-b border-border">
         <div className="container mx-auto px-6 py-4">
-          <Link to="/" className="flex items-center space-x-3">
-            <img src={titansLogo} alt="Titans.fitness" className="h-10 w-10" />
-            <span className="text-2xl font-bold text-text-primary">Titans.fitness</span>
+          <Link to="/" className="flex items-center">
+            <img 
+              src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets//TitansFitnessLogo.png" 
+              alt="Titans.fitness" 
+              className="h-12"
+            />
           </Link>
         </div>
       </header>

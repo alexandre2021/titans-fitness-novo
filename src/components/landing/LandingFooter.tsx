@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import titansLogo from "@/assets/titans-logo.png";
 
 const LandingFooter = () => {
   return (
@@ -7,9 +6,12 @@ const LandingFooter = () => {
       <div className="container mx-auto px-6">
         <div className="grid md:grid-cols-4 gap-8">
           <div className="col-span-1 md:col-span-2">
-            <div className="flex items-center space-x-3 mb-4">
-              <img src={titansLogo} alt="Titans.fitness" className="h-8 w-8" />
-              <span className="text-xl font-bold">Titans.fitness</span>
+            <div className="flex items-center mb-4">
+              <img 
+                src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets//TitansFitnessLogo.png" 
+                alt="Titans.fitness" 
+                className="h-10"
+              />
             </div>
             <p className="text-gray-300 mb-4 max-w-md">
               A plataforma completa para Personal Trainers que querem 
