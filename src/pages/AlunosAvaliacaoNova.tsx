@@ -214,7 +214,7 @@ const AlunosAvaliacaoNova = () => {
           .from('avaliacoes_fisicas')
           .select('*')
           .eq('aluno_id', id)
-          .order('data_avaliacao', { ascending: false });
+          .order('created_at', { ascending: false });
 
         if (avaliacoesError) {
           console.error('Erro ao buscar avaliações:', avaliacoesError);
@@ -285,12 +285,22 @@ const AlunosAvaliacaoNova = () => {
 
       // Se já temos 4 avaliações, remover a mais antiga (incluindo imagens)
       if (avaliacoes.length >= 4) {
-        const maisAntiga = avaliacoes[avaliacoes.length - 1];
-        await deletarImagensDaAvaliacao(maisAntiga);
-        await supabase
+        // Buscar avaliações ordenadas por created_at ASC (mais antiga primeiro) para FIFO correto
+        const { data: avaliacoesParaFifo } = await supabase
           .from('avaliacoes_fisicas')
-          .delete()
-          .eq('id', maisAntiga.id);
+          .select('*')
+          .eq('aluno_id', id)
+          .order('created_at', { ascending: true });
+
+        if (avaliacoesParaFifo && avaliacoesParaFifo.length >= 4) {
+          const maisAntiga = avaliacoesParaFifo[0]; // Primeira = mais antiga
+          console.log('🗑️ Deletando avaliação mais antiga:', maisAntiga.id);
+          await deletarImagensDaAvaliacao(maisAntiga);
+          await supabase
+            .from('avaliacoes_fisicas')
+            .delete()
+            .eq('id', maisAntiga.id);
+        }
       }
 
       // Upload das imagens (se existirem)

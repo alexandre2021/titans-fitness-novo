@@ -200,22 +200,39 @@ const AlunosAvaliacoes = () => {
     <div className="space-y-6">
       {/* Cabeçalho */}
       <div className="space-y-4">
-        {/* Linha 1: Título e botão voltar */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/alunos')}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold">Avaliações</h1>
-            <p className="text-sm text-muted-foreground">Histórico de avaliações físicas e evolução</p>
+        {/* Layout Desktop: Título e botão na mesma linha */}
+        <div className="hidden md:flex md:items-center md:justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" onClick={() => navigate('/alunos')}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold">Avaliações</h1>
+              <p className="text-muted-foreground">Histórico de avaliações físicas e evolução</p>
+            </div>
           </div>
+          <Button onClick={handleNovaAvaliacao}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Avaliação
+          </Button>
         </div>
-        
-        {/* Linha 2: Botão Nova Avaliação em largura total */}
-        <Button onClick={handleNovaAvaliacao} className="w-full h-12">
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Avaliação
-        </Button>
+
+        {/* Layout Mobile: Título em cima, botão embaixo */}
+        <div className="md:hidden space-y-4">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" onClick={() => navigate('/alunos')}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">Avaliações</h1>
+              <p className="text-sm text-muted-foreground">Histórico de avaliações físicas e evolução</p>
+            </div>
+          </div>
+          <Button onClick={handleNovaAvaliacao} className="w-full h-12">
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Avaliação
+          </Button>
+        </div>
       </div>
 
       {/* Informações do Aluno */}
