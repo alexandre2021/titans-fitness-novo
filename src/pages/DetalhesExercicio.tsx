@@ -142,12 +142,10 @@ const DetalhesExercicio = () => {
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
-            size="sm"
             onClick={() => navigate('/exercicios-pt')}
-            className="flex items-center gap-2"
+            className="h-10 w-10 p-0"
           >
             <ArrowLeft className="h-4 w-4" />
-            Voltar
           </Button>
           <div>
             <h1 className="text-3xl font-bold">Detalhes do Exercício</h1>
@@ -169,12 +167,10 @@ const DetalhesExercicio = () => {
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
-            size="sm"
             onClick={() => navigate('/exercicios-pt')}
-            className="flex items-center gap-2"
+            className="h-10 w-10 p-0"
           >
             <ArrowLeft className="h-4 w-4" />
-            Voltar
           </Button>
           <div>
             <h1 className="text-3xl font-bold">Erro</h1>
@@ -192,12 +188,10 @@ const DetalhesExercicio = () => {
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
-            size="sm"
             onClick={() => navigate('/exercicios-pt')}
-            className="flex items-center gap-2"
+            className="h-10 w-10 p-0"
           >
             <ArrowLeft className="h-4 w-4" />
-            Voltar
           </Button>
           <div className="flex-1">
             <h1 className="text-3xl font-bold flex items-center gap-2">

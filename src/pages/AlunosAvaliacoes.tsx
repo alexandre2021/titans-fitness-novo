@@ -162,7 +162,11 @@ const AlunosAvaliacoes = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate('/alunos')}>
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate('/alunos')}
+              className="h-10 w-10 p-0"
+            >
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
@@ -182,7 +186,11 @@ const AlunosAvaliacoes = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/alunos')}>
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate('/alunos')}
+            className="h-10 w-10 p-0"
+          >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-3xl font-bold">Avaliações</h1>
@@ -203,7 +211,11 @@ const AlunosAvaliacoes = () => {
         {/* Layout Desktop: Título e botão na mesma linha */}
         <div className="hidden md:flex md:items-center md:justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate('/alunos')}>
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate('/alunos')}
+              className="h-10 w-10 p-0"
+            >
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
@@ -220,7 +232,11 @@ const AlunosAvaliacoes = () => {
         {/* Layout Mobile: Título em cima, botão embaixo */}
         <div className="md:hidden space-y-4">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate('/alunos')}>
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate('/alunos')}
+              className="h-10 w-10 p-0"
+            >
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>

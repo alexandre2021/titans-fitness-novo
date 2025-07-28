@@ -379,7 +379,11 @@ const AlunosAvaliacaoNova = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate(`/alunos-avaliacoes/${id}`)}>
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate(`/alunos-avaliacoes/${id}`)}
+            className="h-10 w-10 p-0"
+          >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
@@ -395,7 +399,11 @@ const AlunosAvaliacaoNova = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/alunos')}>
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate('/alunos')}
+            className="h-10 w-10 p-0"
+          >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-3xl font-bold">Nova Avaliação</h1>
@@ -413,7 +421,11 @@ const AlunosAvaliacaoNova = () => {
     <div className="space-y-6">
       {/* Cabeçalho */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => navigate(`/alunos-avaliacoes/${id}`)}>
+        <Button 
+          variant="ghost" 
+          onClick={() => navigate(`/alunos-avaliacoes/${id}`)}
+          className="h-10 w-10 p-0"
+        >
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>

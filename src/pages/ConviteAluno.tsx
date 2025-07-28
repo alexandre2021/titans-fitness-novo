@@ -96,13 +96,11 @@ const ConviteAluno = () => {
     <div className="space-y-6 max-w-2xl mx-auto">
       <div className="flex items-center gap-4">
         <Button
-          variant="outline"
-          size="sm"
+          variant="ghost"
           onClick={() => navigate("/alunos")}
-          className="flex items-center gap-2"
+          className="h-10 w-10 p-0"
         >
           <ArrowLeft className="h-4 w-4" />
-          Voltar
         </Button>
         <div>
           <h1 className="text-3xl font-bold">Convidar Aluno</h1>

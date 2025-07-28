@@ -1,10 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
-import { User, Users } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { User, Users, ArrowLeft } from "lucide-react";
 
 
 const UserTypeSelection = () => {
+  const navigate = useNavigate();
+  
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -25,11 +27,13 @@ const UserTypeSelection = () => {
         <div className="w-full max-w-4xl">
           {/* Botão voltar acima do título principal */}
           <div className="mb-4">
-            <Link to="/" className="inline-flex items-center gap-2">
-              {/* Use ArrowLeft do Lucide */}
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-              <span className="font-medium">Voltar</span>
-            </Link>
+            <Button
+              variant="ghost"
+              onClick={() => navigate("/")}
+              className="h-10 w-10 p-0"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
           </div>
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-text-primary mb-4">

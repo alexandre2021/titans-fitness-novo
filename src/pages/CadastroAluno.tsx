@@ -205,10 +205,13 @@ export default function CadastroAluno() {
       <div className="w-full max-w-md">
         {/* Botão voltar acima do logo e do card */}
         <div className="mb-1">
-          <Link to="/" className="inline-flex items-center gap-2 outline-none focus-visible:outline-none">
-            <ArrowLeft className="w-4 h-4" />
-            <span className="font-medium">Voltar</span>
-          </Link>
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/")}
+            className="h-10 w-10 p-0"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
         </div>
         <div className="flex items-center justify-center mb-4">
           <img 
