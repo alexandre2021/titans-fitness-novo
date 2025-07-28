@@ -61,8 +61,12 @@ const PTSidebar = () => {
   return (
     <div className="flex h-full w-64 flex-col bg-card border-r">
       <div className="p-6">
-        <h2 className="text-lg font-semibold">Titans Fitness</h2>
-        <p className="text-sm text-muted-foreground">Personal Trainer</p>
+        <img 
+          src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets//TitansFitnessLogo.png" 
+          alt="Titans Fitness" 
+          className="h-12 w-auto"
+        />
+        <p className="text-sm text-muted-foreground mt-2">Personal Trainer</p>
       </div>
 
       <nav className="flex-1 space-y-1 px-3">
