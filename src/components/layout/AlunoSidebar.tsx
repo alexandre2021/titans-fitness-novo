@@ -84,7 +84,7 @@ const AlunoSidebar = () => {
         ))}
       </nav>
 
-      <div className="border-t p-4">
+      <div className="border-t p-4 mt-auto">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="w-full justify-start gap-3 p-2">
