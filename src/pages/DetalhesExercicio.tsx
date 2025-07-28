@@ -1,5 +1,6 @@
 // pages/DetalhesExercicio.tsx
 import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,8 +22,8 @@ const DetalhesExercicio = () => {
   const [loading, setLoading] = useState(true);
   const [exercicio, setExercicio] = useState<Exercicio | null>(null);
 
-  // Mock temporário para user e profile
-  const user = { id: 'temp-user-id' };
+  // Usuário real via contexto
+  const { user } = useAuth();
   const profile = { limite_exercicios: 10 };
 
   // Carregar exercício
@@ -200,7 +201,6 @@ const DetalhesExercicio = () => {
           </Button>
           <div className="flex-1">
             <h1 className="text-3xl font-bold flex items-center gap-2">
-              <Eye className="h-8 w-8" />
               {exercicio.nome}
             </h1>
             <p className="text-muted-foreground">
@@ -285,9 +285,11 @@ const DetalhesExercicio = () => {
                 <Badge className={getDifficultyColor(exercicio.dificuldade)}>
                   {exercicio.dificuldade || 'Não definida'}
                 </Badge>
-                <Badge className={getTypeColor(exercicio.tipo)}>
-                  {exercicio.tipo === 'padrao' ? 'Exercício Padrão' : 'Personalizado'}
-                </Badge>
+                {exercicio.tipo === 'padrao' && (
+                  <Badge className={getTypeColor(exercicio.tipo)}>
+                    Exercício Padrão
+                  </Badge>
+                )}
               </div>
 
               <Separator />

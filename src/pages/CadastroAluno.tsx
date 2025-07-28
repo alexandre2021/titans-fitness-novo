@@ -201,28 +201,25 @@ export default function CadastroAluno() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center p-2">
       <div className="w-full max-w-md">
-        <div className="flex items-center justify-center mb-8">
-          <Link to="/" className="flex items-center">
-            <img 
-              src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets//TitansFitnessLogo.png" 
-              alt="Titans.fitness" 
-              className="h-12"
-            />
+        {/* Botão voltar acima do logo e do card */}
+        <div className="mb-1">
+          <Link to="/" className="inline-flex items-center gap-2 outline-none focus-visible:outline-none">
+            <ArrowLeft className="w-4 h-4" />
+            <span className="font-medium">Voltar</span>
           </Link>
+        </div>
+        <div className="flex items-center justify-center mb-4">
+          <img 
+            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets//TitansFitnessLogo.png" 
+            alt="Titans.fitness" 
+            className="h-12"
+          />
         </div>
 
         <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="space-y-1 text-center">
-            <div className="flex items-center gap-2 mb-4">
-              <Link to="/cadastro">
-                <Button variant="ghost" size="sm" className="gap-2">
-                  <ArrowLeft className="w-4 h-4" />
-                  Voltar
-                </Button>
-              </Link>
-            </div>
             <CardTitle className="text-2xl font-bold">Cadastro de Aluno</CardTitle>
             <CardDescription>
               Preencha os dados abaixo para criar sua conta
