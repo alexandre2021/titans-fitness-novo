@@ -6,7 +6,7 @@ const AISection = () => {
     <section className="py-20 bg-background">
       <div className="container mx-auto px-6">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <div>
+          <div className="mx-auto lg:mx-0 max-w-xl">
             <div className="inline-flex items-center bg-primary/10 rounded-full px-4 py-2 mb-6">
               <Brain className="w-5 h-5 text-primary mr-2" />
               <span className="text-primary font-semibold">Powered by AI</span>
@@ -22,7 +22,12 @@ const AISection = () => {
               Nossa IA analisa dados de treino, progresso e preferências dos alunos 
               para criar programas totalmente personalizados e otimizar resultados.
             </p>
-            
+            <Button className="bg-secondary hover:bg-secondary/90 text-secondary-foreground">
+              Experimentar IA Gratuitamente
+            </Button>
+          </div>
+          {/* Bloco de benefícios à direita em telas grandes */}
+          <div className="mx-auto lg:mx-0 max-w-xl w-full flex flex-col justify-center h-full" style={{minHeight: '400px'}}>
             <div className="space-y-4 mb-8">
               <div className="flex items-start space-x-3">
                 <Zap className="w-6 h-6 text-secondary mt-1 flex-shrink-0" />
@@ -31,7 +36,6 @@ const AISection = () => {
                   <p className="text-text-secondary">Gere treinos personalizados em segundos baseados no perfil do aluno.</p>
                 </div>
               </div>
-              
               <div className="flex items-start space-x-3">
                 <Target className="w-6 h-6 text-secondary mt-1 flex-shrink-0" />
                 <div>
@@ -39,7 +43,6 @@ const AISection = () => {
                   <p className="text-text-secondary">A IA sugere modificações baseadas no progresso e feedback do aluno.</p>
                 </div>
               </div>
-              
               <div className="flex items-start space-x-3">
                 <TrendingUp className="w-6 h-6 text-secondary mt-1 flex-shrink-0" />
                 <div>
@@ -48,12 +51,7 @@ const AISection = () => {
                 </div>
               </div>
             </div>
-            
-            <Button className="bg-secondary hover:bg-secondary/90 text-secondary-foreground">
-              Experimentar IA Gratuitamente
-            </Button>
           </div>
-          
         </div>
       </div>
     </section>

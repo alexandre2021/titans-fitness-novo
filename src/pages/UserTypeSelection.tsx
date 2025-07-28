@@ -23,6 +23,14 @@ const UserTypeSelection = () => {
       {/* Main Content */}
       <main className="flex-1 flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-4xl">
+          {/* Botão voltar acima do título principal */}
+          <div className="mb-4">
+            <Link to="/" className="inline-flex items-center gap-2">
+              {/* Use ArrowLeft do Lucide */}
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+              <span className="font-medium">Voltar</span>
+            </Link>
+          </div>
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-text-primary mb-4">
               Como você gostaria de usar o Titans.fitness?
@@ -42,16 +50,9 @@ const UserTypeSelection = () => {
                 <CardTitle className="text-2xl text-text-primary">Personal Trainer</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <p className="text-text-secondary mb-6">
-                  Gerencie seus alunos, crie treinos personalizados e 
-                  acompanhe o progresso de cada cliente com nossa IA.
+                <p className="text-text-secondary mb-8">
+                  Gerencie seus alunos, crie treinos personalizados e acompanhe o progresso de cada cliente com nossa IA.
                 </p>
-                <ul className="text-left text-text-secondary space-y-2 mb-8">
-                  <li>✓ Gestão completa de alunos</li>
-                  <li>✓ Criação de treinos com IA</li>
-                  <li>✓ Relatórios de progresso</li>
-                  <li>✓ Agenda inteligente</li>
-                </ul>
                 <Link to="/cadastro/personal-trainer" className="block">
                   <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
                     Sou Personal Trainer
@@ -69,16 +70,9 @@ const UserTypeSelection = () => {
                 <CardTitle className="text-2xl text-text-primary">Aluno</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <p className="text-text-secondary mb-6">
-                  Acesse seus treinos personalizados, acompanhe seu progresso 
-                  e mantenha contato direto com seu Personal Trainer.
+                <p className="text-text-secondary mb-8">
+                  Acesse seus treinos personalizados, acompanhe seu progresso e mantenha contato direto com seu Personal Trainer.
                 </p>
-                <ul className="text-left text-text-secondary space-y-2 mb-8">
-                  <li>✓ Acesso aos seus treinos</li>
-                  <li>✓ Histórico de exercícios</li>
-                  <li>✓ Acompanhamento de progresso</li>
-                  <li>✓ Comunicação com seu PT</li>
-                </ul>
                 <Link to="/cadastro/aluno" className="block">
                   <Button className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground">
                     Sou Aluno

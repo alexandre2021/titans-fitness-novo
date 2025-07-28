@@ -56,43 +56,13 @@ export const ExercicioCard = ({
   };
 
   const getEquipmentColor = (equipamento: string | null) => {
-    switch (equipamento) {
-      case 'Barra':
-        return 'bg-blue-100 text-blue-800';
-      case 'Halteres':
-        return 'bg-purple-100 text-purple-800';
-      case 'Máquina':
-        return 'bg-indigo-100 text-indigo-800';
-      case 'Peso Corporal':
-        return 'bg-orange-100 text-orange-800';
-      case 'Cabo':
-        return 'bg-teal-100 text-teal-800';
-      case 'Kettlebell':
-        return 'bg-red-100 text-red-800';
-      case 'Fitas de Suspensão':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'Elásticos':
-        return 'bg-pink-100 text-pink-800';
-      case 'Bola Suíça':
-        return 'bg-green-100 text-green-800';
-      case 'Bolas Medicinais':
-        return 'bg-cyan-100 text-cyan-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+    // Todas as badges de equipamento terão fundo cinza claro e texto preto
+    return 'bg-gray-100 text-black';
   };
 
   const getDifficultyColor = (dificuldade: string | null) => {
-    switch (dificuldade) {
-      case 'Baixa':
-        return 'text-white'; // Verde
-      case 'Média':
-        return 'text-white'; // Amarelo
-      case 'Alta':
-        return 'text-white'; // Vermelho
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+    // Todas as badges de dificuldade terão fundo cinza claro e texto preto
+    return 'bg-gray-100 text-black';
   };
 
   const getDifficultyStyle = (dificuldade: string | null) => {
@@ -153,34 +123,21 @@ export const ExercicioCard = ({
               
               <div className="flex flex-wrap gap-1 md:gap-2">
                 {exercicio.grupo_muscular && (
-                  <Badge 
-                    className="text-xs border-0"
-                    style={getGrupoMuscularStyle(exercicio.grupo_muscular)}
-                  >
+                  <Badge className="text-xs bg-gray-100 text-black border-0">
                     {exercicio.grupo_muscular}
                   </Badge>
                 )}
-                
                 {exercicio.equipamento && (
-                  <Badge className={`text-xs ${getEquipmentColor(exercicio.equipamento)}`}>
+                  <Badge className={`text-xs bg-gray-100 text-black`}>
                     {exercicio.equipamento}
                   </Badge>
                 )}
-                
                 {exercicio.dificuldade && (
-                  <Badge 
-                    className="text-xs border-0"
-                    style={getDifficultyStyle(exercicio.dificuldade)}
-                  >
+                  <Badge className="text-xs bg-gray-100 text-black border-0">
                     {exercicio.dificuldade}
                   </Badge>
                 )}
-                
-                {exercicio.tipo === 'personalizado' && (
-                  <Badge className="text-xs bg-purple-100 text-purple-800">
-                    Personalizado
-                  </Badge>
-                )}
+                {/* Badge 'Personalizado' removido */}
               </div>
             </div>
 
