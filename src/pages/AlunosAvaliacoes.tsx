@@ -4,7 +4,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, BarChart3, TrendingUp, Calendar, Plus, Eye } from 'lucide-react';
+import { ArrowLeft, BarChart3, TrendingUp, Calendar, Plus, Eye, MoreVertical, Trash2 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -44,6 +60,48 @@ interface AvaliacaoFisica {
 }
 
 const AlunosAvaliacoes = () => {
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [avaliacaoParaExcluir, setAvaliacaoParaExcluir] = useState<AvaliacaoFisica | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const handleExcluirAvaliacao = (avaliacao: AvaliacaoFisica) => {
+    setAvaliacaoParaExcluir(avaliacao);
+    setShowDeleteDialog(true);
+  };
+
+  const handleConfirmarExclusao = async () => {
+    if (!avaliacaoParaExcluir) return;
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('avaliacoes_fisicas')
+        .delete()
+        .eq('id', avaliacaoParaExcluir.id)
+        .eq('aluno_id', id);
+      if (error) {
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível excluir a avaliação. Tente novamente.',
+          variant: 'destructive',
+        });
+      } else {
+        setAvaliacoes(prev => prev.filter(a => a.id !== avaliacaoParaExcluir.id));
+        toast({
+          title: 'Avaliação excluída',
+          description: 'A avaliação foi removida com sucesso.',
+        });
+        setShowDeleteDialog(false);
+        setAvaliacaoParaExcluir(null);
+      }
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Ocorreu um erro inesperado. Tente novamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -328,15 +386,45 @@ const AlunosAvaliacoes = () => {
                           {formatters.date(avaliacao.data_avaliacao)}
                         </span>
                       </div>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleVerDetalhes(avaliacao.id)}
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        Detalhes
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleVerDetalhes(avaliacao.id)}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            Detalhes
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleExcluirAvaliacao(avaliacao)} className="text-destructive focus:text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
+      {/* Modal de Confirmação de Exclusão */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Avaliação</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta avaliação? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmarExclusao}
+              disabled={isDeleting}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Excluindo...' : 'Excluir'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
                     
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div>
@@ -356,37 +444,10 @@ const AlunosAvaliacoes = () => {
                           </Badge>
                         </div>
                       </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Medidas</p>
-                        <p className="text-xs text-muted-foreground">
-                          {[
-                            avaliacao.peito_busto && 'Peito',
-                            avaliacao.cintura && 'Cintura', 
-                            avaliacao.quadril && 'Quadril',
-                            avaliacao.braco_direito && 'Braços',
-                            avaliacao.coxa_direita && 'Coxas'
-                          ].filter(Boolean).join(' • ') || 'Nenhuma medida'}
-                        </p>
-                      </div>
+                      {/* Medidas removidas */}
                     </div>
 
-                    {/* Preview rápido das fotos */}
-                    {(avaliacao.foto_frente_url || avaliacao.foto_lado_url || avaliacao.foto_costas_url) && (
-                      <div className="mt-3 pt-3 border-t">
-                        <p className="text-xs text-muted-foreground mb-1">Fotos disponíveis:</p>
-                        <div className="flex gap-1">
-                          {avaliacao.foto_frente_url && (
-                            <span className="text-xs bg-muted px-2 py-1 rounded">Frente</span>
-                          )}
-                          {avaliacao.foto_lado_url && (
-                            <span className="text-xs bg-muted px-2 py-1 rounded">Lado</span>
-                          )}
-                          {avaliacao.foto_costas_url && (
-                            <span className="text-xs bg-muted px-2 py-1 rounded">Costas</span>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                    {/* Fotos disponíveis removidas */}
 
                     {/* Observações preview */}
                     {avaliacao.observacoes && (

@@ -78,7 +78,7 @@ export const FiltrosExercicios: React.FC<FiltrosExerciciosProps> = ({
                           filtros.dificuldade !== 'todos';
 
   return (
-    <Card>
+    <Card className="border-0 shadow-none">
       <CardContent className="p-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1">

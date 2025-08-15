@@ -1,5 +1,5 @@
 // hooks/useExercicios.ts
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
@@ -29,7 +29,7 @@ export const useExercicios = () => {
   });
 
   // Buscar exercícios padrão
-  const fetchExerciciosPadrao = async () => {
+  const fetchExerciciosPadrao = useCallback(async () => {
     try {
       console.log('🔍 Iniciando busca de exercícios padrão...');
       
@@ -58,18 +58,35 @@ export const useExercicios = () => {
         variant: "destructive",
       });
     }
-  };
+  }, [toast]);
 
   // Buscar exercícios personalizados do PT
-  const fetchExerciciosPersonalizados = async () => {
+  const fetchExerciciosPersonalizados = useCallback(async () => {
     if (!user) {
       console.log('⚠️ Usuário não encontrado, pulando busca de exercícios personalizados');
       return;
     }
 
     try {
-      console.log('🔍 Iniciando busca de exercícios personalizados para o PT:', user.id);
+      console.log('=== DEBUG EXERCÍCIOS PERSONALIZADOS ===');
+      console.log('🔍 User ID:', user.id);
+      console.log('📧 User Email:', user.email);
       
+      // PRIMEIRO: Vamos buscar TODOS os exercícios personalizados (sem filtro de PT)
+      const { data: todosPersonalizados, error: errorTodos } = await supabase
+        .from('exercicios')
+        .select('*')
+        .eq('tipo', 'personalizado');
+
+      console.log('🔬 TODOS os exercícios personalizados no banco:', todosPersonalizados);
+      console.log('🔬 Total personalizados no sistema:', todosPersonalizados?.length || 0);
+      
+      if (todosPersonalizados && todosPersonalizados.length > 0) {
+        console.log('🔬 Primeiro exercício personalizado:', todosPersonalizados[0]);
+        console.log('🔬 PT IDs encontrados:', [...new Set(todosPersonalizados.map(ex => ex.pt_id))]);
+      }
+
+      // SEGUNDO: Buscar apenas os do PT atual
       const { data, error } = await supabase
         .from('exercicios')
         .select('*')
@@ -78,13 +95,28 @@ export const useExercicios = () => {
         .eq('pt_id', user.id)
         .order('created_at', { ascending: false });
 
+      console.log('🔍 Query executada com filtros:');
+      console.log('   - is_ativo: true');
+      console.log('   - tipo: personalizado');
+      console.log('   - pt_id:', user.id);
+
       if (error) {
         console.error('❌ Erro na query de exercícios personalizados:', error);
         throw error;
       }
       
-      console.log('📊 Exercícios personalizados encontrados:', data);
-      console.log(`✅ ${data?.length || 0} exercícios personalizados carregados`);
+      console.log('📊 Exercícios personalizados DO PT:', data);
+      console.log(`✅ ${data?.length || 0} exercícios personalizados carregados para este PT`);
+      
+      // TERCEIRO: Verificar se existe algum com pt_id diferente
+      if (data?.length === 0 && todosPersonalizados && todosPersonalizados.length > 0) {
+        console.log('⚠️ ATENÇÃO: Existem exercícios personalizados no banco, mas nenhum para este PT!');
+        console.log('🔍 Verificando se algum tem pt_id similar...');
+        
+        todosPersonalizados.forEach((ex, index) => {
+          console.log(`   ${index + 1}. ID: ${ex.id}, PT_ID: ${ex.pt_id}, Nome: ${ex.nome}, Ativo: ${ex.is_ativo}`);
+        });
+      }
       
       setExerciciosPersonalizados(data || []);
       setTotalPersonalizados(data?.length || 0);
@@ -97,38 +129,41 @@ export const useExercicios = () => {
         variant: "destructive",
       });
     }
-  };
+  }, [user, toast]);
 
-  // Buscar todos os exercícios (para debug)
-  const debugAllExercicios = async () => {
+  // Função auxiliar para deletar mídia do Cloudflare
+  const deleteMediaFromCloudflare = useCallback(async (fileUrl: string) => {
     try {
-      const { data, error } = await supabase
-        .from('exercicios')
-        .select('*');
+      // Extrair nome do arquivo da URL
+      const filename = fileUrl.split('?')[0].split('/').pop();
+      if (!filename) return;
+
+      console.log('☁️ Deletando arquivo do Cloudflare:', filename);
+
+      // Buscar token de autenticação
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+
+      // Chamar edge function de deleção
+      const { data, error } = await supabase.functions.invoke('delete-image', {
+        body: {
+          filename,
+          bucket_type: 'exercicios'
+        }
+      });
 
       if (error) throw error;
       
-      console.log('🔬 DEBUG - Todos os exercícios no banco:', data);
-      console.log('🔬 DEBUG - Total de registros:', data?.length);
-      
-      if (data && data.length > 0) {
-        const padrao = data.filter(ex => ex.tipo === 'padrao');
-        const personalizado = data.filter(ex => ex.tipo === 'personalizado');
-        const ativos = data.filter(ex => ex.is_ativo === true);
-        
-        console.log('🔬 DEBUG - Exercícios padrão:', padrao.length);
-        console.log('🔬 DEBUG - Exercícios personalizados:', personalizado.length);
-        console.log('🔬 DEBUG - Exercícios ativos:', ativos.length);
-        console.log('🔬 DEBUG - Primeiro exercício:', data[0]);
-      }
+      console.log(`✅ Mídia ${filename} deletada do Cloudflare`);
       
     } catch (error) {
-      console.error('❌ Erro no debug:', error);
+      console.warn('⚠️ Erro ao deletar mídia do Cloudflare:', error);
+      // Não falha o processo principal se a mídia não for deletada
     }
-  };
+  }, []);
 
   // Excluir exercício personalizado
-  const excluirExercicio = async (exercicioId: string) => {
+  const excluirExercicio = useCallback(async (exercicioId: string) => {
     if (!user) return;
 
     try {
@@ -196,41 +231,10 @@ export const useExercicios = () => {
         variant: "destructive",
       });
     }
-  };
-
-  // Função auxiliar para deletar mídia do Cloudflare
-  const deleteMediaFromCloudflare = async (fileUrl: string) => {
-    try {
-      // Extrair nome do arquivo da URL
-      const filename = fileUrl.split('?')[0].split('/').pop();
-      if (!filename) return;
-
-      console.log('☁️ Deletando arquivo do Cloudflare:', filename);
-
-      // Buscar token de autenticação
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) return;
-
-      // Chamar edge function de deleção
-      const { data, error } = await supabase.functions.invoke('delete-image', {
-        body: {
-          filename,
-          bucket_type: 'exercicios'
-        }
-      });
-
-      if (error) throw error;
-      
-      console.log(`✅ Mídia ${filename} deletada do Cloudflare`);
-      
-    } catch (error) {
-      console.warn('⚠️ Erro ao deletar mídia do Cloudflare:', error);
-      // Não falha o processo principal se a mídia não for deletada
-    }
-  };
+  }, [user, toast, deleteMediaFromCloudflare]);
 
   // Recarregar dados
-  const refetch = async () => {
+  const refetch = useCallback(async () => {
     console.log('🔄 Recarregando dados...');
     setLoading(true);
     await Promise.all([
@@ -238,18 +242,19 @@ export const useExercicios = () => {
       fetchExerciciosPersonalizados()
     ]);
     setLoading(false);
-  };
+  }, [fetchExerciciosPadrao, fetchExerciciosPersonalizados]);
 
   // Carregar dados iniciais
   useEffect(() => {
     const loadData = async () => {
-      console.log('🚀 Iniciando carregamento de dados do useExercicios');
-      console.log('👤 Usuário atual:', user?.id);
+      console.log('🚀 =========================');
+      console.log('🚀 INICIANDO DEBUG DETALHADO');
+      console.log('🚀 =========================');
+      console.log('👤 User object completo:', user);
+      console.log('👤 User ID:', user?.id);
+      console.log('👤 User Email:', user?.email);
       
       setLoading(true);
-      
-      // Executar debug primeiro
-      await debugAllExercicios();
       
       // Carregar dados
       await Promise.all([
@@ -258,11 +263,17 @@ export const useExercicios = () => {
       ]);
       
       setLoading(false);
-      console.log('✅ Carregamento concluído');
+      console.log('✅ =========================');
+      console.log('✅ DEBUG CONCLUÍDO');
+      console.log('✅ =========================');
     };
 
-    loadData();
-  }, [user]);
+    if (user) {
+      loadData();
+    } else {
+      console.log('⚠️ Aguardando usuário ser carregado...');
+    }
+  }, [user, fetchExerciciosPadrao, fetchExerciciosPersonalizados]);
 
   return {
     exerciciosPadrao,

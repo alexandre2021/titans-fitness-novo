@@ -378,41 +378,54 @@ const EditarExercicio = () => {
     }
   };
 
-  // Função auxiliar para deletar do Cloudflare
-  const deleteMediaFromCloudflare = async (fileUrl: string) => {
-    try {
-      const filename = fileUrl.split('?')[0].split('/').pop();
-      if (!filename || !filename.includes('exercicio_')) return;
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) return;
-
-      await supabase.functions.invoke('delete-image', {
-        body: {
-          filename,
-          bucket_type: 'exercicios'
-        }
-      });
-      
-    } catch (error) {
-      console.warn('Erro ao deletar do Cloudflare:', error);
+  // Função auxiliar para pegar URL atual
+  const getCurrentUrl = (type: 'imagem1' | 'imagem2' | 'video') => {
+    switch (type) {
+      case 'imagem1': return imagem1Url;
+      case 'imagem2': return imagem2Url;
+      case 'video': return videoUrl;
+      default: return '';
     }
   };
 
-  // Função para upload de nova mídia usando Edge Function
+  // Função auxiliar para deletar do Cloudflare (melhorada)
+  const deleteMediaFromCloudflare = async (fileUrl: string) => {
+    try {
+      let filename = fileUrl;
+      // Se é URL do Cloudflare, extrair só o nome do arquivo
+      if (filename.includes('pub-exerciciospt.r2.dev/')) {
+        filename = filename.split('/').pop()?.split('?')[0] || filename;
+      } else if (filename.includes('/')) {
+        filename = filename.split('/').pop()?.split('?')[0] || filename;
+      }
+      // Validar se é arquivo de exercício
+      if (!filename.includes('exercicio_')) {
+        console.log('Não é arquivo de exercício, pulando deleção');
+        return;
+      }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      await supabase.functions.invoke('delete-image', {
+        body: { filename, bucket_type: 'exercicios' }
+      });
+    } catch (error) {
+      console.warn('Erro ao deletar:', error);
+    }
+  };
+
+  // Função para upload de nova mídia usando Edge Function (fluxo seguro)
   const handleUploadMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
     try {
-      // Criar input de arquivo
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = type === 'video' ? 'video/*' : 'image/*';
-      
+
       input.onchange = async (event) => {
         const file = (event.target as HTMLInputElement).files?.[0];
         if (!file) return;
 
         // Validações
-        const maxSize = type === 'video' ? 20 * 1024 * 1024 : 5 * 1024 * 1024; // 20MB video, 5MB imagem
+        const maxSize = type === 'video' ? 20 * 1024 * 1024 : 5 * 1024 * 1024;
         if (file.size > maxSize) {
           toast({
             title: "Erro",
@@ -423,19 +436,19 @@ const EditarExercicio = () => {
         }
 
         setUploadingMedia(type);
-        
+
+        // 1. Guardar URL antiga
+        const oldUrl = getCurrentUrl(type);
+
         try {
-          // Converter para base64
+          // 2. Upload nova mídia
           const base64 = await fileToBase64(file);
-          
-          // Gerar nome único
           const timestamp = Date.now();
           const extension = file.name.split('.').pop();
           const filename = `exercicio_${timestamp}_${Math.random().toString(36).substring(7)}.${extension}`;
 
           console.log('📤 Fazendo upload:', { filename, type, size: file.size });
 
-          // Chamar Edge Function de upload
           const { data: { session } } = await supabase.auth.getSession();
           if (!session?.access_token) {
             throw new Error("Usuário não autenticado");
@@ -459,12 +472,11 @@ const EditarExercicio = () => {
           }
 
           const result = await response.json();
-          
           if (!result.success) {
             throw new Error(result.error || 'Erro no upload');
           }
 
-          // Atualizar URL local
+          // 3. Atualizar estado local
           switch (type) {
             case 'imagem1':
               setImagem1Url(result.url);
@@ -477,7 +489,12 @@ const EditarExercicio = () => {
               break;
           }
 
-          // Recarregar URLs assinadas se exercício existe
+          // 4. Deletar mídia antiga (se existia e não é igual à nova)
+          if (oldUrl && oldUrl !== result.url) {
+            await deleteMediaFromCloudflare(oldUrl);
+          }
+
+          // 5. Recarregar URLs assinadas se exercício existe
           if (exercicio) {
             const updatedExercicio = { ...exercicio };
             switch (type) {
@@ -500,7 +517,8 @@ const EditarExercicio = () => {
           });
 
         } catch (error) {
-          console.error('Erro no upload:', error);
+          // NÃO deletar a antiga se upload falhou
+          console.error('Upload falhou:', error);
           toast({
             title: "Erro",
             description: "Falha no upload. Tente novamente.",
@@ -512,7 +530,7 @@ const EditarExercicio = () => {
       };
 
       input.click();
-      
+
     } catch (error) {
       console.error('Erro ao abrir seletor:', error);
       toast({

@@ -59,7 +59,7 @@ const AlunoSidebar = () => {
   };
 
   return (
-    <div className="flex h-full w-64 flex-col bg-card border-r">
+    <div className="fixed top-0 left-0 h-screen w-64 flex flex-col bg-card border-r z-30">
       <div className="p-6 border-b">
         <div className="flex justify-center mb-3">
           <img 

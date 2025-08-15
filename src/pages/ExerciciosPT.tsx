@@ -218,10 +218,12 @@ const ExerciciosPT = () => {
 
         {/* Filtros expandidos */}
         {showFilters && (
-          <FiltrosExercicios 
-            filtros={filtros}
-            onFiltrosChange={setFiltros}
-          />
+          <div className="mt-2">
+            <FiltrosExercicios 
+              filtros={filtros}
+              onFiltrosChange={setFiltros}
+            />
+          </div>
         )}
 
         <TabsContent value="padrao" className="space-y-4">

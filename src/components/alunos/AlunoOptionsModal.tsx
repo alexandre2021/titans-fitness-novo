@@ -35,23 +35,6 @@ export const AlunoOptionsModal = ({ alunoId, onExcluir }: AlunoOptionsModalProps
             <span className="text-xs text-muted-foreground">Informações pessoais do aluno</span>
           </div>
         </DropdownMenuItem>
-        
-        <DropdownMenuItem onClick={() => handleNavigation(`/alunos-parq/${alunoId}`)}>
-          <FileText className="h-4 w-4 mr-2" />
-          <div className="flex flex-col">
-            <span>PAR-Q</span>
-            <span className="text-xs text-muted-foreground">Questionário de prontidão para atividade física</span>
-          </div>
-        </DropdownMenuItem>
-        
-        <DropdownMenuItem onClick={() => handleNavigation(`/alunos-avaliacoes/${alunoId}`)}>
-          <BarChart3 className="h-4 w-4 mr-2" />
-          <div className="flex flex-col">
-            <span>Avaliações</span>
-            <span className="text-xs text-muted-foreground">Medidas corporais e evolução física</span>
-          </div>
-        </DropdownMenuItem>
-        
         <DropdownMenuItem onClick={() => handleNavigation(`/alunos-rotinas/${alunoId}`)}>
           <Dumbbell className="h-4 w-4 mr-2" />
           <div className="flex flex-col">
@@ -59,7 +42,20 @@ export const AlunoOptionsModal = ({ alunoId, onExcluir }: AlunoOptionsModalProps
             <span className="text-xs text-muted-foreground">Rotinas de treino personalizadas</span>
           </div>
         </DropdownMenuItem>
-        
+        <DropdownMenuItem onClick={() => handleNavigation(`/alunos-parq/${alunoId}`)}>
+          <FileText className="h-4 w-4 mr-2" />
+          <div className="flex flex-col">
+            <span>PAR-Q</span>
+            <span className="text-xs text-muted-foreground">Questionário de prontidão para atividade física</span>
+          </div>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleNavigation(`/alunos-avaliacoes/${alunoId}`)}>
+          <BarChart3 className="h-4 w-4 mr-2" />
+          <div className="flex flex-col">
+            <span>Avaliações</span>
+            <span className="text-xs text-muted-foreground">Medidas corporais e evolução física</span>
+          </div>
+        </DropdownMenuItem>
         <DropdownMenuItem 
           onClick={onExcluir}
           className="text-destructive focus:text-destructive"

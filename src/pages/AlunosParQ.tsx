@@ -10,11 +10,12 @@ import { useAuth } from '@/hooks/useAuth';
 interface AlunoParQ {
   id: string;
   nome_completo: string;
+  email: string;
   avatar_type: string;
   avatar_image_url?: string;
   avatar_letter?: string;
   avatar_color: string;
-  par_q_respostas?: any;
+  par_q_respostas?: Record<string, boolean> | string | null;
 }
 
 const AlunosParQ = () => {
@@ -41,7 +42,7 @@ const AlunosParQ = () => {
       try {
         const { data, error } = await supabase
           .from('alunos')
-          .select('id, nome_completo, avatar_type, avatar_image_url, avatar_letter, avatar_color, par_q_respostas')
+          .select('id, nome_completo, email, avatar_type, avatar_image_url, avatar_letter, avatar_color, par_q_respostas')
           .eq('id', id)
           .eq('personal_trainer_id', user.id)
           .single();
@@ -49,7 +50,24 @@ const AlunosParQ = () => {
         if (error) {
           console.error('Erro ao buscar PAR-Q do aluno:', error);
         } else {
-          setAluno(data);
+          // Corrigir tipo de par_q_respostas
+          const parsedData = { ...data };
+          // Garante que par_q_respostas seja sempre Record<string, boolean> | null
+          let respostas: Record<string, boolean> | null = null;
+          if (parsedData) {
+            if (typeof parsedData.par_q_respostas === 'string') {
+              try {
+                respostas = JSON.parse(parsedData.par_q_respostas);
+              } catch (e) {
+                respostas = {};
+              }
+            } else if (parsedData.par_q_respostas && typeof parsedData.par_q_respostas === 'object') {
+              respostas = parsedData.par_q_respostas as Record<string, boolean>;
+            } else {
+              respostas = {};
+            }
+          }
+          setAluno({ ...parsedData, par_q_respostas: respostas });
         }
       } catch (error) {
         console.error('Erro ao buscar PAR-Q do aluno:', error);
@@ -164,7 +182,7 @@ const AlunosParQ = () => {
             </Avatar>
             <div>
               <h3 className="text-xl font-semibold">{aluno.nome_completo}</h3>
-              <p className="text-sm text-muted-foreground">Respostas ao questionário PAR-Q</p>
+              <p className="text-sm text-muted-foreground">{aluno.email}</p>
             </div>
           </div>
         </CardHeader>
@@ -186,7 +204,7 @@ const AlunosParQ = () => {
                   <span className="text-primary font-semibold">{index + 1}.</span> {pergunta}
                 </p>
                 <div className="pl-6">
-                  {renderResposta(aluno.par_q_respostas?.[`pergunta_${index + 1}`])}
+                  {renderResposta((aluno.par_q_respostas && typeof aluno.par_q_respostas === 'object') ? aluno.par_q_respostas[`pergunta_${index + 1}`] : false)}
                 </div>
               </div>
             </div>

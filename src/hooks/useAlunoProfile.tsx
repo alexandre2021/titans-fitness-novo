@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { Json } from '@/integrations/supabase/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
@@ -12,7 +13,7 @@ interface AlunoProfile {
   peso?: number;
   altura?: number;
   descricao_pessoal?: string;
-  par_q_respostas?: any;
+  par_q_respostas?: Json;
   onboarding_completo: boolean;
   avatar_type: string;
   avatar_image_url?: string;

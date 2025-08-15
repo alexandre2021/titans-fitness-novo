@@ -1,309 +1,278 @@
-# 📋 Padrões do Sistema - Exercícios PT
+# 📋 Padrões do Sistema - Rotinas e Exercícios
 
-Este documento centraliza todos os padrões, valores e configurações utilizados no sistema de exercícios para Personal Trainers.
+Centralização de todos os padrões, valores e configurações do sistema.
 
 ---
 
-## 🏋️ **Grupos Musculares**
+## 🏋️ **GRUPOS MUSCULARES**
 
-### **Valores no Banco de Dados:**
+### **Valores Padrão:**
 ```typescript
 const GRUPOS_MUSCULARES = [
-  'Peito',
-  'Costas', 
-  'Ombros',
-  'Bíceps',
-  'Tríceps',
-  'Abdômen',
-  'Pernas',
-  'Glúteos',
-  'Panturrilha',
-  'Trapézio'
+  'Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 
+  'Abdômen', 'Pernas', 'Glúteos', 'Panturrilha'
 ];
 ```
 
-### **🎨 Cores por Grupo Muscular:**
+### **🎨 Cores por Grupo:**
 ```typescript
 const CORES_GRUPOS_MUSCULARES = {
-  'Peito': '#F87171',      // Vermelho claro
-  'Costas': '#60A5FA',     // Azul claro  
-  'Pernas': '#34D399',     // Verde claro
-  'Ombros': '#FBBF24',     // Amarelo
-  'Bíceps': '#A78BFA',     // Roxo claro
-  'Tríceps': '#F472B6',    // Rosa
-  'Abdômen': '#F59E42',    // Laranja
-  'Glúteos': '#34D399',    // Verde (mesmo de Pernas)
-  'Panturrilha': '#34D399', // Verde (mesmo de Pernas)
-  'Trapézio': '#60A5FA'    // Azul (mesmo de Costas)
+  'Peito': 'bg-red-100 text-red-800',
+  'Costas': 'bg-blue-100 text-blue-800',
+  'Pernas': 'bg-green-100 text-green-800',
+  'Ombros': 'bg-yellow-100 text-yellow-800',
+  'Bíceps': 'bg-purple-100 text-purple-800',
+  'Tríceps': 'bg-pink-100 text-pink-800',
+  'Abdômen': 'bg-orange-100 text-orange-800',
+  'Glúteos': 'bg-green-100 text-green-800',
+  'Panturrilha': 'bg-green-100 text-green-800'
 };
 ```
 
 ---
 
-## 🛠️ **Equipamentos**
+## 📊 **STATUS DO SISTEMA**
 
-### **Valores no Banco de Dados:**
+### **🎯 Status de Rotina:**
+```typescript
+const STATUS_ROTINA = [
+  'Ativa',                 // Nasce ativa e está liberada para execução
+  'Bloqueada',            // Aluno atrasou pagamento, acesso suspenso
+  'Concluída'             // Finalizada (todas as sessões executadas)
+];
+
+const CORES_STATUS_ROTINA = {
+  'Ativa': 'bg-green-100 text-green-800',  
+  'Bloqueada': 'bg-red-100 text-red-800',
+  'Concluída': 'bg-gray-100 text-gray-800'
+};
+```
+
+**IMPORTANTE:** Status "Bloqueada" é usado quando aluno atrasa mensalidade e PT suspende o acesso temporariamente.
+
+### **⏱️ Status de Sessão:**
+```typescript
+const STATUS_SESSAO = [
+  'em_aberto',  // Sessão criada, aguardando execução
+  'em_andamento',  // Execução iniciada
+  'pausada',       // Pausada temporariamente durante execução
+  'concluida'      // Finalizada
+];
+
+const CORES_STATUS_SESSAO = {
+  'em_aberto': 'bg-blue-100 text-blue-800',
+  'em_andamento': 'bg-green-100 text-green-800',
+  'pausada': 'bg-yellow-100 text-yellow-800',
+  'concluida': 'bg-gray-100 text-gray-800'
+};
+```
+
+---
+
+## 🎛️ **CONFIGURAÇÕES DE ROTINA**
+
+### **Objetivos:**
+```typescript
+const OBJETIVOS = [
+  'Emagrecimento',
+  'Ganho de massa',
+  'Definição muscular',
+  'Condicionamento físico',
+  'Reabilitação',
+  'Performance esportiva'
+];
+
+const CORES_OBJETIVOS = {
+  'Emagrecimento': 'bg-orange-100 text-orange-800',
+  'Ganho de massa': 'bg-blue-100 text-blue-800',
+  'Definição muscular': 'bg-purple-100 text-purple-800',
+  'Condicionamento físico': 'bg-green-100 text-green-800',
+  'Reabilitação': 'bg-yellow-100 text-yellow-800',
+  'Performance esportiva': 'bg-indigo-100 text-indigo-800'
+};
+```
+
+### **Dificuldades:**
+```typescript
+const DIFICULDADES = ['Baixa', 'Média', 'Alta'];
+
+const CORES_DIFICULDADES = {
+  'Baixa': 'bg-green-100 text-green-800',
+  'Média': 'bg-yellow-100 text-yellow-800',
+  'Alta': 'bg-red-100 text-red-800'
+};
+```
+
+### **Formas de Pagamento:**
+```typescript
+const FORMAS_PAGAMENTO = [
+  'PIX', 'Cartão de Crédito', 'Cartão de Débito', 
+  'Dinheiro', 'Transferência'
+];
+```
+
+### **Limites de Validação:**
+```typescript
+const LIMITES = {
+  DURACAO_SEMANAS: { min: 1, max: 52 },
+  TREINOS_POR_SEMANA: { min: 1, max: 7 },
+  VALOR_TOTAL: { min: 0, max: 10000 },
+  TEMPO_ESTIMADO_MINUTOS: { min: 15, max: 180 }
+};
+```
+
+---
+
+## 🏋️ **EXERCÍCIOS**
+
+### **Equipamentos:**
 ```typescript
 const EQUIPAMENTOS = [
-  'Barra',
-  'Halteres',
-  'Máquina', 
-  'Peso Corporal',
-  'Cabo',
-  'Kettlebell',
-  'Fitas de Suspensão',
-  'Elásticos',
-  'Bola Suíça',
-  'Bolas Medicinais'
+  'Barra', 'Halteres', 'Máquina', 'Peso Corporal', 'Cabo/Máquina',
+  'Kettlebell', 'Fitas de Suspensão', 'Elásticos', 'Bola Suíça'
 ];
 ```
 
-### **🎨 Cores por Equipamento:**
+### **Tipos de Série:**
 ```typescript
-const CORES_EQUIPAMENTOS = {
-  'Barra': '#3B82F6',           // Azul
-  'Halteres': '#8B5CF6',        // Roxo
-  'Máquina': '#6366F1',         // Índigo
-  'Peso Corporal': '#F97316',   // Laranja
-  'Cabo': '#14B8A6',            // Teal
-  'Kettlebell': '#EF4444',      // Vermelho
-  'Fitas de Suspensão': '#EAB308', // Amarelo
-  'Elásticos': '#EC4899',       // Rosa
-  'Bola Suíça': '#22C55E',      // Verde
-  'Bolas Medicinais': '#06B6D4' // Ciano
+const TIPOS_SERIE = {
+  SIMPLES: 'simples',      // Série tradicional
+  COMBINADA: 'combinada'   // Bi-set/Super-set
 };
 ```
 
 ---
 
-## 📊 **Níveis de Dificuldade**
+## 🎨 **SISTEMA DE CORES TAILWIND**
 
-### **Valores no Banco de Dados:**
-```typescript
-const DIFICULDADES = [
-  'Baixa',
-  'Média', 
-  'Alta'
-];
-```
-
-### **🎨 Cores por Dificuldade:**
-```typescript
-const CORES_DIFICULDADES = {
-  'Baixa': '#22C55E',  // Verde - Fácil de executar
-  'Média': '#EAB308',  // Amarelo - Técnica moderada  
-  'Alta': '#EF4444'    // Vermelho - Técnica avançada
-};
-```
-
-### **📝 Descrições:**
-- **Baixa**: Exercícios básicos, fáceis de executar, ideais para iniciantes
-- **Média**: Exercícios com técnica moderada, requerem alguma experiência
-- **Alta**: Exercícios avançados, técnica complexa, para praticantes experientes
-
----
-
-## 🏷️ **Tipos de Exercício**
-
-### **Valores no Banco de Dados:**
-```typescript
-const TIPOS_EXERCICIO = {
-  PADRAO: 'padrao',           // Exercícios do sistema
-  PERSONALIZADO: 'personalizado' // Exercícios criados pelo PT
-};
-```
-
-### **🎨 Cores por Tipo:**
-```typescript
-const CORES_TIPOS = {
-  'personalizado': '#A855F7'  // Roxo para exercícios personalizados
-};
-```
-
----
-
-## 🎨 **Sistema de Cores - Paleta Completa**
-
-### **Cores Primárias do Sistema:**
+### **Classes Padrão para Badges:**
 ```css
-:root {
-  /* Grupos Musculares */
-  --cor-peito: #F87171;
-  --cor-costas: #60A5FA;  
-  --cor-pernas: #34D399;
-  --cor-ombros: #FBBF24;
-  --cor-biceps: #A78BFA;
-  --cor-triceps: #F472B6;
-  --cor-abdomen: #F59E42;
-  
-  /* Dificuldades */
-  --cor-baixa: #22C55E;
-  --cor-media: #EAB308;
-  --cor-alta: #EF4444;
-  
-  /* Status */
-  --cor-personalizado: #A855F7;
-  --cor-ativo: #22C55E;
-  --cor-inativo: #6B7280;
-}
+/* Grupos Musculares */
+.badge-peito { @apply bg-red-100 text-red-800; }
+.badge-costas { @apply bg-blue-100 text-blue-800; }
+.badge-pernas { @apply bg-green-100 text-green-800; }
+.badge-ombros { @apply bg-yellow-100 text-yellow-800; }
+
+/* Status de Rotina */
+.badge-ativa { @apply bg-green-100 text-green-800; }
+.badge-aguardando { @apply bg-yellow-100 text-yellow-800; }
+.badge-bloqueada { @apply bg-red-100 text-red-800; }
+.badge-concluida { @apply bg-gray-100 text-gray-800; }
+
+/* Status de Sessão */
+.badge-nao-iniciada { @apply bg-blue-100 text-blue-800; }
+.badge-em-andamento { @apply bg-green-100 text-green-800; }
+.badge-pausada { @apply bg-yellow-100 text-yellow-800; }
+.badge-concluida-sessao { @apply bg-gray-100 text-gray-800; }
+
+/* Dificuldades */
+.badge-baixa { @apply bg-green-100 text-green-800; }
+.badge-media { @apply bg-yellow-100 text-yellow-800; }
+.badge-alta { @apply bg-red-100 text-red-800; }
+
+/* Objetivos */
+.badge-emagrecimento { @apply bg-orange-100 text-orange-800; }
+.badge-ganho-massa { @apply bg-blue-100 text-blue-800; }
+.badge-definicao { @apply bg-purple-100 text-purple-800; }
+.badge-condicionamento { @apply bg-green-100 text-green-800; }
+.badge-reabilitacao { @apply bg-yellow-100 text-yellow-800; }
+.badge-performance { @apply bg-indigo-100 text-indigo-800; }
 ```
 
 ---
 
-## 📱 **Padrões de Interface**
+## 🔧 **PADRÕES TÉCNICOS**
 
-### **🏷️ Badges/Etiquetas:**
+### **Nomenclatura:**
+- **Banco de dados**: `snake_case` (`grupo_muscular`, `data_inicio`)
+- **TypeScript**: `camelCase` (`grupoMuscular`, `dataInicio`)
+- **Componentes**: `PascalCase` (`RotinaConfiguracao`)
+- **Constantes**: `UPPER_CASE` (`STATUS_ROTINA`)
+
+### **Estrutura SessionStorage:**
 ```typescript
-interface BadgeConfig {
-  backgroundColor: string;
-  color: 'white' | 'black';
-  size: 'xs' | 'sm' | 'md';
-}
-
-// Aplicação padrão:
-// - Grupo Muscular: Cor específica + texto branco
-// - Equipamento: Cor específica + texto variável  
-// - Dificuldade: Cor específica + texto branco
-// - Tipo: Roxo + texto branco
-```
-
-### **🎛️ Filtros:**
-```typescript
-interface FiltrosPadrao {
-  grupoMuscular: string; // 'todos' | GRUPOS_MUSCULARES
-  equipamento: string;   // 'todos' | EQUIPAMENTOS  
-  dificuldade: string;   // 'todos' | DIFICULDADES
-}
-
-const FILTROS_INICIAIS = {
-  grupoMuscular: 'todos',
-  equipamento: 'todos', 
-  dificuldade: 'todos'
-};
-```
-
-### **🃏 Cards de Exercício:**
-```typescript
-interface CardLayout {
-  hover: 'shadow-md transition-shadow';
-  spacing: 'p-4';
-  grid: {
-    mobile: '1 coluna',
-    tablet: '2 colunas', 
-    desktop: '3 colunas'
-  };
-  badges: {
-    gap: '2px',
-    size: 'text-xs',
-    order: ['grupo', 'equipamento', 'dificuldade', 'tipo']
-  };
+interface RotinaStorage {
+  alunoId: string;
+  etapaAtual: 'configuracao' | 'treinos' | 'exercicios' | 'revisao';
+  configuracao?: ConfiguracaoRotina;
+  treinos?: TreinoTemp[];
+  exercicios?: ExerciciosPorTreino;
 }
 ```
 
----
-
-## 🧭 **Rotas do Sistema**
-
-### **Estrutura de Navegação:**
+### **Rotas de Rotina:**
 ```typescript
-const ROTAS_EXERCICIOS = {
-  LISTAGEM: '/exercicios-pt',
-  NOVO: '/exercicios-pt/novo',
-  DETALHES: '/exercicios-pt/detalhes/:id',
-  EDITAR: '/exercicios-pt/editar/:id', 
-  COPIA: '/exercicios-pt/copia/:id'
+const ROTAS_ROTINA = {
+  CONFIGURACAO: '/rotinas-criar/:alunoId/configuracao',
+  TREINOS: '/rotinas-criar/:alunoId/treinos',
+  EXERCICIOS: '/rotinas-criar/:alunoId/exercicios',
+  REVISAO: '/rotinas-criar/:alunoId/revisao'
 };
-```
 
-### **Permissões por Rota:**
-- **Listagem**: Todos os PTs autenticados
-- **Novo**: PTs com limite disponível  
-- **Detalhes**: Todos (padrão + próprios personalizados)
-- **Editar**: Apenas exercícios personalizados próprios
-- **Copia**: PTs com limite disponível
-
----
-
-## 🔧 **Configurações Técnicas**
-
-### **Validações de Arquivo:**
-```typescript
-const VALIDACOES_MIDIA = {
-  IMAGEM: {
-    formatos: ['jpg', 'jpeg', 'png', 'webp'],
-    tamanho_max: '5MB',
-    otimizacao: 'webp automático'
-  },
-  VIDEO: {
-    formatos: ['mp4', 'webm'],
-    tamanho_max: '20MB', 
-    duracao_max: '30 segundos'
-  },
-  YOUTUBE: {
-    formato: 'URL válida do YouTube',
-    validacao: 'RegEx ou API'
-  }
-};
-```
-
-### **Limites por Plano:**
-```typescript
-const LIMITES_PLANOS = {
-  GRATUITO: {
-    exercicios: 10,
-    alunos: 3
-  },
-  BASICO: {
-    exercicios: 50,
-    alunos: 15  
-  },
-  PREMIUM: {
-    exercicios: 200,
-    alunos: 50
-  },
-  PROFISSIONAL: {
-    exercicios: 'ilimitado',
-    alunos: 'ilimitado'
-  }
+const ROTAS_EXECUCAO = {
+  SELECIONAR: '/execucao-rotina/selecionar-treino/:rotinaId',
+  EXECUTAR: '/execucao-rotina/executar-treino/:sessaoId'
 };
 ```
 
 ---
 
-## 📝 **Boas Práticas**
+## 📋 **TABELAS SUPABASE**
 
-### **✅ Nomenclatura:**
-- **Campos DB**: snake_case (`grupo_muscular`)
-- **Props React**: camelCase (`grupoMuscular`) 
-- **Classes CSS**: kebab-case (`grupo-muscular`)
-- **Constantes**: UPPER_CASE (`GRUPOS_MUSCULARES`)
+### **Estrutura Principal:**
+```sql
+-- Fluxo de criação de rotina:
+rotinas → treinos → exercicios_rotina → series → execucoes_sessao
 
-### **✅ Validação de Dados:**
-- Sempre validar entrada do usuário
-- Usar valores exatos da constante (não hardcode)
-- Fallback para valores padrão quando null/undefined
-- Logs detalhados para debug em desenvolvimento
+-- Geração automática de sessões:
+-- Para rotina de X semanas e Y treinos/semana = X*Y sessões
+```
 
-### **✅ Componentes:**
-- Props tipadas com TypeScript
-- Estados controlados para formulários  
-- Loading states para operações assíncronas
-- Error boundaries para captura de erros
-
-### **✅ Performance:**
-- Lazy loading para componentes pesados
-- Memoização de cálculos complexos
-- Otimização de imagens automática
-- Debounce em campos de busca
+### **Campos Obrigatórios:**
+- **rotinas**: `nome`, `objetivo`, `aluno_id`, `personal_trainer_id`, `status`
+- **treinos**: `rotina_id`, `nome`, `grupos_musculares`, `ordem`
+- **execucoes_sessao**: `rotina_id`, `treino_id`, `sessao_numero`, `status`
 
 ---
 
-## 🔄 **Versionamento**
+## 🎯 **REGRAS DE NEGÓCIO**
 
-**Versão**: 1.0.0  
-**Última atualização**: Janeiro 2025  
-**Próxima revisão**: Conforme necessidade do projeto
+### **Fluxo de Status de Rotina:**
+2. **Ativação**: Rotina criada com status "Ativa"
+3. **Bloqueio**: Aluno atrasa mensalidade → PT muda para "Bloqueada"
+4. **Reativação**: Aluno paga → PT reativa para "Ativa"
+5. **Conclusão**: Todas as sessões executadas → sistema muda para "Concluída"
+
+### **Validações:**
+- ✅ Pelo menos 1 exercício por treino
+- ✅ Pelo menos 1 série por exercício
+- ✅ Data de início não pode ser no passado
+- ✅ Peso corporal não permite edição de carga
+- ✅ Rotina deve estar "Ativa" para execução
+
+### **Comportamentos:**
+- ✅ Sessões criadas automaticamente independente do status
+- ✅ Treinos em ciclo (A → B → C → A...)
+- ✅ Storage limpo após sucesso
+- ✅ Navegação bloqueada se dados incompletos
 
 ---
 
-**📌 Nota**: Este documento deve ser atualizado sempre que novos padrões forem definidos ou modificados. Manter consistência entre código e documentação é essencial para a manutenibilidade do projeto.
+## 🔄 **MENU DE OPÇÕES POR STATUS**
+
+### **Menu Adaptativo (3 pontinhos):**
+```typescript
+
+// Status "Ativa":
+['Detalhes', 'Treinar', 'Bloquear', 'Excluir']
+
+// Status "Bloqueada":  
+['Detalhes', 'Reativar', 'Excluir']
+
+// Status "Concluída":
+['Ver Informações'] // Modal informativa apenas
+```
+
+---
+
+*Versão: 3.0 | Última atualização: 30/07/2025*

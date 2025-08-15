@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Camera, X, Save } from 'lucide-react';
+import { ArrowLeft, Camera, X, Save, ChevronLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -78,6 +78,25 @@ const AlunosAvaliacaoNova = () => {
   const [avaliacoes, setAvaliacoes] = useState<AvaliacaoFisica[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Limpeza de storage ao sair da página (voltar do navegador ou fechar aba)
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      localStorage.removeItem('novaAvaliacaoForm');
+      localStorage.removeItem('novaAvaliacaoImagens');
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+
+  // Função para limpar storage e navegar para lista de avaliações do aluno
+  const handleCancelar = () => {
+    localStorage.removeItem('novaAvaliacaoForm');
+    localStorage.removeItem('novaAvaliacaoImagens');
+    navigate(`/alunos-avaliacoes/${id}`);
+  };
   
   // Estados do aviso de intervalo
   const [showIntervalWarning, setShowIntervalWarning] = useState(false);
@@ -379,13 +398,7 @@ const AlunosAvaliacaoNova = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate(`/alunos-avaliacoes/${id}`)}
-            className="h-10 w-10 p-0"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+          {/* Voltar removido do header */}
           <div>
             <h1 className="text-3xl font-bold">Nova Avaliação</h1>
             <p className="text-muted-foreground">Carregando...</p>
@@ -399,13 +412,7 @@ const AlunosAvaliacaoNova = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate('/alunos')}
-            className="h-10 w-10 p-0"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+          {/* Voltar removido do header */}
           <h1 className="text-3xl font-bold">Nova Avaliação</h1>
         </div>
         <Card>
@@ -421,8 +428,8 @@ const AlunosAvaliacaoNova = () => {
     <div className="space-y-6">
       {/* Cabeçalho */}
       <div className="flex items-center gap-4">
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           onClick={() => navigate(`/alunos-avaliacoes/${id}`)}
           className="h-10 w-10 p-0"
         >
@@ -580,7 +587,7 @@ const AlunosAvaliacaoNova = () => {
               <h4 className="font-medium mb-3">Membros Superiores</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
-                  <Label htmlFor="braco_direito">Braço Direito</Label>
+                  <Label htmlFor="braco_direito">Braço Direito (cm)</Label>
                   <Input
                     id="braco_direito"
                     type="number"
@@ -589,7 +596,7 @@ const AlunosAvaliacaoNova = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="braco_esquerdo">Braço Esquerdo</Label>
+                  <Label htmlFor="braco_esquerdo">Braço Esquerdo (cm)</Label>
                   <Input
                     id="braco_esquerdo"
                     type="number"
@@ -598,7 +605,7 @@ const AlunosAvaliacaoNova = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="antebraco_direito">Antebraço Direito</Label>
+                  <Label htmlFor="antebraco_direito">Antebraço Direito (cm)</Label>
                   <Input
                     id="antebraco_direito"
                     type="number"
@@ -607,7 +614,7 @@ const AlunosAvaliacaoNova = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="antebraco_esquerdo">Antebraço Esquerdo</Label>
+                  <Label htmlFor="antebraco_esquerdo">Antebraço Esquerdo (cm)</Label>
                   <Input
                     id="antebraco_esquerdo"
                     type="number"
@@ -623,7 +630,7 @@ const AlunosAvaliacaoNova = () => {
               <h4 className="font-medium mb-3">Membros Inferiores</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
-                  <Label htmlFor="coxa_direita">Coxa Direita</Label>
+                  <Label htmlFor="coxa_direita">Coxa Direita (cm)</Label>
                   <Input
                     id="coxa_direita"
                     type="number"
@@ -632,7 +639,7 @@ const AlunosAvaliacaoNova = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="coxa_esquerda">Coxa Esquerda</Label>
+                  <Label htmlFor="coxa_esquerda">Coxa Esquerda (cm)</Label>
                   <Input
                     id="coxa_esquerda"
                     type="number"
@@ -641,7 +648,7 @@ const AlunosAvaliacaoNova = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="panturrilha_direita">Panturrilha Direita</Label>
+                  <Label htmlFor="panturrilha_direita">Panturrilha Direita (cm)</Label>
                   <Input
                     id="panturrilha_direita"
                     type="number"
@@ -650,7 +657,7 @@ const AlunosAvaliacaoNova = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="panturrilha_esquerda">Panturrilha Esquerda</Label>
+                  <Label htmlFor="panturrilha_esquerda">Panturrilha Esquerda (cm)</Label>
                   <Input
                     id="panturrilha_esquerda"
                     type="number"
@@ -677,27 +684,29 @@ const AlunosAvaliacaoNova = () => {
           </CardContent>
         </Card>
 
-        {/* Botões de Ação */}
-        <div className="flex justify-end gap-4">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={() => navigate(`/alunos-avaliacoes/${id}`)}
-            disabled={saving}
-          >
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={saving}>
-            {saving ? (
-              <>Salvando...</>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Salvar Avaliação
-              </>
-            )}
-          </Button>
-        </div>
+      {/* Botões de Ação */}
+      <div className="flex justify-end gap-2 pt-6">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleCancelar}
+          disabled={saving}
+          className="flex items-center"
+        >
+          <X className="h-4 w-4 mr-2" />
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={saving} className="bg-green-600 hover:bg-green-700 text-white px-8 flex items-center">
+          {saving ? (
+            <>Salvando...</>
+          ) : (
+            <>
+              <Save className="h-4 w-4 mr-2" />
+              Salvar Avaliação
+            </>
+          )}
+        </Button>
+      </div>
       </form>
 
       {/* Modal de Aviso de Intervalo */}

@@ -31,9 +31,9 @@ const PTLayout = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background">
       <PTSidebar />
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-6 pl-72">
         <Outlet />
       </main>
     </div>

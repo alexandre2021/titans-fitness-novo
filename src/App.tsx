@@ -43,9 +43,18 @@ import ConfiguracoesPT from "./pages/ConfiguracoesPT";
 import DetalhesAluno from "./pages/DetalhesAluno";
 import AlunosParQ from "./pages/AlunosParQ";
 import AlunosAvaliacoes from "./pages/AlunosAvaliacoes";
-import AlunosRotinas from "./pages/AlunosRotinas";
 import AlunosAvaliacaoNova from "./pages/AlunosAvaliacaoNova";
 import AlunosAvaliacaoDetalhes from "./pages/AlunosAvaliacaoDetalhes";
+import AlunosRotinas from "./pages/AlunosRotinas";
+import AlunosRotinaDetalhes from "./pages/AlunosRotinaDetalhes";
+import RotinaConfiguracao from "./pages/RotinaConfiguracao";
+import RotinaTreinos from "./pages/RotinaTreinos";
+import RotinaExercicios from "./pages/RotinaExercicios";
+import RotinaRevisao from "./pages/RotinaRevisao";
+
+// ✅ NOVAS IMPORTAÇÕES PARA EXECUÇÃO
+import ExecucaoSelecionarTreino from "./pages/ExecucaoSelecionarTreino";
+import ExecucaoExecutarTreino from "./pages/ExecucaoExecutarTreino";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +75,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/termos" element={<Termos />} />
               <Route path="/privacidade" element={<Privacidade />} />
+              
               {/* Personal Trainer Routes */}
               <Route path="/index-pt" element={<PTLayout />}>
                 <Route index element={<IndexPT />} />
@@ -91,6 +101,29 @@ const App = () => (
               <Route path="/exercicios-pt/detalhes/:id" element={<PTLayout />}>
                 <Route index element={<DetalhesExercicio />} />
               </Route>
+
+              {/* Rotinas - Criador */}
+              <Route path="/rotinas-criar/:alunoId/configuracao" element={<PTLayout />}>
+                <Route index element={<RotinaConfiguracao />} />
+              </Route>
+              <Route path="/rotinas-criar/:alunoId/treinos" element={<PTLayout />}>
+                <Route index element={<RotinaTreinos />} />
+              </Route>
+              <Route path="/rotinas-criar/:alunoId/exercicios" element={<PTLayout />}>
+                <Route index element={<RotinaExercicios />} />
+              </Route>
+              <Route path="/rotinas-criar/:alunoId/revisao" element={<PTLayout />}>
+                <Route index element={<RotinaRevisao />} />
+              </Route>
+
+              {/* ✅ EXECUÇÃO DE ROTINAS - NOVAS ROTAS */}
+              <Route path="/execucao-rotina/selecionar-treino/:rotinaId" element={<PTLayout />}>
+                <Route index element={<ExecucaoSelecionarTreino />} />
+              </Route>
+              <Route path="/execucao-rotina/executar-treino/:sessaoId" element={<PTLayout />}>
+                <Route index element={<ExecucaoExecutarTreino />} />
+              </Route>
+
               <Route path="/agenda-pt" element={<PTLayout />}>
                 <Route index element={<AgendaPT />} />
               </Route>
@@ -120,6 +153,9 @@ const App = () => (
               </Route>
               <Route path="/alunos-rotinas/:id" element={<PTLayout />}>
                 <Route index element={<AlunosRotinas />} />
+              </Route>
+              <Route path="/alunos-rotinas/:id/:rotinaId" element={<PTLayout />}>
+                <Route index element={<AlunosRotinaDetalhes />} />
               </Route>
               
               {/* Aluno Routes */}

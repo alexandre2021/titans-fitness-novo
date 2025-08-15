@@ -1,13 +1,12 @@
 // pages/DetalhesExercicio.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Eye, Copy, Edit, Image, Video, Youtube, ExternalLink } from "lucide-react";
+import { ArrowLeft, Eye, Copy, Edit, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Tables } from "@/integrations/supabase/types";
@@ -21,10 +20,158 @@ const DetalhesExercicio = () => {
   
   const [loading, setLoading] = useState(true);
   const [exercicio, setExercicio] = useState<Exercicio | null>(null);
+  const [nomeExercicioPadrao, setNomeExercicioPadrao] = useState<string>('');
+  
+  // Estados para URLs assinadas das mídias
+  const [signedUrls, setSignedUrls] = useState<{
+    imagem1?: string;
+    imagem2?: string;
+    video?: string;
+  }>({});
+  const [loadingImages, setLoadingImages] = useState(false);
 
   // Usuário real via contexto
   const { user } = useAuth();
   const profile = { limite_exercicios: 10 };
+
+  // ✅ NOVA FUNÇÃO: Obter URL para exercícios PERSONALIZADOS (Cloudflare)
+  const getSignedImageUrlPersonalizado = useCallback(async (filename: string): Promise<string> => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      if (!accessToken) {
+        throw new Error("Usuário não autenticado");
+      }
+      
+      const response = await fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/get-image-url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+          filename,
+          bucket_type: 'exercicios' // Cloudflare para personalizados
+        })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erro ao obter URL da imagem: ${response.status} - ${errorText}`);
+      }
+      
+      const result = await response.json();
+      
+      if (!result.success || !result.url) {
+        throw new Error('URL não retornada pelo servidor');
+      }
+      
+      return result.url;
+    } catch (error) {
+      console.error('Erro ao obter URL assinada (personalizado):', error);
+      throw error;
+    }
+  }, []);
+
+  // ✅ FUNÇÃO SIMPLIFICADA: Para exercícios PADRÃO (URLs já são públicas!)
+  const getPublicImageUrlPadrao = useCallback((imagePath: string): string => {
+    try {
+      console.log('🔍 Processando imagem padrão:', { imagePath });
+      
+      // Se a URL já é completa e válida, usar diretamente
+      if (imagePath.startsWith('https://')) {
+        console.log('✅ URL já completa:', imagePath);
+        return imagePath;
+      }
+      
+      // Se não, construir a URL pública
+      const publicUrl = supabase.storage
+        .from('exercicios-padrao')
+        .getPublicUrl(imagePath);
+      
+      console.log('✅ URL pública construída:', publicUrl.data.publicUrl);
+      return publicUrl.data.publicUrl;
+    } catch (error) {
+      console.error('Erro ao obter URL pública (padrão):', error);
+      throw error;
+    }
+  }, []);
+
+  // ✅ FUNÇÃO PRINCIPAL: Escolhe o método correto baseado no tipo
+  const getImageUrl = useCallback(async (imagePath: string, exercicio: Exercicio): Promise<string> => {
+    if (exercicio.tipo === 'personalizado') {
+      // Para exercícios personalizados: usar Cloudflare
+      let filename = imagePath;
+      if (filename.includes('/')) {
+        filename = filename.split('/').pop()?.split('?')[0] || filename;
+      }
+      return await getSignedImageUrlPersonalizado(filename);
+    } else {
+      // Para exercícios padrão: URLs já são públicas, não precisam de assinatura!
+      return getPublicImageUrlPadrao(imagePath);
+    }
+  }, [getSignedImageUrlPersonalizado, getPublicImageUrlPadrao]);
+
+  // ✅ FUNÇÃO ATUALIZADA: Carregar URLs com lógica condicional
+  const loadSignedUrls = useCallback(async (exercicio: Exercicio) => {
+    setLoadingImages(true);
+    setSignedUrls({});
+    
+    console.log('🔄 Carregando URLs para exercício:', {
+      tipo: exercicio.tipo,
+      grupoMuscular: exercicio.grupo_muscular,
+      imagem1: exercicio.imagem_1_url,
+      imagem2: exercicio.imagem_2_url,
+      video: exercicio.video_url
+    });
+    
+    try {
+      const urls: { imagem1?: string; imagem2?: string; video?: string } = {};
+      
+      // Carregar imagem 1 se existir
+      if (exercicio.imagem_1_url) {
+        try {
+          console.log('📸 Carregando imagem 1...');
+          const signedUrl = await getImageUrl(exercicio.imagem_1_url, exercicio);
+          urls.imagem1 = signedUrl;
+          console.log('✅ Imagem 1 carregada');
+        } catch (error) {
+          console.error('❌ Erro ao carregar imagem 1:', error);
+        }
+      }
+      
+      // Carregar imagem 2 se existir
+      if (exercicio.imagem_2_url) {
+        try {
+          console.log('📸 Carregando imagem 2...');
+          const signedUrl = await getImageUrl(exercicio.imagem_2_url, exercicio);
+          urls.imagem2 = signedUrl;
+          console.log('✅ Imagem 2 carregada');
+        } catch (error) {
+          console.error('❌ Erro ao carregar imagem 2:', error);
+        }
+      }
+      
+      // Carregar vídeo se existir
+      if (exercicio.video_url) {
+        try {
+          console.log('🎥 Carregando vídeo...');
+          const signedUrl = await getImageUrl(exercicio.video_url, exercicio);
+          urls.video = signedUrl;
+          console.log('✅ Vídeo carregado');
+        } catch (error) {
+          console.error('❌ Erro ao carregar vídeo:', error);
+        }
+      }
+      
+      setSignedUrls(urls);
+      console.log('🎉 Todas as URLs carregadas:', urls);
+    } catch (error) {
+      console.error('❌ Erro geral ao carregar URLs assinadas:', error);
+    } finally {
+      setLoadingImages(false);
+    }
+  }, [getImageUrl]);
 
   // Carregar exercício
   useEffect(() => {
@@ -51,6 +198,23 @@ const DetalhesExercicio = () => {
         }
 
         setExercicio(exercicio);
+        
+        // Se é exercício personalizado baseado em outro, buscar o nome do original
+        if (exercicio.tipo === 'personalizado' && exercicio.exercicio_padrao_id) {
+          const { data: exercicioPadrao } = await supabase
+            .from('exercicios')
+            .select('nome')
+            .eq('id', exercicio.exercicio_padrao_id)
+            .single();
+          
+          if (exercicioPadrao) {
+            setNomeExercicioPadrao(exercicioPadrao.nome);
+          }
+        }
+        
+        // ✅ Carregar URLs assinadas das mídias com nova lógica
+        await loadSignedUrls(exercicio);
+        
         console.log('✅ Exercício carregado:', exercicio);
         
       } catch (error) {
@@ -67,7 +231,7 @@ const DetalhesExercicio = () => {
     };
 
     fetchExercicio();
-  }, [id, user, navigate, toast]);
+  }, [id, user, navigate, toast, loadSignedUrls]);
 
   const handleCriarCopia = () => {
     if (!exercicio || !profile) return;
@@ -112,27 +276,9 @@ const DetalhesExercicio = () => {
     navigate(`/exercicios-pt/editar/${exercicio.id}`);
   };
 
-  const getDifficultyColor = (dificuldade: string | null) => {
-    switch (dificuldade?.toLowerCase()) {
-      case 'baixa':
-        return 'bg-green-100 text-green-800 border-green-300';
-      case 'média':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      case 'alta':
-        return 'bg-red-100 text-red-800 border-red-300';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-300';
-    }
-  };
-
-  const getTypeColor = (tipo: string | null) => {
-    switch (tipo) {
-      case 'padrao':
-        return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'personalizado':
-        return 'bg-purple-100 text-purple-800 border-purple-300';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-300';
+  const handleViewMedia = (url: string) => {
+    if (url) {
+      window.open(url, '_blank');
     }
   };
 
@@ -154,6 +300,7 @@ const DetalhesExercicio = () => {
         </div>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-lg text-muted-foreground">Carregando...</p>
           </div>
         </div>
@@ -194,6 +341,17 @@ const DetalhesExercicio = () => {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex-1">
+            {/* Badge acima do título para personalizado ou padrão */}
+            {exercicio.tipo === 'personalizado' && (
+              <span className="mb-1 inline-block text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">
+                Personalizado
+              </span>
+            )}
+            {exercicio.tipo === 'padrao' && (
+              <span className="mb-1 inline-block text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">
+                Padrão
+              </span>
+            )}
             <h1 className="text-3xl font-bold flex items-center gap-2">
               {exercicio.nome}
             </h1>
@@ -203,21 +361,7 @@ const DetalhesExercicio = () => {
           </div>
         </div>
 
-        {/* Ações */}
-        <div className="flex items-center gap-2">
-          {exercicio.tipo === 'padrao' && (
-            <Button onClick={handleCriarCopia} className="flex items-center gap-2">
-              <Copy className="h-4 w-4" />
-              Criar Cópia
-            </Button>
-          )}
-          {exercicio.tipo === 'personalizado' && exercicio.pt_id === user?.id && (
-            <Button onClick={handleEditar} className="flex items-center gap-2">
-              <Edit className="h-4 w-4" />
-              Editar
-            </Button>
-          )}
-        </div>
+        {/* Nenhuma ação no topo, visualização apenas */}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -241,49 +385,244 @@ const DetalhesExercicio = () => {
 
               <Separator />
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Grupo Muscular</Label>
-                  <p className="text-base font-medium">{exercicio.grupo_muscular}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Equipamento</Label>
-                  <p className="text-base font-medium">{exercicio.equipamento}</p>
-                </div>
-              </div>
+              {/* Removido: Grupo Muscular e Equipamento já exibidos na sessão Classificação */}
             </CardContent>
           </Card>
 
           {/* Instruções */}
           <Card>
             <CardHeader>
-              <CardTitle>Instruções de Execução</CardTitle>
+                <CardTitle>Instruções de execução</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="whitespace-pre-wrap text-base leading-relaxed">
-                {exercicio.instrucoes || 'Instruções não disponíveis'}
+                {exercicio.instrucoes && exercicio.instrucoes.includes('#')
+                  ? (
+                      <ol className="list-decimal pl-5">
+                        {exercicio.instrucoes.split('#').filter(Boolean).map((item, idx) => (
+                          <li key={idx}>{item.trim()}</li>
+                        ))}
+                      </ol>
+                    )
+                  : (exercicio.instrucoes || 'Instruções não disponíveis')
+                }
               </div>
+            </CardContent>
+          </Card>
+
+          {/* ✅ MÍDIAS COM DEBUG */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Mídias</CardTitle>
+              {/* Debug info */}
+              <div className="text-xs text-muted-foreground">
+                Tipo: {exercicio.tipo} | Grupo: {exercicio.grupo_muscular}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Primeira Imagem */}
+              {exercicio.imagem_1_url && (
+                <div>
+                  <Label className="text-sm font-medium">
+                    Primeira Imagem
+                  </Label>
+                  <div className="mt-2 space-y-3">
+                    <div className="relative inline-block">
+                      {loadingImages ? (
+                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
+                          <span className="text-sm text-muted-foreground">Carregando...</span>
+                        </div>
+                      ) : signedUrls.imagem1 ? (
+                        <img 
+                          src={signedUrls.imagem1} 
+                          alt="Primeira imagem do exercício" 
+                          className="w-40 h-40 object-cover rounded-lg border shadow-sm"
+                          onError={(e) => {
+                            console.error('Erro ao carregar imagem 1');
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
+                          <span className="text-sm text-muted-foreground">Erro ao carregar</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewMedia(signedUrls.imagem1 || exercicio.imagem_1_url!)}
+                        className="flex items-center gap-2"
+                        disabled={!signedUrls.imagem1}
+                      >
+                        <Eye className="h-4 w-4" />
+                        Visualizar
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Segunda Imagem */}
+              {exercicio.imagem_2_url && (
+                <div>
+                  <Label className="text-sm font-medium">
+                    Segunda Imagem
+                  </Label>
+                  <div className="mt-2 space-y-3">
+                    <div className="relative inline-block">
+                      {loadingImages ? (
+                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
+                          <span className="text-sm text-muted-foreground">Carregando...</span>
+                        </div>
+                      ) : signedUrls.imagem2 ? (
+                        <img 
+                          src={signedUrls.imagem2} 
+                          alt="Segunda imagem do exercício" 
+                          className="w-40 h-40 object-cover rounded-lg border shadow-sm"
+                          onError={(e) => {
+                            console.error('Erro ao carregar imagem 2');
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
+                          <span className="text-sm text-muted-foreground">Erro ao carregar</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewMedia(signedUrls.imagem2 || exercicio.imagem_2_url!)}
+                        className="flex items-center gap-2"
+                        disabled={!signedUrls.imagem2}
+                      >
+                        <Eye className="h-4 w-4" />
+                        Visualizar
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Vídeo */}
+              {exercicio.video_url && (
+                <div>
+                  <Label className="text-sm font-medium">
+                    Vídeo
+                  </Label>
+                  <div className="mt-2 space-y-3">
+                    <div className="relative inline-block">
+                      {loadingImages ? (
+                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
+                          <span className="text-sm text-muted-foreground">Carregando...</span>
+                        </div>
+                      ) : signedUrls.video ? (
+                        <video 
+                          src={signedUrls.video} 
+                          className="w-40 h-40 object-cover rounded-lg border shadow-sm"
+                          controls
+                          onError={(e) => {
+                            console.error('Erro ao carregar vídeo');
+                          }}
+                        />
+                      ) : (
+                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
+                          <span className="text-sm text-muted-foreground">Erro ao carregar</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewMedia(signedUrls.video || exercicio.video_url!)}
+                        className="flex items-center gap-2"
+                        disabled={!signedUrls.video}
+                      >
+                        <Eye className="h-4 w-4" />
+                        Assistir
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* YouTube */}
+              {exercicio.youtube_url && (
+                <div>
+                  <Label className="text-sm font-medium">URL do YouTube</Label>
+                  <div className="mt-2 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm text-green-600 flex items-center gap-1">
+                        ✅ URL do YouTube configurada
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewMedia(exercicio.youtube_url!)}
+                        className="flex items-center gap-2"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Ver no YouTube
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!exercicio.imagem_1_url && !exercicio.imagem_2_url && !exercicio.video_url && !exercicio.youtube_url && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Nenhuma mídia disponível para este exercício
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Tags e classificação */}
+          {/* Classificação */}
           <Card>
             <CardHeader>
               <CardTitle>Classificação</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                <Badge className={getDifficultyColor(exercicio.dificuldade)}>
-                  {exercicio.dificuldade || 'Não definida'}
-                </Badge>
-                {exercicio.tipo === 'padrao' && (
-                  <Badge className={getTypeColor(exercicio.tipo)}>
-                    Exercício Padrão
-                  </Badge>
-                )}
+            <CardContent className="space-y-3">
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Músculo primário</Label>
+                <p className="text-sm font-medium">{exercicio.grupo_muscular_primario}</p>
+              </div>
+
+              {Array.isArray(exercicio.grupos_musculares_secundarios)
+                ? exercicio.grupos_musculares_secundarios.length > 0 && (
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Músculo(s) secundário(s)</Label>
+                      <p className="text-sm font-medium">{exercicio.grupos_musculares_secundarios.join(', ')}</p>
+                    </div>
+                  )
+                : (typeof exercicio.grupos_musculares_secundarios === 'string' && exercicio.grupos_musculares_secundarios && (exercicio.grupos_musculares_secundarios as string).trim() !== '') && (
+                    <div>
+                      <Label className="text-sm font-medium text-muted-foreground">Músculo(s) secundário(s)</Label>
+                      <p className="text-sm font-medium">{exercicio.grupos_musculares_secundarios}</p>
+                    </div>
+                  )
+              }
+              
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Equipamento</Label>
+                <p className="text-sm font-medium">{exercicio.equipamento || 'Não especificado'}</p>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Dificuldade</Label>
+                <p className="text-sm font-medium">{exercicio.dificuldade || 'Não definida'}</p>
               </div>
 
               <Separator />
@@ -298,97 +637,20 @@ const DetalhesExercicio = () => {
                 
                 {exercicio.tipo === 'personalizado' && exercicio.exercicio_padrao_id && (
                   <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Baseado em</Label>
-                    <p className="text-sm">Exercício Padrão</p>
+                    <Label className="text-sm font-medium text-muted-foreground">Baseado no exercício</Label>
+                    <p className="text-sm">{nomeExercicioPadrao || 'Carregando...'}</p>
                   </div>
                 )}
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Mídias */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Mídias</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Imagens */}
-              {(exercicio.imagem_1_url || exercicio.imagem_2_url) && (
                 <div>
-                  <Label className="text-sm font-medium text-muted-foreground flex items-center gap-2 mb-2">
-                    <Image className="h-4 w-4" />
-                    Imagens
-                  </Label>
-                  <div className="space-y-2">
-                    {exercicio.imagem_1_url && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full justify-start"
-                        onClick={() => window.open(exercicio.imagem_1_url!, '_blank')}
-                      >
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        Ver Primeira Imagem
-                      </Button>
-                    )}
-                    {exercicio.imagem_2_url && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full justify-start"
-                        onClick={() => window.open(exercicio.imagem_2_url!, '_blank')}
-                      >
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        Ver Segunda Imagem
-                      </Button>
-                    )}
+                  <Label className="text-sm font-medium text-muted-foreground">Status</Label>
+                  <div className="mt-1">
+                    <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                      Ativo
+                    </span>
                   </div>
                 </div>
-              )}
-
-              {/* Vídeo */}
-              {exercicio.video_url && (
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground flex items-center gap-2 mb-2">
-                    <Video className="h-4 w-4" />
-                    Vídeo
-                  </Label>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full justify-start"
-                    onClick={() => window.open(exercicio.video_url!, '_blank')}
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Assistir Vídeo
-                  </Button>
-                </div>
-              )}
-
-              {/* YouTube */}
-              {exercicio.youtube_url && (
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground flex items-center gap-2 mb-2">
-                    <Youtube className="h-4 w-4" />
-                    YouTube
-                  </Label>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full justify-start"
-                    onClick={() => window.open(exercicio.youtube_url!, '_blank')}
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Ver no YouTube
-                  </Button>
-                </div>
-              )}
-
-              {!exercicio.imagem_1_url && !exercicio.imagem_2_url && !exercicio.video_url && !exercicio.youtube_url && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Nenhuma mídia disponível
-                </p>
-              )}
+              </div>
             </CardContent>
           </Card>
         </div>
