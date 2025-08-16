@@ -29,17 +29,16 @@ export const FiltrosExercicios: React.FC<FiltrosExerciciosProps> = ({
 
   // Grupos musculares reais da tabela
   const gruposMusculares = [
-    { value: 'todos', label: 'Todos os grupos' },
-    { value: 'Peito', label: 'Peito' },
-    { value: 'Costas', label: 'Costas' },
-    { value: 'Ombros', label: 'Ombros' },
-    { value: 'Bíceps', label: 'Bíceps' },
-    { value: 'Tríceps', label: 'Tríceps' },
-    { value: 'Abdômen', label: 'Abdômen' },
-    { value: 'Pernas', label: 'Pernas' },
-    { value: 'Glúteos', label: 'Glúteos' },
-    { value: 'Panturrilha', label: 'Panturrilha' },
-    { value: 'Trapézio', label: 'Trapézio' }
+  { value: 'todos', label: 'Todos os grupos' },
+  { value: 'Peito', label: 'Peito' },
+  { value: 'Costas', label: 'Costas' },
+  { value: 'Ombros', label: 'Ombros' },
+  { value: 'Bíceps', label: 'Bíceps' },
+  { value: 'Tríceps', label: 'Tríceps' },
+  { value: 'Abdômen', label: 'Abdômen' },
+  { value: 'Pernas', label: 'Pernas' },
+  { value: 'Glúteos', label: 'Glúteos' },
+  { value: 'Panturrilha', label: 'Panturrilha' }
   ];
 
   // Equipamentos reais da tabela

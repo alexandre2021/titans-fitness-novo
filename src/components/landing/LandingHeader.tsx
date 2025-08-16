@@ -13,7 +13,8 @@ const LandingHeader = () => {
               className="h-16"
             />
           </div>
-          
+
+          {/* Desktop nav */}
           <nav className="hidden md:flex items-center space-x-8">
             <a href="#funcionalidades" className="text-text-navigation hover:text-text-primary transition-colors">
               Funcionalidades
@@ -28,6 +29,13 @@ const LandingHeader = () => {
               <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground">
                 Cadastre-se
               </Button>
+            </Link>
+          </nav>
+
+          {/* Mobile nav: Login sempre visível no header */}
+          <nav className="flex md:hidden items-center gap-x-2">
+            <Link to="/login" className="text-text-navigation hover:text-text-primary transition-colors text-base font-medium">
+              Login
             </Link>
           </nav>
         </div>

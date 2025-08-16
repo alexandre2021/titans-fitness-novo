@@ -1,14 +1,10 @@
+// src/components/perfil/EditProfissionalModal.tsx
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { X } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -57,10 +53,17 @@ const ESPECIALIZACOES_OPTIONS = [
   "Crianças"
 ];
 
+interface ProfileData {
+  cref?: string;
+  anos_experiencia?: string;
+  bio?: string;
+  especializacoes?: string[];
+}
+
 interface EditProfissionalModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  profile: any;
+  profile: ProfileData | null;
   onSave: () => void;
 }
 
@@ -139,121 +142,113 @@ export const EditProfissionalModal = ({ open, onOpenChange, profile, onSave }: E
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Editar Informações Profissionais</DialogTitle>
-        </DialogHeader>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="cref"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>CREF</FormLabel>
+              <FormControl>
+                <Input placeholder="000000-G/SP" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="cref"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>CREF</FormLabel>
-                  <FormControl>
-                    <Input placeholder="000000-G/SP" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <FormField
+          control={form.control}
+          name="anos_experiencia"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Anos de Experiência</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="menos_1">Menos de 1 ano</SelectItem>
+                  <SelectItem value="1_2">1-2 anos</SelectItem>
+                  <SelectItem value="3_5">3-5 anos</SelectItem>
+                  <SelectItem value="6_10">6-10 anos</SelectItem>
+                  <SelectItem value="mais_10">Mais de 10 anos</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-            <FormField
-              control={form.control}
-              name="anos_experiencia"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Anos de Experiência</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="menos_1">Menos de 1 ano</SelectItem>
-                      <SelectItem value="1_2">1-2 anos</SelectItem>
-                      <SelectItem value="3_5">3-5 anos</SelectItem>
-                      <SelectItem value="6_10">6-10 anos</SelectItem>
-                      <SelectItem value="mais_10">Mais de 10 anos</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div>
-              <FormLabel>Especializações</FormLabel>
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <Select onValueChange={setNovaEspecializacao} value={novaEspecializacao}>
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Adicionar especialização" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ESPECIALIZACOES_OPTIONS.map((esp) => (
-                        <SelectItem key={esp} value={esp}>
-                          {esp}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button type="button" onClick={adicionarEspecializacao} variant="outline">
-                    Adicionar
-                  </Button>
-                </div>
-                
-                <div className="flex flex-wrap gap-2">
-                  {especializacoes.map((esp) => (
-                    <Badge key={esp} variant="secondary" className="flex items-center gap-1">
+        <div>
+          <FormLabel>Especializações</FormLabel>
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <Select onValueChange={setNovaEspecializacao} value={novaEspecializacao}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Adicionar especialização" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ESPECIALIZACOES_OPTIONS.map((esp) => (
+                    <SelectItem key={esp} value={esp}>
                       {esp}
-                      <X
-                        className="h-3 w-3 cursor-pointer"
-                        onClick={() => removerEspecializacao(esp)}
-                      />
-                    </Badge>
+                    </SelectItem>
                   ))}
-                </div>
-              </div>
-            </div>
-
-            <FormField
-              control={form.control}
-              name="bio"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Biografia</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Conte um pouco sobre sua experiência e metodologia..."
-                      rows={4}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="flex justify-end space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? "Salvando..." : "Salvar"}
+                </SelectContent>
+              </Select>
+              <Button type="button" onClick={adicionarEspecializacao} variant="outline">
+                Adicionar
               </Button>
             </div>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+            
+            <div className="flex flex-wrap gap-2">
+              {especializacoes.map((esp) => (
+                <Badge key={esp} variant="secondary" className="flex items-center gap-1">
+                  {esp}
+                  <X
+                    className="h-3 w-3 cursor-pointer"
+                    onClick={() => removerEspecializacao(esp)}
+                  />
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <FormField
+          control={form.control}
+          name="bio"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Biografia</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Conte um pouco sobre sua experiência e metodologia..."
+                  rows={4}
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="flex justify-end space-x-2 pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? "Salvando..." : "Salvar"}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 };
