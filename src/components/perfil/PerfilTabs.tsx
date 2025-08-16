@@ -1,9 +1,23 @@
-import { useState } from "react";
+// src/components/perfil/PerfilTabs.tsx
+
+import { useState, useEffect } from "react";
 import { Edit } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { EditPessoalModal } from "./EditPessoalModal";
 import { EditProfissionalModal } from "./EditProfissionalModal";
 import { EditRedesSociaisModal } from "./EditRedesSociaisModal";
@@ -29,6 +43,61 @@ interface PerfilTabsProps {
   onProfileUpdate: () => void;
 }
 
+// Hook para detectar se é mobile
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  return isMobile;
+};
+
+// Componente responsivo que escolhe entre Modal e Drawer
+interface ResponsiveModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  children: React.ReactNode;
+}
+
+const ResponsiveModal = ({ open, onOpenChange, title, children }: ResponsiveModalProps) => {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent className="max-h-[90vh]">
+          <DrawerHeader className="text-left">
+            <DrawerTitle>{title}</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-4 overflow-y-auto">
+            {children}
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        {children}
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export const PerfilTabs = ({ profile, onProfileUpdate }: PerfilTabsProps) => {
   const [editPessoalOpen, setEditPessoalOpen] = useState(false);
   const [editProfissionalOpen, setEditProfissionalOpen] = useState(false);
@@ -41,19 +110,11 @@ export const PerfilTabs = ({ profile, onProfileUpdate }: PerfilTabsProps) => {
 
   return (
     <Tabs defaultValue="pessoal" className="space-y-6">
-      <TabsList className="bg-muted border border-border/30">
-        <TabsTrigger value="pessoal" className="data-[state=inactive]:bg-background/40 data-[state=inactive]:text-muted-foreground">
-          Pessoal
-        </TabsTrigger>
-        <TabsTrigger value="profissional" className="data-[state=inactive]:bg-background/40 data-[state=inactive]:text-muted-foreground">
-          Profissional
-        </TabsTrigger>
-        <TabsTrigger value="redes" className="data-[state=inactive]:bg-background/40 data-[state=inactive]:text-muted-foreground">
-          Redes Sociais
-        </TabsTrigger>
-        <TabsTrigger value="seguranca" className="data-[state=inactive]:bg-background/40 data-[state=inactive]:text-muted-foreground">
-          Segurança
-        </TabsTrigger>
+      <TabsList>
+        <TabsTrigger value="pessoal">Pessoal</TabsTrigger>
+        <TabsTrigger value="profissional">Profissional</TabsTrigger>
+        <TabsTrigger value="redes">Redes Sociais</TabsTrigger>
+        <TabsTrigger value="seguranca">Segurança</TabsTrigger>
       </TabsList>
 
       <TabsContent value="pessoal">
@@ -178,26 +239,45 @@ export const PerfilTabs = ({ profile, onProfileUpdate }: PerfilTabsProps) => {
         <PasswordChangeSection />
       </TabsContent>
 
-      <EditPessoalModal
+      {/* Modais Responsivos */}
+      <ResponsiveModal
         open={editPessoalOpen}
         onOpenChange={setEditPessoalOpen}
-        profile={profile}
-        onSave={onProfileUpdate}
-      />
+        title="Editar Informações Pessoais"
+      >
+        <EditPessoalModal
+          open={editPessoalOpen}
+          onOpenChange={setEditPessoalOpen}
+          profile={profile}
+          onSave={onProfileUpdate}
+        />
+      </ResponsiveModal>
 
-      <EditProfissionalModal
+      <ResponsiveModal
         open={editProfissionalOpen}
         onOpenChange={setEditProfissionalOpen}
-        profile={profile}
-        onSave={onProfileUpdate}
-      />
+        title="Editar Informações Profissionais"
+      >
+        <EditProfissionalModal
+          open={editProfissionalOpen}
+          onOpenChange={setEditProfissionalOpen}
+          profile={profile}
+          onSave={onProfileUpdate}
+        />
+      </ResponsiveModal>
 
-      <EditRedesSociaisModal
+      <ResponsiveModal
         open={editRedesOpen}
         onOpenChange={setEditRedesOpen}
-        profile={profile}
-        onSave={onProfileUpdate}
-      />
+        title="Editar Redes Sociais"
+      >
+        <EditRedesSociaisModal
+          open={editRedesOpen}
+          onOpenChange={setEditRedesOpen}
+          profile={profile}
+          onSave={onProfileUpdate}
+        />
+      </ResponsiveModal>
     </Tabs>
   );
 };
