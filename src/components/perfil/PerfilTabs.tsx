@@ -41,11 +41,19 @@ export const PerfilTabs = ({ profile, onProfileUpdate }: PerfilTabsProps) => {
 
   return (
     <Tabs defaultValue="pessoal" className="space-y-6">
-      <TabsList className="grid w-full grid-cols-4">
-        <TabsTrigger value="pessoal">Pessoal</TabsTrigger>
-        <TabsTrigger value="profissional">Profissional</TabsTrigger>
-        <TabsTrigger value="redes">Redes Sociais</TabsTrigger>
-        <TabsTrigger value="seguranca">Segurança</TabsTrigger>
+      <TabsList className="bg-muted border border-border/30">
+        <TabsTrigger value="pessoal" className="data-[state=inactive]:bg-background/40 data-[state=inactive]:text-muted-foreground">
+          Pessoal
+        </TabsTrigger>
+        <TabsTrigger value="profissional" className="data-[state=inactive]:bg-background/40 data-[state=inactive]:text-muted-foreground">
+          Profissional
+        </TabsTrigger>
+        <TabsTrigger value="redes" className="data-[state=inactive]:bg-background/40 data-[state=inactive]:text-muted-foreground">
+          Redes Sociais
+        </TabsTrigger>
+        <TabsTrigger value="seguranca" className="data-[state=inactive]:bg-background/40 data-[state=inactive]:text-muted-foreground">
+          Segurança
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="pessoal">

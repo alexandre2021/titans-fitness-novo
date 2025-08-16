@@ -38,7 +38,7 @@ const PerfilPT = () => {
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-2xl font-bold">Seu Perfil de Treinador</h1>
+          <h1 className="text-2xl font-normal">Perfil de treinador</h1>
         </div>
         <p className="text-muted-foreground">Erro ao carregar perfil.</p>
       </div>
@@ -55,7 +55,7 @@ const PerfilPT = () => {
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-2xl font-bold">Seu Perfil de Treinador</h1>
+  <h1 className="text-2xl font-normal">Perfil de treinador</h1>
       </div>
 
       <AvatarSection profile={profile} onProfileUpdate={handleProfileUpdate} />

@@ -176,25 +176,24 @@ export const AvatarSection = ({ profile, onProfileUpdate }: AvatarSectionProps) 
     const letter = profile.avatar_letter || profile.nome_completo?.charAt(0) || 'PT';
     
     return (
-      <AvatarFallback style={{ backgroundColor: profile.avatar_color, color: 'white' }}>
+      <AvatarFallback style={{ backgroundColor: profile.avatar_color, color: 'white', fontSize: '1.35rem', fontWeight: 400 }}>
         {letter}
       </AvatarFallback>
     );
   };
 
   return (
-    <Card className="p-6 text-center">
-      <div className="flex flex-col items-center space-y-4">
+    <Card className="p-4 text-center">
+      <div className="flex flex-col items-center space-y-3">
         <div className="relative">
-          <Avatar className="h-24 w-24">
+          <Avatar className="h-16 w-16">
             {getAvatarContent()}
           </Avatar>
-          
-          <div className="absolute -bottom-2 -right-2 flex space-x-1">
+          <div className="absolute -bottom-1 -right-1 flex space-x-1">
             <Dialog>
               <DialogTrigger asChild>
-                <Button size="sm" variant="outline" className="h-8 w-8 rounded-full p-0">
-                  <Camera className="h-4 w-4" />
+                <Button size="sm" variant="outline" className="h-6 w-6 rounded-full p-0">
+                  <Camera className="h-3 w-3" />
                 </Button>
               </DialogTrigger>
               <DialogContent>

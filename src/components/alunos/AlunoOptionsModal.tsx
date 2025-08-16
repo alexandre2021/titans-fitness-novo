@@ -28,18 +28,18 @@ export const AlunoOptionsModal = ({ alunoId, onExcluir }: AlunoOptionsModalProps
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuItem onClick={() => handleNavigation(`/detalhes-aluno/${alunoId}`)}>
-          <Eye className="h-4 w-4 mr-2" />
-          <div className="flex flex-col">
-            <span>Detalhes</span>
-            <span className="text-xs text-muted-foreground">Informações pessoais do aluno</span>
-          </div>
-        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => handleNavigation(`/alunos-rotinas/${alunoId}`)}>
           <Dumbbell className="h-4 w-4 mr-2" />
           <div className="flex flex-col">
             <span>Rotinas</span>
             <span className="text-xs text-muted-foreground">Rotinas de treino personalizadas</span>
+          </div>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleNavigation(`/detalhes-aluno/${alunoId}`)}>
+          <Eye className="h-4 w-4 mr-2" />
+          <div className="flex flex-col">
+            <span>Detalhes</span>
+            <span className="text-xs text-muted-foreground">Informações pessoais do aluno</span>
           </div>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => handleNavigation(`/alunos-parq/${alunoId}`)}>

@@ -159,34 +159,64 @@ const ExerciciosPT = () => {
   return (
     <div className="space-y-6">
       {/* Cabeçalho */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Exercícios</h1>
-          <p className="text-muted-foreground">
-            Gerencie seus exercícios padrão e personalizados
-          </p>
+      <div className="space-y-4">
+        {/* Mobile: Header compacto */}
+        <div className="flex items-center justify-between md:hidden">
+          <div>
+            <h1 className="text-2xl font-bold">Exercícios</h1>
+            <p className="text-sm text-muted-foreground">
+              Gerencie seus exercícios
+            </p>
+          </div>
+          {activeTab === "personalizados" && (
+            <Button 
+              onClick={handleNovoExercicio}
+              size="sm"
+              className="flex items-center gap-1 px-3"
+              disabled={!canAddMore}
+            >
+              {canAddMore ? (
+                <>
+                  <Plus className="h-4 w-4" />
+                  <span className="hidden xs:inline">Novo</span>
+                </>
+              ) : (
+                "Limite"
+              )}
+            </Button>
+          )}
         </div>
-        {activeTab === "personalizados" && (
-          <Button 
-            onClick={handleNovoExercicio} 
-            className="flex items-center gap-2"
-            disabled={!canAddMore}
-          >
-            {canAddMore ? (
-              <>
-                <Plus className="h-4 w-4" />
-                Novo Exercício
-              </>
-            ) : (
-              "Limite Atingido"
-            )}
-          </Button>
-        )}
+
+        {/* Desktop: Header tradicional */}
+        <div className="hidden md:flex md:items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Exercícios</h1>
+            <p className="text-muted-foreground">
+              Gerencie seus exercícios padrão e personalizados
+            </p>
+          </div>
+          {activeTab === "personalizados" && (
+            <Button 
+              onClick={handleNovoExercicio} 
+              className="flex items-center gap-2"
+              disabled={!canAddMore}
+            >
+              {canAddMore ? (
+                <>
+                  <Plus className="h-4 w-4" />
+                  Novo Exercício
+                </>
+              ) : (
+                "Limite Atingido"
+              )}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Abas */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "padrao" | "personalizados")}>
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList>
           <TabsTrigger value="padrao">
             Padrão ({exerciciosPadrao.length})
           </TabsTrigger>
@@ -195,38 +225,62 @@ const ExerciciosPT = () => {
           </TabsTrigger>
         </TabsList>
 
-        {/* Busca e Filtros */}
-        <div className="flex flex-col sm:flex-row gap-4 mt-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Buscar exercícios..."
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Button
-            variant="outline"
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2"
-          >
-            <Filter className="h-4 w-4" />
-            Filtros
-          </Button>
-        </div>
+        <TabsContent value="padrao" className="space-y-4 mt-4">
+          {/* Busca e Filtros - Mobile optimized */}
+          <div className="space-y-4">
+            {/* Mobile: Busca + Filtros na mesma linha */}
+            <div className="flex gap-2 md:hidden">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Buscar exercícios..."
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-1 px-3 flex-shrink-0"
+              >
+                <Filter className="h-4 w-4" />
+                <span className="hidden xs:inline">Filtros</span>
+              </Button>
+            </div>
 
-        {/* Filtros expandidos */}
-        {showFilters && (
-          <div className="mt-2">
-            <FiltrosExercicios 
-              filtros={filtros}
-              onFiltrosChange={setFiltros}
-            />
+            {/* Desktop: Layout tradicional */}
+            <div className="hidden md:flex gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Buscar exercícios..."
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2"
+              >
+                <Filter className="h-4 w-4" />
+                Filtros
+              </Button>
+            </div>
           </div>
-        )}
 
-        <TabsContent value="padrao" className="space-y-4">
+          {/* Filtros expandidos */}
+          {showFilters && (
+            <div className="p-4 border rounded-lg bg-muted/30">
+              <FiltrosExercicios 
+                filtros={filtros}
+                onFiltrosChange={setFiltros}
+              />
+            </div>
+          )}
           {/* Estatísticas */}
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span>{exerciciosFiltrados.length} exercício(s) encontrado(s)</span>
@@ -258,7 +312,7 @@ const ExerciciosPT = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
               {exerciciosFiltrados.map((exercicio) => (
                 <ExercicioCard
                   key={exercicio.id}
@@ -270,7 +324,62 @@ const ExerciciosPT = () => {
           )}
         </TabsContent>
 
-        <TabsContent value="personalizados" className="space-y-4">
+        <TabsContent value="personalizados" className="space-y-4 mt-4">
+          {/* Busca e Filtros - Mobile optimized */}
+          <div className="space-y-4">
+            {/* Mobile: Busca + Filtros na mesma linha */}
+            <div className="flex gap-2 md:hidden">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Buscar exercícios..."
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-1 px-3 flex-shrink-0"
+              >
+                <Filter className="h-4 w-4" />
+                <span className="hidden xs:inline">Filtros</span>
+              </Button>
+            </div>
+
+            {/* Desktop: Layout tradicional */}
+            <div className="hidden md:flex gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Buscar exercícios..."
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2"
+              >
+                <Filter className="h-4 w-4" />
+                Filtros
+              </Button>
+            </div>
+          </div>
+
+          {/* Filtros expandidos */}
+          {showFilters && (
+            <div className="p-4 border rounded-lg bg-muted/30">
+              <FiltrosExercicios 
+                filtros={filtros}
+                onFiltrosChange={setFiltros}
+              />
+            </div>
+          )}
           {exerciciosPersonalizados.length === 0 && busca === '' && filtros.grupoMuscular === 'todos' ? (
             // Estado vazio - nenhum exercício personalizado
             <Card className="border-dashed">
@@ -322,7 +431,7 @@ const ExerciciosPT = () => {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                   {exerciciosFiltrados.map((exercicio) => (
                     <ExercicioCard
                       key={exercicio.id}

@@ -9,24 +9,14 @@ const PTBottomNav = () => {
       icon: Home,
     },
     {
-      title: "Exercícios",
-      href: "/exercicios-pt",
-      icon: Dumbbell,
-    },
-    {
       title: "Alunos",
       href: "/alunos",
       icon: Users,
     },
     {
-      title: "Agenda",
-      href: "/agenda-pt",
-      icon: CalendarDays,
-    },
-    {
-      title: "Mensagens",
-      href: "/mensagens-pt",
-      icon: MessageCircle,
+      title: "Exercícios",
+      href: "/exercicios-pt",
+      icon: Dumbbell,
     },
   ];
 
@@ -46,7 +36,7 @@ const PTBottomNav = () => {
             }
           >
             <item.icon className="h-5 w-5" />
-            <span className="text-xs mt-1">{item.title}</span>
+            <span className="text-sm mt-1">{item.title}</span>
           </NavLink>
         ))}
       </nav>

@@ -51,17 +51,39 @@ const AlunosPT = () => {
   return (
     <div className="space-y-6">
       {/* Cabeçalho */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Alunos</h1>
-          <p className="text-muted-foreground">
-            Gerencie seus alunos e acompanhe seu progresso
-          </p>
+      <div className="space-y-4">
+        {/* Mobile: Header compacto */}
+        <div className="flex items-center justify-between md:hidden">
+          <div>
+            <h1 className="text-2xl font-bold">Alunos</h1>
+            <p className="text-sm text-muted-foreground">
+              Gerencie seus alunos
+            </p>
+          </div>
+          {/* Botão compacto mobile */}
+          <Button 
+            onClick={handleConvidarAluno} 
+            size="sm"
+            className="flex items-center gap-1 px-3"
+          >
+            <UserPlus className="h-4 w-4" />
+            <span className="hidden xs:inline">Convidar</span>
+          </Button>
         </div>
-        <Button onClick={handleConvidarAluno} className="flex items-center gap-2">
-          <UserPlus className="h-4 w-4" />
-          Convidar Aluno
-        </Button>
+
+        {/* Desktop: Header tradicional */}
+        <div className="hidden md:flex md:items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Alunos</h1>
+            <p className="text-muted-foreground">
+              Gerencie seus alunos e acompanhe seu progresso
+            </p>
+          </div>
+          <Button onClick={handleConvidarAluno} className="flex items-center gap-2">
+            <UserPlus className="h-4 w-4" />
+            Convidar Aluno
+          </Button>
+        </div>
       </div>
 
       {alunos.length === 0 && filtros.busca === '' && filtros.situacao === 'todos' && filtros.genero === 'todos' ? (

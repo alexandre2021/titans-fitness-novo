@@ -93,11 +93,15 @@ export const PasswordChangeSection = () => {
 
       form.reset();
       setIsOpen(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      let errorMessage = 'Erro ao alterar senha. Tente novamente.';
+      if (error && typeof error === 'object' && 'message' in error) {
+        errorMessage = (error as { message?: string }).message || errorMessage;
+      }
       console.error('Error changing password:', error);
       toast({
         title: "Erro",
-        description: error.message || "Erro ao alterar senha. Tente novamente.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -107,8 +111,10 @@ export const PasswordChangeSection = () => {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Segurança</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div className="flex items-center w-full gap-x-4">
+          <h2 className="text-lg font-semibold flex-1 whitespace-normal">Segurança</h2>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">

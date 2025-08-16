@@ -53,7 +53,7 @@ const PTMobileHeader = () => {
     const color = profile?.avatar_color || '#3B82F6';
     
     return (
-      <AvatarFallback style={{ backgroundColor: color, color: 'white' }}>
+      <AvatarFallback style={{ backgroundColor: color, color: 'white', fontSize: '1rem', fontWeight: 400 }}>
         {letter}
       </AvatarFallback>
     );
@@ -62,11 +62,10 @@ const PTMobileHeader = () => {
   return (
     <header className="flex items-center justify-between p-4 border-b bg-background md:hidden">
       <h1 className="text-lg font-semibold">{getPageTitle()}</h1>
-      
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-8 w-8 rounded-full">
-            <Avatar className="h-8 w-8">
+          <Button variant="ghost" size="sm" className="h-12 w-12 rounded-full">
+            <Avatar className="h-12 w-12">
               {getAvatarContent()}
             </Avatar>
           </Button>
