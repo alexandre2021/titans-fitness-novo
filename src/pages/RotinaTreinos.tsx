@@ -29,14 +29,14 @@ const GRUPOS_MUSCULARES = [
 // Cores para badges dos grupos musculares
 const CORES_GRUPOS_MUSCULARES: {[key: string]: string} = {
   'Peito': 'bg-red-100 text-red-800',
-  'Costas': 'bg-blue-100 text-blue-800',
-  'Pernas': 'bg-green-100 text-green-800',
+  'Costas': 'bg-blue-100 text-blue-800', 
+  'Pernas': 'bg-green-100 text-green-800',        // Verde (mantém)
   'Ombros': 'bg-yellow-100 text-yellow-800',
   'Bíceps': 'bg-purple-100 text-purple-800',
   'Tríceps': 'bg-pink-100 text-pink-800',
   'Abdômen': 'bg-orange-100 text-orange-800',
-  'Glúteos': 'bg-green-100 text-green-800',
-  'Panturrilha': 'bg-green-100 text-green-800'
+  'Glúteos': 'bg-violet-100 text-violet-800',     // Roxo/violeta - bem diferente
+  'Panturrilha': 'bg-indigo-100 text-indigo-800'  // Azul índigo - bem distinto
 };
 
 const RotinaTreinos = () => {
@@ -57,9 +57,10 @@ const RotinaTreinos = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [rotinaStorage]);
 
-  // Verificar se tem configuração salva (hook sempre no topo)
+  // 🔧 CORRIGIDO: Sempre usar treinos do storage (criados na configuração)
   useEffect(() => {
     if (!rotinaStorage.isLoaded) return;
+    
     if (!rotinaStorage.storage.configuracao) {
       toast({
         title: "Configuração não encontrada",
@@ -69,15 +70,23 @@ const RotinaTreinos = () => {
       navigate(`/rotinas-criar/${alunoId}/configuracao`);
       return;
     }
-    const treinosSalvos = rotinaStorage.storage.treinos;
-    if (treinosSalvos && treinosSalvos.length > 0) {
-      setTreinos(treinosSalvos);
+
+    const treinosDoStorage = rotinaStorage.storage.treinos;
+    
+    if (treinosDoStorage && treinosDoStorage.length > 0) {
+      // ✅ USAR treinos do storage (já criados na configuração)
+      console.log('📋 Carregando treinos do storage:', treinosDoStorage);
+      setTreinos(treinosDoStorage);
     } else {
+      // ⚠️ FALLBACK: Se por algum motivo não há treinos no storage
+      console.warn('⚠️ Nenhum treino no storage, configuração pode ter falhado');
       const frequencia = rotinaStorage.storage.configuracao.treinos_por_semana;
       const treinosIniciais: TreinoTemp[] = [];
       const nomesTreinos = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+      
       for (let i = 0; i < frequencia; i++) {
         treinosIniciais.push({
+          id: `treino_${nomesTreinos[i].toLowerCase()}_fallback_${Date.now()}_${i}`,
           nome: `Treino ${nomesTreinos[i]}`,
           grupos_musculares: [],
           observacoes: '',
@@ -85,6 +94,8 @@ const RotinaTreinos = () => {
           tempo_estimado_minutos: 60
         });
       }
+      
+      console.log('🔄 Criando treinos fallback:', treinosIniciais);
       setTreinos(treinosIniciais);
     }
   }, [alunoId, navigate, toast, rotinaStorage.isLoaded, rotinaStorage.storage]);
@@ -152,6 +163,7 @@ const RotinaTreinos = () => {
     console.log('✅ Requisitos atendidos - prosseguindo');
     setSalvando(true);
     try {
+      // 🎯 IMPORTANTE: Usar salvarTreinos que tem limpeza inteligente
       await rotinaStorage.salvarTreinos(treinos);
       navigate(`/rotinas-criar/${alunoId}/exercicios`);
     } catch (error) {
@@ -176,7 +188,6 @@ const RotinaTreinos = () => {
   const handleVoltar = () => {
     navigate(`/rotinas-criar/${alunoId}/configuracao`);
   };
-
 
   // Função para scroll suave até o card de requisitos
   const handleScrollRequisitos = () => {
@@ -227,7 +238,7 @@ const RotinaTreinos = () => {
           const treinoCompleto = treino.nome && treino.nome.trim().length >= 2 && treino.grupos_musculares.length > 0;
           
           return (
-            <Card key={index} className={treinoCompleto ? "border-green-200" : "border-gray-200"}>
+            <Card key={treino.id || index} className={treinoCompleto ? "border-green-200" : "border-gray-200"}>
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center justify-between text-lg">
                   <div className="flex items-center">
@@ -331,8 +342,11 @@ const RotinaTreinos = () => {
         })}
       </div>
 
-      {/* Botões de navegação */}
-      <div className="flex justify-between pt-6">
+      {/* Espaçamento para botões fixos no mobile */}
+      <div className="pb-20 md:pb-6"></div>
+
+      {/* Botões de navegação - Desktop */}
+      <div className="hidden md:flex justify-between pt-6">
         <div>
           <Button variant="ghost" onClick={handleVoltar} disabled={salvando}>
             <ChevronLeft className="h-4 w-4 mr-2" />
@@ -361,6 +375,56 @@ const RotinaTreinos = () => {
                 </>
               )}
             </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Botões de navegação - Mobile (fixos no rodapé) */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 md:hidden z-50">
+        <div className="flex justify-between items-center max-w-md mx-auto">
+          {/* Esquerda: Voltar */}
+          <Button 
+            variant="ghost" 
+            onClick={handleVoltar} 
+            disabled={salvando}
+            size="sm"
+            className="px-3"
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Voltar
+          </Button>
+          
+          {/* Direita: Cancelar + Próximo */}
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleCancelar} 
+              disabled={salvando}
+              size="sm"
+              className="px-3"
+            >
+              <X className="h-4 w-4 mr-1" />
+              Cancelar
+            </Button>
+            <div onClick={treinosCompletos !== treinos.length ? handleScrollRequisitos : handleProximo}>
+              <Button 
+                disabled={salvando || treinosCompletos !== treinos.length}
+                size="sm"
+                className="px-3"
+              >
+                {salvando ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    Próximo
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </div>

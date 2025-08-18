@@ -1,17 +1,18 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,26 +41,31 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="border-b border-border">
-        <div className="container mx-auto px-6 py-4">
-          <Link to="/" className="flex items-center">
-            <img 
-              src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets//TitansFitnessLogo.png" 
-              alt="Titans.fitness" 
-              className="h-12"
-            />
-          </Link>
+      <header className="border-b border-border py-4">
+        <div className="flex items-center justify-center relative px-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(-1)}
+            className="h-10 w-10 p-0 absolute left-6"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <img
+            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal.png"
+            alt="Titans.fitness"
+            className="h-12"
+          />
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center px-6 py-12">
-        <Card className="w-full max-w-md border-border">
+      <main className="flex-1 flex justify-center px-6 pt-8 pb-6 md:pt-16 md:pb-12">
+        <Card className="w-full max-w-md border-border shadow-lg">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl text-text-primary">
               Faça login em sua conta
             </CardTitle>
-            <p className="text-text-secondary">
+            <p className="text-text-secondary text-sm">
               Digite suas credenciais para acessar a plataforma
             </p>
           </CardHeader>

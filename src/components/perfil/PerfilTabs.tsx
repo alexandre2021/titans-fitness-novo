@@ -60,6 +60,33 @@ const useIsMobile = () => {
   return isMobile;
 };
 
+// Botão de editar personalizado
+const EditButton = ({ onClick }: { onClick: () => void }) => {
+  const isMobile = useIsMobile();
+  
+  if (isMobile) {
+    return (
+      <button
+        onClick={onClick}
+        className="flex items-center justify-center w-10 h-10 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
+      >
+        <Edit className="h-6 w-6" />
+      </button>
+    );
+  }
+  
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={onClick}
+    >
+      <Edit className="h-4 w-4 mr-2" />
+      Editar
+    </Button>
+  );
+};
+
 // Componente responsivo que escolhe entre Modal e Drawer
 interface ResponsiveModalProps {
   open: boolean;
@@ -119,16 +146,9 @@ export const PerfilTabs = ({ profile, onProfileUpdate }: PerfilTabsProps) => {
 
       <TabsContent value="pessoal">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle>Informações Pessoais</CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEditPessoalOpen(true)}
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Editar
-            </Button>
+            <EditButton onClick={() => setEditPessoalOpen(true)} />
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -155,16 +175,9 @@ export const PerfilTabs = ({ profile, onProfileUpdate }: PerfilTabsProps) => {
 
       <TabsContent value="profissional">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle>Informações Profissionais</CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEditProfissionalOpen(true)}
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Editar
-            </Button>
+            <EditButton onClick={() => setEditProfissionalOpen(true)} />
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -183,7 +196,7 @@ export const PerfilTabs = ({ profile, onProfileUpdate }: PerfilTabsProps) => {
               <div className="flex flex-wrap gap-2 mt-2">
                 {profile.especializacoes?.length ? (
                   profile.especializacoes.map((esp, index) => (
-                    <Badge key={index} variant="secondary">{esp}</Badge>
+                    <Badge key={index} className="bg-[#AA1808] text-white border-transparent">{esp}</Badge>
                   ))
                 ) : (
                   <p className="text-sm text-muted-foreground">Nenhuma especialização cadastrada</p>
@@ -201,16 +214,9 @@ export const PerfilTabs = ({ profile, onProfileUpdate }: PerfilTabsProps) => {
 
       <TabsContent value="redes">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle>Redes Sociais</CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEditRedesOpen(true)}
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Editar
-            </Button>
+            <EditButton onClick={() => setEditRedesOpen(true)} />
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -8,10 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Eye, EyeOff } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "sonner";
-
+import { supabase } from "@/integrations/supabase/client";
 
 const formSchema = z.object({
   nomeCompleto: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
@@ -32,29 +32,27 @@ const CadastroPersonalTrainer = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    setValue,
-    watch,
-  } = useForm<FormData>({
+  const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
+    defaultValues: {
+      nomeCompleto: "",
+      email: "",
+      senha: "",
+      confirmarSenha: "",
+      aceitarTermos: false,
+    },
   });
-
-  const aceitarTermos = watch("aceitarTermos");
 
   const onSubmit = async (data: FormData) => {
     setIsLoading(true);
-    
+
     try {
-      // Criar usuário no Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.senha,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
-        }
+        },
       });
 
       if (authError) {
@@ -63,7 +61,7 @@ const CadastroPersonalTrainer = () => {
       }
 
       if (!authData.user) {
-        toast.error("Erro ao criar usuário");
+        toast.error("Erro ao criar usuário.");
         return;
       }
 
@@ -76,8 +74,7 @@ const CadastroPersonalTrainer = () => {
         });
 
       if (profileError) {
-        toast.error(`Erro ao criar perfil: ${profileError.message}`);
-        return;
+        console.error('Erro ao criar perfil:', profileError);
       }
 
       // Criar perfil específico do PT
@@ -87,7 +84,7 @@ const CadastroPersonalTrainer = () => {
           id: authData.user.id,
           nome_completo: data.nomeCompleto,
           onboarding_completo: false,
-          plano: 'gratuito'
+          plano: 'gratuito',
         });
 
       if (ptError) {
@@ -99,8 +96,8 @@ const CadastroPersonalTrainer = () => {
       navigate("/confirmacao-email");
 
     } catch (error) {
-      toast.error("Erro inesperado no cadastro");
-      console.error("Erro no cadastro:", error);
+      console.error("Erro inesperado:", error);
+      toast.error("Erro inesperado. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
@@ -109,146 +106,166 @@ const CadastroPersonalTrainer = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="border-b border-border">
-        <div className="container mx-auto px-6 py-4">
-          <Link to="/" className="flex items-center">
-            <img 
-              src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets//TitansFitnessLogo.png" 
-              alt="Titans.fitness" 
-              className="h-12"
-            />
-          </Link>
+      <header className="border-b border-border py-4">
+        <div className="flex items-center justify-center relative px-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(-1)}
+            className="h-10 w-10 p-0 absolute left-6"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <img
+            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal.png"
+            alt="Titans.fitness"
+            className="h-12"
+          />
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center px-6 py-12">
-        <Card className="w-full max-w-md border-border">
+      <main className="flex-1 flex justify-center px-6 pt-8 pb-6 md:pt-16 md:pb-12">
+        <Card className="w-full max-w-md border-border shadow-lg">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl text-text-primary">
               Cadastro Personal Trainer
             </CardTitle>
-            <p className="text-text-secondary">
+            <p className="text-text-secondary text-sm">
               Crie sua conta e comece a gerenciar seus alunos
             </p>
           </CardHeader>
-          
+
           <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="nomeCompleto" className="text-text-primary">
-                  Nome Completo *
-                </Label>
-                <Input
-                  id="nomeCompleto"
-                  {...register("nomeCompleto")}
-                  className="border-border focus:ring-primary"
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="nomeCompleto"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome Completo *</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Seu nome completo" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-                {errors.nomeCompleto && (
-                  <p className="text-sm text-destructive">{errors.nomeCompleto.message}</p>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-text-primary">
-                  Email *
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  {...register("email")}
-                  className="border-border focus:ring-primary"
+
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email *</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="email" placeholder="seu@email.com" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-                {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email.message}</p>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="senha" className="text-text-primary">
-                  Senha *
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="senha"
-                    type={showPassword ? "text" : "password"}
-                    {...register("senha")}
-                    className="border-border focus:ring-primary pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-secondary hover:text-text-primary"
-                  >
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
-                {errors.senha && (
-                  <p className="text-sm text-destructive">{errors.senha.message}</p>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="confirmarSenha" className="text-text-primary">
-                  Confirmar Senha *
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="confirmarSenha"
-                    type={showConfirmPassword ? "text" : "password"}
-                    {...register("confirmarSenha")}
-                    className="border-border focus:ring-primary pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-secondary hover:text-text-primary"
-                  >
-                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
-                {errors.confirmarSenha && (
-                  <p className="text-sm text-destructive">{errors.confirmarSenha.message}</p>
-                )}
-              </div>
-              
-              <div className="flex items-start space-x-2">
-                <Checkbox
-                  id="terms"
-                  checked={aceitarTermos || false}
-                  onCheckedChange={(checked) => setValue("aceitarTermos", !!checked)}
+
+                <FormField
+                  control={form.control}
+                  name="senha"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Senha *</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            type={showPassword ? "text" : "password"}
+                            {...field}
+                            placeholder="Sua senha"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 py-2"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-                <Label htmlFor="terms" className="text-sm text-text-primary leading-relaxed">
-                  Eu aceito os{" "}
-                  <Link to="/termos" className="text-primary hover:underline">
-                    Termos de Uso
-                  </Link>{" "}
-                  e a{" "}
-                  <Link to="/privacidade" className="text-primary hover:underline">
-                    Política de Privacidade
-                  </Link>
-                </Label>
-              </div>
-              {errors.aceitarTermos && (
-                <p className="text-sm text-destructive">{errors.aceitarTermos.message}</p>
-              )}
-              
-              <Button 
-                type="submit" 
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                disabled={isLoading}
-              >
-                {isLoading ? "Cadastrando..." : "Cadastrar Personal Trainer"}
-              </Button>
-            </form>
-            
-            <div className="mt-6 text-center">
-              <p className="text-text-secondary">
-                Já tem uma conta?{" "}
-                <Link to="/login" className="text-primary hover:underline">
-                  Fazer login
-                </Link>
-              </p>
+
+                <FormField
+                  control={form.control}
+                  name="confirmarSenha"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Confirmar Senha *</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            type={showConfirmPassword ? "text" : "password"}
+                            {...field}
+                            placeholder="Confirme sua senha"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 py-2"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          >
+                            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="aceitarTermos"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col space-y-2">
+                      <div className="flex items-start space-x-2">
+                        <Checkbox
+                          id="aceitarTermos"
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                        <Label htmlFor="aceitarTermos" className="text-sm text-text-primary leading-relaxed">
+                          Eu aceito os{" "}
+                          <Link to="/termos" className="text-primary hover:underline">
+                            Termos de Uso
+                          </Link>{" "}
+                          e a{" "}
+                          <Link to="/privacidade" className="text-primary hover:underline">
+                            Política de Privacidade
+                          </Link>
+                        </Label>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Button
+                  type="submit"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Cadastrando..." : "Cadastrar Personal Trainer"}
+                </Button>
+              </form>
+            </Form>
+
+            <div className="mt-6 text-center text-sm">
+              <span className="text-text-secondary">Já tem uma conta? </span>
+              <Link to="/login" className="text-primary hover:underline">
+                Fazer login
+              </Link>
             </div>
           </CardContent>
         </Card>

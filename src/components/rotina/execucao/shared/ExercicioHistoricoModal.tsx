@@ -1,10 +1,12 @@
 // src/components/rotina/execucao/shared/ExercicioHistoricoModal.tsx
 import React, { useCallback, useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { BarChart3, Calendar, Weight, Repeat } from 'lucide-react';
+import { BarChart3, Calendar, Weight, Repeat, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Props {
   visible: boolean;
@@ -57,6 +59,7 @@ export const ExercicioHistoricoModal = ({
   alunoId, 
   onClose 
 }: Props) => {
+  const isMobile = useIsMobile();
   const [historico, setHistorico] = useState<HistoricoExecucao[]>([]);
   const [loading, setLoading] = useState(false);
   const [exercicioNome, setExercicioNome] = useState('');
@@ -180,10 +183,136 @@ export const ExercicioHistoricoModal = ({
     return `${diffDays} dias atrás`;
   }, []);
 
+  // ✅ COMPONENTE DE CONTEÚDO REUTILIZÁVEL
+  const HistoricoContent = () => (
+    <div className="space-y-4">
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      ) : historico.length > 0 ? (
+        <>
+          {historico.map((execucao, index) => (
+            <Card key={index} className="transition-colors hover:bg-accent/50">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">
+                      {formatarData(execucao.data_execucao)}
+                    </span>
+                    <Badge variant="outline" className="text-xs">
+                      {calcularDiasAtras(execucao.data_execucao)}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-3">
+                  <div className="flex items-center space-x-2">
+                    <Repeat className="h-4 w-4 text-blue-500" />
+                    <span className="text-sm">
+                      <span className="font-medium">{execucao.repeticoes_executadas_1}</span> repetições
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Weight className="h-4 w-4 text-green-500" />
+                    <span className="text-sm">
+                      <span className="font-medium">{execucao.carga_executada_1}</span> kg
+                    </span>
+                  </div>
+                </div>
+
+                {/* Exercício 2 para séries combinadas */}
+                {execucao.repeticoes_executadas_2 && execucao.carga_executada_2 && (
+                  <div className="grid grid-cols-2 gap-4 mb-3 pt-2 border-t border-border">
+                    <div className="flex items-center space-x-2">
+                      <Repeat className="h-4 w-4 text-blue-500" />
+                      <span className="text-sm">
+                        <span className="font-medium">{execucao.repeticoes_executadas_2}</span> repetições (2º)
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Weight className="h-4 w-4 text-green-500" />
+                      <span className="text-sm">
+                        <span className="font-medium">{execucao.carga_executada_2}</span> kg (2º)
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {execucao.observacoes && (
+                  <div className="bg-muted/50 p-2 rounded text-sm text-muted-foreground">
+                    <strong>Obs:</strong> {execucao.observacoes}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+
+          {historico.length >= 10 && (
+            <p className="text-center text-sm text-muted-foreground">
+              Mostrando últimas 10 execuções
+            </p>
+          )}
+        </>
+      ) : (
+        <div className="text-center py-8">
+          <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">Nenhuma execução anterior encontrada.</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Este será seu primeiro registro para este exercício.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+
+  // 📱 MOBILE: Drawer que desliza de baixo
+  if (isMobile) {
+    return (
+      <Drawer open={visible} onOpenChange={onClose}>
+        <DrawerContent className="max-h-[90vh] px-4">
+          <DrawerHeader className="text-center pb-4 relative">
+            {/* ✅ Botão X para fechar - Mobile (padronizado) */}
+            <button
+              onClick={onClose}
+              className="absolute right-4 top-4 p-1 hover:bg-gray-100 rounded-full transition-colors"
+              aria-label="Fechar"
+            >
+              <X className="h-5 w-5 text-gray-500" />
+            </button>
+            
+            <DrawerTitle className="flex items-center justify-center space-x-2">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              <span>Histórico de Execuções</span>
+            </DrawerTitle>
+            {exercicioNome && (
+              <p className="text-muted-foreground text-sm mt-2">{exercicioNome}</p>
+            )}
+          </DrawerHeader>
+          
+          <div className="overflow-y-auto px-2 pb-4">
+            <HistoricoContent />
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  // 💻 DESKTOP: Modal tradicional no centro
   return (
     <Dialog open={visible} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
+        <DialogHeader className="relative">
+          {/* ✅ Botão X para fechar - Desktop (padronizado) */}
+          <button
+            onClick={onClose}
+            className="absolute right-6 top-4 p-1 hover:bg-gray-100 rounded-full transition-colors"
+            aria-label="Fechar"
+          >
+            <X className="h-5 w-5 text-gray-500" />
+          </button>
+          
           <DialogTitle className="flex items-center space-x-2">
             <BarChart3 className="h-5 w-5 text-primary" />
             <span>Histórico de Execuções</span>
@@ -193,84 +322,7 @@ export const ExercicioHistoricoModal = ({
           )}
         </DialogHeader>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        ) : historico.length > 0 ? (
-          <div className="space-y-4">
-            {historico.map((execucao, index) => (
-              <Card key={index} className="transition-colors hover:bg-accent/50">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">
-                        {formatarData(execucao.data_execucao)}
-                      </span>
-                      <Badge variant="outline" className="text-xs">
-                        {calcularDiasAtras(execucao.data_execucao)}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 mb-3">
-                    <div className="flex items-center space-x-2">
-                      <Repeat className="h-4 w-4 text-blue-500" />
-                      <span className="text-sm">
-                        <span className="font-medium">{execucao.repeticoes_executadas_1}</span> repetições
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Weight className="h-4 w-4 text-green-500" />
-                      <span className="text-sm">
-                        <span className="font-medium">{execucao.carga_executada_1}</span> kg
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Exercício 2 para séries combinadas */}
-                  {execucao.repeticoes_executadas_2 && execucao.carga_executada_2 && (
-                    <div className="grid grid-cols-2 gap-4 mb-3 pt-2 border-t border-border">
-                      <div className="flex items-center space-x-2">
-                        <Repeat className="h-4 w-4 text-blue-500" />
-                        <span className="text-sm">
-                          <span className="font-medium">{execucao.repeticoes_executadas_2}</span> repetições (2º)
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Weight className="h-4 w-4 text-green-500" />
-                        <span className="text-sm">
-                          <span className="font-medium">{execucao.carga_executada_2}</span> kg (2º)
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  {execucao.observacoes && (
-                    <div className="bg-muted/50 p-2 rounded text-sm text-muted-foreground">
-                      <strong>Obs:</strong> {execucao.observacoes}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-
-            {historico.length >= 10 && (
-              <p className="text-center text-sm text-muted-foreground">
-                Mostrando últimas 10 execuções
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">Nenhuma execução anterior encontrada.</p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Este será seu primeiro registro para este exercício.
-            </p>
-          </div>
-        )}
+        <HistoricoContent />
       </DialogContent>
     </Dialog>
   );

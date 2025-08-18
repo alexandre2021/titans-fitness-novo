@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -502,50 +502,134 @@ const AlunosRotinaDetalhes = () => {
                       )}
                     </div>
 
-                    {/* Séries do exercício */}
+                    {/* ✅ SÉRIES COM ESTRUTURA CORRIGIDA */}
                     <div className="space-y-2 ml-4">
+                      {/* Header das séries - Responsivo */}
                       <p className="text-sm font-medium text-muted-foreground">
-                        Séries ({exercicio.series.length}):
+                        <span className="hidden md:inline">Séries ({exercicio.series.length}):</span>
+                        <span className="md:hidden">{exercicio.series.length} séries:</span>
                       </p>
-                      {exercicio.series.map((serie) => (
-                        <div key={serie.id} className="flex items-center gap-4 text-sm bg-muted/30 rounded p-2">
-                          <span className="font-medium">Série {serie.numero_serie}:</span>
-                          
-                          {exercicio2Info ? (
-                            // Série combinada
-                            <div className="flex gap-4">
-                              <span>{serie.repeticoes_1 || 12} rep</span>
-                              {serie.carga_1 && <span>{serie.carga_1}kg</span>}
-                              <span>+</span>
-                              <span>{serie.repeticoes_2 || 12} rep</span>
-                              {serie.carga_2 && <span>{serie.carga_2}kg</span>}
-                            </div>
-                          ) : (
-                            // Série simples
-                            <div className="flex gap-4">
-                              <span>{serie.repeticoes || 12} repetições</span>
-                              {serie.carga && <span>{serie.carga}kg</span>}
-                              {serie.tem_dropset && (
-                                <Badge variant="outline" className="bg-orange-100 text-orange-800 text-xs">
-                                  Drop Set
-                                </Badge>
+                      
+                      {exercicio.series.map((serie, serieIndex) => (
+                        <div key={serie.id}>
+                          {/* ✅ SÉRIE SEM INTERVALO DENTRO */}
+                          <div className="bg-muted/30 rounded p-2">
+                            {/* 🖥️ LAYOUT DESKTOP */}
+                            <div className="hidden md:flex md:items-center md:gap-4 text-sm">
+                              <span className="font-medium">Série {serie.numero_serie}:</span>
+                              
+                              {exercicio2Info ? (
+                                // Série combinada - Desktop
+                                <div className="flex gap-4">
+                                  <span>{serie.repeticoes_1 || 12} repetições</span>
+                                  {serie.carga_1 && <span>{serie.carga_1}kg</span>}
+                                  <span>+</span>
+                                  <span>{serie.repeticoes_2 || 12} repetições</span>
+                                  {serie.carga_2 && <span>{serie.carga_2}kg</span>}
+                                </div>
+                              ) : (
+                                // Série simples - Desktop
+                                <div className="flex gap-4">
+                                  <span>{serie.repeticoes || 12} repetições</span>
+                                  {serie.carga && <span>{serie.carga}kg</span>}
+                                  {serie.tem_dropset && (
+                                    <Badge variant="outline" className="bg-orange-100 text-orange-800 text-xs">
+                                      Drop Set
+                                    </Badge>
+                                  )}
+                                </div>
                               )}
                             </div>
-                          )}
-                          
-                          {serie.intervalo_apos_serie && (
-                            <span className="text-muted-foreground">
-                              Intervalo: {serie.intervalo_apos_serie}s
-                            </span>
+
+                            {/* 📱 LAYOUT MOBILE */}
+                            <div className="md:hidden">
+                              <div className="flex items-center justify-between text-sm">
+                                {/* Número da série compacto */}
+                                <span className="font-semibold text-blue-600">{serie.numero_serie}</span>
+                                
+                                {/* Dados da série em linha */}
+                                <div className="flex items-center gap-2 text-xs">
+                                  {exercicio2Info ? (
+                                    // Série combinada - Mobile
+                                    <div className="flex items-center gap-1">
+                                      <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
+                                        {serie.repeticoes_1 || 12} rep
+                                      </span>
+                                      {serie.carga_1 && (
+                                        <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded">
+                                          {serie.carga_1}kg
+                                        </span>
+                                      )}
+                                      <span className="text-gray-500">+</span>
+                                      <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
+                                        {serie.repeticoes_2 || 12} rep
+                                      </span>
+                                      {serie.carga_2 && (
+                                        <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded">
+                                          {serie.carga_2}kg
+                                        </span>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    // Série simples - Mobile
+                                    <div className="flex items-center gap-1">
+                                      <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
+                                        {serie.repeticoes || 12} rep
+                                      </span>
+                                      {serie.carga && (
+                                        <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded">
+                                          {serie.carga}kg
+                                        </span>
+                                      )}
+                                      {serie.tem_dropset && (
+                                        <span className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-xs">
+                                          Drop
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* ✅ LINHA SEPARADORA COM INTERVALO - Apenas entre séries */}
+                          {serie.intervalo_apos_serie && serieIndex < exercicio.series.length - 1 && (
+                            <div className="flex items-center justify-center py-2">
+                              {/* Desktop */}
+                              <div className="hidden md:flex md:items-center md:gap-2 text-sm text-muted-foreground">
+                                <div className="h-px bg-border flex-1"></div>
+                                <span className="bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-xs font-medium">
+                                  ⏱️ Intervalo: {serie.intervalo_apos_serie} segundos
+                                </span>
+                                <div className="h-px bg-border flex-1"></div>
+                              </div>
+                              
+                              {/* Mobile */}
+                              <div className="md:hidden flex items-center gap-2 w-full">
+                                <div className="h-px bg-border flex-1"></div>
+                                <span className="bg-purple-50 text-purple-700 px-2 py-1 rounded text-xs font-medium">
+                                  ⏱️ {serie.intervalo_apos_serie}s
+                                </span>
+                                <div className="h-px bg-border flex-1"></div>
+                              </div>
+                            </div>
                           )}
                         </div>
                       ))}
                     </div>
 
-                    {/* Intervalo após exercício */}
+                    {/* ✅ Intervalo entre exercícios - Responsivo (já estava correto) */}
                     {exercicio.intervalo_apos_exercicio && exercicioIndex < treino.exercicios.length - 1 && (
                       <div className="mt-2 text-sm text-muted-foreground">
-                        Intervalo após exercício: {exercicio.intervalo_apos_exercicio}s
+                        {/* Desktop */}
+                        <span className="hidden md:inline">
+                          Intervalo para próximo exercício: {exercicio.intervalo_apos_exercicio}s
+                        </span>
+                        {/* Mobile */}
+                        <span className="md:hidden bg-green-50 text-green-700 px-2 py-1 rounded text-xs inline-block">
+                          ⏭️ {exercicio.intervalo_apos_exercicio}s para próximo exercício
+                        </span>
                       </div>
                     )}
 

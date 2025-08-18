@@ -2,6 +2,8 @@
 
 Centralização de todos os padrões, valores e configurações do sistema.
 
+Cor principal #AA1808
+
 ---
 
 ## 🏋️ **GRUPOS MUSCULARES**
@@ -18,14 +20,14 @@ const GRUPOS_MUSCULARES = [
 ```typescript
 const CORES_GRUPOS_MUSCULARES = {
   'Peito': 'bg-red-100 text-red-800',
-  'Costas': 'bg-blue-100 text-blue-800',
-  'Pernas': 'bg-green-100 text-green-800',
+  'Costas': 'bg-blue-100 text-blue-800', 
+  'Pernas': 'bg-green-100 text-green-800',        // Verde (mantém)
   'Ombros': 'bg-yellow-100 text-yellow-800',
   'Bíceps': 'bg-purple-100 text-purple-800',
   'Tríceps': 'bg-pink-100 text-pink-800',
   'Abdômen': 'bg-orange-100 text-orange-800',
-  'Glúteos': 'bg-green-100 text-green-800',
-  'Panturrilha': 'bg-green-100 text-green-800'
+  'Glúteos': 'bg-violet-100 text-violet-800',     // Roxo/violeta - bem diferente
+  'Panturrilha': 'bg-indigo-100 text-indigo-800'
 };
 ```
 
@@ -127,9 +129,11 @@ const LIMITES = {
 
 ### **Equipamentos:**
 ```typescript
+
 const EQUIPAMENTOS = [
-  'Barra', 'Halteres', 'Máquina', 'Peso Corporal', 'Cabo/Máquina',
-  'Kettlebell', 'Fitas de Suspensão', 'Elásticos', 'Bola Suíça'
+  'Barra', 'Halteres', 'Máquina', 'Peso Corporal', 'Cabo',
+  'Kettlebell', 'Fitas de Suspensão', 'Elásticos', 
+  'Bola Suíça', 'Bolas Medicinais', 'Landmine', 'Bola Bosu'
 ];
 ```
 

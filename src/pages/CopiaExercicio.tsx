@@ -76,21 +76,22 @@ const CopiaExercicio = () => {
   'Abdômen',
   'Pernas',
   'Glúteos',
-  'Panturrilha',
-  'Trapézio'
+  'Panturrilha'
   ];
 
   const equipamentos = [
-  'Barra',
-  'Halteres',
-  'Máquina',
-  'Peso Corporal',
-  'Cabo',
-  'Kettlebell',
-  'Fitas de Suspensão',
-  'Elásticos',
-  'Bola Suíça',
-  'Bolas Medicinais'
+    'Barra',
+    'Halteres',
+    'Máquina',
+    'Peso Corporal',
+    'Cabo',
+    'Kettlebell',
+    'Fitas de Suspensão',
+    'Elásticos',
+    'Bola Suíça',
+    'Bolas Medicinais',
+    'Landmine',
+    'Bola Bosu'
   ];
 
 
@@ -670,51 +671,79 @@ const CopiaExercicio = () => {
   return (
 
     <div className="space-y-6">
-      {/* Cabeçalho - Similar ao DetalhesExercicio */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      {/* Cabeçalho Responsivo */}
+<div className="space-y-4">
+  {/* Layout Desktop */}
+  <div className="hidden md:flex md:items-center md:justify-between">
+    <div className="flex items-center gap-4">
+      <Button
+        variant="ghost"
+        onClick={() => navigate('/exercicios-pt')}
+        className="h-10 w-10 p-0"
+      >
+        <ArrowLeft className="h-4 w-4" />
+      </Button>
+      <div className="flex-1">
+        <div className="mb-1">
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+            <Copy className="h-3 w-3 mr-1" />
+            Baseado em exercício padrão
+          </Badge>
+        </div>
+        <h1 className="text-3xl font-bold flex items-center gap-2">
+          Criar Cópia Personalizada
+        </h1>
+        <p className="text-muted-foreground">
+          Criando cópia de: <span className="font-medium">{exercicioOriginal.nome}</span>
+        </p>
+      </div>
+    </div>
+
+    {/* Ações no cabeçalho - Desktop */}
+    <div className="flex items-center gap-2">
+      <Button
+        onClick={handleSave}
+        disabled={saving}
+        className="flex items-center gap-2"
+      >
+        <Save className="h-4 w-4" />
+        {saving ? "Salvando..." : "Salvar Cópia"}
+      </Button>
+    </div>
+  </div>
+
+  {/* Layout Mobile - Padrão da aplicação */}
+      <div className="md:hidden flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4 overflow-hidden">
           <Button
             variant="ghost"
             onClick={() => navigate('/exercicios-pt')}
-            className="h-10 w-10 p-0"
+            className="h-10 w-10 p-0 flex-shrink-0"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div className="flex-1">
-            <div className="mb-1">
-              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                <Copy className="h-3 w-3 mr-1" />
-                Baseado em exercício padrão
-              </Badge>
-            </div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              Criar Cópia Personalizada
-            </h1>
-            <p className="text-muted-foreground">
-              Criando cópia de: <span className="font-medium">{exercicioOriginal.nome}</span>
+          <div className="flex-1 space-y-1 overflow-hidden">
+            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+              <Copy className="h-3 w-3 mr-1" />
+              Baseado em exercício padrão
+            </Badge>
+            <h1 className="text-2xl font-bold leading-tight">Criar Cópia Personalizada</h1>
+            <p className="text-sm text-muted-foreground">
+              Criando cópia de: {exercicioOriginal.nome}
             </p>
           </div>
         </div>
-
-        {/* Ações no cabeçalho */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => navigate('/exercicios-pt')}
-            disabled={saving}
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-2"
-          >
-            <Save className="h-4 w-4" />
-            {saving ? "Salvando..." : "Salvar Cópia"}
-          </Button>
-        </div>
+        
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 w-10 flex-shrink-0"
+        >
+          <Save className="h-6 w-6" />
+          <span className="sr-only">Salvar Cópia</span>
+        </button>
       </div>
+</div>
 
       {/* Layout em coluna única */}
       <div className="space-y-6">
@@ -1185,24 +1214,7 @@ const CopiaExercicio = () => {
           </Card>
         </div>
 
-      {/* Ações */}
-      <div className="flex justify-end gap-4">
-        <Button
-          variant="outline"
-          onClick={() => navigate('/exercicios-pt')}
-          disabled={saving}
-        >
-          Cancelar
-        </Button>
-        <Button
-          onClick={handleSave}
-          disabled={saving}
-          className="flex items-center gap-2"
-        >
-          <Save className="h-4 w-4" />
-          {saving ? "Salvando..." : "Salvar Cópia"}
-        </Button>
-      </div>
+      
     </div>
   );
 };

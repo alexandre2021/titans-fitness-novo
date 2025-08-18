@@ -3,38 +3,32 @@ import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { User, Users, ArrowLeft } from "lucide-react";
 
-
 const UserTypeSelection = () => {
   const navigate = useNavigate();
   
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="border-b border-border">
-        <div className="container mx-auto px-6 py-4">
-          <Link to="/" className="flex items-center">
-            <img 
-              src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets//TitansFitnessLogo.png" 
-              alt="Titans.fitness" 
-              className="h-12"
-            />
-          </Link>
+      <header className="border-b border-border py-4">
+        <div className="flex items-center justify-center relative px-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(-1)}
+            className="h-10 w-10 p-0 absolute left-6"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <img
+            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal.png"
+            alt="Titans.fitness"
+            className="h-12"
+          />
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center px-6 py-12">
+      <main className="flex-1 flex justify-center px-6 pt-8 pb-6 md:pt-16 md:pb-12">
         <div className="w-full max-w-4xl">
-          {/* Botão voltar acima do título principal */}
-          <div className="mb-4">
-            <Button
-              variant="ghost"
-              onClick={() => navigate("/")}
-              className="h-10 w-10 p-0"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </div>
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-text-primary mb-4">
               Como você gostaria de usar o Titans.fitness?

@@ -2,9 +2,9 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { PhoneInput } from "@/components/ui/phone-input";
 import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -19,7 +19,7 @@ const formSchema = z.object({
   email: z.string().email("Email deve ter formato válido"),
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
   confirm_password: z.string().min(6, "Confirmação de senha é obrigatória"),
-  telefone: z.string().optional(),
+  aceitarTermos: z.boolean().refine(val => val === true, "Você deve aceitar os termos"),
 }).refine((data) => data.password === data.confirm_password, {
   message: "As senhas não coincidem",
   path: ["confirm_password"],
@@ -43,7 +43,7 @@ export default function CadastroAluno() {
       email: "",
       password: "",
       confirm_password: "",
-      telefone: "",
+      aceitarTermos: false,
     },
   });
 
@@ -155,7 +155,7 @@ export default function CadastroAluno() {
           personal_trainer_id: ptData.id,
           nome_completo: data.nome_completo,
           email: data.email,
-          telefone: data.telefone || null,
+          telefone: null,
           avatar_type: 'letter',
           avatar_letter: data.nome_completo.charAt(0).toUpperCase(),
           avatar_color: '#60A5FA',
@@ -201,33 +201,37 @@ export default function CadastroAluno() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center p-2">
-      <div className="w-full max-w-md">
-        {/* Botão voltar acima do logo e do card */}
-        <div className="mb-1">
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      <header className="border-b border-border py-4">
+        <div className="flex items-center justify-center relative px-6">
           <Button
             variant="ghost"
-            onClick={() => navigate("/")}
-            className="h-10 w-10 p-0"
+            onClick={() => navigate(-1)}
+            className="h-10 w-10 p-0 absolute left-6"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-        </div>
-        <div className="flex items-center justify-center mb-4">
-          <img 
-            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets//TitansFitnessLogo.png" 
-            alt="Titans.fitness" 
+          <img
+            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal.png"
+            alt="Titans.fitness"
             className="h-12"
           />
         </div>
+      </header>
 
-        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-          <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl font-bold">Cadastro de Aluno</CardTitle>
-            <CardDescription>
+      {/* Main Content */}
+      <main className="flex-1 flex justify-center px-6 pt-8 pb-6 md:pt-16 md:pb-12">
+        <Card className="w-full max-w-md border-border shadow-lg">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl text-text-primary">
+              Cadastro de Aluno
+            </CardTitle>
+            <CardDescription className="text-text-secondary text-sm">
               Preencha os dados abaixo para criar sua conta
             </CardDescription>
           </CardHeader>
+
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -236,7 +240,7 @@ export default function CadastroAluno() {
                   name="personal_trainer_code"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Código do Personal Trainer</FormLabel>
+                      <FormLabel>Código do Personal Trainer *</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -267,7 +271,7 @@ export default function CadastroAluno() {
                   name="nome_completo"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nome Completo</FormLabel>
+                      <FormLabel>Nome Completo *</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder="Seu nome completo" />
                       </FormControl>
@@ -281,26 +285,9 @@ export default function CadastroAluno() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>Email *</FormLabel>
                       <FormControl>
                         <Input {...field} type="email" placeholder="seu@email.com" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="telefone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Telefone (Opcional)</FormLabel>
-                      <FormControl>
-                        <PhoneInput
-                          value={field.value}
-                          onChange={field.onChange}
-                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -312,7 +299,7 @@ export default function CadastroAluno() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Senha</FormLabel>
+                      <FormLabel>Senha *</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Input
@@ -345,7 +332,7 @@ export default function CadastroAluno() {
                   name="confirm_password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Confirmar Senha</FormLabel>
+                      <FormLabel>Confirmar Senha *</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Input
@@ -373,10 +360,37 @@ export default function CadastroAluno() {
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name="aceitarTermos"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col space-y-2">
+                      <div className="flex items-start space-x-2">
+                        <Checkbox
+                          id="aceitarTermos"
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                        <Label htmlFor="aceitarTermos" className="text-sm text-text-primary leading-relaxed">
+                          Eu aceito os{" "}
+                          <Link to="/termos" className="text-primary hover:underline">
+                            Termos de Uso
+                          </Link>{" "}
+                          e a{" "}
+                          <Link to="/privacidade" className="text-primary hover:underline">
+                            Política de Privacidade
+                          </Link>
+                        </Label>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <Button 
                   type="submit" 
-                  className="w-full" 
-                  disabled={isLoading || ptValidation.status !== 'valid'}
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                  disabled={isLoading}
                 >
                   {isLoading ? "Cadastrando..." : "Cadastrar Aluno"}
                 </Button>
@@ -384,25 +398,14 @@ export default function CadastroAluno() {
             </Form>
 
             <div className="mt-6 text-center text-sm">
-              <span className="text-muted-foreground">Já tem uma conta? </span>
+              <span className="text-text-secondary">Já tem uma conta? </span>
               <Link to="/login" className="text-primary hover:underline">
-                Faça login
-              </Link>
-            </div>
-
-            <div className="mt-4 text-center text-xs text-muted-foreground">
-              Ao se cadastrar, você concorda com nossos{" "}
-              <Link to="/termos" className="text-primary hover:underline">
-                Termos de Uso
-              </Link>{" "}
-              e{" "}
-              <Link to="/privacidade" className="text-primary hover:underline">
-                Política de Privacidade
+                Fazer login
               </Link>
             </div>
           </CardContent>
         </Card>
-      </div>
+      </main>
     </div>
   );
 }

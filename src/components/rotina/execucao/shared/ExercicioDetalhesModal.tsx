@@ -1,10 +1,29 @@
-// ...existing code...
+// src/components/rotina/execucao/shared/ExercicioDetalhesModal.tsx
+
 import React, { useCallback, useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Badge } from '@/components/ui/badge';
-import { Dumbbell, Target, AlertCircle, Play, Video, Image as ImageIcon } from 'lucide-react';
+import { Dumbbell, Target, AlertCircle, Play, Video, Image as ImageIcon, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
+
+// Hook para detectar mobile
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkDevice = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkDevice();
+    window.addEventListener('resize', checkDevice);
+    return () => window.removeEventListener('resize', checkDevice);
+  }, []);
+
+  return isMobile;
+};
 
 interface Props {
   visible: boolean;
@@ -31,11 +50,15 @@ interface ExercicioDetalhes {
 // Tipagem usando os tipos do Supabase
 type ExercicioSupabase = Tables<'exercicios'>;
 
-export const ExercicioDetalhesModal = ({ visible, exercicioId, onClose }: Props) => {
+// Componente de conteúdo compartilhado
+const ExercicioDetalhesContent: React.FC<{ 
+  isMobile: boolean; 
+  exercicio: ExercicioDetalhes | null;
+  loading: boolean;
+  onClose: () => void;
+}> = ({ isMobile, exercicio, loading, onClose }) => {
   const GET_IMAGE_URL_ENDPOINT = 'https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/get-image-url';
   
-  const [exercicio, setExercicio] = useState<ExercicioDetalhes | null>(null);
-  const [loading, setLoading] = useState(false);
   const [mediaUrls, setMediaUrls] = useState<{ 
     imagem1?: string; 
     imagem2?: string; 
@@ -204,64 +227,6 @@ export const ExercicioDetalhesModal = ({ visible, exercicioId, onClose }: Props)
     }
   }, []);
 
-  const carregarDetalhes = useCallback(async () => {
-    if (!exercicioId) return;
-    
-    try {
-      setLoading(true);
-      
-      const { data: exercicioRaw, error } = await supabase
-        .from('exercicios')
-        .select('id, nome, equipamento, grupo_muscular, grupo_muscular_primario, grupos_musculares_secundarios, descricao, instrucoes, tipo, imagem_1_url, imagem_2_url, video_url, youtube_url')
-        .eq('id', exercicioId)
-        .single();
-
-      if (error) {
-        console.error('Erro ao carregar detalhes do exercício:', error);
-        setExercicio(null);
-        return;
-      }
-
-      if (!exercicioRaw) {
-        setExercicio(null);
-        return;
-      }
-
-  // Cast com tipagem correta
-  const exercicioData = exercicioRaw as ExercicioSupabase;
-
-      // Transformar para a interface esperada
-      const exercicioFormatado: ExercicioDetalhes = {
-        id: exercicioData.id,
-        nome: exercicioData.nome,
-        equipamento: exercicioData.equipamento || '',
-        grupo_muscular: exercicioData.grupo_muscular || '',
-        grupo_muscular_primario: exercicioData.grupo_muscular_primario || exercicioData.grupo_muscular || '',
-        grupos_musculares_secundarios: exercicioData.grupos_musculares_secundarios || [],
-        descricao: exercicioData.descricao || undefined,
-        instrucoes: exercicioData.instrucoes || undefined,
-        tipo: exercicioData.tipo || 'padrao',
-        imagem_1_url: exercicioData.imagem_1_url || undefined,
-        imagem_2_url: exercicioData.imagem_2_url || undefined,
-        video_url: exercicioData.video_url || undefined,
-        youtube_url: exercicioData.youtube_url || undefined
-      };
-
-      setExercicio(exercicioFormatado);
-    } catch (error) {
-      console.error('Erro ao carregar detalhes:', error);
-      setExercicio(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [exercicioId]);
-
-  useEffect(() => {
-    if (visible && exercicioId) {
-      carregarDetalhes();
-    }
-  }, [visible, exercicioId, carregarDetalhes]);
-
   // Carregar mídias quando exercício for carregado
   useEffect(() => {
     if (exercicio) {
@@ -270,15 +235,26 @@ export const ExercicioDetalhesModal = ({ visible, exercicioId, onClose }: Props)
   }, [exercicio, loadMedia]);
 
   return (
-    <Dialog open={visible} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
+    <>
+      {/* Header */}
+      <div className="px-6 py-4 border-b flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
             <Dumbbell className="h-5 w-5 text-primary" />
-            <span>Detalhes do Exercício</span>
-          </DialogTitle>
-        </DialogHeader>
+            <span className="font-semibold">Detalhes do Exercício</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+            aria-label="Fechar"
+          >
+            <X className="h-5 w-5 text-gray-500" />
+          </button>
+        </div>
+      </div>
 
+      {/* Conteúdo com scroll */}
+      <div className="flex-1 overflow-y-auto px-6 py-4">
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -291,6 +267,7 @@ export const ExercicioDetalhesModal = ({ visible, exercicioId, onClose }: Props)
                 {exercicio.nome}
               </h3>
             </div>
+            
             {/* Tags para equipamento e tipo */}
             <div className="flex flex-wrap gap-2 mb-4">
               <Badge variant="outline">{exercicio.equipamento}</Badge>
@@ -298,14 +275,24 @@ export const ExercicioDetalhesModal = ({ visible, exercicioId, onClose }: Props)
                 {exercicio.tipo === 'padrao' ? 'Padrão' : 'Personalizado'}
               </Badge>
             </div>
-            {/* Grupo muscular primário */}
+            
+            {/* Grupo muscular */}
+            {exercicio.grupo_muscular && (
+              <div className="mb-4">
+                <h4 className="font-medium text-foreground mb-2">Grupo muscular</h4>
+                <p className="text-base text-foreground">{exercicio.grupo_muscular}</p>
+              </div>
+            )}
+            
+            {/* Músculo primário */}
             {exercicio.grupo_muscular_primario && (
-              <div className="mb-2">
-                <h4 className="font-medium text-foreground mb-2">Grupo muscular primário</h4>
+              <div className="mb-4">
+                <h4 className="font-medium text-foreground mb-2">Músculo primário</h4>
                 <p className="text-base text-foreground">{exercicio.grupo_muscular_primario}</p>
               </div>
             )}
-            {/* Grupos musculares secundários */}
+            
+            {/* Músculos secundários */}
             {(() => {
               const secundarios = exercicio.grupos_musculares_secundarios;
               let secundariosStr = '';
@@ -316,14 +303,14 @@ export const ExercicioDetalhesModal = ({ visible, exercicioId, onClose }: Props)
               }
               secundariosStr = (secundariosStr ?? '').trim();
               return secundariosStr !== '' ? (
-                <div className="mb-2">
-                  <h4 className="font-medium text-foreground mb-2">Grupos musculares secundários</h4>
+                <div className="mb-4">
+                  <h4 className="font-medium text-foreground mb-2">Músculo(s) secundário(s)</h4>
                   <p className="text-base text-foreground">{secundariosStr}</p>
                 </div>
               ) : null;
             })()}
 
-            {/* Mídias do Exercício - Exibição Condicional */}
+            {/* Mídias do Exercício - Responsivo */}
             {(exercicio.imagem_1_url || exercicio.imagem_2_url || exercicio.video_url || exercicio.youtube_url) && (
               <div>
                 <h4 className="font-medium text-foreground mb-4 flex items-center space-x-2">
@@ -337,7 +324,7 @@ export const ExercicioDetalhesModal = ({ visible, exercicioId, onClose }: Props)
                     <span className="text-sm text-muted-foreground">Carregando mídias...</span>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
                     {/* Imagem 1 */}
                     {exercicio.imagem_1_url && (
                       <div className="space-y-2">
@@ -347,8 +334,8 @@ export const ExercicioDetalhesModal = ({ visible, exercicioId, onClose }: Props)
                         </div>
                         <div className={`w-full border rounded-lg overflow-hidden flex items-center justify-center ${
                           isSquareImage('imagem1') 
-                            ? 'h-64 w-64 mx-auto' // Container quadrado para imagens 1:1
-                            : 'h-48' // Container retangular para outras proporções
+                            ? isMobile ? 'h-64' : 'h-64 w-64 mx-auto' // Mobile: largura total, Desktop: quadrado
+                            : 'h-48' // Container retangular
                         }`}>
                           {mediaUrls.imagem1 ? (
                             <img
@@ -373,8 +360,8 @@ export const ExercicioDetalhesModal = ({ visible, exercicioId, onClose }: Props)
                         </div>
                         <div className={`w-full border rounded-lg overflow-hidden flex items-center justify-center ${
                           isSquareImage('imagem2') 
-                            ? 'h-64 w-64 mx-auto' // Container quadrado para imagens 1:1
-                            : 'h-48' // Container retangular para outras proporções
+                            ? isMobile ? 'h-64' : 'h-64 w-64 mx-auto' // Mobile: largura total, Desktop: quadrado
+                            : 'h-48' // Container retangular
                         }`}>
                           {mediaUrls.imagem2 ? (
                             <img
@@ -465,7 +452,7 @@ export const ExercicioDetalhesModal = ({ visible, exercicioId, onClose }: Props)
               </div>
             )}
 
-            {/* Dicas de segurança - Simplificado */}
+            {/* Dicas de segurança */}
             <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 p-4 rounded-lg">
               <h4 className="font-medium text-yellow-800 dark:text-yellow-200 mb-2 flex items-center space-x-2">
                 <AlertCircle className="h-4 w-4" />
@@ -481,6 +468,100 @@ export const ExercicioDetalhesModal = ({ visible, exercicioId, onClose }: Props)
             <p className="text-muted-foreground">Detalhes do exercício não encontrados.</p>
           </div>
         )}
+      </div>
+    </>
+  );
+};
+
+export const ExercicioDetalhesModal = ({ visible, exercicioId, onClose }: Props) => {
+  const isMobile = useIsMobile();
+  const [exercicio, setExercicio] = useState<ExercicioDetalhes | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const carregarDetalhes = useCallback(async () => {
+    if (!exercicioId) return;
+    
+    try {
+      setLoading(true);
+      
+      const { data: exercicioRaw, error } = await supabase
+        .from('exercicios')
+        .select('id, nome, equipamento, grupo_muscular, grupo_muscular_primario, grupos_musculares_secundarios, descricao, instrucoes, tipo, imagem_1_url, imagem_2_url, video_url, youtube_url')
+        .eq('id', exercicioId)
+        .single();
+
+      if (error) {
+        console.error('Erro ao carregar detalhes do exercício:', error);
+        setExercicio(null);
+        return;
+      }
+
+      if (!exercicioRaw) {
+        setExercicio(null);
+        return;
+      }
+
+      // Cast com tipagem correta
+      const exercicioData = exercicioRaw as ExercicioSupabase;
+
+      // Transformar para a interface esperada
+      const exercicioFormatado: ExercicioDetalhes = {
+        id: exercicioData.id,
+        nome: exercicioData.nome,
+        equipamento: exercicioData.equipamento || '',
+        grupo_muscular: exercicioData.grupo_muscular || '',
+        grupo_muscular_primario: exercicioData.grupo_muscular_primario || exercicioData.grupo_muscular || '',
+        grupos_musculares_secundarios: exercicioData.grupos_musculares_secundarios || [],
+        descricao: exercicioData.descricao || undefined,
+        instrucoes: exercicioData.instrucoes || undefined,
+        tipo: exercicioData.tipo || 'padrao',
+        imagem_1_url: exercicioData.imagem_1_url || undefined,
+        imagem_2_url: exercicioData.imagem_2_url || undefined,
+        video_url: exercicioData.video_url || undefined,
+        youtube_url: exercicioData.youtube_url || undefined
+      };
+
+      setExercicio(exercicioFormatado);
+    } catch (error) {
+      console.error('Erro ao carregar detalhes:', error);
+      setExercicio(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [exercicioId]);
+
+  useEffect(() => {
+    if (visible && exercicioId) {
+      carregarDetalhes();
+    }
+  }, [visible, exercicioId, carregarDetalhes]);
+
+  // Criar conteúdo com as props necessárias
+  const content = (
+    <ExercicioDetalhesContent 
+      isMobile={isMobile}
+      exercicio={exercicio}
+      loading={loading}
+      onClose={onClose}
+    />
+  );
+
+  if (isMobile) {
+    // Mobile: Drawer
+    return (
+      <Drawer open={visible} onOpenChange={onClose}>
+        <DrawerContent className="max-h-[90vh] flex flex-col">
+          {content}
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  // Desktop: Dialog
+  return (
+    <Dialog open={visible} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] p-0 flex flex-col">
+        {content}
       </DialogContent>
     </Dialog>
   );

@@ -102,11 +102,10 @@ const RotinaExerciciosContent: React.FC = () => {
       // Converter dados do context para formato do storage
       const exerciciosParaSalvar: Record<string, import("@/types/rotina.types").ExercicioRotinaLocal[]> = {};
 
-      dadosCompletos.treinos.forEach((treino) => {
-        const nome = (treino as { nome: string }).nome;
-        const exercicios = (treino as { exercicios?: ExercicioRotinaLocal[] }).exercicios;
+      dadosCompletos.treinos.forEach((treino: TreinoComExercicios) => {
+        const exercicios = treino.exercicios;
         if (exercicios && exercicios.length > 0) {
-          exerciciosParaSalvar[nome] = exercicios;
+          exerciciosParaSalvar[treino.id] = exercicios;
         }
       });
 
@@ -391,8 +390,11 @@ const RotinaExerciciosContent: React.FC = () => {
         {dadosCompletos.treinos.map((treino: TreinoComExercicios) => renderTreino(treino))}
       </div>
 
-      {/* Botões de navegação */}
-      <div className="flex justify-between pt-6 gap-2">
+      {/* Espaçamento para botões fixos no mobile */}
+      <div className="pb-20 md:pb-6"></div>
+
+      {/* Botões de navegação - Desktop */}
+      <div className="hidden md:flex justify-between pt-6 gap-2">
         <div>
           <Button variant="ghost" onClick={handleVoltar} disabled={salvando} className="flex items-center">
             <ChevronLeft className="h-4 w-4 mr-2" />
@@ -421,6 +423,56 @@ const RotinaExerciciosContent: React.FC = () => {
                 </>
               )}
             </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Botões de navegação - Mobile (fixos no rodapé) */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 md:hidden z-50">
+        <div className="flex justify-between items-center max-w-md mx-auto">
+          {/* Esquerda: Voltar */}
+          <Button 
+            variant="ghost" 
+            onClick={handleVoltar} 
+            disabled={salvando}
+            size="sm"
+            className="px-3"
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Voltar
+          </Button>
+          
+          {/* Direita: Cancelar + Próximo */}
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleCancelar} 
+              disabled={salvando}
+              size="sm"
+              className="px-3"
+            >
+              <X className="h-4 w-4 mr-1" />
+              Cancelar
+            </Button>
+            <div onClick={treinosComExercicios !== dadosCompletos.treinos.length ? handleScrollRequisitos : handleProximo}>
+              <Button 
+                disabled={salvando || treinosComExercicios !== dadosCompletos.treinos.length}
+                size="sm"
+                className="px-3"
+              >
+                {salvando ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    Próximo
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </div>

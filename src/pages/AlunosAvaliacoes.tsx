@@ -287,8 +287,8 @@ const AlunosAvaliacoes = () => {
           </Button>
         </div>
 
-        {/* Layout Mobile: Título em cima, botão embaixo */}
-        <div className="md:hidden space-y-4">
+        {/* Layout Mobile: Igual à página de Alunos */}
+        <div className="flex items-center justify-between md:hidden">
           <div className="flex items-center gap-4">
             <Button 
               variant="ghost" 
@@ -298,14 +298,17 @@ const AlunosAvaliacoes = () => {
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">Avaliações</h1>
+              <h1 className="text-3xl font-bold">Avaliações</h1>
               <p className="text-sm text-muted-foreground">Histórico de avaliações físicas e evolução</p>
             </div>
           </div>
-          <Button onClick={handleNovaAvaliacao} className="w-full h-12">
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Avaliação
-          </Button>
+          {/* Botão só com ícone + igual ao de Alunos */}
+          <button
+            onClick={handleNovaAvaliacao}
+            className="flex items-center justify-center w-10 h-10 rounded bg-[#AA1808] text-white shadow hover:bg-[#8a1406] transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
@@ -370,7 +373,7 @@ const AlunosAvaliacoes = () => {
               </p>
               <Button onClick={handleNovaAvaliacao}>
                 <Plus className="h-4 w-4 mr-2" />
-                Criar primeira avaliação
+                Nova Avaliação
               </Button>
             </div>
           ) : (

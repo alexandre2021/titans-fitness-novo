@@ -206,7 +206,7 @@ export const EditProfissionalModal = ({ open, onOpenChange, profile, onSave }: E
             
             <div className="flex flex-wrap gap-2">
               {especializacoes.map((esp) => (
-                <Badge key={esp} variant="secondary" className="flex items-center gap-1">
+                <Badge key={esp} className="bg-[#AA1808] text-white border-transparent flex items-center gap-1">
                   {esp}
                   <X
                     className="h-3 w-3 cursor-pointer"

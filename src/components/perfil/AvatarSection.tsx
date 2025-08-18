@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Camera, User, Palette } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,13 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -31,9 +36,87 @@ const AVATAR_COLORS = [
   '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6366F1'
 ];
 
+// Hook para detectar se é mobile
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  return isMobile;
+};
+
+// Componente responsivo que escolhe entre Modal e Drawer
+interface ResponsiveModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  children: React.ReactNode;
+}
+
+const ResponsiveModal = ({ open, onOpenChange, title, children }: ResponsiveModalProps) => {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent className="max-h-[90vh]">
+          <DrawerHeader className="text-left">
+            <DrawerTitle>{title}</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-4 overflow-y-auto">
+            {children}
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        {children}
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Botão da câmera responsivo
+const CameraButton = ({ onClick }: { onClick?: () => void }) => {
+  const isMobile = useIsMobile();
+  
+  if (isMobile) {
+    return (
+      <button 
+        onClick={onClick}
+        className="flex items-center justify-center h-8 w-8 rounded-full border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
+      >
+        <Camera className="h-5 w-5" />
+      </button>
+    );
+  }
+  
+  return (
+    <Button size="sm" variant="outline" className="h-6 w-6 rounded-full p-0" onClick={onClick}>
+      <Camera className="h-3 w-3" />
+    </Button>
+  );
+};
+
 export const AvatarSection = ({ profile, onProfileUpdate }: AvatarSectionProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -190,73 +273,7 @@ export const AvatarSection = ({ profile, onProfileUpdate }: AvatarSectionProps) 
             {getAvatarContent()}
           </Avatar>
           <div className="absolute -bottom-1 -right-1 flex space-x-1">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button size="sm" variant="outline" className="h-6 w-6 rounded-full p-0">
-                  <Camera className="h-3 w-3" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Gerenciar Avatar</DialogTitle>
-                </DialogHeader>
-                
-                <div className="space-y-4">
-                  <div>
-                    <Input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      disabled={isUploading}
-                      className="hidden"
-                    />
-                    <Button 
-                      variant="outline" 
-                      className="w-full" 
-                      disabled={isUploading}
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <Camera className="h-4 w-4 mr-2" />
-                      {isUploading ? "Enviando..." : "Selecionar Nova Foto"}
-                    </Button>
-                  </div>
-                  
-                  {profile.avatar_type === 'image' && (
-                    <Button variant="outline" onClick={handleRemoveImage} className="w-full">
-                      <User className="h-4 w-4 mr-2" />
-                      Usar Avatar de Letra
-                    </Button>
-                  )}
-                  
-                  {profile.avatar_type === 'letter' && (
-                    <Dialog open={showColorPicker} onOpenChange={setShowColorPicker}>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" className="w-full">
-                          <Palette className="h-4 w-4 mr-2" />
-                          Alterar Cor
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Escolher Cor</DialogTitle>
-                        </DialogHeader>
-                        <div className="grid grid-cols-5 gap-3">
-                          {AVATAR_COLORS.map((color) => (
-                            <button
-                              key={color}
-                              onClick={() => handleColorChange(color)}
-                              className="h-12 w-12 rounded-full border-2 border-gray-200 hover:scale-110 transition-transform"
-                              style={{ backgroundColor: color }}
-                            />
-                          ))}
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
+            <CameraButton onClick={() => setShowAvatarModal(true)} />
           </div>
         </div>
         
@@ -269,6 +286,88 @@ export const AvatarSection = ({ profile, onProfileUpdate }: AvatarSectionProps) 
           )}
         </div>
       </div>
+
+      {/* Modal Responsivo para Gerenciar Avatar */}
+      <ResponsiveModal
+        open={showAvatarModal}
+        onOpenChange={setShowAvatarModal}
+        title="Gerenciar Avatar"
+      >
+        <div className="space-y-4">
+          <div>
+            <Input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              disabled={isUploading}
+              className="hidden"
+            />
+            <Button 
+              variant="outline" 
+              className="w-full text-base py-3" 
+              disabled={isUploading}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Camera className="h-6 w-6 mr-2" />
+              {isUploading ? "Enviando..." : "Selecionar Nova Foto"}
+            </Button>
+          </div>
+          
+          {profile.avatar_type === 'image' && (
+            <Button variant="outline" onClick={handleRemoveImage} className="w-full text-base py-3">
+              <User className="h-6 w-6 mr-2" />
+              Usar Avatar de Letra
+            </Button>
+          )}
+          
+          {profile.avatar_type === 'letter' && (
+            <Button variant="outline" onClick={() => setShowColorPicker(true)} className="w-full text-base py-3">
+              <Palette className="h-6 w-6 mr-2" />
+              Alterar Cor
+            </Button>
+          )}
+
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              className="text-base py-2"
+              onClick={() => setShowAvatarModal(false)}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      </ResponsiveModal>
+
+      {/* Modal Responsivo para Escolher Cor */}
+      <ResponsiveModal
+        open={showColorPicker}
+        onOpenChange={setShowColorPicker}
+        title="Escolher Cor"
+      >
+        <div className="grid grid-cols-5 gap-3">
+          {AVATAR_COLORS.map((color) => (
+            <button
+              key={color}
+              onClick={() => handleColorChange(color)}
+              className="h-12 w-12 rounded-full border-2 border-gray-200 hover:scale-110 transition-transform"
+              style={{ backgroundColor: color }}
+            />
+          ))}
+        </div>
+
+        <div className="flex justify-end space-x-2 pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowColorPicker(false)}
+          >
+            Cancelar
+          </Button>
+        </div>
+      </ResponsiveModal>
     </Card>
   );
 };

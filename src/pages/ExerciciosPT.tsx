@@ -163,7 +163,7 @@ const ExerciciosPT = () => {
         {/* Mobile: Header compacto */}
         <div className="flex items-center justify-between md:hidden">
           <div>
-            <h1 className="text-2xl font-bold">Exercícios</h1>
+            <h1 className="text-3xl font-bold">Exercícios</h1>
             <p className="text-sm text-muted-foreground">
               Gerencie seus exercícios
             </p>
@@ -392,7 +392,7 @@ const ExerciciosPT = () => {
                 {canAddMore ? (
                   <Button onClick={handleNovoExercicio} size="lg" className="flex items-center gap-2">
                     <Plus className="h-5 w-5" />
-                    Criar Primeiro Exercício
+                    Exercício personalizado
                   </Button>
                 ) : (
                   <div className="text-center">

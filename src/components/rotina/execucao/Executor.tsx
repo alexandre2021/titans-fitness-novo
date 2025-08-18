@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Clock, Play, Pause, Square, AlertTriangle } from 'lucide-react';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer';
+import { Clock, Play, Pause, Square, AlertTriangle, X } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { EXERCICIO_CONSTANTS, MENSAGENS } from '@/constants/exercicio.constants';
 import { useExercicioExecucao } from '@/hooks/useExercicioExecucao';
 import { 
@@ -39,6 +41,8 @@ export const Executor = ({
   modoExecucao,
   onSessaoFinalizada 
 }: Props) => {
+  const isMobile = useIsMobile();
+  
   // Estados dos modais
   const [modalIntervaloSerie, setModalIntervaloSerie] = useState(false);
   const [modalIntervaloExercicio, setModalIntervaloExercicio] = useState(false);
@@ -116,31 +120,7 @@ export const Executor = ({
     }
   }, [sessaoPausada, cronometroPausado]);
 
-  const completarSerie = useCallback((exercicioIndex: number, serieIndex: number) => {
-    atualizarSerieExecutada(exercicioIndex, serieIndex, { executada: true });
-    
-    const exercicio = exercicios[exercicioIndex];
-    const serie = exercicio.series[serieIndex];
-    
-    const ehUltimaSerie = exercicioUtils.ehUltimaSerie(serie, exercicio.series);
-    const ehUltimoExercicio = exercicioUtils.ehUltimoExercicio(exercicioIndex, exercicios.length);
-    
-    if (!ehUltimaSerie) {
-      const intervaloSerie = serie.intervalo_apos_serie || EXERCICIO_CONSTANTS.INTERVALO_PADRAO_SERIE;
-      setDadosCronometroSerie({ intervalo: intervaloSerie });
-      setModalIntervaloSerie(true);
-    } else if (!ehUltimoExercicio) {
-      const intervaloExercicio = exercicio.intervalo_apos_exercicio || EXERCICIO_CONSTANTS.INTERVALO_PADRAO_EXERCICIO;
-      const proximoExercicio = exercicios[exercicioIndex + 1];
-      setDadosCronometroExercicio({
-        intervalo: intervaloExercicio,
-        exercicioAtual: lookup[exercicio.exercicio_1_id]?.nome || '',
-        proximoExercicio: lookup[proximoExercicio.exercicio_1_id]?.nome || ''
-      });
-      setModalIntervaloExercicio(true);
-    }
-  }, [exercicios, atualizarSerieExecutada, lookup]);
-
+  // ✅ FUNÇÃO MOVIDA PARA ANTES - finalizarSessao
   const finalizarSessao = useCallback(async () => {
     // Verificação de completude apenas para aluno
     if (modoExecucao === 'aluno') {
@@ -170,6 +150,74 @@ export const Executor = ({
     
     setFinalizando(false);
   }, [modoExecucao, exercicios, salvarExecucaoCompleta, onSessaoFinalizada]);
+
+  // ✅ AGORA completarSerie pode usar finalizarSessao
+  const completarSerie = useCallback((exercicioIndex: number, serieIndex: number) => {
+    atualizarSerieExecutada(exercicioIndex, serieIndex, { executada: true });
+    
+    const exercicio = exercicios[exercicioIndex];
+    const serie = exercicio.series[serieIndex];
+    
+    const ehUltimaSerie = exercicioUtils.ehUltimaSerie(serie, exercicio.series);
+    const ehUltimoExercicio = exercicioUtils.ehUltimoExercicio(exercicioIndex, exercicios.length);
+    
+    // ✅ VERIFICAR SE TODAS AS SÉRIES ESTÃO COMPLETAS
+    const verificarSessaoCompleta = () => {
+      // Simular o estado após esta série ser marcada como executada
+      const exerciciosAtualizados = exercicios.map((ex, exIdx) => {
+        if (exIdx === exercicioIndex) {
+          return {
+            ...ex,
+            series: ex.series.map((s, sIdx) => {
+              if (sIdx === serieIndex) {
+                return { ...s, executada: true };
+              }
+              return s;
+            })
+          };
+        }
+        return ex;
+      });
+
+      // Verificar se todas as séries estão executadas
+      const totalSeries = exerciciosAtualizados.reduce((total, ex) => total + ex.series.length, 0);
+      const seriesExecutadas = exerciciosAtualizados.reduce((total, ex) => 
+        total + ex.series.filter(s => s.executada).length, 0
+      );
+
+      return seriesExecutadas === totalSeries;
+    };
+
+    // ✅ LÓGICA DE INTERVALOS E FINALIZAÇÃO CORRIGIDA
+    if (!ehUltimaSerie) {
+      // Intervalo entre séries
+      const intervaloSerie = serie.intervalo_apos_serie || EXERCICIO_CONSTANTS.INTERVALO_PADRAO_SERIE;
+      setDadosCronometroSerie({ intervalo: intervaloSerie });
+      setModalIntervaloSerie(true);
+    } else {
+      // ✅ ÚLTIMA SÉRIE DE QUALQUER EXERCÍCIO
+      // Primeiro: verificar se TODAS as séries estão completas
+      if (verificarSessaoCompleta()) {
+        // 🚀 FINALIZAR AUTOMATICAMENTE (independente da ordem de execução)
+        setTimeout(() => {
+          finalizarSessao();
+        }, 500); // Pequeno delay para melhor UX (mostrar série como completa primeiro)
+      } else if (!ehUltimoExercicio) {
+        // Só mostra intervalo entre exercícios se ainda há exercícios não executados
+        // E se não é o último exercício por índice
+        const intervaloExercicio = exercicio.intervalo_apos_exercicio || EXERCICIO_CONSTANTS.INTERVALO_PADRAO_EXERCICIO;
+        const proximoExercicio = exercicios[exercicioIndex + 1];
+        setDadosCronometroExercicio({
+          intervalo: intervaloExercicio,
+          exercicioAtual: lookup[exercicio.exercicio_1_id]?.nome || '',
+          proximoExercicio: lookup[proximoExercicio.exercicio_1_id]?.nome || ''
+        });
+        setModalIntervaloExercicio(true);
+      }
+      // Se ehUltimoExercicio = true mas verificarSessaoCompleta() = false,
+      // significa que há outros exercícios ainda não executados, então não faz nada
+    }
+  }, [exercicios, atualizarSerieExecutada, lookup, finalizarSessao]); // ✅ finalizarSessao nas dependências
 
   const forcarFinalizacao = useCallback(async () => {
     setModalFinalizarIncompleta(false);
@@ -453,16 +501,10 @@ export const Executor = ({
         onClose={() => setModalHistoricoVisible(false)}
       />
 
-      {/* Modal de Pausar */}
-      <Dialog open={modalPausarVisible} onOpenChange={setModalPausarVisible}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Pausar Sessão</DialogTitle>
-            <DialogDescription>
-              O progresso atual será salvo. O que deseja fazer?
-            </DialogDescription>
-          </DialogHeader>
-          
+      {/* ✅ Modal de Pausar - RESPONSIVA */}
+      {(() => {
+        // Conteúdo compartilhado
+        const PausarContent = () => (
           <div className="flex flex-col space-y-3 pt-4">
             <Button 
               variant="outline"
@@ -480,8 +522,64 @@ export const Executor = ({
               Cancelar
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        );
+
+        if (isMobile) {
+          // 📱 MOBILE: Drawer
+          return (
+            <Drawer open={modalPausarVisible} onOpenChange={setModalPausarVisible}>
+              <DrawerContent className="px-4 pb-4">
+                <DrawerHeader className="text-center pb-4 relative">
+                  {/* Botão X para fechar */}
+                  <button
+                    onClick={() => setModalPausarVisible(false)}
+                    className="absolute right-4 top-4 p-1 hover:bg-gray-100 rounded-full transition-colors"
+                    aria-label="Fechar"
+                  >
+                    <X className="h-5 w-5 text-gray-500" />
+                  </button>
+                  
+                  <DrawerTitle className="text-lg font-semibold">
+                    Pausar Sessão
+                  </DrawerTitle>
+                  <DrawerDescription className="text-sm text-muted-foreground mt-2">
+                    O progresso atual será salvo. O que deseja fazer?
+                  </DrawerDescription>
+                </DrawerHeader>
+                
+                <div className="px-2">
+                  <PausarContent />
+                </div>
+              </DrawerContent>
+            </Drawer>
+          );
+        }
+
+        // 💻 DESKTOP: Dialog
+        return (
+          <Dialog open={modalPausarVisible} onOpenChange={setModalPausarVisible}>
+            <DialogContent>
+              <DialogHeader className="relative">
+                {/* Botão X para fechar */}
+                <button
+                  onClick={() => setModalPausarVisible(false)}
+                  className="absolute right-6 top-4 p-1 hover:bg-gray-100 rounded-full transition-colors"
+                  aria-label="Fechar"
+                >
+                  <X className="h-5 w-5 text-gray-500" />
+                </button>
+                
+                <DialogTitle>Pausar Sessão</DialogTitle>
+                <DialogDescription>
+                  O progresso atual será salvo. O que deseja fazer?
+                </DialogDescription>
+              </DialogHeader>
+              
+              <PausarContent />
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
 
       {/* Modal de Finalizar Incompleta (apenas para aluno) */}
       {modoExecucao === 'aluno' && (

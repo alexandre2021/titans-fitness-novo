@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -16,8 +16,8 @@ import { useAuth } from "@/hooks/useAuth";
 
 const formSchema = z.object({
   nomeCompleto: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
-  genero: z.string().min(1, "Selecione o gênero"),
-  dataNascimento: z.string().min(1, "Data de nascimento é obrigatória"),
+  genero: z.string().optional(),
+  dataNascimento: z.string().optional(),
   telefone: z.string().optional(),
   cref: z.string().optional(),
 });
@@ -33,13 +33,52 @@ const OnboardingPTInformacoesBasicas = () => {
     register,
     handleSubmit,
     formState: { errors },
-    setValue,
-    watch,
+    control,
+    clearErrors,
+    reset,
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
+    defaultValues: {
+      nomeCompleto: "",
+      genero: "",
+      dataNascimento: "",
+      telefone: "",
+      cref: "",
+    },
   });
 
-  const genero = watch("genero");
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (user) {
+        try {
+          const { data, error } = await supabase
+            .from('personal_trainers')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          if (error) {
+            console.error("Erro ao buscar perfil:", error);
+            return;
+          }
+
+          if (data) {
+            reset({
+              nomeCompleto: data.nome_completo || "",
+              genero: data.genero || "",
+              dataNascimento: data.data_nascimento || "",
+              telefone: data.telefone || "",
+              cref: data.cref || "",
+            });
+          }
+        } catch (err) {
+          console.error("Erro inesperado ao buscar perfil:", err);
+        }
+      }
+    };
+
+    fetchProfile();
+  }, [user, reset]);
 
   const onSubmit = async (data: FormData) => {
     if (!user) return;
@@ -51,8 +90,8 @@ const OnboardingPTInformacoesBasicas = () => {
         .from('personal_trainers')
         .update({
           nome_completo: data.nomeCompleto,
-          genero: data.genero,
-          data_nascimento: data.dataNascimento,
+          genero: data.genero || null,
+          data_nascimento: data.dataNascimento || null,
           telefone: data.telefone || null,
           cref: data.cref || null,
         })
@@ -106,19 +145,31 @@ const OnboardingPTInformacoesBasicas = () => {
             
             <div className="space-y-2">
               <Label htmlFor="genero" className="text-text-primary">
-                Gênero *
+                Gênero
               </Label>
-              <Select onValueChange={(value) => setValue("genero", value)} value={genero}>
-                <SelectTrigger className="border-border">
-                  <SelectValue placeholder="Selecione seu gênero" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Masculino">Masculino</SelectItem>
-                  <SelectItem value="Feminino">Feminino</SelectItem>
-                  <SelectItem value="Outro">Outro</SelectItem>
-                  <SelectItem value="Prefiro não informar">Prefiro não informar</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                name="genero"
+                control={control}
+                render={({ field }) => (
+                  <Select 
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      clearErrors("genero");
+                    }} 
+                    value={field.value}
+                  >
+                    <SelectTrigger className="border-border">
+                      <SelectValue placeholder="Selecione seu gênero" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Masculino">Masculino</SelectItem>
+                      <SelectItem value="Feminino">Feminino</SelectItem>
+                      <SelectItem value="Outro">Outro</SelectItem>
+                      <SelectItem value="Prefiro não informar">Prefiro não informar</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
               {errors.genero && (
                 <p className="text-sm text-destructive">{errors.genero.message}</p>
               )}
@@ -126,7 +177,7 @@ const OnboardingPTInformacoesBasicas = () => {
             
             <div className="space-y-2">
               <Label htmlFor="dataNascimento" className="text-text-primary">
-                Data de Nascimento *
+                Data de Nascimento
               </Label>
               <Input
                 id="dataNascimento"
@@ -143,11 +194,17 @@ const OnboardingPTInformacoesBasicas = () => {
               <Label htmlFor="telefone" className="text-text-primary">
                 Telefone
               </Label>
-              <PhoneInput
-                id="telefone"
-                value={watch("telefone")}
-                onChange={(value) => setValue("telefone", value)}
-                className="border-border focus:ring-primary"
+              <Controller
+                name="telefone"
+                control={control}
+                render={({ field }) => (
+                  <PhoneInput
+                    id="telefone"
+                    value={field.value}
+                    onChange={field.onChange}
+                    className="border-border focus:ring-primary"
+                  />
+                )}
               />
             </div>
             

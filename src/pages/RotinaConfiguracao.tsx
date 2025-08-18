@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, User, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, User, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,9 +20,9 @@ import {
   FORMAS_PAGAMENTO,
   LIMITES,
   Aluno,
-  Objetivo,        // ← ADICIONAR
-  Dificuldade,     // ← ADICIONAR  
-  FormaPagamento   // ← ADICIONAR
+  Objetivo,        
+  Dificuldade,     
+  FormaPagamento   
 } from '@/types/rotina.types';
 
 const RotinaConfiguracao = () => {
@@ -34,6 +34,7 @@ const RotinaConfiguracao = () => {
   const [aluno, setAluno] = useState<Aluno | null>(null);
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
+  const [pagamentoExpandido, setPagamentoExpandido] = useState(false);
   
   const [form, setForm] = useState<ConfiguracaoRotina>({
     nome: '',
@@ -49,8 +50,13 @@ const RotinaConfiguracao = () => {
     descricao: ''
   });
 
-
   const [erros, setErros] = useState<{[key: string]: string}>({});
+
+  // Função para normalizar valores numéricos (remove zeros à esquerda)
+  const normalizarNumero = (valor: string): number => {
+    const numero = parseInt(valor) || 0;
+    return numero;
+  };
 
   // Limpa erro de nome automaticamente ao digitar um valor válido
   useEffect(() => {
@@ -63,11 +69,11 @@ const RotinaConfiguracao = () => {
   }, [form.nome, erros.nome]);
 
   // Carregar dados do aluno e dados salvos
-
-
   useEffect(() => {
-    // Limpa cache de exercícios ao iniciar nova rotina
-    sessionStorage.removeItem('rotina_exercicios');
+    // SÓ limpa cache de exercícios se for início de nova rotina (não tem configuração salva)
+    if (!rotinaStorage.storage.configuracao) {
+      sessionStorage.removeItem('rotina_exercicios');
+    }
 
     let jaRedirecionou = false;
 
@@ -181,8 +187,8 @@ const RotinaConfiguracao = () => {
     setSalvando(true);
     try {
       await rotinaStorage.salvarConfiguracao(form);
-      console.log('✅ Configuração salva:', form); // ← ADICIONAR
-      console.log('✅ Storage após salvar:', rotinaStorage.storage); // ← ADICIONAR
+      console.log('✅ Configuração salva:', form);
+      console.log('✅ Storage após salvar:', rotinaStorage.storage);
       navigate(`/rotinas-criar/${alunoId}/treinos`);
     } catch (error) {
       console.error('Erro ao salvar:', error);
@@ -227,7 +233,6 @@ const RotinaConfiguracao = () => {
       {/* Header com breadcrumb */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          {/* Botão Voltar removido */}
           <span className="text-sm text-gray-600">Nova Rotina</span>
           <span className="text-sm text-gray-500">•</span>
           <span className="text-sm font-medium">Configuração</span>
@@ -343,7 +348,7 @@ const RotinaConfiguracao = () => {
                 min={LIMITES.DURACAO_MIN}
                 max={LIMITES.DURACAO_MAX}
                 value={form.duracao_semanas}
-                onChange={(e) => setForm(prev => ({ ...prev, duracao_semanas: parseInt(e.target.value) || 0 }))}
+                onChange={(e) => setForm(prev => ({ ...prev, duracao_semanas: normalizarNumero(e.target.value) }))}
                 className={erros.duracao_semanas ? 'border-red-500' : ''}
               />
               {erros.duracao_semanas && <p className="text-sm text-red-500">{erros.duracao_semanas}</p>}
@@ -359,14 +364,12 @@ const RotinaConfiguracao = () => {
                 min={LIMITES.TREINOS_MIN}
                 max={LIMITES.TREINOS_MAX}
                 value={form.treinos_por_semana}
-                onChange={(e) => setForm(prev => ({ ...prev, treinos_por_semana: parseInt(e.target.value) || 0 }))}
+                onChange={(e) => setForm(prev => ({ ...prev, treinos_por_semana: normalizarNumero(e.target.value) }))}
                 className={erros.treinos_por_semana ? 'border-red-500' : ''}
               />
               {erros.treinos_por_semana && <p className="text-sm text-red-500">{erros.treinos_por_semana}</p>}
             </div>
           </div>
-
-          {/* Linha 3: Valor e Forma de Pagamento */}
 
           {/* Data de início */}
           <div className="space-y-2">
@@ -393,7 +396,7 @@ const RotinaConfiguracao = () => {
             />
           </div>
 
-          {/* Checkbox para execução pelo aluno - movido para logo após descrição */}
+          {/* Checkbox para execução pelo aluno */}
           <div className="flex items-center space-x-2">
             <input
               type="checkbox"
@@ -407,67 +410,90 @@ const RotinaConfiguracao = () => {
             </Label>
           </div>
 
-          {/* Subtítulo Pagamentos */}
-          <h4 className="text-base font-semibold text-foreground mt-6 mb-2">Pagamento</h4>
+          {/* Seção Pagamento - Colapsável */}
+          <div className="border rounded-lg overflow-hidden">
+            {/* Header da seção - sempre visível */}
+            <button
+              type="button"
+              onClick={() => setPagamentoExpandido(!pagamentoExpandido)}
+              className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors flex items-center justify-between"
+            >
+              <div className="flex items-center gap-2">
+                <h4 className="text-base font-semibold text-foreground">Pagamento</h4>
+                <span className="text-sm text-gray-500">(opcional)</span>
+              </div>
+              {pagamentoExpandido ? (
+                <ChevronUp className="h-4 w-4 text-gray-600" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-gray-600" />
+              )}
+            </button>
 
-          {/* Linha Pagamentos: Valor Total e Forma de Pagamento - movida para logo abaixo do subtítulo */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="valor_total">
-                Valor Total (R$) <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="valor_total"
-                type="number"
-                min={LIMITES.VALOR_MIN}
-                step="0.01"
-                value={form.valor_total}
-                onChange={(e) => setForm(prev => ({ ...prev, valor_total: parseFloat(e.target.value) || 0 }))}
-                className={erros.valor_total ? 'border-red-500' : ''}
-              />
-              {erros.valor_total && <p className="text-sm text-red-500">{erros.valor_total}</p>}
-            </div>
+            {/* Conteúdo colapsável */}
+            {pagamentoExpandido && (
+              <div className="p-4 space-y-4 border-t bg-white">
+                {/* Linha Pagamentos: Valor Total e Forma de Pagamento */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="valor_total">
+                      Valor Total (R$) <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="valor_total"
+                      type="number"
+                      min={LIMITES.VALOR_MIN}
+                      step="0.01"
+                      value={form.valor_total}
+                      onChange={(e) => setForm(prev => ({ ...prev, valor_total: parseFloat(e.target.value) || 0 }))}
+                      className={erros.valor_total ? 'border-red-500' : ''}
+                    />
+                    {erros.valor_total && <p className="text-sm text-red-500">{erros.valor_total}</p>}
+                  </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="forma_pagamento">
-                Forma de Pagamento <span className="text-red-500">*</span>
-              </Label>
-              <Select
-                value={form.forma_pagamento}
-                onValueChange={(value) => setForm(prev => ({ ...prev, forma_pagamento: value as FormaPagamento }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {FORMAS_PAGAMENTO.map(forma => (
-                    <SelectItem key={forma} value={forma}>
-                      {forma}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="forma_pagamento">
+                      Forma de Pagamento <span className="text-red-500">*</span>
+                    </Label>
+                    <Select
+                      value={form.forma_pagamento}
+                      onValueChange={(value) => setForm(prev => ({ ...prev, forma_pagamento: value as FormaPagamento }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FORMAS_PAGAMENTO.map(forma => (
+                          <SelectItem key={forma} value={forma}>
+                            {forma}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Observações de pagamento */}
+                <div className="space-y-2">
+                  <Label htmlFor="observacoes_pagamento">Observações de Pagamento</Label>
+                  <Textarea
+                    id="observacoes_pagamento"
+                    value={form.observacoes_pagamento || ''}
+                    onChange={(e) => setForm(prev => ({ ...prev, observacoes_pagamento: e.target.value }))}
+                    placeholder="Informações adicionais sobre pagamento..."
+                    rows={2}
+                  />
+                </div>
+              </div>
+            )}
           </div>
-
-          {/* Observações de pagamento */}
-          <div className="space-y-2">
-            <Label htmlFor="observacoes_pagamento">Observações de Pagamento</Label>
-            <Textarea
-              id="observacoes_pagamento"
-              value={form.observacoes_pagamento || ''}
-              onChange={(e) => setForm(prev => ({ ...prev, observacoes_pagamento: e.target.value }))}
-              placeholder="Informações adicionais sobre pagamento..."
-              rows={2}
-            />
-          </div>
-
-          {/* Checkbox para execução pelo aluno */}
         </CardContent>
       </Card>
 
-      {/* Botões de navegação */}
-      <div className="flex justify-end pt-6">
+      {/* Espaçamento para botões fixos no mobile */}
+      <div className="pb-20 md:pb-6"></div>
+
+      {/* Botões de navegação - Desktop */}
+      <div className="hidden md:flex justify-end pt-6">
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleVoltar} disabled={salvando}>
             <X className="h-4 w-4 mr-2" />
@@ -483,6 +509,40 @@ const RotinaConfiguracao = () => {
               <>
                 Próximo: Treinos
                 <ChevronRight className="h-4 w-4 ml-2" />
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+
+      {/* Botões de navegação - Mobile (fixos no rodapé) */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 md:hidden z-50">
+        <div className="flex justify-end gap-2 max-w-md mx-auto">
+          <Button 
+            variant="outline" 
+            onClick={handleVoltar} 
+            disabled={salvando}
+            size="sm"
+            className="px-3"
+          >
+            <X className="h-4 w-4 mr-1" />
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleProximo} 
+            disabled={salvando}
+            size="sm"
+            className="px-3"
+          >
+            {salvando ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
+                Salvando...
+              </>
+            ) : (
+              <>
+                Próximo
+                <ChevronRight className="h-4 w-4 ml-1" />
               </>
             )}
           </Button>

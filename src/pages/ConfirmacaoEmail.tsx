@@ -1,22 +1,28 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mail } from "lucide-react";
-
+import { Mail, ArrowLeft } from "lucide-react";
 
 const ConfirmacaoEmail = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="border-b border-border">
-        <div className="container mx-auto px-6 py-4">
-          <Link to="/" className="flex items-center">
-            <img 
-              src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets//TitansFitnessLogo.png" 
-              alt="Titans.fitness" 
-              className="h-12"
-            />
-          </Link>
+      <header className="border-b border-border py-4">
+        <div className="flex items-center justify-center relative px-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(-1)}
+            className="h-10 w-10 p-0 absolute left-6"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <img
+            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal.png"
+            alt="Titans.fitness"
+            className="h-12"
+          />
         </div>
       </header>
 
@@ -31,16 +37,16 @@ const ConfirmacaoEmail = () => {
               Cadastro Realizado!
             </CardTitle>
           </CardHeader>
-          
+
           <CardContent className="space-y-4">
             <p className="text-text-secondary">
               Seu cadastro foi realizado com sucesso. Verifique seu email para confirmar sua conta.
             </p>
-            
+
             <p className="text-sm text-text-secondary">
               Após confirmar seu email, você poderá fazer login e começar a usar a plataforma.
             </p>
-            
+
             <div className="pt-4">
               <Link to="/login">
                 <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
@@ -48,7 +54,7 @@ const ConfirmacaoEmail = () => {
                 </Button>
               </Link>
             </div>
-            
+
             <div className="pt-2">
               <Link to="/" className="text-sm text-primary hover:underline">
                 Voltar para início

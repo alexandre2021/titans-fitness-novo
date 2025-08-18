@@ -4,15 +4,21 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { ExercicioOptionsModal } from './ExercicioOptionsModal';
 import { Tables } from '@/integrations/supabase/types';
 
@@ -23,6 +29,95 @@ interface ExercicioCardProps {
   onCriarCopia?: (exercicioId: string) => void;
   onExcluir?: (exercicioId: string) => Promise<void>;
 }
+
+const CORES_GRUPOS_MUSCULARES: { [key: string]: string } = {
+  'Peito': 'bg-red-100 text-red-800',
+  'Costas': 'bg-blue-100 text-blue-800', 
+  'Pernas': 'bg-green-100 text-green-800',        // Verde (mantém)
+  'Ombros': 'bg-yellow-100 text-yellow-800',
+  'Bíceps': 'bg-purple-100 text-purple-800',
+  'Tríceps': 'bg-pink-100 text-pink-800',
+  'Abdômen': 'bg-orange-100 text-orange-800',
+  'Glúteos': 'bg-violet-100 text-violet-800',     // Roxo/violeta - bem diferente
+  'Panturrilha': 'bg-indigo-100 text-indigo-800'
+};
+
+// Componente responsivo para confirmação
+const ResponsiveDeleteConfirmation = ({ 
+  open, 
+  onOpenChange, 
+  onConfirm, 
+  isDeleting, 
+  title,
+  description
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+  isDeleting: boolean;
+  title: string;
+  description: React.ReactNode;
+}) => {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent>
+          <DrawerHeader className="text-left">
+            <DrawerTitle>{title}</DrawerTitle>
+          </DrawerHeader>
+          <div className="p-4 space-y-4">
+            <div className="text-sm text-muted-foreground">{description}</div>
+            <div className="flex justify-end space-x-2 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={onConfirm}
+                  disabled={isDeleting}
+                  variant="destructive"
+                >
+                  {isDeleting ? "Excluindo..." : "Excluir"}
+                </Button>
+            </div>
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription asChild>{description}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={onConfirm}
+            disabled={isDeleting}
+            variant="destructive"
+          >
+            {isDeleting ? "Excluindo..." : "Excluir"}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+};
 
 export const ExercicioCard = ({ 
   exercicio, 
@@ -55,55 +150,9 @@ export const ExercicioCard = ({
     }
   };
 
-  const getEquipmentColor = (equipamento: string | null) => {
-    // Todas as badges de equipamento terão fundo cinza claro e texto preto
-    return 'bg-gray-100 text-black';
-  };
-
-  const getDifficultyColor = (dificuldade: string | null) => {
-    // Todas as badges de dificuldade terão fundo cinza claro e texto preto
-    return 'bg-gray-100 text-black';
-  };
-
-  const getDifficultyStyle = (dificuldade: string | null) => {
-    switch (dificuldade) {
-      case 'Baixa':
-        return { backgroundColor: '#22C55E', color: 'white' };
-      case 'Média':
-        return { backgroundColor: '#EAB308', color: 'white' };
-      case 'Alta':
-        return { backgroundColor: '#EF4444', color: 'white' };
-      default:
-        return {};
-    }
-  };
-
-  const getGrupoMuscularStyle = (grupo: string | null) => {
-    switch (grupo) {
-      case 'Peito':
-        return { backgroundColor: '#F87171', color: 'white' };
-      case 'Costas':
-        return { backgroundColor: '#60A5FA', color: 'white' };
-      case 'Pernas':
-        return { backgroundColor: '#34D399', color: 'white' };
-      case 'Ombros':
-        return { backgroundColor: '#FBBF24', color: 'white' };
-      case 'Bíceps':
-        return { backgroundColor: '#A78BFA', color: 'white' };
-      case 'Tríceps':
-        return { backgroundColor: '#F472B6', color: 'white' };
-      case 'Abdômen':
-        return { backgroundColor: '#F59E42', color: 'white' };
-      case 'Glúteos':
-        return { backgroundColor: '#34D399', color: 'white' }; // Mesma cor de Pernas
-      case 'Panturrilha':
-        return { backgroundColor: '#34D399', color: 'white' }; // Mesma cor de Pernas
-      case 'Trapézio':
-        return { backgroundColor: '#60A5FA', color: 'white' }; // Mesma cor de Costas
-      default:
-        return {};
-    }
-  };
+  const corGrupoMuscular = exercicio.grupo_muscular 
+    ? CORES_GRUPOS_MUSCULARES[exercicio.grupo_muscular] || 'bg-gray-100 text-black'
+    : 'bg-gray-100 text-black';
 
   return (
     <>
@@ -123,7 +172,7 @@ export const ExercicioCard = ({
               
               <div className="flex flex-wrap gap-1 md:gap-2">
                 {exercicio.grupo_muscular && (
-                  <Badge className="text-xs bg-gray-100 text-black border-0">
+                  <Badge className={`text-xs border-0 ${corGrupoMuscular}`}>
                     {exercicio.grupo_muscular}
                   </Badge>
                 )}
@@ -137,7 +186,6 @@ export const ExercicioCard = ({
                     {exercicio.dificuldade}
                   </Badge>
                 )}
-                {/* Badge 'Personalizado' removido */}
               </div>
             </div>
 
@@ -150,28 +198,19 @@ export const ExercicioCard = ({
         </CardContent>
       </Card>
 
-      {/* Dialog de confirmação de exclusão */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Exercício</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir o exercício <strong>{exercicio.nome}</strong>? 
-              Esta ação não pode ser desfeita e todos os dados do exercício serão removidos.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleExcluir}
-              disabled={isDeleting}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              {isDeleting ? "Excluindo..." : "Excluir"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ResponsiveDeleteConfirmation
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        onConfirm={handleExcluir}
+        isDeleting={isDeleting}
+        title="Excluir Exercício"
+        description={
+          <>
+            Tem certeza que deseja excluir o exercício <strong>{exercicio.nome}</strong>? 
+            Esta ação não pode ser desfeita e todos os dados do exercício serão removidos.
+          </>
+        }
+      />
     </>
   );
 };

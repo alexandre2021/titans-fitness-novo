@@ -18,7 +18,7 @@ const PTMobileHeader = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const getPageTitle = () => {
+  const getPageTitle = (): React.ReactNode => {
     switch (location.pathname) {
       case "/index-pt":
         return "Inicial";
@@ -35,7 +35,13 @@ const PTMobileHeader = () => {
       case "/configuracoes-pt":
         return "Configurações";
       default:
-        return "Titans Fitness";
+        return (
+          <img 
+            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal.png" 
+            alt="Titans Fitness"
+            className="h-12"
+          />
+        );
     }
   };
 
@@ -61,7 +67,7 @@ const PTMobileHeader = () => {
 
   return (
     <header className="flex items-center justify-between p-4 border-b bg-background md:hidden">
-      <h1 className="text-lg font-semibold">{getPageTitle()}</h1>
+      <div className="text-lg font-semibold">{getPageTitle()}</div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="sm" className="h-12 w-12 rounded-full">
@@ -72,17 +78,17 @@ const PTMobileHeader = () => {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => navigate('/perfil-pt')}>
-            <User className="mr-2 h-4 w-4" />
-            Perfil
+            <User className="mr-2 h-5 w-5" />
+            <span className="text-base">Perfil</span>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => navigate('/configuracoes-pt')}>
-            <Settings className="mr-2 h-4 w-4" />
-            Configurações
+            <Settings className="mr-2 h-5 w-5" />
+            <span className="text-base">Configurações</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleLogout} className="text-red-600">
-            <LogOut className="mr-2 h-4 w-4" />
-            Sair
+            <LogOut className="mr-2 h-5 w-5" />
+            <span className="text-base">Sair</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

@@ -31,9 +31,9 @@ const especializacoesOpcoes = [
 ];
 
 const formSchema = z.object({
-  anosExperiencia: z.string().min(1, "Selecione os anos de experiência"),
-  especializacoes: z.array(z.string()).min(1, "Selecione pelo menos uma especialização"),
-  bio: z.string().min(50, "A biografia deve ter pelo menos 50 caracteres"),
+  anosExperiencia: z.string().optional(),
+  especializacoes: z.array(z.string()).optional(),
+  bio: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -83,9 +83,9 @@ const OnboardingPTExperienciaProfissional = () => {
       const { error } = await supabase
         .from('personal_trainers')
         .update({
-          anos_experiencia: data.anosExperiencia,
-          especializacoes: data.especializacoes,
-          bio: data.bio,
+          anos_experiencia: data.anosExperiencia || null,
+          especializacoes: data.especializacoes || [],
+          bio: data.bio || null,
         })
         .eq('id', user.id);
 
@@ -103,6 +103,8 @@ const OnboardingPTExperienciaProfissional = () => {
     }
   };
 
+
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-6 py-12">
       <Card className="w-full max-w-2xl border-border">
@@ -115,7 +117,7 @@ const OnboardingPTExperienciaProfissional = () => {
             Experiência Profissional
           </CardTitle>
           <p className="text-text-secondary">
-            Conte-nos sobre sua experiência e especializações
+            Conte-nos sobre sua experiência e especializações (opcional)
           </p>
         </CardHeader>
         
@@ -123,11 +125,11 @@ const OnboardingPTExperienciaProfissional = () => {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="anosExperiencia" className="text-text-primary">
-                Anos de Experiência *
+                Anos de Experiência
               </Label>
               <Select onValueChange={(value) => setValue("anosExperiencia", value)} value={anosExperiencia}>
                 <SelectTrigger className="border-border">
-                  <SelectValue placeholder="Selecione seus anos de experiência" />
+                  <SelectValue placeholder="Selecione seus anos de experiência (opcional)" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Menos de 1 ano">Menos de 1 ano</SelectItem>
@@ -144,11 +146,11 @@ const OnboardingPTExperienciaProfissional = () => {
             
             <div className="space-y-2">
               <Label className="text-text-primary">
-                Especializações * (selecione pelo menos uma)
+                Especializações
               </Label>
               <Select onValueChange={adicionarEspecializacao}>
                 <SelectTrigger className="border-border">
-                  <SelectValue placeholder="Adicionar especialização" />
+                  <SelectValue placeholder="Adicionar especialização (opcional)" />
                 </SelectTrigger>
                 <SelectContent>
                   {especializacoesOpcoes.map((opcao) => (
@@ -189,16 +191,16 @@ const OnboardingPTExperienciaProfissional = () => {
             
             <div className="space-y-2">
               <Label htmlFor="bio" className="text-text-primary">
-                Biografia Profissional * (mínimo 50 caracteres)
+                Biografia Profissional
               </Label>
               <Textarea
                 id="bio"
-                placeholder="Descreva sua experiência, formação e abordagem profissional..."
+                placeholder="Descreva sua experiência, formação e abordagem profissional... (opcional)"
                 {...register("bio")}
                 className="border-border focus:ring-primary min-h-32"
               />
               <p className="text-xs text-text-secondary">
-                {bio?.length || 0} / 50 caracteres mínimos
+                {bio?.length || 0} caracteres
               </p>
               {errors.bio && (
                 <p className="text-sm text-destructive">{errors.bio.message}</p>

@@ -49,10 +49,71 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useExercicioLookup } from '@/hooks/useExercicioLookup';
 import { useToast } from '@/hooks/use-toast';
+
+// Hook para detectar se é mobile
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  return isMobile;
+};
+
+// Componente responsivo que escolhe entre Modal e Drawer
+interface ResponsiveModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  children: React.ReactNode;
+}
+
+const ResponsiveModal = ({ open, onOpenChange, title, children }: ResponsiveModalProps) => {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent className="max-h-[90vh]">
+          <DrawerHeader className="text-left">
+            <DrawerTitle>{title}</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-4 overflow-y-auto">
+            {children}
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        {children}
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 interface AlunoInfo {
   id: string;
@@ -614,43 +675,85 @@ const AlunosRotinas = () => {
     <>
       <div className="space-y-6">
         {/* Cabeçalho */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost" 
-              onClick={() => navigate('/alunos')}
-              className="h-10 w-10 p-0"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold">Rotinas</h1>
-              <p className="text-muted-foreground">Gerencie as rotinas de {aluno.nome_completo}</p>
-            </div>
-          </div>
-          
-          {activeTab === "atual" && (
-            <Button
-              onClick={() => {
-                if (rotinas.length > 0) {
-                  toast({
-                    title: "Já existe uma rotina atual",
-                    description: "Conclua ou exclua a rotina atual antes de criar uma nova.",
-                    variant: "destructive",
-                  });
-                  return;
-                }
-                setNavegandoNovaRotina(true);
-                navigate(`/rotinas-criar/${id}/configuracao`);
-              }}
-              variant="default"
-              disabled={navegandoNovaRotina}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Rotina
-            </Button>
-          )}
-        </div>
+<div className="space-y-4">
+  {/* Layout Desktop: Título e botão na mesma linha */}
+  <div className="hidden md:flex md:items-center md:justify-between">
+    <div className="flex items-center gap-4">
+      <Button 
+        variant="ghost" 
+        onClick={() => navigate('/alunos')}
+        className="h-10 w-10 p-0"
+      >
+        <ArrowLeft className="h-4 w-4" />
+      </Button>
+      <div>
+        <h1 className="text-3xl font-bold">Rotinas</h1>
+        <p className="text-muted-foreground">Gerencie as rotinas de {aluno.nome_completo}</p>
+      </div>
+    </div>
+    {activeTab === "atual" && (
+      <Button
+        onClick={() => {
+          if (rotinas.length > 0) {
+            toast({
+              title: "Já existe uma rotina atual",
+              description: "Conclua ou exclua a rotina atual antes de criar uma nova.",
+              variant: "destructive",
+            });
+            return;
+          }
+          setNavegandoNovaRotina(true);
+          navigate(`/rotinas-criar/${id}/configuracao`);
+        }}
+        variant="default"
+        disabled={navegandoNovaRotina}
+      >
+        <Plus className="h-4 w-4 mr-2" />
+        Nova Rotina
+      </Button>
+    )}
+  </div>
+
+  {/* Layout Mobile: Igual à página de Alunos */}
+  <div className="flex items-center justify-between md:hidden">
+    <div className="flex items-center gap-4">
+      <Button 
+        variant="ghost" 
+        onClick={() => navigate('/alunos')}
+        className="h-10 w-10 p-0"
+      >
+        <ArrowLeft className="h-4 w-4" />
+      </Button>
+      <div>
+        <h1 className="text-3xl font-bold">Rotinas</h1>
+        <p className="text-sm text-muted-foreground">Gerencie as rotinas</p>
+      </div>
+    </div>
+    {/* Botão só com ícone + igual ao de Alunos */}
+    {activeTab === "atual" && (
+      <Button
+        onClick={() => {
+          if (rotinas.length > 0) {
+            toast({
+              title: "Já existe uma rotina atual",
+              description: "Conclua ou exclua a rotina atual antes de criar uma nova.",
+              variant: "destructive",
+            });
+            return;
+          }
+          setNavegandoNovaRotina(true);
+          navigate(`/rotinas-criar/${id}/configuracao`);
+        }}
+        disabled={navegandoNovaRotina}
+        size="sm"
+        className="flex items-center gap-1 px-3"
+      >
+        <Plus className="h-4 w-4" />
+        <span className="hidden xs:inline">Nova</span>
+      </Button>
+    )}
+  </div>
+</div>
 
         {/* Informações do Aluno */}
         <Card>
@@ -700,7 +803,7 @@ const AlunosRotinas = () => {
                 {rotinas.length === 0 ? (
                   <div className="text-center py-12">
                     <Dumbbell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Nenhuma rotina atual</h3>
+                    <h3 className="text-lg font-semibold mb-2">Nenhuma rotina</h3>
                     <p className="text-muted-foreground mb-6">
                       Este aluno não possui nenhuma rotina no momento. Crie uma nova rotina personalizada.
                     </p>
@@ -784,7 +887,7 @@ const AlunosRotinas = () => {
             </Card>
           </TabsContent>
 
-          {/* Tab Concluídas - Layout atualizado */}
+          {/* Tab Concluídas - Layout responsivo melhorado */}
           <TabsContent value="concluidas" className="space-y-4">
             <Card>
               <CardHeader>
@@ -805,7 +908,7 @@ const AlunosRotinas = () => {
                 ) : (
                   <div className="space-y-4">
                     {rotinasArquivadas.map((rotina) => (
-                      <div key={rotina.id} className="border rounded-lg p-6 hover:bg-muted/50 transition-colors">
+                      <div key={rotina.id} className="border rounded-lg p-4 md:p-6 hover:bg-muted/50 transition-colors">
                         {/* Header da rotina com título e badge de conclusão */}
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex-1">
@@ -817,28 +920,31 @@ const AlunosRotinas = () => {
                           <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-1" />
                         </div>
 
-                        {/* Informações em linha - Duração/Frequência/Conclusão distribuídas */}
-                        <div className="grid grid-cols-3 gap-4 text-sm mb-4">
-                          <div className="flex items-center gap-2 justify-center">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                        {/* ✅ INFORMAÇÕES RESPONSIVAS - Desktop: 3 colunas, Mobile: 3 linhas */}
+                        <div className="space-y-3 md:space-y-0 md:grid md:grid-cols-3 md:gap-4 text-sm mb-4">
+                          {/* Duração */}
+                          <div className="flex items-center gap-2 md:justify-center">
+                            <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                             <span className="text-muted-foreground">Duração:</span>
                             <span className="font-medium">{rotina.duracao_semanas} semanas</span>
                           </div>
-                          <div className="flex items-center gap-2 justify-center">
-                            <Dumbbell className="h-4 w-4 text-muted-foreground" />
+                          
+                          {/* Frequência */}
+                          <div className="flex items-center gap-2 md:justify-center">
+                            <Dumbbell className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                             <span className="text-muted-foreground">Frequência:</span>
                             <span className="font-medium">{rotina.treinos_por_semana}x/semana</span>
                           </div>
-                          <div className="flex items-center gap-2 justify-center">
-                            <CalendarCheck className="h-4 w-4 text-muted-foreground" />
+                          
+                          {/* Conclusão */}
+                          <div className="flex items-center gap-2 md:justify-center">
+                            <CalendarCheck className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                             <span className="text-muted-foreground">Conclusão:</span>
                             <span className="font-medium">
                               {new Date(rotina.data_conclusao).toLocaleDateString('pt-BR')}
                             </span>
                           </div>
                         </div>
-
-                        {/* Informações adicionais removidas conforme solicitado */}
 
                         {/* Botão Ver Relatório PDF */}
                         <Button
@@ -859,28 +965,36 @@ const AlunosRotinas = () => {
         </Tabs>
       </div>
 
-      {/* Modal de Confirmação de Exclusão */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Rotina</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir a rotina <strong>{selectedRotina?.nome}</strong>? 
-              Esta ação não pode ser desfeita e todos os treinos e exercícios da rotina serão removidos.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmarExclusao}
-              disabled={isDeleting}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              {isDeleting ? "Excluindo..." : "Excluir"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Modal de Confirmação de Exclusão - Versão Responsiva */}
+<ResponsiveModal
+  open={showDeleteDialog}
+  onOpenChange={setShowDeleteDialog}
+  title="Excluir Rotina"
+>
+  <div className="space-y-4">
+    <p className="text-sm text-muted-foreground">
+      Tem certeza que deseja excluir a rotina <strong>{selectedRotina?.nome}</strong>? 
+      Esta ação não pode ser desfeita e todos os treinos e exercícios da rotina serão removidos.
+    </p>
+    
+    <div className="flex justify-end space-x-2 pt-4">
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => setShowDeleteDialog(false)}
+      >
+        Cancelar
+      </Button>
+      <Button
+        onClick={handleConfirmarExclusao}
+        disabled={isDeleting}
+        className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+      >
+        {isDeleting ? "Excluindo..." : "Excluir"}
+      </Button>
+    </div>
+  </div>
+</ResponsiveModal>
 
       {/* Modal para Rotina Concluída */}
       <Dialog open={showConcluidaDialog} onOpenChange={setShowConcluidaDialog}>
@@ -906,59 +1020,56 @@ const AlunosRotinas = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Informações sobre Status */}
-      <Dialog open={showStatusInfoDialog} onOpenChange={setShowStatusInfoDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Info className="h-5 w-5 text-blue-600" />
-              Status das Rotinas
-            </DialogTitle>
-            <DialogDescription>
-              Entenda o significado de cada status das rotinas de treino.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 pt-4">
-            
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
-              <div>
-                <p className="font-medium text-green-800 mb-1">Ativa</p>
-                <p className="text-sm text-muted-foreground">
-                  Pagamento confirmado, aluno pode acessar e executar os treinos normalmente.
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 rounded-full bg-red-500 mt-2 flex-shrink-0"></div>
-              <div>
-                <p className="font-medium text-red-800 mb-1">Bloqueada</p>
-                <p className="text-sm text-muted-foreground">
-                  Aluno atrasou mensalidade, acesso aos treinos foi suspenso temporariamente.
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 rounded-full bg-gray-500 mt-2 flex-shrink-0"></div>
-              <div>
-                <p className="font-medium text-gray-800 mb-1">Concluída</p>
-                <p className="text-sm text-muted-foreground">
-                  Todas as sessões da rotina foram executadas. Rotina finalizada automaticamente.
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex justify-end pt-4 border-t">
-            <Button onClick={() => setShowStatusInfoDialog(false)}>
-              Entendi
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Modal de Informações sobre Status - Versão Responsiva */}
+<ResponsiveModal
+  open={showStatusInfoDialog}
+  onOpenChange={setShowStatusInfoDialog}
+  title="Status das Rotinas"
+>
+  <div className="space-y-1 mb-4">
+    <p className="text-sm text-muted-foreground">
+      Entenda o significado de cada status das rotinas de treino.
+    </p>
+  </div>
+  
+  <div className="space-y-4">
+    <div className="flex items-start gap-3">
+      <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
+      <div>
+        <p className="font-medium text-green-800 mb-1">Ativa</p>
+        <p className="text-sm text-muted-foreground">
+          Pagamento confirmado, aluno pode acessar e executar os treinos normalmente.
+        </p>
+      </div>
+    </div>
+    
+    <div className="flex items-start gap-3">
+      <div className="w-2 h-2 rounded-full bg-red-500 mt-2 flex-shrink-0"></div>
+      <div>
+        <p className="font-medium text-red-800 mb-1">Bloqueada</p>
+        <p className="text-sm text-muted-foreground">
+          Aluno atrasou mensalidade, acesso aos treinos foi suspenso temporariamente.
+        </p>
+      </div>
+    </div>
+    
+    <div className="flex items-start gap-3">
+      <div className="w-2 h-2 rounded-full bg-gray-500 mt-2 flex-shrink-0"></div>
+      <div>
+        <p className="font-medium text-gray-800 mb-1">Concluída</p>
+        <p className="text-sm text-muted-foreground">
+          Todas as sessões da rotina foram executadas. Rotina finalizada automaticamente.
+        </p>
+      </div>
+    </div>
+  </div>
+  
+  <div className="flex justify-end pt-4 border-t mt-6">
+    <Button onClick={() => setShowStatusInfoDialog(false)}>
+      Entendi
+    </Button>
+  </div>
+</ResponsiveModal>
     </>
   );
 };

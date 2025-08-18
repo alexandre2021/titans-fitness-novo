@@ -114,7 +114,7 @@ const RotinaRevisao: React.FC = () => {
     }
     const { treinos, exercicios } = rotinaStorage.storage;
     const treinosSemExercicios = treinos.filter(treino => 
-      !exercicios[treino.nome] || exercicios[treino.nome].length === 0
+      !exercicios[treino.id] || exercicios[treino.id].length === 0
     );
     if (treinosSemExercicios.length > 0) {
       toast({
@@ -188,7 +188,7 @@ const RotinaRevisao: React.FC = () => {
         const treinoOriginal = treinos.find(t => t.nome === treinoCriado.nome);
         if (!treinoOriginal) continue;
 
-        const exerciciosDoTreino = exercicios[treinoOriginal.nome] || [];
+        const exerciciosDoTreino = exercicios[treinoOriginal.id] || [];
 
         for (let i = 0; i < exerciciosDoTreino.length; i++) {
           const exercicio = exerciciosDoTreino[i];
@@ -459,7 +459,7 @@ const RotinaRevisao: React.FC = () => {
         <h3 className="text-lg font-medium">Detalhamento dos Treinos</h3>
         
         {treinos.map((treino, treinoIndex) => {
-          const exerciciosDoTreino = exercicios[treino.nome] || [];
+          const exerciciosDoTreino = exercicios[treino.id] || [];
           
           return (
             <Card key={treinoIndex}>
@@ -557,8 +557,11 @@ const RotinaRevisao: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Botões de navegação */}
-      <div className="flex justify-between pt-6 gap-2">
+      {/* Espaçamento para botões fixos no mobile */}
+      <div className="pb-20 md:pb-6"></div>
+
+      {/* Botões de navegação - Desktop */}
+      <div className="hidden md:flex justify-between pt-6 gap-2">
         <div>
           <Button variant="ghost" onClick={() => navigate(`/rotinas-criar/${alunoId}/exercicios`)} disabled={finalizando} className="flex items-center">
             <ChevronLeft className="h-4 w-4 mr-2" />
@@ -587,6 +590,55 @@ const RotinaRevisao: React.FC = () => {
               </>
             )}
           </Button>
+        </div>
+      </div>
+
+      {/* Botões de navegação - Mobile (fixos no rodapé) */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 md:hidden z-50">
+        <div className="flex justify-between items-center max-w-md mx-auto">
+          {/* Esquerda: Voltar */}
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate(`/rotinas-criar/${alunoId}/exercicios`)} 
+            disabled={finalizando}
+            size="sm"
+            className="px-3"
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Voltar
+          </Button>
+          
+          {/* Direita: Cancelar + Próximo */}
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleVoltar} 
+              disabled={finalizando}
+              size="sm"
+              className="px-3"
+            >
+              <X className="h-4 w-4 mr-1" />
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleFinalizar} 
+              disabled={finalizando}
+              size="sm"
+              className="px-3 bg-green-600 hover:bg-green-700 text-white"
+            >
+              {finalizando ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Check className="h-4 w-4 mr-1" />
+                  Finalizar
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

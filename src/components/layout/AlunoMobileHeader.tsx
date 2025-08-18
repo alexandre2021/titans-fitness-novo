@@ -26,7 +26,7 @@ const AlunoMobileHeader = () => {
           {getAvatarContent()}
         </Avatar>
         <div>
-          <h2 className="text-lg font-semibold">Titans Fitness</h2>
+          <img src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal.png" alt="Titans Fitness" className="h-12" />
           <p className="text-xs text-muted-foreground">
             {profile?.nome_completo || 'Aluno'}
           </p>

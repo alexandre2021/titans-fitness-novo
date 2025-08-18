@@ -22,7 +22,7 @@ import Privacidade from "./pages/Privacidade";
 import DashboardPT from "./pages/DashboardPT";
 import DashboardAluno from "./pages/DashboardAluno";
 import OnboardingAlunoDadosBasicos from "./pages/OnboardingAlunoDadosBasicos";
-import OnboardingAlunoDescricaoSaude from "./pages/OnboardingAlunoDescricaoSaude";
+import OnboardingAlunoDescricaoSaude from "./pages/OnboardingAlunoQuestionarioSaude";
 import AlunoLayout from "./components/layout/AlunoLayout";
 import IndexAluno from "./pages/IndexAluno";
 import TreinosAluno from "./pages/TreinosAluno";

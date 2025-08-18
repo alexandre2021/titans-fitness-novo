@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { UserPlus, Users } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useAlunos } from "@/hooks/useAlunos";
 import { usePTProfile } from "@/hooks/usePTProfile";
 import { AlunoCard } from "@/components/alunos/AlunoCard";
@@ -55,7 +56,7 @@ const AlunosPT = () => {
         {/* Mobile: Header compacto */}
         <div className="flex items-center justify-between md:hidden">
           <div>
-            <h1 className="text-2xl font-bold">Alunos</h1>
+            <h1 className="text-3xl font-bold">Alunos</h1>
             <p className="text-sm text-muted-foreground">
               Gerencie seus alunos
             </p>
@@ -66,7 +67,7 @@ const AlunosPT = () => {
             size="sm"
             className="flex items-center gap-1 px-3"
           >
-            <UserPlus className="h-4 w-4" />
+            <Plus className="h-4 w-4" />
             <span className="hidden xs:inline">Convidar</span>
           </Button>
         </div>
@@ -97,7 +98,7 @@ const AlunosPT = () => {
             </p>
             <Button onClick={handleConvidarAluno} size="lg" className="flex items-center gap-2">
               <UserPlus className="h-5 w-5" />
-              Convidar Primeiro Aluno
+              Convidar Aluno
             </Button>
           </CardContent>
         </Card>

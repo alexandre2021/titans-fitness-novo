@@ -61,11 +61,11 @@ const AlunoSidebar = () => {
   return (
     <div className="fixed top-0 left-0 h-screen w-64 flex flex-col bg-card border-r z-30">
       <div className="p-6 border-b">
-        <div className="flex justify-center mb-3">
+        <div className="flex justify-center mb-1.5">
           <img 
-            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets//TitansFitnessLogo.png" 
+            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/TitansFitnessLogo-grande.png" 
             alt="Titans Fitness" 
-            className="h-16 w-auto"
+            className="h-28 w-auto"
           />
         </div>
         <p className="text-sm text-muted-foreground text-center">Aluno</p>
