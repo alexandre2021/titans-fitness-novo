@@ -1,10 +1,10 @@
+// src/pages/OnboardingAlunoQuestionarioSaude.tsx
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Progress } from "@/components/ui/progress";
 import { useAlunoProfile } from "@/hooks/useAlunoProfile";
 import { toast } from "sonner";
 
@@ -12,98 +12,53 @@ const OnboardingAlunoQuestionarioSaude = () => {
   const navigate = useNavigate();
   const { profile, loading, updateProfile } = useAlunoProfile();
   
-  const [formData, setFormData] = useState({
-    par_q_respostas: {
-      questao1: null as boolean | null,
-      questao2: null as boolean | null,
-      questao3: null as boolean | null,
-      questao4: null as boolean | null,
-      questao5: null as boolean | null,
-      questao6: null as boolean | null,
-      questao7: null as boolean | null,
-    }
+  const [respostas, setRespostas] = useState<Record<string, string | null>>({
+    questao1: null,
+    questao2: null,
+    questao3: null,
+    questao4: null,
+    questao5: null,
+    questao6: null,
+    questao7: null,
   });
   
   const [isLoading, setIsLoading] = useState(false);
 
-  // Atualizar formData quando o profile carregar
-  useEffect(() => {
-    if (profile?.par_q_respostas) {
-      const parQData = profile.par_q_respostas as Record<string, boolean>;
-      setFormData({
-        par_q_respostas: {
-          questao1: parQData?.questao1 ?? null,
-          questao2: parQData?.questao2 ?? null,
-          questao3: parQData?.questao3 ?? null,
-          questao4: parQData?.questao4 ?? null,
-          questao5: parQData?.questao5 ?? null,
-          questao6: parQData?.questao6 ?? null,
-          questao7: parQData?.questao7 ?? null,
-        }
-      });
-    }
-  }, [profile]);
-
-  const parQuestoes = [
-    "Seu médico já disse que você possui algum problema cardíaco?",
+  const questoes = [
+    "Você possui algum problema cardíaco?",
     "Você sente dor no peito quando faz atividade física?",
     "No último mês, você sentiu dor no peito quando não estava fazendo atividade física?",
     "Você já perdeu o equilíbrio por tonturas ou perdeu a consciência?",
     "Você tem algum problema ósseo ou articular que poderia ser agravado pela atividade física?",
-    "Seu médico já receitou medicamentos para pressão arterial ou problemas cardíacos?",
+    "Você toma medicamentos para pressão arterial ou problemas cardíacos?",
     "Você tem conhecimento de alguma razão pela qual não deveria fazer atividade física?"
   ];
 
-  const handleParQChange = (questaoIndex: number, checked: boolean) => {
-    setFormData(prev => ({
+  const handleRespostaChange = (questaoIndex: number, valor: string) => {
+    setRespostas(prev => ({
       ...prev,
-      par_q_respostas: {
-        ...prev.par_q_respostas,
-        [`questao${questaoIndex + 1}`]: checked
-      }
+      [`questao${questaoIndex + 1}`]: valor
     }));
   };
 
-  const generateAvatar = () => {
-    const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16'];
-    const randomColor = colors[Math.floor(Math.random() * colors.length)];
-    const letter = profile?.nome_completo?.charAt(0).toUpperCase() || 'A';
-    
-    return {
-      avatar_type: 'letter',
-      avatar_letter: letter,
-      avatar_color: randomColor
-    };
-  };
-
   const handleFinish = async () => {
-    // Validar se todas as questões foram respondidas
-    const questoesRespondidas = Object.values(formData.par_q_respostas).length;
-    if (questoesRespondidas < 7) {
-      toast.error("Por favor, responda todas as questões do questionário de saúde.");
-      return;
-    }
-
     setIsLoading(true);
 
     try {
-      const avatarData = generateAvatar();
-
-      // Salvar dados finais e marcar onboarding como completo
+      // Salvar respostas e marcar onboarding como completo
       const success = await updateProfile({
-        par_q_respostas: formData.par_q_respostas,
-        onboarding_completo: true,
-        ...avatarData
+        par_q_respostas: respostas,
+        onboarding_completo: true
       });
 
       if (success) {
-        toast.success("Onboarding concluído com sucesso!");
+        toast.success("Questionário concluído com sucesso!");
         navigate('/index-aluno');
       } else {
-        toast.error("Erro ao finalizar onboarding. Tente novamente.");
+        toast.error("Erro ao salvar respostas. Tente novamente.");
       }
     } catch (error) {
-      console.error('Erro ao finalizar onboarding:', error);
+      console.error('Erro ao salvar questionário:', error);
       toast.error("Erro inesperado. Tente novamente.");
     } finally {
       setIsLoading(false);
@@ -127,49 +82,33 @@ const OnboardingAlunoQuestionarioSaude = () => {
         </Card>
       ) : (
         <Card className="w-full max-w-2xl">
-          <CardHeader className="text-center space-y-4">
-            <div className="space-y-2">
-              <CardTitle className="text-2xl">Questionário de Saúde</CardTitle>
-              <p className="text-muted-foreground">
-                Responda ao questionário PAR-Q para garantir sua segurança durante os exercícios
-              </p>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Etapa 2 de 2</span>
-                <span>100%</span>
-              </div>
-              <Progress value={100} className="w-full" />
-            </div>
+          <CardHeader className="text-center space-y-2">
+            <CardTitle className="text-2xl">Questionário de Saúde</CardTitle>
+            <p className="text-muted-foreground">
+              Responda com sinceridade. Você pode pular questões que preferir não responder.
+            </p>
           </CardHeader>
           
           <CardContent className="space-y-6">
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-base font-semibold">Questionário de Prontidão para Atividade Física (PAR-Q) *</Label>
-                <p className="text-sm text-muted-foreground">
-                  <strong>Responda todas as questões com sinceridade.</strong> Estas informações são obrigatórias e ajudarão seu personal trainer a criar um programa seguro e adequado para você.
-                </p>
-              </div>
-              
-              <div className="space-y-4">
-                {parQuestoes.map((questao, index) => {
-                  const questaoKey = `questao${index + 1}` as keyof typeof formData.par_q_respostas;
-                  const valorAtual = formData.par_q_respostas[questaoKey];
+              <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+                {questoes.map((questao, index) => {
+                  const questaoKey = `questao${index + 1}`;
+                  const valorAtual = respostas[questaoKey];
                   
                   return (
                     <div key={index} className="space-y-3 p-4 border rounded-lg bg-gray-50">
                       <p className="text-sm font-medium leading-relaxed text-gray-900">
-                        {index + 1}. {questao} *
+                        {index + 1}. {questao}
                       </p>
-                      <div className="flex flex-col sm:flex-row gap-3 sm:gap-6">
+                      <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="radio"
                             name={`questao-${index}`}
-                            value="true"
-                            checked={valorAtual === true}
-                            onChange={() => handleParQChange(index, true)}
+                            value="sim"
+                            checked={valorAtual === "sim"}
+                            onChange={() => handleRespostaChange(index, "sim")}
                             className="w-4 h-4 text-primary focus:ring-primary"
                           />
                           <span className="text-sm font-medium text-gray-700">Sim</span>
@@ -178,12 +117,23 @@ const OnboardingAlunoQuestionarioSaude = () => {
                           <input
                             type="radio"
                             name={`questao-${index}`}
-                            value="false"
-                            checked={valorAtual === false}
-                            onChange={() => handleParQChange(index, false)}
+                            value="nao"
+                            checked={valorAtual === "nao"}
+                            onChange={() => handleRespostaChange(index, "nao")}
                             className="w-4 h-4 text-primary focus:ring-primary"
                           />
                           <span className="text-sm font-medium text-gray-700">Não</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name={`questao-${index}`}
+                            value="prefiro_nao_responder"
+                            checked={valorAtual === "prefiro_nao_responder"}
+                            onChange={() => handleRespostaChange(index, "prefiro_nao_responder")}
+                            className="w-4 h-4 text-primary focus:ring-primary"
+                          />
+                          <span className="text-sm font-medium text-gray-700">Prefiro não responder</span>
                         </label>
                       </div>
                     </div>
@@ -196,6 +146,7 @@ const OnboardingAlunoQuestionarioSaude = () => {
               <Button 
                 variant="outline"
                 onClick={handlePrevious}
+                disabled={isLoading}
                 className="w-full md:w-auto"
               >
                 Anterior
@@ -205,7 +156,7 @@ const OnboardingAlunoQuestionarioSaude = () => {
                 disabled={isLoading}
                 className="w-full md:w-auto"
               >
-                {isLoading ? "Finalizando..." : "Finalizar"}
+                {isLoading ? "Finalizando..." : "Finalizar questionário"}
               </Button>
             </div>
           </CardContent>

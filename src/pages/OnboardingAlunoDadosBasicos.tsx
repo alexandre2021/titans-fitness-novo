@@ -1,3 +1,5 @@
+// src/pages/OnboardingAlunoDadosBasicos.tsx
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,16 +8,18 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Progress } from "@/components/ui/progress";
 import { useAlunoProfile } from "@/hooks/useAlunoProfile";
 import { formatarTelefone } from "@/utils/formatters";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import QuestionarioSaudeModal from "@/components/QuestionarioSaudeModal";
 
 const OnboardingAlunoDadosBasicos = () => {
   const navigate = useNavigate();
   const { profile, loading, updateProfile } = useAlunoProfile();
   
   const [formData, setFormData] = useState({
+    email: '',
     nome_completo: '',
     genero: '',
     data_nascimento: '',
@@ -26,20 +30,38 @@ const OnboardingAlunoDadosBasicos = () => {
   });
   
   const [isLoading, setIsLoading] = useState(false);
+  const [showQuestionarioModal, setShowQuestionarioModal] = useState(false);
 
-  // Atualizar formData quando o profile carregar
+  // Carregar email do usuário autenticado e dados do profile
   useEffect(() => {
-    if (profile) {
-      setFormData({
-        nome_completo: profile.nome_completo || '',
-        genero: profile.genero || '',
-        data_nascimento: profile.data_nascimento || '',
-        telefone: profile.telefone || '',
-        peso: profile.peso?.toString() || '',
-        altura: profile.altura?.toString() || '',
-        descricao_pessoal: profile.descricao_pessoal || ''
-      });
-    }
+    const loadUserData = async () => {
+      try {
+        // Buscar email do usuário autenticado
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user?.email) {
+          setFormData(prev => ({ ...prev, email: user.email }));
+        }
+
+        // Carregar dados do profile se existirem
+        if (profile) {
+          setFormData(prev => ({
+            ...prev,
+            nome_completo: profile.nome_completo || '',
+            genero: profile.genero || '',
+            data_nascimento: profile.data_nascimento || '',
+            telefone: profile.telefone || '',
+            peso: profile.peso?.toString() || '',
+            altura: profile.altura?.toString() || '',
+            descricao_pessoal: profile.descricao_pessoal || ''
+          }));
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados do usuário:', error);
+      }
+    };
+
+    loadUserData();
   }, [profile]);
 
   const handleInputChange = (field: string, value: string) => {
@@ -50,7 +72,19 @@ const OnboardingAlunoDadosBasicos = () => {
     }
   };
 
-  const handleNext = async () => {
+  const generateAvatar = () => {
+    const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    const letter = formData.nome_completo?.charAt(0).toUpperCase() || 'A';
+    
+    return {
+      avatar_type: 'letter',
+      avatar_letter: letter,
+      avatar_color: randomColor
+    };
+  };
+
+  const handleFinish = async () => {
     // Validar apenas o nome completo (obrigatório)
     if (!formData.nome_completo.trim()) {
       toast.error("Nome completo é obrigatório");
@@ -60,7 +94,9 @@ const OnboardingAlunoDadosBasicos = () => {
     setIsLoading(true);
 
     try {
-      // Salvar dados da primeira etapa
+      const avatarData = generateAvatar();
+
+      // Salvar dados básicos (SEM marcar onboarding como completo ainda)
       const success = await updateProfile({
         nome_completo: formData.nome_completo.trim(),
         genero: formData.genero || null,
@@ -68,19 +104,49 @@ const OnboardingAlunoDadosBasicos = () => {
         telefone: formData.telefone || null,
         peso: formData.peso ? parseFloat(formData.peso) : null,
         altura: formData.altura ? parseFloat(formData.altura) : null,
-        descricao_pessoal: formData.descricao_pessoal.trim() || null
+        descricao_pessoal: formData.descricao_pessoal.trim() || null,
+        ...avatarData
       });
 
       if (success) {
-        navigate('/onboarding-aluno/descricao-saude');
+        toast.success("Dados salvos com sucesso!");
+        setShowQuestionarioModal(true);
       } else {
         toast.error("Erro ao salvar dados. Tente novamente.");
       }
     } catch (error) {
-      console.error('Erro ao salvar dados básicos:', error);
+      console.error('Erro ao salvar dados:', error);
       toast.error("Erro inesperado. Tente novamente.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleQuestionarioResponse = async (responder: boolean) => {
+    if (responder) {
+      setShowQuestionarioModal(false);
+      navigate('/onboarding-aluno/descricao-saude');
+    } else {
+      setIsLoading(true);
+      try {
+        const success = await updateProfile({
+          onboarding_completo: true,
+          par_q_respostas: null
+        });
+
+        if (success) {
+          setShowQuestionarioModal(false);
+          navigate('/index-aluno');
+          toast.success("Bem-vindo(a) à plataforma!");
+        } else {
+          toast.error("Erro ao finalizar. Tente novamente.");
+        }
+      } catch (error) {
+        console.error('Erro ao finalizar onboarding:', error);
+        toast.error("Erro inesperado. Tente novamente.");
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -97,24 +163,26 @@ const OnboardingAlunoDadosBasicos = () => {
         </Card>
       ) : (
         <Card className="w-full max-w-2xl">
-          <CardHeader className="text-center space-y-4">
-            <div className="space-y-2">
-              <CardTitle className="text-2xl">Bem-vindo(a)!</CardTitle>
-              <p className="text-muted-foreground">
-                Vamos começar coletando suas informações básicas
-              </p>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Etapa 1 de 2</span>
-                <span>50%</span>
-              </div>
-              <Progress value={50} className="w-full" />
-            </div>
+          <CardHeader className="text-center space-y-2">
+            <CardTitle className="text-2xl">Bem-vindo(a)!</CardTitle>
+            <p className="text-muted-foreground">
+              Vamos configurar seu perfil para uma experiência personalizada
+            </p>
           </CardHeader>
           
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2 space-y-2">
+                <Label htmlFor="email" className="text-muted-foreground">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  readOnly
+                  className="bg-muted border-muted-foreground/20 text-muted-foreground cursor-not-allowed"
+                />
+              </div>
+
               <div className="md:col-span-2 space-y-2">
                 <Label htmlFor="nome_completo">Nome Completo *</Label>
                 <Input
@@ -124,6 +192,29 @@ const OnboardingAlunoDadosBasicos = () => {
                   value={formData.nome_completo}
                   onChange={(e) => handleInputChange('nome_completo', e.target.value)}
                   required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="email_readonly" className="text-muted-foreground">Email</Label>
+                <Input
+                  id="email_readonly"
+                  type="email"
+                  value={formData.email}
+                  readOnly
+                  className="bg-muted border-muted-foreground/20 text-muted-foreground cursor-not-allowed text-sm"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="telefone">Telefone</Label>
+                <Input
+                  id="telefone"
+                  type="tel"
+                  placeholder="(XX) XXXXX-XXXX (opcional)"
+                  value={formData.telefone}
+                  onChange={(e) => handleInputChange('telefone', e.target.value)}
+                  maxLength={15}
                 />
               </div>
               
@@ -149,18 +240,6 @@ const OnboardingAlunoDadosBasicos = () => {
                   type="date"
                   value={formData.data_nascimento}
                   onChange={(e) => handleInputChange('data_nascimento', e.target.value)}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="telefone">Telefone</Label>
-                <Input
-                  id="telefone"
-                  type="tel"
-                  placeholder="(XX) XXXXX-XXXX (opcional)"
-                  value={formData.telefone}
-                  onChange={(e) => handleInputChange('telefone', e.target.value)}
-                  maxLength={15}
                 />
               </div>
               
@@ -202,18 +281,26 @@ const OnboardingAlunoDadosBasicos = () => {
               </div>
             </div>
             
-            <div className="flex justify-end">
+            <div className="flex justify-center">
               <Button 
-                onClick={handleNext}
+                onClick={handleFinish}
                 disabled={isLoading}
-                className="w-full md:w-auto"
+                className="w-full md:w-auto md:px-12"
+                size="lg"
               >
-                {isLoading ? "Salvando..." : "Próximo"}
+                {isLoading ? "Salvando..." : "Continuar"}
               </Button>
             </div>
           </CardContent>
         </Card>
       )}
+
+      <QuestionarioSaudeModal
+        open={showQuestionarioModal}
+        onOpenChange={setShowQuestionarioModal}
+        onResponse={handleQuestionarioResponse}
+        isLoading={isLoading}
+      />
     </div>
   );
 };
