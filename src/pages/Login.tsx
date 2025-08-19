@@ -19,21 +19,27 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
         toast.error(`Erro no login: ${error.message}`);
+        setIsLoading(false);
         return;
       }
 
-      // O AuthGuard vai redirecionar automaticamente baseado no tipo de usuário
+      if (data.user) {
+        console.log('🎯 Usuário logado, forçando redirecionamento...');
+        alert('Login OK! Redirecionando...');
+        setTimeout(() => {
+          window.location.href = '/index-aluno';
+        }, 2000);
+      }
     } catch (error) {
       toast.error("Erro inesperado no login");
       console.error("Erro no login:", error);
-    } finally {
       setIsLoading(false);
     }
   };
