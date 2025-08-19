@@ -1,3 +1,5 @@
+// src/pages/PerfilAluno.tsx
+
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -38,7 +40,7 @@ const PerfilAluno = () => {
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-2xl font-bold">Meu Perfil</h1>
+          <h1 className="text-2xl font-normal">Meu Perfil</h1>
         </div>
         <p className="text-muted-foreground">Erro ao carregar perfil.</p>
       </div>
@@ -55,7 +57,7 @@ const PerfilAluno = () => {
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-2xl font-bold">Meu Perfil</h1>
+        <h1 className="text-2xl font-normal">Meu Perfil</h1>
       </div>
 
       <AlunoAvatarSection profile={profile} onProfileUpdate={handleProfileUpdate} />

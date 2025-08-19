@@ -40,10 +40,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     // Set up auth state listener
+    getInitialSession();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state change:', event, session?.user?.email);
-        
+      async (_event, session) => {
         if (mounted) {
           setSession(session);
           setUser(session?.user ?? null);
@@ -51,8 +51,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
     );
-
-    getInitialSession();
 
     return () => {
       mounted = false;

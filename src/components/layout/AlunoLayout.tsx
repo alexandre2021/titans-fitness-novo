@@ -33,7 +33,7 @@ const AlunoLayout = () => {
   return (
     <div className="min-h-screen bg-background flex">
       <AlunoSidebar />
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-6 pl-64">
         <Outlet />
       </main>
     </div>

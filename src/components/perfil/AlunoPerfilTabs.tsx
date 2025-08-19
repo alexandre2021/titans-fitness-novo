@@ -1,8 +1,22 @@
-import { useState } from "react";
+// src/components/perfil/AlunoPerfilTabs.tsx
+
+import { useState, useEffect } from "react";
 import { Edit } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { useAuth } from "@/hooks/useAuth";
 import { EditAlunoModal } from "./EditAlunoModal";
 import { PasswordChangeSection } from "./PasswordChangeSection";
@@ -22,6 +36,88 @@ interface AlunoPerfilTabsProps {
   onProfileUpdate?: () => void;
 }
 
+// Hook para detectar se é mobile
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  return isMobile;
+};
+
+// Botão de editar personalizado
+const EditButton = ({ onClick }: { onClick: () => void }) => {
+  const isMobile = useIsMobile();
+  
+  if (isMobile) {
+    return (
+      <button
+        onClick={onClick}
+        className="flex items-center justify-center w-10 h-10 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
+      >
+        <Edit className="h-6 w-6" />
+      </button>
+    );
+  }
+  
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={onClick}
+    >
+      <Edit className="h-4 w-4 mr-2" />
+      Editar
+    </Button>
+  );
+};
+
+// Componente responsivo que escolhe entre Modal e Drawer
+interface ResponsiveModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  children: React.ReactNode;
+}
+
+const ResponsiveModal = ({ open, onOpenChange, title, children }: ResponsiveModalProps) => {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent className="max-h-[90vh]">
+          <DrawerHeader className="text-left">
+            <DrawerTitle>{title}</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-4 overflow-y-auto">
+            {children}
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        {children}
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export const AlunoPerfilTabs = ({ profile, onProfileUpdate }: AlunoPerfilTabsProps) => {
   const { user } = useAuth();
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -40,7 +136,7 @@ export const AlunoPerfilTabs = ({ profile, onProfileUpdate }: AlunoPerfilTabsPro
 
   return (
     <Tabs defaultValue="basicas" className="space-y-6">
-      <TabsList className="grid w-full grid-cols-3">
+      <TabsList>
         <TabsTrigger value="basicas">Informações Básicas</TabsTrigger>
         <TabsTrigger value="fisicas">Informações Físicas</TabsTrigger>
         <TabsTrigger value="seguranca">Segurança</TabsTrigger>
@@ -48,16 +144,9 @@ export const AlunoPerfilTabs = ({ profile, onProfileUpdate }: AlunoPerfilTabsPro
 
       <TabsContent value="basicas">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle>Informações Básicas</CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEditModalOpen(true)}
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Editar
-            </Button>
+            <EditButton onClick={() => setEditModalOpen(true)} />
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -121,12 +210,20 @@ export const AlunoPerfilTabs = ({ profile, onProfileUpdate }: AlunoPerfilTabsPro
         <PasswordChangeSection />
       </TabsContent>
 
-      <EditAlunoModal
+      <ResponsiveModal
         open={editModalOpen}
         onOpenChange={setEditModalOpen}
-        profile={profile}
-        onSave={onProfileUpdate || (() => {})}
-      />
+        title="Editar Informações Básicas"
+      >
+        <EditAlunoModal
+          profile={profile}
+          onSave={() => {
+            onProfileUpdate?.();
+            setEditModalOpen(false);
+          }}
+          onCancel={() => setEditModalOpen(false)}
+        />
+      </ResponsiveModal>
     </Tabs>
   );
 };

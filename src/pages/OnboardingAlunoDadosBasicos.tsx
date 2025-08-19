@@ -109,7 +109,6 @@ const OnboardingAlunoDadosBasicos = () => {
       });
 
       if (success) {
-        toast.success("Dados salvos com sucesso!");
         setShowQuestionarioModal(true);
       } else {
         toast.error("Erro ao salvar dados. Tente novamente.");
@@ -172,17 +171,7 @@ const OnboardingAlunoDadosBasicos = () => {
           
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2 space-y-2">
-                <Label htmlFor="email" className="text-muted-foreground">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  readOnly
-                  className="bg-muted border-muted-foreground/20 text-muted-foreground cursor-not-allowed"
-                />
-              </div>
-
+              {/* Nome Completo - Obrigatório */}
               <div className="md:col-span-2 space-y-2">
                 <Label htmlFor="nome_completo">Nome Completo *</Label>
                 <Input
@@ -194,15 +183,16 @@ const OnboardingAlunoDadosBasicos = () => {
                   required
                 />
               </div>
-              
+
+              {/* Email e Telefone - mesma linha no desktop */}
               <div className="space-y-2">
-                <Label htmlFor="email_readonly" className="text-muted-foreground">Email</Label>
+                <Label htmlFor="email" className="text-muted-foreground">Email</Label>
                 <Input
-                  id="email_readonly"
+                  id="email"
                   type="email"
                   value={formData.email}
                   readOnly
-                  className="bg-muted border-muted-foreground/20 text-muted-foreground cursor-not-allowed text-sm"
+                  className="bg-gray-100 border-gray-200 text-muted-foreground cursor-not-allowed"
                 />
               </div>
 
@@ -211,18 +201,19 @@ const OnboardingAlunoDadosBasicos = () => {
                 <Input
                   id="telefone"
                   type="tel"
-                  placeholder="(XX) XXXXX-XXXX (opcional)"
+                  placeholder="(XX) XXXXX-XXXX"
                   value={formData.telefone}
                   onChange={(e) => handleInputChange('telefone', e.target.value)}
                   maxLength={15}
                 />
               </div>
               
+              {/* Gênero */}
               <div className="space-y-2">
                 <Label htmlFor="genero">Gênero</Label>
                 <Select value={formData.genero} onValueChange={(value) => handleInputChange('genero', value)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione seu gênero (opcional)" />
+                    <SelectValue placeholder="Selecione seu gênero" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="masculino">Masculino</SelectItem>
@@ -233,6 +224,7 @@ const OnboardingAlunoDadosBasicos = () => {
                 </Select>
               </div>
               
+              {/* Data de Nascimento */}
               <div className="space-y-2">
                 <Label htmlFor="data_nascimento">Data de Nascimento</Label>
                 <Input
@@ -243,12 +235,13 @@ const OnboardingAlunoDadosBasicos = () => {
                 />
               </div>
               
+              {/* Peso */}
               <div className="space-y-2">
                 <Label htmlFor="peso">Peso (kg)</Label>
                 <Input
                   id="peso"
                   type="number"
-                  placeholder="Ex: 70 (opcional)"
+                  placeholder="Ex: 70"
                   value={formData.peso}
                   onChange={(e) => handleInputChange('peso', e.target.value)}
                   step="0.1"
@@ -256,12 +249,13 @@ const OnboardingAlunoDadosBasicos = () => {
                 />
               </div>
               
+              {/* Altura */}
               <div className="space-y-2">
                 <Label htmlFor="altura">Altura (cm)</Label>
                 <Input
                   id="altura"
                   type="number"
-                  placeholder="Ex: 175 (opcional)"
+                  placeholder="Ex: 175"
                   value={formData.altura}
                   onChange={(e) => handleInputChange('altura', e.target.value)}
                   step="0.1"
@@ -269,11 +263,12 @@ const OnboardingAlunoDadosBasicos = () => {
                 />
               </div>
               
+              {/* Descrição Pessoal */}
               <div className="md:col-span-2 space-y-2">
                 <Label htmlFor="descricao_pessoal">Descrição Pessoal</Label>
                 <Textarea
                   id="descricao_pessoal"
-                  placeholder="Conte um pouco sobre seus objetivos, experiência com exercícios, preferências de treino, etc. (opcional)"
+                  placeholder="Conte um pouco sobre seus objetivos, experiência com exercícios, preferências de treino, etc."
                   value={formData.descricao_pessoal}
                   onChange={(e) => handleInputChange('descricao_pessoal', e.target.value)}
                   rows={3}

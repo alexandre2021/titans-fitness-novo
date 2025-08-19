@@ -1,13 +1,9 @@
-import { useState, useEffect } from "react";
+// src/components/perfil/EditAlunoModal.tsx
+
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -19,7 +15,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -27,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -40,70 +36,59 @@ const formSchema = z.object({
   descricao_pessoal: z.string().optional(),
 });
 
-interface EditAlunoModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  profile: any;
-  onSave: () => void;
+interface AlunoProfileData {
+  nome_completo: string;
+  telefone?: string;
+  data_nascimento?: string;
+  genero?: string;
+  peso?: number;
+  altura?: number;
+  descricao_pessoal?: string;
 }
 
-export const EditAlunoModal = ({ open, onOpenChange, profile, onSave }: EditAlunoModalProps) => {
+interface EditAlunoModalProps {
+  profile: AlunoProfileData;
+  onSave: () => void;
+  onCancel: () => void;
+}
+
+export const EditAlunoModal = ({ profile, onSave, onCancel }: EditAlunoModalProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      nome_completo: "",
-      telefone: "",
-      data_nascimento: "",
-      genero: "",
-      peso: "",
-      altura: "",
-      descricao_pessoal: "",
+      nome_completo: profile.nome_completo || "",
+      telefone: profile.telefone || "",
+      data_nascimento: profile.data_nascimento || "",
+      genero: profile.genero || "",
+      peso: profile.peso?.toString() || "",
+      altura: profile.altura?.toString() || "",
+      descricao_pessoal: profile.descricao_pessoal || "",
     },
   });
-
-  useEffect(() => {
-    if (profile && open) {
-      form.reset({
-        nome_completo: profile.nome_completo || "",
-        telefone: profile.telefone || "",
-        data_nascimento: profile.data_nascimento || "",
-        genero: profile.genero || "",
-        peso: profile.peso?.toString() || "",
-        altura: profile.altura?.toString() || "",
-        descricao_pessoal: profile.descricao_pessoal || "",
-      });
-    }
-  }, [profile, open, form]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     try {
-      const user = await supabase.auth.getUser();
-      if (!user.data.user) throw new Error('Usuário não autenticado');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
 
-      const updateData: any = {
+      const updateData = {
         nome_completo: values.nome_completo,
         telefone: values.telefone || null,
         data_nascimento: values.data_nascimento || null,
         genero: values.genero || null,
         descricao_pessoal: values.descricao_pessoal || null,
+        ...(values.peso && { peso: parseFloat(values.peso) }),
+        ...(values.altura && { altura: parseFloat(values.altura) }),
       };
 
-      // Converter peso e altura para números se fornecidos
-      if (values.peso) {
-        updateData.peso = parseFloat(values.peso);
-      }
-      if (values.altura) {
-        updateData.altura = parseFloat(values.altura);
-      }
-
       const { error } = await supabase
-        .from('alunos')
+        .from("alunos")
         .update(updateData)
-        .eq('id', user.data.user.id);
+        .eq("id", user.id);
 
       if (error) throw error;
 
@@ -113,9 +98,8 @@ export const EditAlunoModal = ({ open, onOpenChange, profile, onSave }: EditAlun
       });
 
       onSave();
-      onOpenChange(false);
     } catch (error) {
-      console.error('Error updating profile:', error);
+      console.error("Error updating profile:", error);
       toast({
         title: "Erro",
         description: "Erro ao atualizar perfil. Tente novamente.",
@@ -127,156 +111,149 @@ export const EditAlunoModal = ({ open, onOpenChange, profile, onSave }: EditAlun
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Editar Informações</DialogTitle>
-        </DialogHeader>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="nome_completo"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Nome Completo</FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="nome_completo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome Completo</FormLabel>
+        <FormField
+          control={form.control}
+          name="telefone"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Telefone</FormLabel>
+              <FormControl>
+                <PhoneInput
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="data_nascimento"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Data de Nascimento</FormLabel>
+                <FormControl>
+                  <Input type="date" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="genero"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Gênero</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
-                    <Input {...field} />
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
                   </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                  <SelectContent>
+                    <SelectItem value="masculino">Masculino</SelectItem>
+                    <SelectItem value="feminino">Feminino</SelectItem>
+                    <SelectItem value="outro">Outro</SelectItem>
+                    <SelectItem value="nao_informar">Prefiro não informar</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
-            <FormField
-              control={form.control}
-              name="telefone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Telefone</FormLabel>
-                  <FormControl>
-                    <PhoneInput 
-                      value={field.value} 
-                      onChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="peso"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Peso (kg)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    placeholder="Ex: 70.5"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="data_nascimento"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Data de Nascimento</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <FormField
+            control={form.control}
+            name="altura"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Altura (cm)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    placeholder="Ex: 175"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
-              <FormField
-                control={form.control}
-                name="genero"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Gênero</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="masculino">Masculino</SelectItem>
-                        <SelectItem value="feminino">Feminino</SelectItem>
-                        <SelectItem value="outro">Outro</SelectItem>
-                        <SelectItem value="nao_informar">Prefiro não informar</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+        <FormField
+          control={form.control}
+          name="descricao_pessoal"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Descrição Pessoal</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Conte um pouco sobre você, seus objetivos, experiências..."
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="peso"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Peso (kg)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        step="0.1" 
-                        placeholder="Ex: 70.5"
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="altura"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Altura (cm)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        placeholder="Ex: 175"
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="descricao_pessoal"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrição Pessoal</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Conte um pouco sobre você, seus objetivos, experiências..."
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="flex justify-end space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? "Salvando..." : "Salvar"}
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+        <div className="flex justify-end space-x-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={isLoading}
+          >
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? "Salvando..." : "Salvar"}
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 };
