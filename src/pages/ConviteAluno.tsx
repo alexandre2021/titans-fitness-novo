@@ -21,7 +21,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePTProfile } from "@/hooks/usePTProfile";
 
 const formSchema = z.object({
-  nome_aluno: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
   email_aluno: z.string().email("Email inválido"),
 });
 
@@ -37,7 +36,6 @@ const ConviteAluno = () => {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      nome_aluno: "",
       email_aluno: "",
     },
   });
@@ -57,7 +55,6 @@ const ConviteAluno = () => {
     try {
       const { data: responseData, error } = await supabase.functions.invoke('enviar-convite', {
         body: {
-          nome_aluno: data.nome_aluno,
           email_aluno: data.email_aluno,
           nome_personal: profile.nome_completo,
           codigo_pt: profile.codigo_pt,
@@ -111,35 +108,15 @@ const ConviteAluno = () => {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5" />
-            Dados do Convite
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleEnviarConvite)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="nome_aluno"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome do Aluno</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Digite o nome completo do aluno" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <FormField
                 control={form.control}
                 name="email_aluno"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email do Aluno</FormLabel>
+                    <FormLabel>Email</FormLabel>
                     <FormControl>
                       <Input 
                         type="email" 

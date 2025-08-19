@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,8 +8,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Eye, EyeOff, ArrowLeft } from "lucide-react";
-import { useNavigate, Link } from "react-router-dom";
+import { Eye, EyeOff, ArrowLeft, CheckCircle } from "lucide-react";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -31,9 +31,12 @@ export default function CadastroAluno() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [ptValidation, setPtValidation] = useState<{status: 'idle' | 'validating' | 'valid' | 'invalid', message?: string}>({status: 'idle'});
+  const [ptValidation, setPtValidation] = useState<{status: 'idle' | 'validating' | 'valid' | 'invalid', message?: string, ptName?: string}>({status: 'idle'});
+  const [isFromInvite, setIsFromInvite] = useState(false);
+  
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -46,6 +49,38 @@ export default function CadastroAluno() {
       aceitarTermos: false,
     },
   });
+
+  // Capturar código do PT da URL e dados do convite
+  useEffect(() => {
+    const codigoPTFromUrl = searchParams.get('codigo');
+    const emailFromUrl = searchParams.get('email');
+    const isFromInviteParam = searchParams.get('ref') === 'convite';
+    const ptNameFromUrl = searchParams.get('pt');
+
+    if (codigoPTFromUrl) {
+      setIsFromInvite(isFromInviteParam);
+      
+      // Preencher o código automaticamente
+      form.setValue('personal_trainer_code', codigoPTFromUrl.toUpperCase());
+      
+      // Preencher o email se veio da URL
+      if (emailFromUrl) {
+        form.setValue('email', emailFromUrl);
+      }
+      
+      // Validar o código automaticamente
+      validatePTCode(codigoPTFromUrl);
+
+      // Se temos o nome do PT da URL, exibir mensagem de boas-vindas
+      if (ptNameFromUrl && isFromInviteParam) {
+        toast({
+          title: "Bem-vindo!",
+          description: `${ptNameFromUrl} te convidou para o Titans Fitness! O código e email já foram preenchidos automaticamente.`,
+          duration: 5000,
+        });
+      }
+    }
+  }, [searchParams, form, toast]);
 
   // Validação em tempo real do código PT
   const validatePTCode = async (code: string) => {
@@ -66,7 +101,11 @@ export default function CadastroAluno() {
       if (error || !data) {
         setPtValidation({status: 'invalid', message: 'Código do Personal Trainer não encontrado'});
       } else {
-        setPtValidation({status: 'valid', message: `Personal Trainer: ${data.nome_completo}`});
+        setPtValidation({
+          status: 'valid', 
+          message: `Personal Trainer encontrado!`,
+          ptName: data.nome_completo
+        });
       }
     } catch (error) {
       setPtValidation({status: 'invalid', message: 'Erro ao validar código'});
@@ -181,7 +220,8 @@ export default function CadastroAluno() {
 
       toast({
         title: "Sucesso!",
-        description: "Cadastro realizado com sucesso! Faça login.",
+        description: `Cadastro realizado com sucesso${ptValidation.ptName ? ` com ${ptValidation.ptName}` : ''}! Faça login para começar.`,
+        duration: 5000,
       });
 
       // Fazer logout para limpar a sessão e redirecionar para login
@@ -225,14 +265,30 @@ export default function CadastroAluno() {
         <Card className="w-full max-w-md border-border shadow-lg">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl text-text-primary">
-              Cadastro de Aluno
+              {isFromInvite ? "Complete seu Cadastro" : "Cadastro de Aluno"}
             </CardTitle>
             <CardDescription className="text-text-secondary text-sm">
-              Preencha os dados abaixo para criar sua conta
+              {isFromInvite 
+                ? "Você está quase lá! Preencha os dados abaixo" 
+                : "Preencha os dados abaixo para criar sua conta"
+              }
             </CardDescription>
           </CardHeader>
 
           <CardContent>
+            {/* Banner de convite aceito */}
+            {isFromInvite && ptValidation.status === 'valid' && (
+              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center gap-2 text-green-700">
+                  <CheckCircle className="h-5 w-5" />
+                  <span className="font-medium">Convite aceito!</span>
+                </div>
+                <p className="text-sm text-green-600 mt-1">
+                  Você será aluno de <strong>{ptValidation.ptName}</strong>
+                </p>
+              </div>
+            )}
+
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
@@ -250,13 +306,17 @@ export default function CadastroAluno() {
                             validatePTCode(e.target.value);
                           }}
                           className="uppercase"
+                          disabled={isFromInvite && ptValidation.status === 'valid'}
                         />
                       </FormControl>
                       {ptValidation.status === 'validating' && (
                         <p className="text-sm text-muted-foreground">Validando código...</p>
                       )}
                       {ptValidation.status === 'valid' && (
-                        <p className="text-sm text-green-600">{ptValidation.message}</p>
+                        <div className="flex items-center gap-2 text-sm text-green-600">
+                          <CheckCircle className="h-4 w-4" />
+                          <span>{ptValidation.message}</span>
+                        </div>
                       )}
                       {ptValidation.status === 'invalid' && (
                         <p className="text-sm text-destructive">{ptValidation.message}</p>
@@ -287,7 +347,12 @@ export default function CadastroAluno() {
                     <FormItem>
                       <FormLabel>Email *</FormLabel>
                       <FormControl>
-                        <Input {...field} type="email" placeholder="seu@email.com" />
+                        <Input 
+                          {...field} 
+                          type="email" 
+                          placeholder="seu@email.com"
+                          disabled={isFromInvite && !!searchParams.get('email')}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
