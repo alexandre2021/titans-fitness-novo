@@ -16,30 +16,39 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🔥 INICIANDO LOGIN...');
     setIsLoading(true);
     
     try {
+      console.log('🔥 Chamando signInWithPassword...');
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
+      console.log('🔥 Resultado:', { data, error });
+
       if (error) {
+        console.log('🔥 ERRO NO LOGIN:', error);
         toast.error(`Erro no login: ${error.message}`);
         setIsLoading(false);
         return;
       }
 
       if (data.user) {
-        console.log('🎯 Usuário logado, forçando redirecionamento...');
+        console.log('🔥 USER ENCONTRADO:', data.user);
+        console.log('🔥 EXECUTANDO REDIRECIONAMENTO...');
         alert('Login OK! Redirecionando...');
         setTimeout(() => {
+          console.log('🔥 CHAMANDO window.location.href...');
           window.location.href = '/index-aluno';
         }, 2000);
+      } else {
+        console.log('🔥 USER NÃO ENCONTRADO');
       }
     } catch (error) {
+      console.log('🔥 CATCH ERROR:', error);
       toast.error("Erro inesperado no login");
-      console.error("Erro no login:", error);
       setIsLoading(false);
     }
   };
