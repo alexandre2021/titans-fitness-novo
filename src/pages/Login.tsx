@@ -16,39 +16,42 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('🔥 INICIANDO LOGIN...');
     setIsLoading(true);
     
     try {
-      console.log('🔥 Chamando signInWithPassword...');
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      console.log('🔥 Resultado:', { data, error });
-
       if (error) {
-        console.log('🔥 ERRO NO LOGIN:', error);
         toast.error(`Erro no login: ${error.message}`);
         setIsLoading(false);
         return;
       }
 
       if (data.user) {
-        console.log('🔥 USER ENCONTRADO:', data.user);
-        console.log('🔥 EXECUTANDO REDIRECIONAMENTO...');
-        alert('Login OK! Redirecionando...');
-        setTimeout(() => {
-          console.log('🔥 CHAMANDO window.location.href...');
+        // Buscar tipo de usuário e redirecionar
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('user_type')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profile?.user_type === 'aluno') {
+          toast.success('Login realizado com sucesso!');
           window.location.href = '/index-aluno';
-        }, 2000);
-      } else {
-        console.log('🔥 USER NÃO ENCONTRADO');
+        } else if (profile?.user_type === 'personal_trainer') {
+          toast.success('Login realizado com sucesso!');
+          window.location.href = '/index-pt';
+        } else {
+          toast.success('Login realizado com sucesso!');
+          window.location.href = '/';
+        }
       }
     } catch (error) {
-      console.log('🔥 CATCH ERROR:', error);
       toast.error("Erro inesperado no login");
+      console.error("Erro no login:", error);
       setIsLoading(false);
     }
   };
