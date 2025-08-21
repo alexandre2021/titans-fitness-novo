@@ -8,6 +8,29 @@ Este processo automatizado garante a conformidade com a REGRA 5.1 das Regras de 
 -   **Fonte de Dados:** A data do último acesso (`last_sign_in_at`) na tabela `auth.users` do Supabase será utilizada como principal métrica de inatividade.
 -   **Cálculo:** A inatividade é calculada comparando `last_sign_in_at` com a data atual.
 
+
+
+-- Certifique-se de que a extensão pg_cron está habilitada no seu projeto Supabase.
+-- Vá em Database -> Extensions e habilite 'pg_cron'.
+
+SELECT cron.schedule(
+    'check-inactive-users-daily', -- Nome único para o seu job agendado
+    '0 0 * * *',                  -- Agendamento: 'minuto hora dia_do_mes mes dia_da_semana'
+                                  -- '0 0 * * *' significa todos os dias à meia-noite (00:00 UTC)
+    $$
+    -- Comando SQL que será executado pelo pg_cron
+    -- Ele invoca sua Edge Function 'check-inactive-users'
+    SELECT supabase_functions.invoke(
+        'check-inactive-users',   -- O nome da Edge Function que você vai criar e implantar
+        '{}',                     -- Payload (corpo da requisição) enviado para a Edge Function. Vazio neste caso.
+        '{"x-supabase-api-key": "YOUR_SUPABASE_SERVICE_ROLE_KEY"}' -- Cabeçalhos da requisição.
+                                                                  -- A SERVICE_ROLE_KEY é necessária para que a Edge Function
+                                                                  -- tenha permissões de administrador para consultar auth.users
+                                                                  -- e deletar usuários.
+    );
+    $$
+);
+
 ### 2. Notificação de Alerta (60 dias de inatividade)
 
 -   **Gatilho:** Quando um aluno atingir 60 dias de inatividade (ou seja, 30 dias antes da exclusão final).

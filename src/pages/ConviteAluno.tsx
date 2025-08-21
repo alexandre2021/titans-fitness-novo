@@ -226,7 +226,7 @@ const ConviteAluno = () => {
                 <ul className="space-y-1 text-muted-foreground">
                   <li>• <strong>Aluno novo:</strong> Receberá um email para criar conta</li>
                   <li>• <strong>Aluno existente:</strong> Receberá um email para aceitar o vínculo</li>
-                  <li>• <strong>Já tem PT:</strong> Convite será bloqueado automaticamente</li>
+                  <li>• <strong>Aluno vinculado a outro personal trainer:</strong> Convite será bloqueado automaticamente</li>
                 </ul>
               </div>
 

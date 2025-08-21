@@ -1,3 +1,4 @@
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
@@ -60,7 +61,8 @@ const UserTypeSelection = () => {
             </Card>
 
             {/* Aluno Card */}
-            <Card className="border-border hover:border-secondary transition-colors cursor-pointer group">
+            <Card className="relative border-border hover:border-secondary transition-colors cursor-pointer group">
+              <Badge variant="secondary" className="absolute top-4 right-4">Em breve</Badge>
               <CardHeader className="text-center pb-4">
                 <div className="w-16 h-16 bg-secondary/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-secondary/20 transition-colors">
                   <Users className="w-8 h-8 text-secondary" />
@@ -71,19 +73,16 @@ const UserTypeSelection = () => {
                 <p className="text-text-secondary mb-8">
                   Acesse seus treinos personalizados, acompanhe seu progresso e mantenha contato direto com seu Personal Trainer.
                 </p>
-                <Link to="/cadastro/aluno" className="block">
-                  <Button className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground">
+                <Button className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground" disabled>
                     Sou Aluno
                   </Button>
-                </Link>
               </CardContent>
             </Card>
           </div>
 
           <div className="text-center mt-8">
             <p className="text-text-secondary">
-              Já tem uma conta?{" "}
-              <Link to="/login" className="text-primary hover:underline">
+              Já tem uma conta?{" "}<Link to="/login" className="text-primary hover:underline">
                 Fazer login
               </Link>
             </p>
