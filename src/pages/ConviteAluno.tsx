@@ -181,10 +181,10 @@ const ConviteAluno = () => {
               {resultado.tipo === 'sucesso' && (
                 <div className="mt-3">
                   <Button 
-                    onClick={() => navigate("/alunos")}
+                    onClick={() => navigate("/index-pt")}
                     size="sm"
                   >
-                    Ver lista de alunos
+                    Voltar ao Início
                   </Button>
                 </div>
               )}
