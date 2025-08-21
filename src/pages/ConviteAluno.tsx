@@ -93,7 +93,7 @@ const ConviteAluno = () => {
           tipo: 'sucesso',
           cenario: responseData.cenario,
           titulo: 'Convite enviado com sucesso!',
-          mensagem: `O convite foi enviado para ${data.email_aluno}. ${cenarioTexto}`
+          mensagem: `O convite foi enviado para ${data.email_aluno}.`
         });
         form.reset();
       } else if (responseData?.success === false) {
