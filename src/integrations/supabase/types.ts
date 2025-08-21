@@ -198,6 +198,53 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      },
+      convites: {
+        Row: {
+          id: string
+          personal_trainer_id: string
+          email_convidado: string
+          token_convite: string
+          tipo_convite: string
+          status: string | null
+          expires_at: string
+          aceito_em: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          personal_trainer_id: string
+          email_convidado: string
+          token_convite?: string
+          tipo_convite: string
+          status?: string | null
+          expires_at?: string
+          aceito_em?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          personal_trainer_id?: string
+          email_convidado?: string
+          token_convite?: string
+          tipo_convite?: string
+          status?: string | null
+          expires_at?: string
+          aceito_em?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "convites_personal_trainer_id_fkey"
+            columns: ["personal_trainer_id"]
+            isOneToOne: false
+            referencedRelation: "personal_trainers"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       execucoes_series: {
         Row: {

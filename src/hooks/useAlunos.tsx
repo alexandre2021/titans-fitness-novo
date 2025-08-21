@@ -72,11 +72,11 @@ export const useAlunos = () => {
     return matchBusca && matchSituacao && matchGenero;
   });
 
-  const excluirAluno = async (alunoId: string) => {
+  const desvincularAluno = async (alunoId: string) => {
     try {
       const { error } = await supabase
         .from('alunos')
-        .delete()
+        .update({ personal_trainer_id: null })
         .eq('id', alunoId);
 
       if (error) throw error;
@@ -84,7 +84,7 @@ export const useAlunos = () => {
       setAlunos(alunos.filter(aluno => aluno.id !== alunoId));
       return true;
     } catch (error) {
-      console.error('Error deleting aluno:', error);
+      console.error('Error unlinking aluno:', error);
       return false;
     }
   };
@@ -94,7 +94,7 @@ export const useAlunos = () => {
     loading, 
     filtros, 
     setFiltros, 
-    excluirAluno,
+    desvincularAluno,
     totalAlunos: alunos.length
   };
 };

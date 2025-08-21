@@ -89,32 +89,32 @@ interface Aluno {
 
 interface AlunoCardProps {
   aluno: Aluno;
-  onExcluir: (id: string) => Promise<boolean>;
+  onDesvincular: (id: string) => Promise<boolean>;
 }
 
-export const AlunoCard = ({ aluno, onExcluir }: AlunoCardProps) => {
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+export const AlunoCard = ({ aluno, onDesvincular }: AlunoCardProps) => {
+  const [showUnlinkDialog, setShowUnlinkDialog] = useState(false);
+  const [isUnlinking, setIsUnlinking] = useState(false);
   const { toast } = useToast();
 
-  const handleExcluir = async () => {
-    setIsDeleting(true);
-    const success = await onExcluir(aluno.id);
+  const handleDesvincular = async () => {
+    setIsUnlinking(true);
+    const success = await onDesvincular(aluno.id);
     
     if (success) {
       toast({
-        title: "Aluno excluído",
-        description: "O aluno foi removido com sucesso.",
+        title: "Aluno desvinculado",
+        description: "O vínculo com o aluno foi removido com sucesso.",
       });
-      setShowDeleteDialog(false);
+      setShowUnlinkDialog(false);
     } else {
       toast({
         title: "Erro",
-        description: "Não foi possível excluir o aluno. Tente novamente.",
+        description: "Não foi possível desvincular o aluno. Tente novamente.",
         variant: "destructive",
       });
     }
-    setIsDeleting(false);
+    setIsUnlinking(false);
   };
 
   const renderAvatar = () => {
@@ -162,38 +162,38 @@ export const AlunoCard = ({ aluno, onExcluir }: AlunoCardProps) => {
 
             <AlunoOptionsModal 
               alunoId={aluno.id}
-              onExcluir={() => setShowDeleteDialog(true)}
+              onDesvincular={() => setShowUnlinkDialog(true)}
             />
           </div>
         </CardContent>
       </Card>
 
-      {/* Modal de Confirmação de Exclusão - Versão Responsiva */}
+      {/* Modal de Confirmação de Remoção de Vínculo - Versão Responsiva */}
       <ResponsiveModal
-        open={showDeleteDialog}
-        onOpenChange={setShowDeleteDialog}
-        title="Excluir Aluno"
+        open={showUnlinkDialog}
+        onOpenChange={setShowUnlinkDialog}
+        title="Remover Vínculo"
       >
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Tem certeza que deseja excluir o aluno <strong>{aluno.nome_completo}</strong>? 
-            Esta ação não pode ser desfeita e todos os dados do aluno serão removidos.
+            Tem certeza que deseja remover o vínculo com o aluno <strong>{aluno.nome_completo}</strong>? 
+            Você perderá o acesso aos dados dele.
           </p>
           
           <div className="flex justify-end space-x-2 pt-4">
             <Button
               type="button"
               variant="outline"
-              onClick={() => setShowDeleteDialog(false)}
+              onClick={() => setShowUnlinkDialog(false)}
             >
               Cancelar
             </Button>
             <Button
-              onClick={handleExcluir}
-              disabled={isDeleting}
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              onClick={handleDesvincular}
+              disabled={isUnlinking}
+              className="bg-orange-600 hover:bg-orange-700 text-white"
             >
-              {isDeleting ? "Excluindo..." : "Excluir"}
+              {isUnlinking ? "Removendo..." : "Remover"}
             </Button>
           </div>
         </div>

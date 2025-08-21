@@ -13,7 +13,7 @@ const AlunosPT = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { profile } = usePTProfile();
-  const { alunos, loading, filtros, setFiltros, excluirAluno, totalAlunos } = useAlunos();
+  const { alunos, loading, filtros, setFiltros, desvincularAluno, totalAlunos } = useAlunos();
 
   const handleConvidarAluno = () => {
     if (!profile) return;
@@ -135,7 +135,7 @@ const AlunosPT = () => {
                 <AlunoCard 
                   key={aluno.id} 
                   aluno={aluno} 
-                  onExcluir={excluirAluno}
+                  onDesvincular={desvincularAluno}
                 />
               ))}
             </div>

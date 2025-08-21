@@ -17,6 +17,7 @@ import CadastroPersonalTrainer from "./pages/CadastroPersonalTrainer";
 import CadastroAluno from "./pages/CadastroAluno";
 import ConfirmacaoEmail from "./pages/ConfirmacaoEmail";
 import Login from "./pages/Login";
+import ConviteInvalido from "./pages/ConviteInvalido";
 import Termos from "./pages/Termos";
 import Privacidade from "./pages/Privacidade";
 import DashboardPT from "./pages/DashboardPT";
@@ -75,6 +76,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/termos" element={<Termos />} />
             <Route path="/privacidade" element={<Privacidade />} />
+            <Route path="/convite-invalido" element={<ConviteInvalido />} />
             
             {/* ✅ ROTAS PROTEGIDAS - Personal Trainer */}
             <Route path="/index-pt" element={<AuthGuard><PTLayout /></AuthGuard>}>

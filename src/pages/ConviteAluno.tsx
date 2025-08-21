@@ -5,7 +5,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Form,
   FormControl,
@@ -14,7 +15,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { ArrowLeft, Mail } from "lucide-react";
+import { ArrowLeft, Mail, AlertCircle, CheckCircle, UserX } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,6 +29,13 @@ type FormData = z.infer<typeof formSchema>;
 
 const ConviteAluno = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [resultado, setResultado] = useState<{
+    tipo: 'sucesso' | 'erro' | 'aluno_com_pt' | 'convite_duplicado';
+    cenario?: string;
+    titulo: string;
+    mensagem: string;
+  } | null>(null);
+  
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -51,46 +59,99 @@ const ConviteAluno = () => {
     }
 
     setIsLoading(true);
+    setResultado(null);
 
     try {
       const { data: responseData, error } = await supabase.functions.invoke('enviar-convite', {
         body: {
           email_aluno: data.email_aluno,
+          personal_trainer_id: user.id,
           nome_personal: profile.nome_completo,
-          codigo_pt: profile.codigo_pt,
         }
       });
 
       if (error) {
         console.error('Error calling function:', error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível enviar o convite. Tente novamente.",
-          variant: "destructive",
+        setResultado({
+          tipo: 'erro',
+          titulo: 'Erro no envio',
+          mensagem: 'Não foi possível enviar o convite. Tente novamente.'
         });
         return;
       }
 
-      toast({
-        title: "Convite enviado!",
-        description: `O convite foi enviado para ${data.email_aluno} com sucesso.`,
+      // Verificar se há erro na resposta da função
+      if (!responseData.success) {
+        if (responseData.error === 'ALUNO_JA_TEM_PT') {
+          setResultado({
+            tipo: 'aluno_com_pt',
+            titulo: 'Aluno já possui Personal Trainer',
+            mensagem: 'Este aluno já está vinculado a outro profissional. Não é possível enviar o convite.'
+          });
+        } else if (responseData.error === 'CONVITE_JA_ENVIADO') {
+          setResultado({
+            tipo: 'convite_duplicado',
+            titulo: 'Convite já enviado',
+            mensagem: 'Já existe um convite pendente para este aluno. Aguarde a resposta ou cancele o convite anterior.'
+          });
+        } else {
+          setResultado({
+            tipo: 'erro',
+            titulo: 'Erro no envio',
+            mensagem: responseData.message || 'Erro desconhecido ao enviar convite.'
+          });
+        }
+        return;
+      }
+
+      // Sucesso - determinar tipo de convite
+      const cenarioTexto = responseData.cenario === 'email_novo' 
+        ? 'Aluno novo: um email de cadastro foi enviado.'
+        : 'Aluno existente: um email de convite para vínculo foi enviado.';
+
+      setResultado({
+        tipo: 'sucesso',
+        cenario: responseData.cenario,
+        titulo: 'Convite enviado com sucesso!',
+        mensagem: `O convite foi enviado para ${data.email_aluno}. ${cenarioTexto}`
       });
 
-      navigate("/alunos");
+      // Limpar formulário
+      form.reset();
+
     } catch (error) {
       console.error("Error sending invite:", error);
-      toast({
-        title: "Erro",
-        description: "Erro inesperado ao enviar convite.",
-        variant: "destructive",
+      setResultado({
+        tipo: 'erro',
+        titulo: 'Erro inesperado',
+        mensagem: 'Erro inesperado ao enviar convite. Tente novamente.'
       });
     } finally {
       setIsLoading(false);
     }
   };
 
+  const getAlertIcon = (tipo: string) => {
+    switch (tipo) {
+      case 'sucesso': return <CheckCircle className="h-4 w-4" />;
+      case 'aluno_com_pt': return <UserX className="h-4 w-4" />;
+      case 'convite_duplicado': return <AlertCircle className="h-4 w-4" />;
+      default: return <AlertCircle className="h-4 w-4" />;
+    }
+  };
+
+  const getAlertVariant = (tipo: string) => {
+    switch (tipo) {
+      case 'sucesso': return 'default';
+      case 'aluno_com_pt': return 'destructive';
+      case 'convite_duplicado': return 'default';
+      default: return 'destructive';
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
+      {/* Cabeçalho */}
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"
@@ -102,11 +163,37 @@ const ConviteAluno = () => {
         <div>
           <h1 className="text-3xl font-bold">Convidar Aluno</h1>
           <p className="text-muted-foreground">
-            Envie um convite para um novo aluno se juntar ao seu programa
+            Envie um convite para um aluno se juntar ao seu programa
           </p>
         </div>
       </div>
 
+      {/* Resultado do convite */}
+      {resultado && (
+        <Alert variant={getAlertVariant(resultado.tipo)} className="border-l-4">
+          <div className="flex items-start gap-3">
+            {getAlertIcon(resultado.tipo)}
+            <div className="flex-1">
+              <h4 className="font-semibold">{resultado.titulo}</h4>
+              <AlertDescription className="mt-1">
+                {resultado.mensagem}
+              </AlertDescription>
+              {resultado.tipo === 'sucesso' && (
+                <div className="mt-3">
+                  <Button 
+                    onClick={() => navigate("/alunos")}
+                    size="sm"
+                  >
+                    Ver lista de alunos
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </Alert>
+      )}
+
+      {/* Formulário */}
       <Card>
         <CardContent className="pt-6">
           <Form {...form}>
@@ -116,18 +203,32 @@ const ConviteAluno = () => {
                 name="email_aluno"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>Email do Aluno</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="email" 
-                        placeholder="Digite o email do aluno" 
-                        {...field} 
-                      />
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                          type="email" 
+                          placeholder="Digite o email do aluno" 
+                          className="pl-10"
+                          {...field} 
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              {/* Informações sobre o processo */}
+              <div className="bg-muted/50 rounded-lg p-4 text-sm">
+                <h4 className="font-medium mb-2">Como funciona:</h4>
+                <ul className="space-y-1 text-muted-foreground">
+                  <li>• <strong>Aluno novo:</strong> Receberá um email para criar conta</li>
+                  <li>• <strong>Aluno existente:</strong> Receberá um email para aceitar o vínculo</li>
+                  <li>• <strong>Já tem PT:</strong> Convite será bloqueado automaticamente</li>
+                </ul>
+              </div>
 
               <div className="flex gap-4 pt-4">
                 <Button

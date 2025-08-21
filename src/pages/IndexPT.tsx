@@ -14,11 +14,16 @@ import {
   TrendingUp,
   Clock,
   Target,
-  Cake
+  Cake,
+  Mail,
+  MailCheck,
+  X,
+  Send
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
 
 interface DashboardStats {
@@ -47,9 +52,19 @@ interface AlunoDestaque {
   tipo: 'aniversariante' | 'novo';
 }
 
+interface ConvitePendente {
+  id: string;
+  email_convidado: string;
+  tipo_convite: string;
+  status: string;
+  created_at: string;
+  expires_at: string;
+}
+
 const IndexPT = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>({
     alunosAtivos: 0,
@@ -59,6 +74,56 @@ const IndexPT = () => {
   });
   const [sessoesHoje, setSessoesHoje] = useState<SessaoHoje[]>([]);
   const [alunosDestaque, setAlunosDestaque] = useState<AlunoDestaque[]>([]);
+  const [convitesPendentes, setConvitesPendentes] = useState<ConvitePendente[]>([]);
+
+  // Carregar convites pendentes
+  const carregarConvitesPendentes = useCallback(async () => {
+    if (!user?.id) return;
+    console.log("ID do PT logado (carregarConvitesPendentes):", user.id);
+
+    try {
+      const { data: convites } = await supabase
+        .from('convites')
+        .select('id, email_convidado, tipo_convite, status, created_at, expires_at')
+        .eq('personal_trainer_id', user.id)
+        .eq('status', 'pendente')
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (convites) {
+        setConvitesPendentes(convites);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar convites pendentes:', error);
+    }
+  }, [user?.id]);
+
+  // Cancelar convite
+  const cancelarConvite = async (conviteId: string, email: string) => {
+    try {
+      const { error } = await supabase
+        .from('convites')
+        .update({ status: 'cancelado' })
+        .eq('id', conviteId);
+
+      if (error) throw error;
+
+      // Remover da lista local
+      setConvitesPendentes(prev => prev.filter(c => c.id !== conviteId));
+
+      toast({
+        title: "Convite cancelado",
+        description: `O convite para ${email} foi cancelado.`,
+      });
+    } catch (error) {
+      console.error('Erro ao cancelar convite:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível cancelar o convite.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Carregar estatísticas principais
   const carregarStats = useCallback(async () => {
@@ -259,13 +324,14 @@ const IndexPT = () => {
       await Promise.all([
         carregarStats(),
         carregarSessoesHoje(),
-        carregarAlunosDestaque()
+        carregarAlunosDestaque(),
+        carregarConvitesPendentes()
       ]);
       setLoading(false);
     };
 
     carregarDados();
-  }, [carregarStats, carregarSessoesHoje, carregarAlunosDestaque]);
+  }, [carregarStats, carregarSessoesHoje, carregarAlunosDestaque, carregarConvitesPendentes]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -283,6 +349,26 @@ const IndexPT = () => {
       case 'em_aberto': return 'Agendada';
       default: return status;
     }
+  };
+
+  const formatarDataRelativa = (data: string) => {
+    const agora = new Date();
+    const dataConvite = new Date(data);
+    const diferencaMs = agora.getTime() - dataConvite.getTime();
+    const diferencaDias = Math.floor(diferencaMs / (1000 * 60 * 60 * 24));
+
+    if (diferencaDias === 0) return 'Hoje';
+    if (diferencaDias === 1) return 'Ontem';
+    if (diferencaDias < 7) return `${diferencaDias} dias atrás`;
+    return dataConvite.toLocaleDateString('pt-BR');
+  };
+
+  const getConviteIcon = (tipo: string) => {
+    return tipo === 'cadastro' ? <Mail className="h-4 w-4" /> : <MailCheck className="h-4 w-4" />;
+  };
+
+  const getConviteDescricao = (tipo: string) => {
+    return tipo === 'cadastro' ? 'Convite de cadastro' : 'Convite de vínculo';
   };
 
   if (loading) {
@@ -365,6 +451,56 @@ const IndexPT = () => {
       <div className="grid gap-6 md:grid-cols-3">
         {/* Coluna Esquerda - Atividades de Hoje */}
         <div className="md:col-span-2 space-y-6">
+          {/* Convites Pendentes */}
+          {convitesPendentes.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Send className="h-5 w-5" />
+                  Convites Pendentes
+                  <Badge variant="secondary" className="ml-auto">
+                    {convitesPendentes.length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {convitesPendentes.map((convite) => (
+                    <div key={convite.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        {getConviteIcon(convite.tipo_convite)}
+                        <div className="flex flex-col">
+                          <span className="font-medium">{convite.email_convidado}</span>
+                          <span className="text-sm text-muted-foreground">
+                            {getConviteDescricao(convite.tipo_convite)} • {formatarDataRelativa(convite.created_at)}
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => cancelarConvite(convite.id, convite.email_convidado)}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 pt-4 border-t">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => navigate("/convite-aluno")}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Enviar Novo Convite
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Sessões de Hoje */}
           <Card>
             <CardHeader>
@@ -398,8 +534,6 @@ const IndexPT = () => {
               )}
             </CardContent>
           </Card>
-
-
         </div>
 
         {/* Coluna Direita - Alunos em Destaque */}

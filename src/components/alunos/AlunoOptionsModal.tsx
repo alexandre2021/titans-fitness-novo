@@ -6,14 +6,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { MoreVertical, Eye, FileText, BarChart3, Dumbbell, Trash2 } from 'lucide-react';
+import { MoreVertical, Eye, FileText, BarChart3, Dumbbell, UserMinus } from 'lucide-react';
 
 interface AlunoOptionsModalProps {
   alunoId: string;
-  onExcluir: () => void;
+  onDesvincular: () => void;
 }
 
-export const AlunoOptionsModal = ({ alunoId, onExcluir }: AlunoOptionsModalProps) => {
+export const AlunoOptionsModal = ({ alunoId, onDesvincular }: AlunoOptionsModalProps) => {
   const navigate = useNavigate();
 
   const handleNavigation = (path: string) => {
@@ -57,11 +57,11 @@ export const AlunoOptionsModal = ({ alunoId, onExcluir }: AlunoOptionsModalProps
           </div>
         </DropdownMenuItem>
         <DropdownMenuItem 
-          onClick={onExcluir}
-          className="text-destructive focus:text-destructive"
+          onClick={onDesvincular}
+          className="text-orange-600 focus:text-orange-700"
         >
-          <Trash2 className="h-4 w-4 mr-2" />
-          <span>Excluir</span>
+          <UserMinus className="h-4 w-4 mr-2" />
+          <span>Remover</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
