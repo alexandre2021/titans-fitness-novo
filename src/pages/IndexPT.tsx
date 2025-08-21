@@ -354,13 +354,20 @@ const IndexPT = () => {
   const formatarDataRelativa = (data: string) => {
     const agora = new Date();
     const dataConvite = new Date(data);
-    const diferencaMs = agora.getTime() - dataConvite.getTime();
-    const diferencaDias = Math.floor(diferencaMs / (1000 * 60 * 60 * 24));
+
+    // Zera a hora, minuto e segundo para comparar apenas os dias (no fuso horário local)
+    const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+    const diaConvite = new Date(dataConvite.getFullYear(), dataConvite.getMonth(), dataConvite.getDate());
+
+    const diferencaMs = hoje.getTime() - diaConvite.getTime();
+    const diferencaDias = Math.round(diferencaMs / (1000 * 60 * 60 * 24));
 
     if (diferencaDias === 0) return 'Hoje';
     if (diferencaDias === 1) return 'Ontem';
-    if (diferencaDias < 7) return `${diferencaDias} dias atrás`;
-    return dataConvite.toLocaleDateString('pt-BR');
+    if (diferencaDias > 1 && diferencaDias < 7) return `${diferencaDias} dias atrás`;
+    
+    // Para datas mais antigas, formata para o padrão BR
+    return new Intl.DateTimeFormat('pt-BR').format(dataConvite);
   };
 
   const getConviteIcon = (tipo: string) => {

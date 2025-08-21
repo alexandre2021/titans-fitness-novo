@@ -70,61 +70,62 @@ const ConviteAluno = () => {
         }
       });
 
+      // **LÓGICA DE ERRO CORRIGIDA**
+      // Erros de negócio (como 409) são tratados pelo client do Supabase como um 'error'
       if (error) {
-        console.error('Error calling function:', error);
-        setResultado({
-          tipo: 'erro',
-          titulo: 'Erro no envio',
-          mensagem: 'Não foi possível enviar o convite. Tente novamente.'
-        });
-        return;
-      }
-
-      // Verificar se há erro na resposta da função
-      if (!responseData.success) {
-        if (responseData.error === 'ALUNO_JA_TEM_PT') {
-          setResultado({
-            tipo: 'aluno_com_pt',
-            titulo: 'Aluno já possui Personal Trainer',
-            mensagem: 'Este aluno já está vinculado a outro profissional. Não é possível enviar o convite.'
-          });
-        } else if (responseData.error === 'CONVITE_JA_ENVIADO') {
+        // Verificamos se dentro do erro genérico está o nosso erro customizado
+        if (error.context?.error === 'CONVITE_JA_ENVIADO') {
           setResultado({
             tipo: 'convite_duplicado',
             titulo: 'Convite já enviado',
             mensagem: 'Já existe um convite pendente para este aluno. Aguarde a resposta ou cancele o convite anterior.'
           });
+        } else if (error.context?.error === 'ALUNO_JA_TEM_PT') {
+          setResultado({
+            tipo: 'aluno_com_pt',
+            titulo: 'Aluno já possui Personal Trainer',
+            mensagem: 'Este aluno já está vinculado a outro profissional. Não é possível enviar o convite.'
+          });
         } else {
+          // Para todos os outros erros (500, rede, etc.)
+          console.error('Error calling function:', error);
           setResultado({
             tipo: 'erro',
             titulo: 'Erro no envio',
-            mensagem: responseData.message || 'Erro desconhecido ao enviar convite.'
+            mensagem: 'Não foi possível enviar o convite. Tente novamente.'
           });
         }
         return;
       }
 
-      // Sucesso - determinar tipo de convite
-      const cenarioTexto = responseData.cenario === 'email_novo' 
-        ? 'Aluno novo: um email de cadastro foi enviado.'
-        : 'Aluno existente: um email de convite para vínculo foi enviado.';
+      // **LÓGICA DE SUCESSO (só é executada para respostas 2xx)**
+      if (responseData.success) {
+        const cenarioTexto = responseData.cenario === 'email_novo' 
+          ? 'Aluno novo: um email de cadastro foi enviado.'
+          : 'Aluno existente: um email de convite para vínculo foi enviado.';
 
-      setResultado({
-        tipo: 'sucesso',
-        cenario: responseData.cenario,
-        titulo: 'Convite enviado com sucesso!',
-        mensagem: `O convite foi enviado para ${data.email_aluno}. ${cenarioTexto}`
-      });
+        setResultado({
+          tipo: 'sucesso',
+          cenario: responseData.cenario,
+          titulo: 'Convite enviado com sucesso!',
+          mensagem: `O convite foi enviado para ${data.email_aluno}. ${cenarioTexto}`
+        });
+        form.reset();
+      } else {
+         // Fallback para um erro inesperado no corpo de uma resposta 2xx
+         setResultado({
+            tipo: 'erro',
+            titulo: 'Erro inesperado',
+            mensagem: responseData.message || 'Ocorreu um erro desconhecido.'
+          });
+      }
 
-      // Limpar formulário
-      form.reset();
-
-    } catch (error) {
-      console.error("Error sending invite:", error);
+    } catch (e) {
+      console.error("Unhandled exception in handleEnviarConvite:", e);
       setResultado({
         tipo: 'erro',
-        titulo: 'Erro inesperado',
-        mensagem: 'Erro inesperado ao enviar convite. Tente novamente.'
+        titulo: 'Erro Crítico',
+        mensagem: 'Ocorreu um erro inesperado no aplicativo. Tente novamente.'
       });
     } finally {
       setIsLoading(false);
