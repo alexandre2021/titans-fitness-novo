@@ -33,7 +33,7 @@ const Termos = () => {
         
         <div className="prose prose-gray max-w-none">
           <p className="text-text-secondary text-lg mb-8">
-            Última atualização: 18 de agosto de 2025
+            Última atualização: 21 de agosto de 2025
           </p>
 
           <section className="mb-8">
@@ -70,8 +70,9 @@ const Termos = () => {
               ocorrerem em sua conta.
             </p>
             <p className="text-text-secondary mb-4">
-              <strong>Alunos</strong> devem fornecer um código válido de Personal Trainer para completar o cadastro. 
-              <strong>Personal Trainers</strong> receberão um código único após a validação de seu perfil profissional.
+              <strong>Alunos</strong> devem ser convidados por um Personal Trainer para completar o cadastro. 
+              <strong>Personal Trainers</strong> podem convidar alunos através da plataforma após validação 
+              de seu perfil profissional.
             </p>
           </section>
 
@@ -80,15 +81,16 @@ const Termos = () => {
             <div className="bg-orange-50 border-l-4 border-orange-500 p-4 mb-4">
               <p className="text-text-primary font-semibold mb-2">Política de Inatividade</p>
               <p className="text-text-secondary">
-                Contas que permanecerem inativas por <strong>3 (três) meses consecutivos</strong> serão 
-                automaticamente excluídas de nossa plataforma. Esta política se aplica tanto a Personal 
-                Trainers quanto a Alunos.
+                Contas que permanecerem inativas por <strong>90 (noventa) dias consecutivos</strong> serão 
+                automaticamente excluídas de nossa plataforma. Esta política se aplica exclusivamente a 
+                contas de <strong>Alunos</strong>.
               </p>
             </div>
             <ul className="list-disc pl-6 text-text-secondary space-y-2 mb-4">
-              <li><strong>Atividade:</strong> Login na plataforma, criação/visualização de treinos, ou comunicação são consideradas atividades</li>
+              <li><strong>Atividade:</strong> Login na plataforma, visualização de treinos, ou uso de qualquer função são consideradas atividades</li>
+              <li><strong>Aviso prévio:</strong> Usuários recebem um email de aviso aos 60 dias de inatividade</li>
               <li><strong>Dados:</strong> Após a exclusão, todos os dados serão permanentemente removidos e não poderão ser recuperados</li>
-              <li><strong>Reativação:</strong> Para evitar a exclusão, basta fazer login e usar qualquer função da plataforma</li>
+              <li><strong>Reativação:</strong> Para evitar a exclusão, basta fazer login na plataforma antes do prazo</li>
             </ul>
           </section>
 
@@ -96,7 +98,9 @@ const Termos = () => {
             <h2 className="text-2xl font-semibold text-text-primary mb-4">5. Responsabilidades do Personal Trainer</h2>
             <ul className="list-disc pl-6 text-text-secondary space-y-2">
               <li>Possuir qualificações adequadas e certificações válidas para exercer a profissão</li>
+              <li>Realizar avaliação física adequada e coletar informações de saúde antes de iniciar treinos</li>
               <li>Criar treinos seguros, apropriados e baseados em evidências científicas para cada aluno</li>
+              <li>Monitorar continuamente a saúde e bem-estar dos alunos durante o treinamento</li>
               <li>Manter a confidencialidade de todas as informações pessoais e de saúde dos alunos</li>
               <li>Seguir as diretrizes de segurança, ética profissional e boas práticas do setor</li>
               <li>Responder às dúvidas e solicitações dos alunos de forma profissional e em tempo hábil</li>
@@ -113,6 +117,8 @@ const Termos = () => {
               <li>Usar a plataforma de forma adequada e respeitosa</li>
               <li>Informar sobre limitações físicas, medicamentos ou condições médicas relevantes</li>
               <li>Manter contato regular com seu Personal Trainer sobre seu progresso e dificuldades</li>
+              <li>Buscar acompanhamento médico quando orientado pelo Personal Trainer</li>
+              <li>Respeitar suas próprias limitações e não exceder orientações recebidas</li>
             </ul>
           </section>
 
@@ -126,6 +132,7 @@ const Termos = () => {
               <li>Os acordos financeiros devem ser estabelecidos diretamente entre Personal Trainer e Aluno</li>
               <li>A plataforma não processa pagamentos nem participa de transações financeiras</li>
               <li>Disputas profissionais devem ser resolvidas entre as partes ou através de órgãos competentes</li>
+              <li>O Personal Trainer deve seguir as normas do CREF e legislação profissional aplicável</li>
             </ul>
           </section>
 
@@ -144,13 +151,24 @@ const Termos = () => {
               O Titans.fitness é uma plataforma de tecnologia que facilita a conexão entre profissionais 
               e clientes. Não nos responsabilizamos por:
             </p>
-            <ul className="list-disc pl-6 text-text-secondary space-y-2">
+            <ul className="list-disc pl-6 text-text-secondary space-y-2 mb-6">
               <li>Lesões ou danos resultantes da execução inadequada de exercícios</li>
               <li>Qualidade dos serviços prestados pelos Personal Trainers</li>
               <li>Resultados específicos de treinos ou programas</li>
               <li>Disputas entre Personal Trainers e Alunos</li>
               <li>Perda de dados devido a problemas técnicos ou inatividade da conta</li>
             </ul>
+            
+            <div className="bg-blue-50 border-l-4 border-blue-500 p-4">
+              <p className="text-text-primary font-semibold mb-2">Responsabilidade Profissional</p>
+              <p className="text-text-secondary">
+                Embora a plataforma não se responsabilize pelos serviços prestados, é <strong>obrigação 
+                legal e ética do Personal Trainer</strong> seguir as normas do CREF (Conselho Regional 
+                de Educação Física), realizar avaliações adequadas, monitorar a saúde dos alunos e atuar 
+                dentro de seu escopo profissional. A negligência nessas responsabilidades pode resultar 
+                em consequências legais e profissionais para o Personal Trainer.
+              </p>
+            </div>
           </section>
 
           <section className="mb-8">
@@ -162,6 +180,7 @@ const Termos = () => {
               <li>Compartilhar conteúdo ofensivo, falso ou prejudicial</li>
               <li>Violar direitos de propriedade intelectual</li>
               <li>Tentar acessar sistemas ou dados de outros usuários</li>
+              <li>Fornecer informações falsas sobre qualificações ou certificações</li>
             </ul>
           </section>
 
@@ -177,8 +196,13 @@ const Termos = () => {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold text-text-primary mb-4">12. Rescisão</h2>
             <p className="text-text-secondary mb-4">
-              Você pode encerrar sua conta a qualquer momento. Nós podemos suspender ou encerrar 
-              contas que violem estes termos ou por inatividade conforme descrito no item 4.
+              Você pode encerrar sua conta a qualquer momento através das configurações da plataforma. 
+              Nós podemos suspender ou encerrar contas que violem estes termos ou por inatividade 
+              conforme descrito no item 4.
+            </p>
+            <p className="text-text-secondary mb-4">
+              Personal Trainers podem desvincular alunos de suas contas, mas isso não exclui a conta 
+              do aluno da plataforma.
             </p>
           </section>
 
@@ -188,7 +212,7 @@ const Termos = () => {
               Para dúvidas sobre estes Termos de Uso, entre em contato:
             </p>
             <ul className="list-none text-text-secondary space-y-1">
-              <li><strong>Email:</strong> suporte@titans.fitness</li>
+              <li><strong>Email:</strong> contato@titans.fitness</li>
             </ul>
           </section>
         </div>

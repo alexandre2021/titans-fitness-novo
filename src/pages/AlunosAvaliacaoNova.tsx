@@ -1,3 +1,6 @@
+// Regra de Avaliações:
+// Um aluno pode ter no máximo 4 avaliações físicas ativas.
+// Ao criar uma nova avaliação (a 5ª ou mais), a avaliação mais antiga é automaticamente excluída.
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -545,7 +548,7 @@ const AlunosAvaliacaoNova = () => {
         {/* Medidas Corporais */}
         <Card>
           <CardHeader>
-            <CardTitle>Medidas Corporais (cm) - Opcional</CardTitle>
+            <CardTitle>Medidas Corporais</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Tronco */}
@@ -553,7 +556,7 @@ const AlunosAvaliacaoNova = () => {
               <h4 className="font-medium mb-3">Tronco</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="peito_busto">Peito/Busto</Label>
+                  <Label htmlFor="peito_busto">Peito/Busto (cm)</Label>
                   <Input
                     id="peito_busto"
                     type="number"
@@ -562,7 +565,7 @@ const AlunosAvaliacaoNova = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="cintura">Cintura</Label>
+                  <Label htmlFor="cintura">Cintura (cm)</Label>
                   <Input
                     id="cintura"
                     type="number"
@@ -571,7 +574,7 @@ const AlunosAvaliacaoNova = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="quadril">Quadril</Label>
+                  <Label htmlFor="quadril">Quadril (cm)</Label>
                   <Input
                     id="quadril"
                     type="number"

@@ -303,12 +303,14 @@ const AlunosAvaliacoes = () => {
             </div>
           </div>
           {/* Botão só com ícone + igual ao de Alunos */}
-          <button
+          <Button
             onClick={handleNovaAvaliacao}
-            className="flex items-center justify-center w-10 h-10 rounded bg-[#AA1808] text-white shadow hover:bg-[#8a1406] transition-colors"
+            size="icon"
+            className="rounded-full"
+            style={{ backgroundColor: '#AA1808', color: 'white' }} // Preserve original background color
           >
             <Plus className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
       </div>
 

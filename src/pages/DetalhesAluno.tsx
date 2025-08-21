@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, User, Mail, Phone, Calendar, MapPin } from 'lucide-react';
+import { ArrowLeft, User, Mail, Phone, Calendar, MapPin, Ruler, Weight } from 'lucide-react'; // Added Ruler, Weight
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { formatters } from '@/utils/formatters';
@@ -23,6 +23,8 @@ interface AlunoDetalhes {
   onboarding_completo: boolean;
   endereco?: string;
   descricao_pessoal?: string;
+  peso?: number; // Added
+  altura?: number; // Added
 }
 
 const DetalhesAluno = () => {
@@ -39,7 +41,7 @@ const DetalhesAluno = () => {
       try {
         const { data, error } = await supabase
           .from('alunos')
-          .select('*')
+          .select('*') // Still selecting all, as requested
           .eq('id', id)
           .eq('personal_trainer_id', user.id)
           .single();
@@ -47,7 +49,7 @@ const DetalhesAluno = () => {
         if (error) {
           console.error('Erro ao buscar detalhes do aluno:', error);
         } else {
-          setAluno(data);
+          setAluno(data as AlunoDetalhes); // Cast to new interface
         }
       } catch (error) {
         console.error('Erro ao buscar detalhes do aluno:', error);
@@ -74,6 +76,22 @@ const DetalhesAluno = () => {
         {aluno.avatar_letter || aluno.nome_completo.charAt(0).toUpperCase()}
       </AvatarFallback>
     );
+  };
+
+  // Helper function to display "Não informado"
+  const displayValue = (value: string | number | null | undefined, unit?: string) => {
+    if (value === null || value === undefined || value === '') {
+      return "Não informado";
+    }
+    return `${value}${unit ? ` ${unit}` : ''}`;
+  };
+
+  // Helper for gender display
+  const displayGender = (gender: string | null | undefined) => {
+    if (gender === 'masculino') return 'Masculino';
+    if (gender === 'feminino') return 'Feminino';
+    if (gender === 'outro') return 'Outro';
+    return "Não informado";
   };
 
   if (loading) {
@@ -167,54 +185,61 @@ const DetalhesAluno = () => {
                 <Mail className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="text-sm font-medium">Email</p>
-                  <p className="text-sm text-muted-foreground">{aluno.email}</p>
+                  <p className="text-sm text-muted-foreground">{displayValue(aluno.email)}</p>
                 </div>
               </div>
 
-              {aluno.telefone && (
-                <div className="flex items-center gap-3">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Telefone</p>
-                    <p className="text-sm text-muted-foreground">{formatters.phone(aluno.telefone)}</p>
-                  </div>
+              <div className="flex items-center gap-3">
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Telefone</p>
+                  <p className="text-sm text-muted-foreground">{displayValue(aluno.telefone ? formatters.phone(aluno.telefone) : null)}</p>
                 </div>
-              )}
+              </div>
 
-              {aluno.data_nascimento && (
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Data de Nascimento</p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatters.date(aluno.data_nascimento)}
-                    </p>
-                  </div>
+              <div className="flex items-center gap-3">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Data de Nascimento</p>
+                  <p className="text-sm text-muted-foreground">
+                    {displayValue(aluno.data_nascimento ? formatters.date(aluno.data_nascimento) : null)}
+                  </p>
                 </div>
-              )}
+              </div>
+
+              <div className="flex items-center gap-3">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Gênero</p>
+                  <p className="text-sm text-muted-foreground">{displayGender(aluno.genero)}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Weight className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Peso</p>
+                  <p className="text-sm text-muted-foreground">{displayValue(aluno.peso, 'kg')}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Ruler className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium">Altura</p>
+                  <p className="text-sm text-muted-foreground">{displayValue(aluno.altura, 'cm')}</p>
+                </div>
+              </div>
             </div>
 
             <div className="space-y-4">
-              {aluno.genero && (
+              <div className="flex items-start gap-3">
+                <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium">Gênero</p>
-                  <p className="text-sm text-muted-foreground">
-                    {aluno.genero === 'masculino' ? 'Masculino' : 
-                     aluno.genero === 'feminino' ? 'Feminino' : 'Outro'}
-                  </p>
+                  <p className="text-sm font-medium">Endereço</p>
+                  <p className="text-sm text-muted-foreground">{displayValue(aluno.endereco)}</p>
                 </div>
-              )}
-
-
-              {aluno.endereco && (
-                <div className="flex items-start gap-3">
-                  <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">Endereço</p>
-                    <p className="text-sm text-muted-foreground">{aluno.endereco}</p>
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           </div>
 

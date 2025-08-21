@@ -35,7 +35,7 @@ const AlunoMobileHeader = () => {
       default:
         return (
           <img 
-            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal.png" 
+            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-logo-mobile.png" 
             alt="Titans Fitness"
             className="h-12"
           />

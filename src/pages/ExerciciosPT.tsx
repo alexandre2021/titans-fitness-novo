@@ -171,18 +171,11 @@ const ExerciciosPT = () => {
           {activeTab === "personalizados" && (
             <Button 
               onClick={handleNovoExercicio}
-              size="sm"
-              className="flex items-center gap-1 px-3"
+              size="icon"
+              className="rounded-full"
               disabled={!canAddMore}
             >
-              {canAddMore ? (
-                <>
-                  <Plus className="h-4 w-4" />
-                  <span className="hidden xs:inline">Novo</span>
-                </>
-              ) : (
-                "Limite"
-              )}
+              <Plus className="h-4 w-4" />
             </Button>
           )}
         </div>

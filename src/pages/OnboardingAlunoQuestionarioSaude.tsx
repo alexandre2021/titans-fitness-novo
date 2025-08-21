@@ -12,14 +12,14 @@ const OnboardingAlunoQuestionarioSaude = () => {
   const navigate = useNavigate();
   const { profile, loading, updateProfile } = useAlunoProfile();
   
-  const [respostas, setRespostas] = useState<Record<string, string | null>>({
-    questao1: null,
-    questao2: null,
-    questao3: null,
-    questao4: null,
-    questao5: null,
-    questao6: null,
-    questao7: null,
+  const [respostas, setRespostas] = useState<Record<string, boolean | null>>({
+    questao_1: null,
+    questao_2: null,
+    questao_3: null,
+    questao_4: null,
+    questao_5: null,
+    questao_6: null,
+    questao_7: null,
   });
   
   const [isLoading, setIsLoading] = useState(false);
@@ -35,9 +35,10 @@ const OnboardingAlunoQuestionarioSaude = () => {
   ];
 
   const handleRespostaChange = (questaoIndex: number, valor: string) => {
+    const valorBooleano = valor === 'sim' ? true : valor === 'nao' ? false : null;
     setRespostas(prev => ({
       ...prev,
-      [`questao${questaoIndex + 1}`]: valor
+      [`questao_${questaoIndex + 1}`]: valorBooleano
     }));
   };
 
@@ -93,7 +94,7 @@ const OnboardingAlunoQuestionarioSaude = () => {
             <div className="space-y-4">
               <div className="space-y-4 max-h-[60vh] overflow-y-auto">
                 {questoes.map((questao, index) => {
-                  const questaoKey = `questao${index + 1}`;
+                  const questaoKey = `questao_${index + 1}`;
                   const valorAtual = respostas[questaoKey];
                   
                   return (
@@ -107,7 +108,7 @@ const OnboardingAlunoQuestionarioSaude = () => {
                             type="radio"
                             name={`questao-${index}`}
                             value="sim"
-                            checked={valorAtual === "sim"}
+                            checked={valorAtual === true}
                             onChange={() => handleRespostaChange(index, "sim")}
                             className="w-4 h-4 text-primary focus:ring-primary"
                           />
@@ -118,7 +119,7 @@ const OnboardingAlunoQuestionarioSaude = () => {
                             type="radio"
                             name={`questao-${index}`}
                             value="nao"
-                            checked={valorAtual === "nao"}
+                            checked={valorAtual === false}
                             onChange={() => handleRespostaChange(index, "nao")}
                             className="w-4 h-4 text-primary focus:ring-primary"
                           />
@@ -129,7 +130,7 @@ const OnboardingAlunoQuestionarioSaude = () => {
                             type="radio"
                             name={`questao-${index}`}
                             value="prefiro_nao_responder"
-                            checked={valorAtual === "prefiro_nao_responder"}
+                            checked={valorAtual === null}
                             onChange={() => handleRespostaChange(index, "prefiro_nao_responder")}
                             className="w-4 h-4 text-primary focus:ring-primary"
                           />

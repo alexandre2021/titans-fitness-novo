@@ -745,11 +745,10 @@ const AlunosRotinas = () => {
           navigate(`/rotinas-criar/${id}/configuracao`);
         }}
         disabled={navegandoNovaRotina}
-        size="sm"
-        className="flex items-center gap-1 px-3"
+        size="icon"
+        className="rounded-full"
       >
         <Plus className="h-4 w-4" />
-        <span className="hidden xs:inline">Nova</span>
       </Button>
     )}
   </div>

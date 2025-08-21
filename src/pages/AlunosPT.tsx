@@ -64,11 +64,10 @@ const AlunosPT = () => {
           {/* Botão compacto mobile */}
           <Button 
             onClick={handleConvidarAluno} 
-            size="sm"
-            className="flex items-center gap-1 px-3"
+            size="icon"
+            className="rounded-full"
           >
             <Plus className="h-4 w-4" />
-            <span className="hidden xs:inline">Convidar</span>
           </Button>
         </div>
 
