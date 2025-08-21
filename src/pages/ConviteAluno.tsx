@@ -70,36 +70,21 @@ const ConviteAluno = () => {
         }
       });
 
-      // **LÓGICA DE ERRO CORRIGIDA**
-      // Erros de negócio (como 409) são tratados pelo client do Supabase como um 'error'
+      // **CORREÇÃO PRINCIPAL: Tratamento adequado dos erros HTTP**
       if (error) {
-        // Verificamos se dentro do erro genérico está o nosso erro customizado
-        if (error.context?.error === 'CONVITE_JA_ENVIADO') {
-          setResultado({
-            tipo: 'convite_duplicado',
-            titulo: 'Convite já enviado',
-            mensagem: 'Já existe um convite pendente para este aluno. Aguarde a resposta ou cancele o convite anterior.'
-          });
-        } else if (error.context?.error === 'ALUNO_JA_TEM_PT') {
-          setResultado({
-            tipo: 'aluno_com_pt',
-            titulo: 'Aluno já possui Personal Trainer',
-            mensagem: 'Este aluno já está vinculado a outro profissional. Não é possível enviar o convite.'
-          });
-        } else {
-          // Para todos os outros erros (500, rede, etc.)
-          console.error('Error calling function:', error);
-          setResultado({
-            tipo: 'erro',
-            titulo: 'Erro no envio',
-            mensagem: 'Não foi possível enviar o convite. Tente novamente.'
-          });
-        }
+        console.error('Error response from function:', error);
+        
+        // Para todos os erros (500, rede, etc.)
+        setResultado({
+          tipo: 'erro',
+          titulo: 'Erro no envio',
+          mensagem: `Não foi possível enviar o convite. Erro: ${error.message || 'Erro desconhecido'}`
+        });
         return;
       }
 
-      // **LÓGICA DE SUCESSO (só é executada para respostas 2xx)**
-      if (responseData.success) {
+      // **SUCESSO: só é executado para respostas 2xx sem erro**
+      if (responseData?.success) {
         const cenarioTexto = responseData.cenario === 'email_novo' 
           ? 'Aluno novo: um email de cadastro foi enviado.'
           : 'Aluno existente: um email de convite para vínculo foi enviado.';
@@ -111,12 +96,34 @@ const ConviteAluno = () => {
           mensagem: `O convite foi enviado para ${data.email_aluno}. ${cenarioTexto}`
         });
         form.reset();
+      } else if (responseData?.success === false) {
+        // **TRATAMENTO DE ERROS DE NEGÓCIO via responseData**
+        if (responseData.error_type === 'CONVITE_JA_ENVIADO') {
+          setResultado({
+            tipo: 'convite_duplicado',
+            titulo: 'Convite já enviado',
+            mensagem: 'Já existe um convite pendente para este aluno. Aguarde a resposta ou cancele o convite anterior.'
+          });
+        } else if (responseData.error_type === 'ALUNO_JA_TEM_PT') {
+          setResultado({
+            tipo: 'aluno_com_pt',
+            titulo: 'Aluno já possui Personal Trainer',
+            mensagem: 'Este aluno já está vinculado a outro profissional. Não é possível enviar o convite.'
+          });
+        } else {
+          // Outros erros de negócio
+          setResultado({
+            tipo: 'erro',
+            titulo: 'Erro no envio',
+            mensagem: responseData.message || 'Ocorreu um erro ao processar a solicitação.'
+          });
+        }
       } else {
          // Fallback para um erro inesperado no corpo de uma resposta 2xx
          setResultado({
             tipo: 'erro',
             titulo: 'Erro inesperado',
-            mensagem: responseData.message || 'Ocorreu um erro desconhecido.'
+            mensagem: responseData?.message || 'Ocorreu um erro desconhecido.'
           });
       }
 
@@ -141,7 +148,7 @@ const ConviteAluno = () => {
     }
   };
 
-  const getAlertVariant = (tipo: string) => {
+  const getAlertVariant = (tipo: string): "default" | "destructive" => {
     switch (tipo) {
       case 'sucesso': return 'default';
       case 'aluno_com_pt': return 'destructive';
