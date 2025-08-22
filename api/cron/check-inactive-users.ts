@@ -38,7 +38,7 @@ export default async function handler(
       .from('avaliacoes')
       .select('documento_url');
 
-    if (avaliacoesError) throw avaliacoesError;
+    if (avaliacoesError) throw new Error(JSON.stringify(avaliacoesError));
 
     // Busca URLs da tabela 'rotina_arquivada'
     // Suposição: a coluna com a URL se chama 'pdf_url'
@@ -46,7 +46,7 @@ export default async function handler(
       .from('rotina_arquivada')
       .select('pdf_url');
 
-    if (rotinasError) throw rotinasError;
+    if (rotinasError) throw new Error(JSON.stringify(rotinasError));
 
     const filesToLog = [];
 
@@ -71,7 +71,7 @@ export default async function handler(
         .from('deleted_user_files_log') // Suposição: a tabela de log se chama assim
         .insert(filesToLog);
 
-      if (insertError) throw insertError;
+      if (insertError) throw new Error(JSON.stringify(insertError));
 
       const successMessage = `Successfully logged ${filesToLog.length} file URLs.`;
       console.log(successMessage);
