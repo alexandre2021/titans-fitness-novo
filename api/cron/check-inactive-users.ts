@@ -30,17 +30,17 @@ export default async function handler(
   try {
     console.log("Cron job started: Fetching file URLs to log.");
 
-    // Tabela correta: avaliacoes_fisicas
+    // Busca de 'avaliacoes_fisicas', incluindo aluno_id
     const { data: avaliacoes, error: avaliacoesError } = await supabase
       .from('avaliacoes_fisicas')
-      .select('foto_frente_url, foto_lado_url, foto_costas_url');
+      .select('aluno_id, foto_frente_url, foto_lado_url, foto_costas_url');
 
     if (avaliacoesError) throw new Error(JSON.stringify(avaliacoesError));
 
-    // Tabela correta: rotinas_arquivadas
+    // Busca de 'rotinas_arquivadas', incluindo aluno_id
     const { data: rotinas, error: rotinasError } = await supabase
       .from('rotinas_arquivadas')
-      .select('pdf_url');
+      .select('aluno_id, pdf_url');
 
     if (rotinasError) throw new Error(JSON.stringify(rotinasError));
 
@@ -48,22 +48,26 @@ export default async function handler(
 
     if (avaliacoes) {
       for (const item of avaliacoes) {
+        if (!item.aluno_id) continue; // Pula se não houver ID de aluno
+
         if (item.foto_frente_url) {
-          filesToLog.push({ file_url: item.foto_frente_url, source_table: 'avaliacoes_fisicas' });
+          filesToLog.push({ user_id: item.aluno_id, file_url: item.foto_frente_url, bucket_type: 'avaliacoes' });
         }
         if (item.foto_lado_url) {
-          filesToLog.push({ file_url: item.foto_lado_url, source_table: 'avaliacoes_fisicas' });
+          filesToLog.push({ user_id: item.aluno_id, file_url: item.foto_lado_url, bucket_type: 'avaliacoes' });
         }
         if (item.foto_costas_url) {
-          filesToLog.push({ file_url: item.foto_costas_url, source_table: 'avaliacoes_fisicas' });
+          filesToLog.push({ user_id: item.aluno_id, file_url: item.foto_costas_url, bucket_type: 'avaliacoes' });
         }
       }
     }
 
     if (rotinas) {
       for (const item of rotinas) {
+        if (!item.aluno_id) continue; // Pula se não houver ID de aluno
+
         if (item.pdf_url) {
-          filesToLog.push({ file_url: item.pdf_url, source_table: 'rotinas_arquivadas' });
+          filesToLog.push({ user_id: item.aluno_id, file_url: item.pdf_url, bucket_type: 'rotinas-concluidas' });
         }
       }
     }
