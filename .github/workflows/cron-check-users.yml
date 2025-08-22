@@ -1,0 +1,19 @@
+name: Verificador de Usuários Inativos
+
+on:
+  # Permite acionar este workflow manualmente pela aba Actions
+  workflow_dispatch:
+
+  # Aciona o workflow todo dia à meia-noite (UTC)
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  cron:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar a API para verificar usuários inativos
+        run: |
+          curl --request POST \
+          --url 'https://titans-fitness-novo.vercel.app/api/cron/check-inactive-users' \
+          --header 'Authorization: Bearer ${{ secrets.CRON_SECRET }}'
