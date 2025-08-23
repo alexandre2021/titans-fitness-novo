@@ -71,7 +71,7 @@ export default function CadastroAluno() {
       if (error || !conviteData) {
         setTokenValidation({
           status: 'invalid',
-          message: 'O link de convite é inválido, expirou ou já foi utilizado. Se você já completou seu cadastro, por favor, faça o login. Se o problema persistir, solicite um novo convite ao seu Personal Trainer.'
+          message: 'Token de convite inválido ou não encontrado.'
         });
         return;
       }
