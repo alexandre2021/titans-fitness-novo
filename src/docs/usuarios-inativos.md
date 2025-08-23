@@ -25,10 +25,13 @@ O fluxo é orquestrado por um conjunto de ferramentas que garantem a execução 
 - **Localização:** `api/cron/check-inactive-users.ts`
 - **Como funciona:**
     1.  **Autenticação:** A função primeiro valida o `CRON_SECRET` recebido para garantir que a chamada foi originada pelo GitHub Actions.
-    2.  **Busca de Usuários:** Ela se conecta ao Supabase e busca todos os usuários registrados na tabela `auth.users`.
-    3.  **Análise de Inatividade:** Para cada usuário, a função verifica a data do `last_sign_in_at` (último login).
-        - Se o último login foi entre 60 e 89 dias atrás, o usuário é adicionado a uma lista de "aviso".
-        - Se o último login foi há 90 dias ou mais, o usuário é adicionado a uma lista de "exclusão".
+    2.  **Busca e Filtragem de Usuários:**
+        - Ela se conecta ao Supabase e busca todos os usuários registrados na tabela `auth.users`.
+        - **Importante:** Usuários com e-mails na lista de `PROTECTED_EMAILS` (contas de sistema, personal trainers, etc.) são **ignorados** para evitar exclusões acidentais.
+        - Para cada usuário restante, verifica-se sua existência e tipo na tabela `public.alunos`. Apenas usuários identificados como `aluno` são processados.
+    3.  **Análise de Inatividade:** Para cada **aluno** elegível, a função verifica a data do `last_sign_in_at` (último login) ou `created_at` (se nunca logou).
+        - Se o último login/criação foi entre 60 e 89 dias atrás, o aluno é adicionado a uma lista de "aviso".
+        - Se o último login/criação foi há 90 dias ou mais, o aluno é adicionado a uma lista de "exclusão".
 
 ### 3. Envio de Email de Alerta (60 dias)
 

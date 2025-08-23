@@ -87,10 +87,17 @@ export default function CadastroAluno() {
 
       // Verificar se já foi usado
       if (conviteData.status !== 'pendente') {
-        setTokenValidation({
-          status: 'invalid',
-          message: 'Este convite já foi utilizado ou cancelado.'
-        });
+        if (conviteData.status === 'aceito') {
+          setTokenValidation({
+            status: 'invalid',
+            message: 'Este convite já foi aceito. Se você já concluiu seu cadastro, por favor, faça o login.'
+          });
+        } else {
+          setTokenValidation({
+            status: 'invalid',
+            message: 'Este convite foi cancelado ou não está mais disponível.'
+          });
+        }
         return;
       }
 

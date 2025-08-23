@@ -62,8 +62,8 @@ export default async function handler(
     // ATENÇÃO: Regra de negócio ajustada para o teste.
     // Deleta alunos com base na data de criação para este teste específico.
     // Em produção, voltar para 60 e 90 dias.
-    const sixtyDaysAgo = new Date(now.getTime() - (0 * 24 * 60 * 60 * 1000));
-    const ninetyDaysAgo = new Date(now.getTime() - (0 * 24 * 60 * 60 * 1000));
+    const sixtyDaysAgo = new Date(now.getTime() - (60 * 24 * 60 * 60 * 1000));
+    const ninetyDaysAgo = new Date(now.getTime() - (90 * 24 * 60 * 60 * 1000));
 
     // Passo 1: Buscar todos os usuários da autenticação
     const { data: authUsers, error: usersError } = await supabaseAdmin.auth.admin.listUsers();

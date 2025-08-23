@@ -72,11 +72,59 @@ const AlunosAvaliacoes = () => {
     if (!avaliacaoParaExcluir) return;
     setIsDeleting(true);
     try {
+      // 1. Buscar URLs das imagens antes de excluir o registro
+      const { data: avaliacaoData, error: fetchError } = await supabase
+        .from('avaliacoes_fisicas')
+        .select('foto_frente_url, foto_lado_url, foto_costas_url')
+        .eq('id', avaliacaoParaExcluir.id)
+        .single();
+
+      if (fetchError) {
+        console.error('Erro ao buscar avaliação para exclusão de imagens:', fetchError);
+        // Não impede a exclusão do registro, mas loga o erro
+      }
+
+      // 2. Deletar imagens do Cloudflare, se existirem
+      const deletePromises = [];
+      const filesToDelete = [];
+
+      if (avaliacaoData?.foto_frente_url) filesToDelete.push(avaliacaoData.foto_frente_url);
+      if (avaliacaoData?.foto_lado_url) filesToDelete.push(avaliacaoData.foto_lado_url);
+      if (avaliacaoData?.foto_costas_url) filesToDelete.push(avaliacaoData.foto_costas_url);
+
+      for (const fileUrl of filesToDelete) {
+        const filename = fileUrl.split('?')[0].split('/').pop();
+        if (filename) {
+          deletePromises.push(
+            supabase.functions.invoke('delete-image', {
+              body: {
+                filename,
+                bucket_type: 'avaliacoes' // Especifica o bucket correto
+              }
+            }).then(({ data, error }) => {
+              if (error) {
+                console.error(`Erro ao deletar imagem ${filename} do Cloudflare:`, error);
+              } else if (data && data.success) {
+                console.log(`Imagem ${filename} deletada do Cloudflare com sucesso.`);
+              } else {
+                console.warn(`Falha ao deletar imagem ${filename} do Cloudflare:`, data);
+              }
+            }).catch(err => {
+              console.error(`Erro inesperado ao chamar Edge Function para ${filename}:`, err);
+            })
+          );
+        }
+      }
+      
+      await Promise.all(deletePromises); // Espera todas as deleções de imagem
+
+      // 3. Excluir registro do banco de dados
       const { error } = await supabase
         .from('avaliacoes_fisicas')
         .delete()
         .eq('id', avaliacaoParaExcluir.id)
-        .eq('aluno_id', id);
+        .eq('aluno_id', id); // Garante que apenas o PT do aluno pode excluir
+
       if (error) {
         toast({
           title: 'Erro',
@@ -93,6 +141,7 @@ const AlunosAvaliacoes = () => {
         setAvaliacaoParaExcluir(null);
       }
     } catch (error) {
+      console.error('Erro inesperado na exclusão da avaliação:', error);
       toast({
         title: 'Erro',
         description: 'Ocorreu um erro inesperado. Tente novamente.',
