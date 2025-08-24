@@ -96,7 +96,7 @@ const ResponsiveDeleteConfirmation = ({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription asChild>{description}</AlertDialogDescription>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <Button
@@ -205,10 +205,9 @@ export const ExercicioCard = ({
         isDeleting={isDeleting}
         title="Excluir Exercício"
         description={
-          <>
-            Tem certeza que deseja excluir o exercício <strong>{exercicio.nome}</strong>? 
-            Esta ação não pode ser desfeita e todos os dados do exercício serão removidos.
-          </>
+          <span>
+            Tem certeza que deseja excluir o exercício <strong>{exercicio.nome}</strong>. Esta ação não pode ser desfeita e todos os dados do exercício serão removidos.
+          </span>
         }
       />
     </>

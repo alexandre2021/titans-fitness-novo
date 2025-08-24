@@ -91,9 +91,20 @@ const AlunosPT = () => {
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-16">
             <Users className="h-16 w-16 text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Nenhum aluno cadastrado</h3>
-            <p className="text-muted-foreground text-center mb-6 max-w-md">
-              Comece convidando seu primeiro aluno para começar a criar treinos personalizados
+            <h3 className="text-xl font-semibold mb-2 text-center">
+              Convide seu primeiro aluno para:
+            </h3>
+            <p className="text-green-600 text-lg text-center mb-1">
+              ✓ Fazer avaliações;
+            </p>
+            <p className="text-green-600 text-lg text-center mb-1">
+              ✓ Criar rotinas de treino;
+            </p>
+            <p className="text-green-600 text-lg text-center mb-1">
+              ✓ Trocar mensagens;
+            </p>
+            <p className="text-green-600 text-lg text-center mb-6">
+              ✓ Agendar sessões.
             </p>
             <Button onClick={handleConvidarAluno} size="lg" className="flex items-center gap-2">
               <UserPlus className="h-5 w-5" />

@@ -52,6 +52,8 @@ import RotinaConfiguracao from "./pages/RotinaConfiguracao";
 import RotinaTreinos from "./pages/RotinaTreinos";
 import RotinaExercicios from "./pages/RotinaExercicios";
 import RotinaRevisao from "./pages/RotinaRevisao";
+import EsqueciSenha from "./pages/EsqueciSenha";
+import ResetarSenha from "./pages/ResetarSenha";
 
 // ✅ NOVAS IMPORTAÇÕES PARA EXECUÇÃO
 import ExecucaoSelecionarTreino from "./pages/ExecucaoSelecionarTreino";
@@ -77,6 +79,8 @@ const App = () => (
             <Route path="/termos" element={<Termos />} />
             <Route path="/privacidade" element={<Privacidade />} />
             <Route path="/convite-invalido" element={<ConviteInvalido />} />
+            <Route path="/esqueci-senha" element={<EsqueciSenha />} />
+            <Route path="/resetar-senha" element={<ResetarSenha />} />
             
             {/* ✅ ROTAS PROTEGIDAS - Personal Trainer */}
             <Route path="/index-pt" element={<AuthGuard><PTLayout /></AuthGuard>}>

@@ -78,7 +78,7 @@ const ConviteAluno = () => {
         setResultado({
           tipo: 'erro',
           titulo: 'Erro no envio',
-          mensagem: `Não foi possível enviar o convite. Erro: ${error.message || 'Erro desconhecido'}`
+          mensagem: "Não foi possível enviar o convite. Por favor, verifique o e-mail e tente novamente mais tarde."
         });
         return;
       }

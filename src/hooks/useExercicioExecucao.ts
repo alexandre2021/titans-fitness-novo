@@ -400,6 +400,63 @@ export const useExercicioExecucao = (
         return false;
       }
 
+      // --- LÓGICA FIFO PARA ROTINAS ARQUIVADAS ---
+      const alunoId = rotinaCompleta.aluno_id;
+      console.log(`🔍 Verificando rotinas arquivadas para o aluno: ${alunoId}`);
+      const { data: rotinasArquivadas, error: countError } = await supabase
+        .from('rotinas_arquivadas')
+        .select('id, pdf_url, created_at')
+        .eq('aluno_id', alunoId);
+
+      if (countError) {
+        console.error('⚠️ Erro ao buscar rotinas arquivadas, o processo de arquivamento continuará, mas a limpeza pode não ocorrer.', countError);
+      }
+
+      if (rotinasArquivadas && rotinasArquivadas.length >= 4) {
+        console.log(` FIFO: Limite de ${rotinasArquivadas.length} rotinas atingido. Removendo a mais antiga.`);
+        
+        const maisAntiga = rotinasArquivadas.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
+        
+        console.log(`🗑️ Rotina mais antiga a ser removida: ${maisAntiga.id}, criada em: ${maisAntiga.created_at}`);
+
+        // Deletar PDF associado
+        if (maisAntiga.pdf_url) {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                const accessToken = session?.access_token;
+                if (!accessToken) throw new Error("Usuário não autenticado para deletar PDF.");
+
+                const deleteResponse = await fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/delete-image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+                    body: JSON.stringify({ file_url: maisAntiga.pdf_url, bucket_type: 'rotinas' })
+                });
+
+                if (!deleteResponse.ok) {
+                    const errorText = await deleteResponse.text();
+                    throw new Error(`Falha ao deletar PDF da rotina antiga: ${errorText}`);
+                }
+                console.log('✅ PDF da rotina antiga deletado com sucesso:', maisAntiga.pdf_url);
+
+            } catch (pdfError) {
+                console.error('❌ Erro ao deletar PDF da rotina antiga. O registro no banco será removido mesmo assim.', pdfError);
+            }
+        }
+
+        // Deletar registro do banco
+        const { error: deleteError } = await supabase
+          .from('rotinas_arquivadas')
+          .delete()
+          .eq('id', maisAntiga.id);
+
+        if (deleteError) {
+          console.error('❌ Erro ao deletar o registro da rotina arquivada mais antiga:', deleteError);
+        } else {
+          console.log('✅ Registro da rotina mais antiga deletado do banco de dados.');
+        }
+      }
+      // --- FIM DA LÓGICA FIFO ---
+
       // 2. Buscar execuções da rotina
       const { data: execucoes, error: execucoesError } = await supabase
         .from('execucoes_sessao')
@@ -473,12 +530,10 @@ export const useExercicioExecucao = (
       console.log('✅ PDF uploaded com sucesso:', pdfUrl);
 
       // 5. Calcular estatísticas para arquivamento
-      const totalSessoes = execucoes?.length || 0;
-      const tempoTotal = execucoes?.reduce((acc, exec) => acc + (exec.tempo_total_minutos || 0), 0) || 0;
       const dataInicio = rotinaCompleta.data_inicio;
       const dataConclusao = new Date().toISOString().split('T')[0];
 
-      // 6. Inserir na tabela rotinas_arquivadas - ✅ CORRIGIDO
+      // 6. Inserir na tabela rotinas_arquivadas
       console.log('🗄️ Salvando dados arquivados...');
       const { error: arquivoError } = await supabase
         .from('rotinas_arquivadas')
@@ -491,7 +546,6 @@ export const useExercicioExecucao = (
           data_inicio: dataInicio,
           data_conclusao: dataConclusao,
           pdf_url: pdfUrl
-          // ✅ REMOVIDOS: sessoes_executadas e tempo_total_minutos (não existem na tabela)
         });
 
       if (arquivoError) {
@@ -504,7 +558,6 @@ export const useExercicioExecucao = (
       // 7. Deletar rotina e dados relacionados (cascata)
       console.log('🗑️ Removendo rotina da base ativa...');
       
-      // Deletar em ordem (execucoes_series -> execucoes_sessao -> series -> exercicios_rotina -> treinos -> rotinas)
       await supabase.from('execucoes_series').delete().in('execucao_sessao_id', 
         execucoes?.map(e => e.id) || []
       );

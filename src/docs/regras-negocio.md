@@ -16,7 +16,6 @@ Este documento centraliza as regras de negócio e os modelos de relacionamento d
   - [4. Gestão de Rotinas de Treino](#4-gestão-de-rotinas-de-treino)
   - [5. Gestão de Contas de Usuário](#5-gestão-de-contas-de-usuário)
   - [6. Gestão de Avaliações](#6-gestão-de-avaliações)
-  - [7. Gestão de Rotinas Arquivadas](#7-gestão-de-rotinas-arquivadas)
 
 ---
 
@@ -155,7 +154,7 @@ Esta seção detalha as regras de negócio relacionadas à criação, posse e ci
 - **REGRA 4.4 (Rotina Ativa):** Um aluno pode ter apenas uma única rotina de treino com o status "ativa" por vez.
     - **Implementação:** O sistema já impõe esta regra. Para iniciar uma nova rotina, a rotina anterior deve ser primeiro encerrada ou arquivada. A coluna `status` na tabela `rotinas` controla este ciclo de vida.
 
-- **REGRA 4.5 (Exclusão de Rotinas Arquivadas):** A tabela `rotinas_arquivadas` possui um trigger (`delete_rotina_arquivada_files`) que executa a função `handle_delete_rotina_arquivada` após a exclusão de um registro. A lógica de exclusão FIFO para rotinas concluídas (máximo de 4 rotinas por aluno) deve garantir a remoção do PDF correspondente no bucket 'rotinas-concluidas' para a rotina mais antiga.
+- **REGRA 4.5 (Limite de Rotinas Arquivadas):** Para otimizar o armazenamento e manter o histórico do aluno focado, um aluno pode ter no máximo 4 rotinas arquivadas. A lógica de controle é implementada na aplicação e funciona no modelo FIFO (First-In, First-Out). Ao concluir uma nova rotina, o sistema verifica se o limite foi atingido. Se sim, a rotina arquivada mais antiga é removida, incluindo seu PDF correspondente no bucket de armazenamento, antes da nova rotina ser arquivada.
 
 ## 5. Gestão de Contas de Usuário
 
@@ -218,10 +217,4 @@ A remoção de um vínculo é uma operação não destrutiva, que preserva a con
 
 Esta seção detalha as regras de negócio relacionadas à criação, posse e ciclo de vida das avaliações.
 
-- **REGRA 6.1 (Exclusão de Avaliações):** Um aluno pode visualizar no máximo 5 avaliações. Ao excluir uma avaliação, as imagens associadas no bucket 'avaliacoes' devem ser removidas. A lógica de exclusão deve seguir a regra FIFO, garantindo que a avaliação mais antiga seja removida quando o limite de avaliações for atingido.
-
-## 7. Gestão de Rotinas Arquivadas
-
-Esta seção detalha as regras de negócio relacionadas ao ciclo de vida das rotinas arquivadas.
-
-- **REGRA 7.1 (Exclusão de Rotinas Arquivadas):** A tabela `rotinas_arquivadas` possui um trigger (`delete_rotina_arquivada_files`) que executa a função `handle_delete_rotina_arquivada` após a exclusão de um registro. A lógica de exclusão FIFO para rotinas concluídas (máximo de 4 rotinas por aluno) deve garantir a remoção do PDF correspondente no bucket 'rotinas-concluidas' para a rotina mais antiga.
+- **REGRA 6.1 (Limite de Avaliações Físicas):** Um aluno pode ter no máximo 4 avaliações físicas. Ao criar uma nova avaliação que exceda este limite, a avaliação mais antiga é automaticamente removida (lógica FIFO). Este processo de exclusão é iniciado pela aplicação, que primeiro remove as imagens associadas do bucket de armazenamento e depois o registro da avaliação no banco de dados.

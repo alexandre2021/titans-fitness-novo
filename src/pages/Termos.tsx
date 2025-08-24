@@ -60,6 +60,9 @@ const Termos = () => {
               <strong>Para Alunos:</strong> Fornecemos acesso aos treinos criados pelo seu Personal Trainer, 
               ferramentas de acompanhamento e comunicação direta com seu profissional.
             </p>
+            <p className="text-text-secondary mb-4">
+              Para garantir a performance e a relevância do histórico, a plataforma mantém um número limitado de registros para dados como avaliações físicas e rotinas concluídas. O sistema opera de forma automática, substituindo o registro mais antigo por um novo quando o limite é atingido.
+            </p>
           </section>
 
           <section className="mb-8">

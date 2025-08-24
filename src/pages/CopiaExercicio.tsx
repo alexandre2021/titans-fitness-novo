@@ -14,10 +14,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Save, Copy, Upload, Trash2, Eye, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from "@/hooks/useAuth";
 import { Tables } from "@/integrations/supabase/types";
 
@@ -27,10 +42,12 @@ const CopiaExercicio = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [exercicioOriginal, setExercicioOriginal] = useState<Exercicio | null>(null);
+  const [showDeleteMediaDialog, setShowDeleteMediaDialog] = useState<string | null>(null);
   
   // Usuário autenticado
   const { user } = useAuth();
@@ -94,8 +111,78 @@ const CopiaExercicio = () => {
     'Bola Bosu'
   ];
 
-
   const dificuldades = ['Baixa', 'Média', 'Alta'];
+
+  // Componente responsivo para confirmação de exclusão de mídia
+  const ResponsiveDeleteMediaConfirmation = ({ 
+    open, 
+    onOpenChange, 
+    onConfirm, 
+    title,
+    description
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onConfirm: () => void;
+    title: string;
+    description: React.ReactNode;
+  }) => {
+    if (isMobile) {
+      return (
+        <Drawer open={open} onOpenChange={onOpenChange}>
+          <DrawerContent>
+            <DrawerHeader className="text-left">
+              <DrawerTitle>{title}</DrawerTitle>
+            </DrawerHeader>
+            <div className="p-4 space-y-4">
+              <div className="text-sm text-muted-foreground">{description}</div>
+              <div className="flex justify-end space-x-2 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => onOpenChange(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={onConfirm}
+                    variant="destructive"
+                  >
+                    Não incluir
+                  </Button>
+              </div>
+            </div>
+          </DrawerContent>
+        </Drawer>
+      );
+    }
+
+    return (
+      <AlertDialog open={open} onOpenChange={onOpenChange}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{title}</AlertDialogTitle>
+            <AlertDialogDescription>{description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={onConfirm}
+              variant="destructive"
+            >
+              Não incluir
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
+  };
 
   // Função para obter URL assinada do Cloudflare
   const getSignedImageUrl = useCallback(async (filename: string): Promise<string> => {
@@ -299,10 +386,6 @@ const CopiaExercicio = () => {
 
   // Função para deletar mídia
   const handleDeleteMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
-    if (!window.confirm('Tem certeza que deseja deletar esta mídia?')) {
-      return;
-    }
-
     try {
       switch (type) {
         case 'imagem1':
@@ -318,14 +401,15 @@ const CopiaExercicio = () => {
 
       toast({
         title: "Sucesso",
-        description: "Mídia removida com sucesso!",
+        description: "Mídia removida da cópia!",
       });
 
+      setShowDeleteMediaDialog(null);
     } catch (error) {
       console.error('Erro ao deletar mídia:', error);
       toast({
         title: "Erro",
-        description: "Erro ao remover mídia.",
+        description: "Erro ao excluir mídia.",
         variant: "destructive",
       });
     }
@@ -963,12 +1047,13 @@ const CopiaExercicio = () => {
                         </Button>
                         <Button
                           type="button"
+                          variant="destructive"
                           size="sm"
-                          onClick={() => handleDeleteMedia('imagem1')}
+                          onClick={() => setShowDeleteMediaDialog('imagem1')}
                           className="flex items-center gap-2"
                         >
                           <Trash2 className="h-4 w-4" />
-                          Remover
+                          Não incluir
                         </Button>
                       </div>
                     </div>
@@ -1040,12 +1125,13 @@ const CopiaExercicio = () => {
                         </Button>
                         <Button
                           type="button"
+                          variant="destructive"
                           size="sm"
-                          onClick={() => handleDeleteMedia('imagem2')}
+                          onClick={() => setShowDeleteMediaDialog('imagem2')}
                           className="flex items-center gap-2"
                         >
                           <Trash2 className="h-4 w-4" />
-                          Remover
+                          Não incluir
                         </Button>
                       </div>
                     </div>
@@ -1117,12 +1203,13 @@ const CopiaExercicio = () => {
                         </Button>
                         <Button
                           type="button"
+                          variant="destructive"
                           size="sm"
-                          onClick={() => handleDeleteMedia('video')}
+                          onClick={() => setShowDeleteMediaDialog('video')}
                           className="flex items-center gap-2"
                         >
                           <Trash2 className="h-4 w-4" />
-                          Remover
+                          Não incluir
                         </Button>
                       </div>
                     </div>
@@ -1214,7 +1301,13 @@ const CopiaExercicio = () => {
           </Card>
         </div>
 
-      
+      <ResponsiveDeleteMediaConfirmation
+        open={showDeleteMediaDialog !== null}
+        onOpenChange={(open) => !open && setShowDeleteMediaDialog(null)}
+        onConfirm={() => showDeleteMediaDialog && handleDeleteMedia(showDeleteMediaDialog as 'imagem1' | 'imagem2' | 'video')}
+        title="Não incluir mídia na cópia"
+        description="Esta mídia não será incluída na sua cópia personalizada. O exercício original não será alterado."
+      />
     </div>
   );
 };

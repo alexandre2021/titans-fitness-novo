@@ -94,13 +94,14 @@ export const PasswordChangeSection = () => {
       form.reset();
       setIsOpen(false);
     } catch (error: unknown) {
-      let errorMessage = 'Erro ao alterar senha. Tente novamente.';
-      if (error && typeof error === 'object' && 'message' in error) {
-        errorMessage = (error as { message?: string }).message || errorMessage;
+      let errorMessage = 'Não foi possível alterar a senha. Tente novamente.';
+      if (error instanceof Error && error.message.includes('incorreta')) {
+        errorMessage = 'A senha atual informada está incorreta.';
       }
+      
       console.error('Error changing password:', error);
       toast({
-        title: "Erro",
+        title: "Erro ao alterar senha",
         description: errorMessage,
         variant: "destructive",
       });

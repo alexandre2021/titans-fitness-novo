@@ -14,6 +14,7 @@ import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
+import { useAuth } from "@/hooks/useAuth"; // Importa o hook de autenticação
 
 const formSchema = z.object({
   nome_completo: z.string().min(2, "Nome completo deve ter pelo menos 2 caracteres"),
@@ -43,6 +44,7 @@ export default function CadastroAluno() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
+  const { user, loading: authLoading } = useAuth(); // Usa o hook de autenticação
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -55,12 +57,10 @@ export default function CadastroAluno() {
     },
   });
 
-  // Validar token de convite
   const validateToken = useCallback(async (token: string) => {
     setTokenValidation({status: 'validating'});
     
     try {
-      // Buscar convite
       const { data: conviteData, error } = await supabase
         .from('convites')
         .select('*')
@@ -76,7 +76,6 @@ export default function CadastroAluno() {
         return;
       }
 
-      // Verificar se o convite não expirou
       if (new Date(conviteData.expires_at) < new Date()) {
         setTokenValidation({
           status: 'expired',
@@ -85,7 +84,6 @@ export default function CadastroAluno() {
         return;
       }
 
-      // Verificar se já foi usado
       if (conviteData.status !== 'pendente') {
         if (conviteData.status === 'aceito') {
           setTokenValidation({
@@ -101,14 +99,12 @@ export default function CadastroAluno() {
         return;
       }
 
-      // Buscar nome do Personal Trainer
       const { data: ptData } = await supabase
         .from('personal_trainers')
         .select('nome_completo')
         .eq('id', conviteData.personal_trainer_id)
         .single();
 
-      // Token válido
       setTokenValidation({
         status: 'valid',
         message: 'Convite válido! Complete seu cadastro.',
@@ -116,7 +112,6 @@ export default function CadastroAluno() {
         conviteData: conviteData
       });
 
-      // Preencher email se não veio da URL
       if (conviteData.email_convidado && !form.getValues('email')) {
         form.setValue('email', conviteData.email_convidado);
       }
@@ -130,13 +125,24 @@ export default function CadastroAluno() {
     }
   }, [form]);
 
-  // Validar token na URL
   useEffect(() => {
-    const tokenFromUrl = searchParams.get('token');
-    const emailFromUrl = searchParams.get('email');
-    const ptNameFromUrl = searchParams.get('pt');
-    const isFromInvite = searchParams.get('ref') === 'convite';
+    // Aguarda a verificação de autenticação terminar
+    if (authLoading) {
+      setTokenValidation({ status: 'validating', message: 'Verificando sessão...' });
+      return;
+    }
 
+    // Se um usuário já está logado, impede o cadastro
+    if (user) {
+      setTokenValidation({
+        status: 'invalid',
+        message: 'Você já está logado. Para cadastrar um novo usuário, por favor, saia da sua conta primeiro.'
+      });
+      return;
+    }
+
+    // Prossegue com a validação do token apenas se for um usuário anônimo
+    const tokenFromUrl = searchParams.get('token');
     if (!tokenFromUrl) {
       setTokenValidation({
         status: 'invalid',
@@ -145,15 +151,15 @@ export default function CadastroAluno() {
       return;
     }
 
-    // Preencher email se veio da URL
+    const emailFromUrl = searchParams.get('email');
     if (emailFromUrl) {
       form.setValue('email', emailFromUrl);
     }
 
-    // Validar token
     validateToken(tokenFromUrl);
 
-    // Mostrar mensagem de boas-vindas se temos o nome do PT
+    const ptNameFromUrl = searchParams.get('pt');
+    const isFromInvite = search_params.get('ref') === 'convite';
     if (ptNameFromUrl && isFromInvite) {
       toast({
         title: "Bem-vindo!",
@@ -161,7 +167,7 @@ export default function CadastroAluno() {
         duration: 5000,
       });
     }
-  }, [searchParams, form, toast, validateToken]); // Adicionado validateToken às dependências
+  }, [authLoading, user, searchParams, validateToken, form, toast]);
 
   const onSubmit = async (data: FormData) => {
     if (tokenValidation.status !== 'valid' || !tokenValidation.conviteData) {
@@ -176,7 +182,6 @@ export default function CadastroAluno() {
     setIsLoading(true);
 
     try {
-      // Criar usuário no Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -194,7 +199,7 @@ export default function CadastroAluno() {
           title: "Erro no cadastro",
           description: authError.message === 'User already registered' 
             ? "Este email já está cadastrado. Tente fazer login." 
-            : authError.message,
+            : "Ocorreu um erro ao realizar o cadastro. Verifique os dados e tente novamente.",
           variant: "destructive",
         });
         return;
@@ -209,7 +214,6 @@ export default function CadastroAluno() {
         return;
       }
 
-      // Criar perfil do usuário
       const { error: profileError } = await supabase
         .from('user_profiles')
         .insert({
@@ -221,7 +225,6 @@ export default function CadastroAluno() {
         console.error('Erro ao criar perfil:', profileError);
       }
 
-      // Criar registro do aluno
       const ptId = tokenValidation.conviteData?.personal_trainer_id;
       const { error: alunoError } = await supabase
         .from('alunos')
@@ -248,7 +251,6 @@ export default function CadastroAluno() {
         return;
       }
 
-      // Marcar convite como aceito
       const conviteId = tokenValidation.conviteData?.id;
       if (conviteId) {
         await supabase
@@ -266,7 +268,6 @@ export default function CadastroAluno() {
         duration: 5000,
       });
 
-      // Fazer logout para limpar a sessão e redirecionar para login
       await supabase.auth.signOut();
       navigate('/login');
 
@@ -284,7 +285,6 @@ export default function CadastroAluno() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
       <header className="border-b border-border py-4">
         <div className="flex items-center justify-center relative px-6">
           <Button
@@ -302,7 +302,6 @@ export default function CadastroAluno() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 flex justify-center px-6 pt-8 pb-6 md:pt-16 md:pb-12">
         <Card className="w-full max-w-md border-border shadow-lg">
           <CardHeader className="text-center">
@@ -315,12 +314,11 @@ export default function CadastroAluno() {
           </CardHeader>
 
           <CardContent>
-            {/* Status do Token */}
             {tokenValidation.status === 'validating' && (
               <Alert className="mb-6">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 <AlertDescription>
-                  Validando convite...
+                  {tokenValidation.message || 'Validando convite...'}
                 </AlertDescription>
               </Alert>
             )}
@@ -343,7 +341,6 @@ export default function CadastroAluno() {
               </Alert>
             )}
 
-            {/* Formulário - só exibe se token for válido */}
             {tokenValidation.status === 'valid' && (
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

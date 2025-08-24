@@ -134,15 +134,21 @@ export const useExercicios = () => {
   // Função auxiliar para deletar mídia do Cloudflare
   const deleteMediaFromCloudflare = useCallback(async (fileUrl: string) => {
     try {
-      // Extrair nome do arquivo da URL
+      console.log('☁️ URL original da mídia para deleção:', fileUrl);
       const filename = fileUrl.split('?')[0].split('/').pop();
-      if (!filename) return;
+      if (!filename) {
+        console.warn('⚠️ Não foi possível extrair o nome do arquivo da URL:', fileUrl);
+        return;
+      }
 
-      console.log('☁️ Deletando arquivo do Cloudflare:', filename);
+      console.log('☁️ Nome do arquivo extraído para deleção:', filename);
 
       // Buscar token de autenticação
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) return;
+      if (!session?.access_token) {
+        console.warn('⚠️ Sessão não encontrada, não é possível deletar mídia do Cloudflare.');
+        return;
+      }
 
       // Chamar edge function de deleção
       const { data, error } = await supabase.functions.invoke('delete-image', {
