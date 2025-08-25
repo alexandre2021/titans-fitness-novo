@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,8 +10,22 @@ import { useToast } from "@/hooks/use-toast";
 export default function EsqueciSenha() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
+  const [emailSent, setEmailSent] = useState(false);
+  const [countdown, setCountdown] = useState(60);
   const { toast } = useToast();
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (emailSent && countdown > 0) {
+      timer = setTimeout(() => {
+        setCountdown(countdown - 1);
+      }, 1000);
+    } else if (countdown === 0) {
+      setEmailSent(false);
+      setCountdown(60);
+    }
+    return () => clearTimeout(timer);
+  }, [emailSent, countdown]);
 
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +48,7 @@ export default function EsqueciSenha() {
         title: "Sucesso",
         description: "Se o e-mail estiver correto, você receberá um link para redefinir sua senha.",
       });
-      navigate("/login");
+      setEmailSent(true);
     }
   };
 
@@ -44,7 +58,9 @@ export default function EsqueciSenha() {
         <CardHeader>
           <CardTitle className="text-2xl">Esqueceu a Senha?</CardTitle>
           <CardDescription>
-            Digite seu e-mail abaixo para receber um link de redefinição de senha.
+            {emailSent
+              ? `Um link de recuperação foi enviado para ${email}. Verifique sua caixa de entrada.`
+              : "Digite seu e-mail abaixo para receber um link de redefinição de senha."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -59,11 +75,15 @@ export default function EsqueciSenha() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
+                  disabled={loading || emailSent}
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Enviando..." : "Enviar Link"}
+              <Button type="submit" className="w-full" disabled={loading || emailSent}>
+                {loading
+                  ? "Enviando..."
+                  : emailSent
+                  ? `Aguarde ${countdown}s para reenviar`
+                  : "Enviar Link"}
               </Button>
             </div>
           </form>
