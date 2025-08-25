@@ -126,6 +126,7 @@ const callEdgeFunction = async (functionName: string, payload: Record<string, un
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'apikey': SUPABASE_ANON_KEY,
     },
     body: JSON.stringify(payload),
   });
