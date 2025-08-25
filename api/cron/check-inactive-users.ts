@@ -58,199 +58,220 @@ export default async function handler(
     console.log("--- Cron Job: Inactive User Processing Started ---");
 
     const now = new Date();
-    
-    // ATENÇÃO: Regra de negócio ajustada para o teste.
-    // Deleta alunos com base na data de criação para este teste específico.
-    // Em produção, voltar para 60 e 90 dias.
     const sixtyDaysAgo = new Date(now.getTime() - (60 * 24 * 60 * 60 * 1000));
     const ninetyDaysAgo = new Date(now.getTime() - (90 * 24 * 60 * 60 * 1000));
 
     // Passo 1: Buscar todos os usuários da autenticação
     const { data: authUsers, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
+    if (usersError) throw new Error(`Failed to fetch users from auth: ${usersError.message}`);
 
-    if (usersError) {
-        console.error("Error fetching users from auth:", JSON.stringify(usersError));
-        throw new Error("Failed to fetch users from auth.");
-    }
+    const alunosToWarn = [];
+    const alunosToDelete = [];
+    const ptsToWarn = [];
+    const ptsToDelete = [];
 
-    const usersToWarn = [];
-    const usersToDelete = [];
-
-    // Passo 2: Iterar sobre os usuários e verificar se são alunos elegíveis
+    // Passo 2: Iterar sobre os usuários, identificar tipo e separar em listas
     for (const user of authUsers.users) {
-        // Pular emails protegidos
-        if (PROTECTED_EMAILS.includes(user.email)) {
-            continue;
-        }
+      if (PROTECTED_EMAILS.includes(user.email ?? '')) continue;
 
-        // Verificar se o usuário existe na tabela 'alunos'
-        const { data: aluno, error: alunoError } = await supabase
-            .from('alunos')
-            .select('id, email, last_warning_email_sent_at')
-            .eq('id', user.id)
-            .single();
-
-        // Se não for encontrado na tabela 'alunos', não é um aluno. Pular.
-        if (alunoError || !aluno) {
-            if (alunoError && alunoError.code !== 'PGRST116') { // PGRST116 = 0 linhas, esperado para não-alunos
-                 console.warn(`Skipping user ${user.email} (ID: ${user.id}) as they are not a student. Details: ${alunoError?.message}`);
-            }
-            continue;
-        }
-
-        // Usar a data de criação como referência para o teste
-        const referenceDate = new Date(user.created_at);
-        const lastWarningEmailSentAt = aluno.last_warning_email_sent_at;
-
-        if (referenceDate <= ninetyDaysAgo) {
-            usersToDelete.push({ ...user, ...aluno });
-        } else if (referenceDate <= sixtyDaysAgo && !lastWarningEmailSentAt) {
-            usersToWarn.push({ ...user, ...aluno });
-        }
-    }
-
-    console.log(`Found ${usersToWarn.length} ALUNOS to warn.`);
-    console.log(`Found ${usersToDelete.length} ALUNOS to delete.`);
-
-    // --- Processa Usuários para Aviso (60 dias inativos, primeira vez) ---
-    if (brevoApiKey) {
-      for (const user of usersToWarn) {
-        console.log(`Sending warning email to user: ${user.email}`);
-        try {
-          await axios.post(brevoApiUrl, {
-            sender: { email: brevoSenderEmail, name: brevoSenderName },
-            to: [{ email: user.email }],
-            subject: 'Aviso: Sua conta Titans Fitness pode ser desativada por inatividade',
-            htmlContent: `...` // O HTML do email foi omitido para clareza, mas permanece o mesmo
-          }, {
-            headers: {
-              'api-key': brevoApiKey,
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            }
-          });
-          console.log(`Warning email sent to ${user.email}`);
-
-          const { error: updateError } = await supabase
-            .from('alunos')
-            .update({ last_warning_email_sent_at: new Date().toISOString() })
-            .eq('id', user.id);
-
-          if (updateError) {
-            console.error(`Failed to update last_warning_email_sent_at for user ${user.id}:`, JSON.stringify(updateError));
-          }
-        } catch (emailError: any) {
-          console.error(`Failed to send warning email to ${user.email}:`, emailError.response?.data || emailError.message);
-        }
-      }
-    } else {
-      console.warn("Brevo API Key not set. Skipping sending warning emails.");
-    }
-
-    // --- Processa Usuários para Exclusão (90+ dias inativos) ---
-    let totalFilesDeleted = 0;
-
-    for (const user of usersToDelete) {
-      console.log(`--- Processing deletion for user: ${user.email} (ID: ${user.id}) ---`);
-
-      const userFilesToProcess = [];
-
-      const { data: alunoData, error: alunoError } = await supabase
-        .from('alunos')
-        .select('id, avatar_image_url')
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('user_type')
         .eq('id', user.id)
         .single();
-      if (alunoError) {
-        console.error(`Error fetching aluno data for user ${user.id}:`, JSON.stringify(alunoError));
-      } else if (alunoData?.avatar_image_url) {
-        userFilesToProcess.push({ user_id: user.id, file_url: alunoData.avatar_image_url, bucket_type_edge_function: 'avatars' });
+
+      if (!profile) {
+        console.warn(`Skipping user ${user.email ?? 'unknown'} (ID: ${user.id}) as they have no user_profile.`);
+        continue;
       }
 
-      const { data: avaliacoesData, error: avaliacoesError } = await supabase
-        .from('avaliacoes_fisicas')
-        .select('foto_frente_url, foto_lado_url, foto_costas_url')
-        .eq('aluno_id', user.id);
-      if (avaliacoesError) {
-        console.error(`Error fetching avaliacoes_fisicas for user ${user.id}:`, JSON.stringify(avaliacoesError));
-      } else if (avaliacoesData) {
-        for (const item of avaliacoesData) {
-          if (item.foto_frente_url) userFilesToProcess.push({ user_id: user.id, file_url: item.foto_frente_url, bucket_type_edge_function: 'avaliacoes' });
-          if (item.foto_lado_url) userFilesToProcess.push({ user_id: user.id, file_url: item.foto_lado_url, bucket_type_edge_function: 'avaliacoes' });
-          if (item.foto_costas_url) userFilesToProcess.push({ user_id: user.id, file_url: item.foto_costas_url, bucket_type_edge_function: 'avaliacoes' });
+      const referenceDate = new Date(user.last_sign_in_at ?? user.created_at);
+
+      if (profile.user_type === 'aluno') {
+        const { data: aluno } = await supabase.from('alunos').select('last_warning_email_sent_at').eq('id', user.id).single();
+        if (referenceDate <= ninetyDaysAgo) {
+          alunosToDelete.push({ ...user, ...aluno });
+        } else if (referenceDate <= sixtyDaysAgo && !aluno?.last_warning_email_sent_at) {
+          alunosToWarn.push({ ...user, ...aluno });
+        }
+      } else if (profile.user_type === 'personal_trainer') {
+        const { data: pt } = await supabase.from('personal_trainers').select('last_warning_email_sent_at').eq('id', user.id).single();
+        if (referenceDate <= ninetyDaysAgo) {
+          ptsToDelete.push({ ...user, ...pt });
+        } else if (referenceDate <= sixtyDaysAgo && !pt?.last_warning_email_sent_at) {
+          ptsToWarn.push({ ...user, ...pt });
         }
       }
+    }
 
-      const { data: rotinasData, error: rotinasError } = await supabase
-        .from('rotinas_arquivadas')
-        .select('pdf_url')
-        .eq('aluno_id', user.id);
-      if (rotinasError) {
-        console.error(`Error fetching rotinas_arquivadas for user ${user.id}:`, JSON.stringify(rotinasError));
-      } else if (rotinasData) {
-        for (const item of rotinasData) {
-          if (item.pdf_url) userFilesToProcess.push({ user_id: user.id, file_url: item.pdf_url, bucket_type_edge_function: 'rotinas' });
-        }
+    console.log(`Found ${alunosToWarn.length} ALUNOS to warn.`);
+    console.log(`Found ${alunosToDelete.length} ALUNOS to delete.`);
+    console.log(`Found ${ptsToWarn.length} PERSONAL TRAINERS to warn.`);
+    console.log(`Found ${ptsToDelete.length} PERSONAL TRAINERS to delete.`);
+
+    // --- AVISO PARA ALUNOS ---
+    for (const user of alunosToWarn) {
+      if (user.email) {
+        await sendWarningEmail(user.email);
+        await supabase.from('alunos').update({ last_warning_email_sent_at: new Date().toISOString() }).eq('id', user.id);
       }
+    }
 
-      console.log(`User ${user.email} has ${userFilesToProcess.length} files to attempt deletion.`);
+    // --- AVISO PARA PERSONAL TRAINERS ---
+    for (const user of ptsToWarn) {
+      if (user.email) {
+        await sendWarningEmail(user.email);
+        await supabase.from('personal_trainers').update({ last_warning_email_sent_at: new Date().toISOString() }).eq('id', user.id);
+      }
+    }
 
-      for (const file of userFilesToProcess) {
-        const filename = file.file_url.split('?')[0].split('/').pop();
-        if (!filename) {
-          console.warn(`Skipping file with invalid URL: ${file.file_url} for user ${user.id}`);
-          continue;
-        }
+    let totalFilesDeleted = 0;
 
-        try {
-          const { data: edgeFunctionResponse, error: edgeFunctionError } = await supabase.functions.invoke('delete-image', {
-            body: {
-              filename: filename,
-              bucket_type: file.bucket_type_edge_function
+    // --- EXCLUSÃO DE ALUNOS ---
+    for (const user of alunosToDelete) {
+        if (user.email) {
+            console.log(`--- Processing ALUNO deletion for: ${user.email} (ID: ${user.id}) ---`);
+            const files = await getAlunoFiles(user.id);
+            for (const file of files) {
+                await deleteFile(file.file_url, file.bucket_type_edge_function, user.id);
+                totalFilesDeleted++;
             }
-          });
-
-          if (edgeFunctionError) {
-            console.error(`Edge Function error for ${filename} (user ${user.id}):`, edgeFunctionError);
-          } else if (edgeFunctionResponse && edgeFunctionResponse.success) {
-            console.log(`Successfully deleted ${filename} for user ${user.id}.`);
-            totalFilesDeleted++;
-          } else {
-            console.error(`Edge Function reported failure for ${filename} (user ${user.id}):`, edgeFunctionResponse);
-          }
-        } catch (edgeCallError: any) {
-          console.error(`Unexpected error during Edge Function call for ${filename} (user ${user.id}):`, edgeCallError.message);
+            await deleteUser(user.id, user.email);
         }
-      }
+    }
 
-      console.log(`Attempting to delete user ${user.email} (ID: ${user.id}) from auth.users...`);
-      const { error: deleteUserError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
+    // --- EXCLUSÃO DE PERSONAL TRAINERS ---
+    for (const user of ptsToDelete) {
+        if (user.email) {
+            console.log(`--- Processing PT deletion for: ${user.email} (ID: ${user.id}) ---`);
+            
+            // 1. Deletar mídias de exercícios
+            const { data: exercicios } = await supabase.from('exercicios').select('imagem_1_url, imagem_2_url, video_url').eq('pt_id', user.id);
+            if (exercicios) {
+                for (const ex of exercicios) {
+                    if (ex.imagem_1_url) { await deleteFile(ex.imagem_1_url, 'exerciciospt', user.id); totalFilesDeleted++; }
+                    if (ex.imagem_2_url) { await deleteFile(ex.imagem_2_url, 'exerciciospt', user.id); totalFilesDeleted++; }
+                    if (ex.video_url) { await deleteFile(ex.video_url, 'exerciciospt', user.id); totalFilesDeleted++; }
+                }
+            }
 
-      if (deleteUserError) {
-        console.error(`Failed to delete user ${user.email} (ID: ${user.id}):`, JSON.stringify(deleteUserError));
-      } else {
-        console.log(`Successfully deleted user ${user.email} (ID: ${user.id}).`);
-      }
+            // 2. Desvincular alunos
+            console.log(`Unlinking students from PT ${user.id}...`);
+            const { error: unlinkError } = await supabase.from('alunos').update({ personal_trainer_id: null }).eq('personal_trainer_id', user.id);
+            if (unlinkError) console.error(`Failed to unlink students for PT ${user.id}:`, unlinkError);
+            else console.log(`Successfully unlinked students for PT ${user.id}.`);
+
+            // 3. Deletar usuário (cascata cuidará de user_profiles e personal_trainers)
+            await deleteUser(user.id, user.email);
+        }
     }
 
     console.log(`--- Cron Job: Inactive User Processing Finished ---`);
-    console.log(`Total users warned: ${usersToWarn.length}`);
-    console.log(`Total users processed for deletion: ${usersToDelete.length}`);
-    console.log(`Total files deleted: ${totalFilesDeleted}`);
-
     return res.status(200).json({
       success: true,
       message: "Inactive user processing completed.",
-      usersWarned: usersToWarn.length,
-      usersDeleted: usersToDelete.length,
+      usersWarned: alunosToWarn.length + ptsToWarn.length,
+      usersDeleted: alunosToDelete.length + ptsToDelete.length,
       filesDeleted: totalFilesDeleted,
     });
 
   } catch (error: unknown) {
-    let errorMessage = 'An unknown error occurred';
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    }
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     console.error("Error during cron job execution:", errorMessage);
     return res.status(500).json({ success: false, error: errorMessage });
   }
+}
+
+// --- Funções Auxiliares Refatoradas ---
+
+async function sendWarningEmail(email: string) {
+  if (!brevoApiKey) {
+    console.warn("Brevo API Key not set. Skipping sending warning emails.");
+    return;
+  }
+  console.log(`Sending warning email to user: ${email}`);
+  try {
+    await axios.post(brevoApiUrl, {
+      sender: { email: brevoSenderEmail, name: brevoSenderName },
+      to: [{ email }],
+      subject: 'Aviso: Sua conta Titans Fitness pode ser desativada por inatividade',
+      htmlContent: `<!DOCTYPE html><html><head><title>Aviso de Inatividade</title></head><body><p>Olá,</p><p>Sua conta na Titans Fitness não registra atividade há mais de 60 dias. Para evitar a exclusão automática, por favor, faça login nos próximos 30 dias.</p><p>Atenciosamente,</p><p>Equipe Titans Fitness</p></body></html>`
+    }, {
+      headers: { 'api-key': brevoApiKey, 'Content-Type': 'application/json', 'Accept': 'application/json' }
+    });
+    console.log(`Warning email sent to ${email}`);
+  } catch (error: unknown) {
+    console.error(`Failed to send warning email to ${email}.`);
+    if (axios.isAxiosError(error)) {
+        // Log detalhado para erros do Axios
+        console.error('Axios Error:', { 
+            message: error.message, 
+            data: error.response?.data,
+            status: error.response?.status
+        });
+    } else if (error instanceof Error) {
+        // Log para erros genéricos
+        console.error('Generic Error:', error.message);
+    } else {
+        // Log para outros tipos de erro
+        console.error('Unknown Error:', error);
+    }
+  }
+}
+
+async function getAlunoFiles(userId: string) {
+    const filesToProcess: { file_url: string, bucket_type_edge_function: string }[] = [];
+
+    // Busca apenas os arquivos de avaliações físicas no Cloudflare R2
+    const { data: avaliacoesData } = await supabase.from('avaliacoes_fisicas').select('foto_frente_url, foto_lado_url, foto_costas_url').eq('aluno_id', userId);
+    if (avaliacoesData) {
+        for (const item of avaliacoesData) {
+            if (item.foto_frente_url) filesToProcess.push({ file_url: item.foto_frente_url, bucket_type_edge_function: 'avaliacoes' });
+            if (item.foto_lado_url) filesToProcess.push({ file_url: item.foto_lado_url, bucket_type_edge_function: 'avaliacoes' });
+            if (item.foto_costas_url) filesToProcess.push({ file_url: item.foto_costas_url, bucket_type_edge_function: 'avaliacoes' });
+        }
+    }
+
+    // Busca apenas os PDFs de rotinas no Cloudflare R2
+    const { data: rotinasData } = await supabase.from('rotinas_arquivadas').select('pdf_url').eq('aluno_id', userId);
+    if (rotinasData) {
+        for (const item of rotinasData) {
+            if (item.pdf_url) filesToProcess.push({ file_url: item.pdf_url, bucket_type_edge_function: 'rotinas' });
+        }
+    }
+    return filesToProcess;
+}
+
+async function deleteFile(fileUrl: string, bucket: string, userId: string) {
+    const filename = fileUrl.split('?')[0].split('/').pop();
+    if (!filename) {
+        console.warn(`Skipping file with invalid URL: ${fileUrl} for user ${userId}`);
+        return;
+    }
+    try {
+        const { error } = await supabase.functions.invoke('delete-image', {
+            body: { filename: filename, bucket_type: bucket }
+        });
+        if (error) {
+            console.error(`Edge Function error for ${filename} (user ${userId}):`, error);
+        } else {
+            console.log(`Successfully deleted ${filename} for user ${userId}.`);
+        }
+    } catch (e: unknown) {
+        if (e instanceof Error) {
+            console.error(`Unexpected error during Edge Function call for ${filename} (user ${userId}):`, e.message);
+        } else {
+            console.error(`Unexpected error during Edge Function call for ${filename} (user ${userId}):`, e);
+        }
+    }
+}
+
+async function deleteUser(userId: string, email: string) {
+    console.log(`Attempting to delete user ${email} (ID: ${userId}) from auth.users...`);
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    if (error) {
+        console.error(`Failed to delete user ${email} (ID: ${userId}):`, error.message);
+    } else {
+        console.log(`Successfully deleted user ${email} (ID: ${userId}).`);
+    }
 }

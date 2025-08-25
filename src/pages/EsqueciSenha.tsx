@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CheckCircle } from "lucide-react";
 
 export default function EsqueciSenha() {
   const [email, setEmail] = useState("");
@@ -57,13 +59,21 @@ export default function EsqueciSenha() {
       <Card className="mx-auto max-w-sm">
         <CardHeader>
           <CardTitle className="text-2xl">Esqueceu a Senha?</CardTitle>
-          <CardDescription>
-            {emailSent
-              ? `Um link de recuperação foi enviado para ${email}. Verifique sua caixa de entrada.`
-              : "Digite seu e-mail abaixo para receber um link de redefinição de senha."}
-          </CardDescription>
+          {!emailSent && (
+            <CardDescription>
+              Digite seu e-mail abaixo para receber um link de redefinição de senha.
+            </CardDescription>
+          )}
         </CardHeader>
         <CardContent>
+          {emailSent && (
+            <Alert className="mb-4 border-green-500/50 bg-green-50 text-green-800 dark:bg-green-950 dark:border-green-800 dark:text-green-300">
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription>
+                Um link de recuperação foi enviado para <strong>{email}</strong>. Verifique sua caixa de entrada e pasta de spam.
+              </AlertDescription>
+            </Alert>
+          )}
           <form onSubmit={handlePasswordReset}>
             <div className="grid gap-4">
               <div className="grid gap-2">

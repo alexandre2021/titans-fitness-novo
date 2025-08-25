@@ -113,6 +113,37 @@ const CameraButton = ({ onClick }: { onClick?: () => void }) => {
   );
 };
 
+// Helper functions for Cloudflare R2 Edge Functions
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+const callEdgeFunction = async (functionName: string, payload: Record<string, unknown>) => {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw new Error('Variáveis de ambiente SUPABASE_URL ou SUPABASE_ANON_KEY não configuradas.');
+  }
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/${functionName}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || `Erro na função Edge ${functionName}: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+const uploadImageToR2 = async (filename: string, image_base64: string, bucket_type: string) => {
+  return callEdgeFunction('upload-imagem', { filename, image_base64, bucket_type });
+};
+
+const deleteImageFromR2 = async (filename: string, bucket_type: string) => {
+  return callEdgeFunction('delete-image', { filename, bucket_type });
+};
+
 export const AvatarSection = ({ profile, onProfileUpdate }: AvatarSectionProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -129,55 +160,79 @@ export const AvatarSection = ({ profile, onProfileUpdate }: AvatarSectionProps) 
       const user = await supabase.auth.getUser();
       if (!user.data.user) throw new Error('Usuário não autenticado');
 
-      // Delete existing image if exists
-      if (profile.avatar_image_url) {
-        const oldPath = profile.avatar_image_url.split('/').pop();
-        if (oldPath) {
-          await supabase.storage.from('avatars').remove([`${user.data.user.id}/${oldPath}`]);
+      // 1. Delete existing image from R2 if it exists
+      if (profile.avatar_type === 'image' && profile.avatar_image_url) {
+        const oldFilename = profile.avatar_image_url.split('/').pop();
+        if (oldFilename) {
+          console.log(`Attempting to delete old avatar: ${oldFilename}`);
+          const deleteResult = await deleteImageFromR2(oldFilename, 'avatars');
+          if (!deleteResult.success) {
+            console.warn('Failed to delete old avatar from R2:', deleteResult.error);
+            // Continue with upload even if old delete fails, but log it.
+          } else {
+            console.log('Old avatar deleted successfully from R2.');
+          }
         }
       }
 
-      // Upload new image
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      const filePath = `${user.data.user.id}/${fileName}`;
+      // 2. Convert new image to base64
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
 
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file);
+      reader.onloadend = async () => {
+        const base64data = reader.result as string;
+        const image_base64 = base64data.split(',')[1]; // Remove data:image/jpeg;base64, prefix
 
-      if (uploadError) throw uploadError;
+        const fileExt = file.name.split('.').pop();
+        // Use user ID as part of filename to ensure uniqueness and easy identification
+        const fileName = `${user.data.user?.id}-${Date.now()}.${fileExt}`; 
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
+        // 3. Upload new image to R2 via Edge Function
+        const uploadResult = await uploadImageToR2(fileName, image_base64, 'avatars');
 
-      // Update profile
-      const { error: updateError } = await supabase
-        .from('personal_trainers')
-        .update({
-          avatar_type: 'image',
-          avatar_image_url: urlData.publicUrl
-        })
-        .eq('id', user.data.user.id);
+        if (!uploadResult.success) {
+          throw new Error(uploadResult.error || 'Erro ao fazer upload da imagem para R2.');
+        }
 
-      if (updateError) throw updateError;
+        const newImageUrl = uploadResult.url;
 
-      toast({
-        title: "Avatar atualizado",
-        description: "Sua foto de perfil foi atualizada com sucesso.",
-      });
+        // 4. Update profile in Supabase
+        const { error: updateError } = await supabase
+          .from('personal_trainers')
+          .update({
+            avatar_type: 'image',
+            avatar_image_url: newImageUrl
+          })
+          .eq('id', user.data.user.id);
 
-      onProfileUpdate();
+        if (updateError) throw updateError;
+
+        toast({
+          title: "Avatar atualizado",
+          description: "Sua foto de perfil foi atualizada com sucesso.",
+        });
+
+        onProfileUpdate();
+        setIsUploading(false); // Set to false here after all async operations
+      };
+
+      reader.onerror = (error) => {
+        console.error('Error reading file:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao ler o arquivo da imagem. Tente novamente.",
+          variant: "destructive",
+        });
+        setIsUploading(false);
+      };
+
     } catch (error) {
       console.error('Error uploading avatar:', error);
       toast({
         title: "Erro",
-        description: "Erro ao atualizar avatar. Tente novamente.",
+        description: `Erro ao atualizar avatar: ${error.message}.`,
         variant: "destructive",
       });
-    } finally {
       setIsUploading(false);
     }
   };
@@ -187,15 +242,23 @@ export const AvatarSection = ({ profile, onProfileUpdate }: AvatarSectionProps) 
       const user = await supabase.auth.getUser();
       if (!user.data.user) throw new Error('Usuário não autenticado');
 
-      // Delete image from storage
-      if (profile.avatar_image_url) {
-        const oldPath = profile.avatar_image_url.split('/').pop();
-        if (oldPath) {
-          await supabase.storage.from('avatars').remove([`${user.data.user.id}/${oldPath}`]);
+      // Delete image from R2
+      if (profile.avatar_type === 'image' && profile.avatar_image_url) {
+        const filenameToDelete = profile.avatar_image_url.split('/').pop();
+        if (filenameToDelete) {
+          const deleteResult = await deleteImageFromR2(filenameToDelete, 'avatars');
+          if (!deleteResult.success) {
+            console.error('Failed to delete avatar from R2:', deleteResult.error);
+            throw new Error(deleteResult.error || 'Erro ao deletar imagem do R2.');
+          }
+          toast({
+            title: "Avatar removido do R2",
+            description: "A foto de perfil foi removida do armazenamento.",
+          });
         }
       }
 
-      // Update profile
+      // Update profile in Supabase
       const { error } = await supabase
         .from('personal_trainers')
         .update({
@@ -216,7 +279,7 @@ export const AvatarSection = ({ profile, onProfileUpdate }: AvatarSectionProps) 
       console.error('Error removing avatar:', error);
       toast({
         title: "Erro",
-        description: "Erro ao remover avatar. Tente novamente.",
+        description: `Erro ao remover avatar: ${error.message}.`,
         variant: "destructive",
       });
     }
