@@ -117,6 +117,7 @@ export const AvatarSection = ({ profile, onProfileUpdate }: AvatarSectionProps) 
   const [isUploading, setIsUploading] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [avatarKey, setAvatarKey] = useState(Date.now()); // Estado para forçar refresh do avatar
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -164,12 +165,17 @@ export const AvatarSection = ({ profile, onProfileUpdate }: AvatarSectionProps) 
 
       if (updateError) throw updateError;
 
+      // Force avatar refresh
+      setAvatarKey(Date.now());
+
       toast({
         title: "Avatar atualizado",
         description: "Sua foto de perfil foi atualizada com sucesso.",
       });
 
       onProfileUpdate();
+      setShowAvatarModal(false);
+      
     } catch (error) {
       console.error('Error uploading avatar:', error);
       toast({
@@ -179,6 +185,9 @@ export const AvatarSection = ({ profile, onProfileUpdate }: AvatarSectionProps) 
       });
     } finally {
       setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -206,12 +215,17 @@ export const AvatarSection = ({ profile, onProfileUpdate }: AvatarSectionProps) 
 
       if (error) throw error;
 
+      // Force avatar refresh
+      setAvatarKey(Date.now());
+
       toast({
         title: "Avatar removido",
         description: "Foto de perfil removida com sucesso.",
       });
 
       onProfileUpdate();
+      setShowAvatarModal(false);
+      
     } catch (error) {
       console.error('Error removing avatar:', error);
       toast({
@@ -253,13 +267,34 @@ export const AvatarSection = ({ profile, onProfileUpdate }: AvatarSectionProps) 
 
   const getAvatarContent = () => {
     if (profile.avatar_type === 'image' && profile.avatar_image_url) {
-      return <AvatarImage src={profile.avatar_image_url} />;
+      // Adiciona cache buster apenas para exibição
+      const imageUrl = `${profile.avatar_image_url}?v=${avatarKey}`;
+      
+      return (
+        <AvatarImage 
+          src={imageUrl}
+          key={avatarKey} // Force re-render quando avatarKey muda
+          onLoad={() => console.log('Avatar loaded successfully')}
+          onError={(e) => {
+            console.error('Failed to load avatar:', imageUrl);
+            // Fallback para letra se a imagem falhar
+            e.currentTarget.style.display = 'none';
+          }}
+        />
+      );
     }
     
     const letter = profile.avatar_letter || profile.nome_completo?.charAt(0) || 'PT';
     
     return (
-      <AvatarFallback style={{ backgroundColor: profile.avatar_color, color: 'white', fontSize: '1.35rem', fontWeight: 400 }}>
+      <AvatarFallback 
+        style={{ 
+          backgroundColor: profile.avatar_color, 
+          color: 'white', 
+          fontSize: '1.35rem', 
+          fontWeight: 400 
+        }}
+      >
         {letter}
       </AvatarFallback>
     );
