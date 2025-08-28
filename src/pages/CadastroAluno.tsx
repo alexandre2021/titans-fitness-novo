@@ -13,8 +13,7 @@ import { Eye, EyeOff, ArrowLeft, CheckCircle, AlertCircle, Loader2 } from "lucid
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Tables } from "@/integrations/supabase/types";
-import { useAuth } from "@/hooks/useAuth"; // Importa o hook de autenticação
+import { useAuth } from "@/hooks/useAuth";
 
 const formSchema = z.object({
   nome_completo: z.string().min(2, "Nome completo deve ter pelo menos 2 caracteres"),
@@ -28,7 +27,6 @@ const formSchema = z.object({
 });
 
 type FormData = z.infer<typeof formSchema>;
-type Convite = Tables<'convites'>;
 
 export default function CadastroAluno() {
   const [showPassword, setShowPassword] = useState(false);
@@ -38,13 +36,19 @@ export default function CadastroAluno() {
     status: 'idle' | 'validating' | 'valid' | 'invalid' | 'expired';
     message?: string;
     ptName?: string;
-    conviteData?: Convite;
+    conviteData?: {
+      id: string;
+      token_convite: string;
+      email_convidado: string;
+      personal_trainer_id: string;
+      pt_nome: string;
+    };
   }>({status: 'idle'});
   
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
-  const { user, loading: authLoading } = useAuth(); // Usa o hook de autenticação
+  const { user, loading: authLoading } = useAuth();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -58,72 +62,67 @@ export default function CadastroAluno() {
   });
 
   const validateToken = useCallback(async (token: string) => {
-    setTokenValidation({status: 'validating'});
+    setTokenValidation({status: 'validating', message: 'Validando convite...'});
     
     try {
-      const { data: conviteData, error } = await supabase
-        .from('convites')
-        .select('*')
-        .eq('token_convite', token)
-        .eq('tipo_convite', 'cadastro')
-        .single();
-
-      if (error || !conviteData) {
-        setTokenValidation({
-          status: 'invalid',
-          message: 'Token de convite inválido ou não encontrado.'
-        });
-        return;
-      }
-
-      if (new Date(conviteData.expires_at) < new Date()) {
-        setTokenValidation({
-          status: 'expired',
-          message: 'Este convite expirou. Solicite um novo convite ao seu Personal Trainer.'
-        });
-        return;
-      }
-
-      if (conviteData.status !== 'pendente') {
-        if (conviteData.status === 'aceito') {
-          setTokenValidation({
-            status: 'invalid',
-            message: 'Este convite já foi aceito. Se você já concluiu seu cadastro, por favor, faça o login.'
-          });
-        } else {
-          setTokenValidation({
-            status: 'invalid',
-            message: 'Este convite foi cancelado ou não está mais disponível.'
-          });
-        }
-        return;
-      }
-
-      const { data: ptData } = await supabase
-        .from('personal_trainers')
-        .select('nome_completo')
-        .eq('id', conviteData.personal_trainer_id)
-        .single();
-
-      setTokenValidation({
-        status: 'valid',
-        message: 'Convite válido! Complete seu cadastro.',
-        ptName: ptData?.nome_completo || 'Personal Trainer',
-        conviteData: conviteData
+      const { data, error } = await supabase.functions.invoke('validate-invite', {
+        body: { token }
       });
 
-      if (conviteData.email_convidado && !form.getValues('email')) {
-        form.setValue('email', conviteData.email_convidado);
+      if (error) {
+        console.error('Erro na validação do token:', error);
+        setTokenValidation({
+          status: 'invalid',
+          message: 'Erro ao validar convite. Tente novamente.'
+        });
+        return;
       }
 
+      if (data?.success) {
+        setTokenValidation({
+          status: 'valid',
+          message: 'Convite válido! Complete seu cadastro.',
+          ptName: data.convite.pt_nome,
+          conviteData: {
+            id: data.convite.id,
+            token_convite: data.convite.token_convite,
+            email_convidado: data.convite.email_convidado,
+            personal_trainer_id: data.convite.personal_trainer_id,
+            pt_nome: data.convite.pt_nome
+          }
+        });
+
+        // Pré-preencher email se disponível
+        if (data.convite.email_convidado) {
+          form.setValue('email', data.convite.email_convidado);
+        }
+      } else {
+        setTokenValidation({
+          status: 'invalid',
+          message: data?.error || 'Token de convite inválido'
+        });
+      }
     } catch (error) {
-      console.error('Erro ao validar token:', error);
+      console.error('Erro na validação:', error);
       setTokenValidation({
         status: 'invalid',
-        message: 'Erro ao validar convite. Tente novamente.'
+        message: 'Erro interno ao validar convite'
       });
     }
   }, [form]);
+
+  const invalidateToken = async (conviteId: string, token: string) => {
+    try {
+      await supabase.functions.invoke('invalidate-invite', {
+        body: { 
+          conviteId,
+          token 
+        }
+      });
+    } catch (error) {
+      console.error('Erro ao invalidar token:', error);
+    }
+  };
 
   useEffect(() => {
     // Aguarda a verificação de autenticação terminar
@@ -159,7 +158,7 @@ export default function CadastroAluno() {
     validateToken(tokenFromUrl);
 
     const ptNameFromUrl = searchParams.get('pt');
-    const isFromInvite = search_params.get('ref') === 'convite';
+    const isFromInvite = searchParams.get('ref') === 'convite';
     if (ptNameFromUrl && isFromInvite) {
       toast({
         title: "Bem-vindo!",
@@ -225,7 +224,7 @@ export default function CadastroAluno() {
         console.error('Erro ao criar perfil:', profileError);
       }
 
-      const ptId = tokenValidation.conviteData?.personal_trainer_id;
+      const ptId = tokenValidation.conviteData.personal_trainer_id;
       const { error: alunoError } = await supabase
         .from('alunos')
         .insert({
@@ -251,16 +250,11 @@ export default function CadastroAluno() {
         return;
       }
 
-      const conviteId = tokenValidation.conviteData?.id;
-      if (conviteId) {
-        await supabase
-          .from('convites')
-          .update({ 
-            status: 'aceito',
-            aceito_em: new Date().toISOString()
-          })
-          .eq('id', conviteId);
-      }
+      // Invalidar o token após uso bem-sucedido
+      await invalidateToken(
+        tokenValidation.conviteData.id,
+        tokenValidation.conviteData.token_convite
+      );
 
       toast({
         title: "Sucesso!",
@@ -269,7 +263,7 @@ export default function CadastroAluno() {
       });
 
       await supabase.auth.signOut();
-      navigate('/login');
+      navigate('/login?message=cadastro_sucesso');
 
     } catch (error) {
       console.error('Erro no cadastro:', error);
@@ -337,6 +331,15 @@ export default function CadastroAluno() {
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
                   {tokenValidation.message}
+                  <div className="mt-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => navigate('/login')}
+                    >
+                      Voltar ao Login
+                    </Button>
+                  </div>
                 </AlertDescription>
               </Alert>
             )}
@@ -369,9 +372,15 @@ export default function CadastroAluno() {
                             {...field} 
                             type="email" 
                             placeholder="seu@email.com"
-                            disabled={!!searchParams.get('email')}
+                            disabled={!!tokenValidation.conviteData?.email_convidado}
+                            readOnly={!!tokenValidation.conviteData?.email_convidado}
                           />
                         </FormControl>
+                        {tokenValidation.conviteData?.email_convidado && (
+                          <p className="text-xs text-muted-foreground">
+                            Email pré-preenchido através do convite
+                          </p>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}

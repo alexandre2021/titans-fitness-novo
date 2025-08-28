@@ -1,19 +1,86 @@
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { UserPlus, Users } from "lucide-react";
-import { Plus } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { UserPlus, Users, Plus, Mail, MailCheck, X, Send } from "lucide-react";
 import { useAlunos } from "@/hooks/useAlunos";
 import { usePTProfile } from "@/hooks/usePTProfile";
+import { useAuth } from "@/hooks/useAuth";
 import { AlunoCard } from "@/components/alunos/AlunoCard";
 import { FiltrosAlunos } from "@/components/alunos/FiltrosAlunos";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+
+interface ConvitePendente {
+  id: string;
+  email_convidado: string;
+  tipo_convite: string;
+  status: string;
+  created_at: string;
+  expires_at: string;
+}
 
 const AlunosPT = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const { profile } = usePTProfile();
   const { alunos, loading, filtros, setFiltros, desvincularAluno, totalAlunos } = useAlunos();
+  const [convitesPendentes, setConvitesPendentes] = useState<ConvitePendente[]>([]);
+
+  // Carregar convites pendentes
+  const carregarConvitesPendentes = useCallback(async () => {
+    if (!user?.id) return;
+
+    try {
+      const { data: convites } = await supabase
+        .from('convites')
+        .select('id, email_convidado, tipo_convite, status, created_at, expires_at')
+        .eq('personal_trainer_id', user.id)
+        .eq('status', 'pendente')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (convites) {
+        setConvitesPendentes(convites);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar convites pendentes:', error);
+    }
+  }, [user?.id]);
+
+  // Cancelar convite
+  const cancelarConvite = async (conviteId: string, email: string) => {
+    try {
+      const { error } = await supabase
+        .from('convites')
+        .update({ status: 'cancelado' })
+        .eq('id', conviteId);
+
+      if (error) throw error;
+
+      // Remover da lista local
+      setConvitesPendentes(prev => prev.filter(c => c.id !== conviteId));
+
+      toast({
+        title: "Convite cancelado",
+        description: `O convite para ${email} foi cancelado.`,
+      });
+    } catch (error) {
+      console.error('Erro ao cancelar convite:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível cancelar o convite.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Carregar convites ao montar o componente
+  useEffect(() => {
+    carregarConvitesPendentes();
+  }, [carregarConvitesPendentes]);
 
   const handleConvidarAluno = () => {
     if (!profile) return;
@@ -29,6 +96,31 @@ const AlunosPT = () => {
     }
 
     navigate("/convite-aluno");
+  };
+
+  const formatarDataRelativa = (data: string) => {
+    const agora = new Date();
+    const dataConvite = new Date(data);
+
+    const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+    const diaConvite = new Date(dataConvite.getFullYear(), dataConvite.getMonth(), dataConvite.getDate());
+
+    const diferencaMs = hoje.getTime() - diaConvite.getTime();
+    const diferencaDias = Math.round(diferencaMs / (1000 * 60 * 60 * 24));
+
+    if (diferencaDias === 0) return 'Hoje';
+    if (diferencaDias === 1) return 'Ontem';
+    if (diferencaDias > 1 && diferencaDias < 7) return `${diferencaDias} dias atrás`;
+    
+    return new Intl.DateTimeFormat('pt-BR').format(dataConvite);
+  };
+
+  const getConviteIcon = (tipo: string) => {
+    return tipo === 'cadastro' ? <Mail className="h-4 w-4" /> : <MailCheck className="h-4 w-4" />;
+  };
+
+  const getConviteDescricao = (tipo: string) => {
+    return tipo === 'cadastro' ? 'Convite de cadastro' : 'Convite de vínculo';
   };
 
   if (loading) {
@@ -85,6 +177,56 @@ const AlunosPT = () => {
           </Button>
         </div>
       </div>
+
+      {/* Convites Pendentes */}
+      {convitesPendentes.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Send className="h-5 w-5" />
+              Convites Pendentes
+              <Badge variant="secondary" className="ml-auto">
+                {convitesPendentes.length}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {convitesPendentes.map((convite) => (
+                <div key={convite.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    {getConviteIcon(convite.tipo_convite)}
+                    <div className="flex flex-col">
+                      <span className="font-medium">{convite.email_convidado}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {getConviteDescricao(convite.tipo_convite)} • {formatarDataRelativa(convite.created_at)}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => cancelarConvite(convite.id, convite.email_convidado)}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={handleConvidarAluno}
+                className="w-full"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Enviar Novo Convite
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {alunos.length === 0 && filtros.busca === '' && filtros.situacao === 'todos' && filtros.genero === 'todos' ? (
         // Estado vazio - nenhum aluno cadastrado

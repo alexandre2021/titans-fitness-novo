@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -36,6 +36,18 @@ const ConviteAluno = () => {
     mensagem: string;
   } | null>(null);
   
+  const [tokenValidation, setTokenValidation] = useState<{
+    isValidating: boolean;
+    isValid: boolean;
+    conviteData?: {
+      id: string;
+      token_convite: string;
+      email_convidado: string;
+      pt_nome: string;
+    };
+    error?: string;
+  } | null>(null);
+  
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -47,6 +59,72 @@ const ConviteAluno = () => {
       email_aluno: "",
     },
   });
+
+  // Validar token na URL ao carregar a página
+  useEffect(() => {
+    const validateToken = async (token: string) => {
+      setTokenValidation({ isValidating: true, isValid: false });
+      
+      try {
+        const { data, error } = await supabase.functions.invoke('validate-invite', {
+          body: { token }
+        });
+
+        if (error) {
+          console.error('Erro na validação do token:', error);
+          setTokenValidation({
+            isValidating: false,
+            isValid: false,
+            error: 'Erro ao validar convite. Tente novamente.'
+          });
+          return;
+        }
+
+        if (data?.success) {
+          form.setValue('email_aluno', data.convite.email_convidado);
+          setTokenValidation({
+            isValidating: false,
+            isValid: true,
+            conviteData: data.convite
+          });
+        } else {
+          setTokenValidation({
+            isValidating: false,
+            isValid: false,
+            error: data?.error || 'Token de convite inválido'
+          });
+        }
+      } catch (error) {
+        console.error('Erro na validação:', error);
+        setTokenValidation({
+          isValidating: false,
+          isValid: false,
+          error: 'Erro interno ao validar convite'
+        });
+      }
+    };
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    
+    if (token) {
+      validateToken(token);
+    }
+  }, [form]);
+
+  // Função para invalidar o token após uso bem-sucedido
+  const invalidateToken = async (conviteId: string, token: string) => {
+    try {
+      await supabase.functions.invoke('invalidate-invite', {
+        body: { 
+          conviteId,
+          token 
+        }
+      });
+    } catch (error) {
+      console.error('Erro ao invalidar token:', error);
+    }
+  };
 
   const handleEnviarConvite = async (data: FormData) => {
     if (!user || !profile) {
@@ -70,11 +148,8 @@ const ConviteAluno = () => {
         }
       });
 
-      // **CORREÇÃO PRINCIPAL: Tratamento adequado dos erros HTTP**
       if (error) {
         console.error('Error response from function:', error);
-        
-        // Para todos os erros (500, rede, etc.)
         setResultado({
           tipo: 'erro',
           titulo: 'Erro no envio',
@@ -83,12 +158,14 @@ const ConviteAluno = () => {
         return;
       }
 
-      // **SUCESSO: só é executado para respostas 2xx sem erro**
       if (responseData?.success) {
-        const cenarioTexto = responseData.cenario === 'email_novo' 
-          ? 'Aluno novo: um email de cadastro foi enviado.'
-          : 'Aluno existente: um email de convite para vínculo foi enviado.';
-
+        if (tokenValidation?.conviteData) {
+          await invalidateToken(
+            tokenValidation.conviteData.id,
+            tokenValidation.conviteData.token_convite
+          );
+        }
+        
         setResultado({
           tipo: 'sucesso',
           cenario: responseData.cenario,
@@ -97,7 +174,6 @@ const ConviteAluno = () => {
         });
         form.reset();
       } else if (responseData?.success === false) {
-        // **TRATAMENTO DE ERROS DE NEGÓCIO via responseData**
         if (responseData.error_type === 'CONVITE_JA_ENVIADO') {
           setResultado({
             tipo: 'convite_duplicado',
@@ -111,7 +187,6 @@ const ConviteAluno = () => {
             mensagem: 'Este aluno já está vinculado a outro profissional. Não é possível enviar o convite.'
           });
         } else {
-          // Outros erros de negócio
           setResultado({
             tipo: 'erro',
             titulo: 'Erro no envio',
@@ -119,7 +194,6 @@ const ConviteAluno = () => {
           });
         }
       } else {
-         // Fallback para um erro inesperado no corpo de uma resposta 2xx
          setResultado({
             tipo: 'erro',
             titulo: 'Erro inesperado',
@@ -176,6 +250,56 @@ const ConviteAluno = () => {
         </div>
       </div>
 
+      {/* Validação de Token */}
+      {tokenValidation && (
+        <Card className="border-l-4 border-l-blue-500">
+          <CardContent className="pt-4">
+            {tokenValidation.isValidating && (
+              <div className="flex items-center gap-3">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+                <span className="text-sm">Validando convite...</span>
+              </div>
+            )}
+            
+            {!tokenValidation.isValidating && tokenValidation.isValid && tokenValidation.conviteData && (
+              <Alert>
+                <CheckCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <div>
+                    <strong>Convite validado!</strong>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Você foi convidado por <strong>{tokenValidation.conviteData.pt_nome}</strong>
+                      <br />
+                      Email: {tokenValidation.conviteData.email_convidado}
+                    </p>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {!tokenValidation.isValidating && !tokenValidation.isValid && tokenValidation.error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <div>
+                    <strong>Convite inválido</strong>
+                    <p className="mt-1 text-sm">{tokenValidation.error}</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-2"
+                      onClick={() => navigate('/login')}
+                    >
+                      Voltar ao Login
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Resultado do convite */}
       {resultado && (
         <Alert variant={getAlertVariant(resultado.tipo)} className="border-l-4">
@@ -189,10 +313,10 @@ const ConviteAluno = () => {
               {resultado.tipo === 'sucesso' && (
                 <div className="mt-3">
                   <Button 
-                    onClick={() => navigate("/index-pt")}
+                    onClick={() => navigate("/alunos")}
                     size="sm"
                   >
-                    Voltar ao Início
+                    Ver Alunos
                   </Button>
                 </div>
               )}
@@ -201,64 +325,85 @@ const ConviteAluno = () => {
         </Alert>
       )}
 
-      {/* Formulário */}
-      <Card>
-        <CardContent className="pt-6">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleEnviarConvite)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email_aluno"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email do Aluno</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          type="email" 
-                          placeholder="Digite o email do aluno" 
-                          className="pl-10"
-                          {...field} 
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+      {/* Formulário ou mensagem de indisponibilidade */}
+      {tokenValidation && !tokenValidation.isValid && !tokenValidation.isValidating ? (
+        <Card className="opacity-50 pointer-events-none">
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground">
+              Formulário indisponível devido a convite inválido
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardContent className="pt-6">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleEnviarConvite)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="email_aluno"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email do Aluno</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input 
+                            type="email" 
+                            placeholder="Digite o email do aluno"
+                            className="pl-10"
+                            disabled={tokenValidation?.isValid || isLoading}
+                            readOnly={tokenValidation?.isValid}
+                            {...field} 
+                          />
+                          {tokenValidation?.isValid && (
+                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                            </div>
+                          )}
+                        </div>
+                      </FormControl>
+                      {tokenValidation?.isValid && (
+                        <p className="text-xs text-muted-foreground">
+                          Email pré-preenchido através do convite
+                        </p>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              {/* Informações sobre o processo */}
-              <div className="bg-muted/50 rounded-lg p-4 text-sm">
-                <h4 className="font-medium mb-2">Como funciona:</h4>
-                <ul className="space-y-1 text-muted-foreground">
-                  <li>• <strong>Aluno novo:</strong> Receberá um email para criar conta</li>
-                  <li>• <strong>Aluno existente:</strong> Receberá um email para aceitar o vínculo</li>
-                  <li>• <strong>Aluno vinculado a outro personal trainer:</strong> Convite será bloqueado automaticamente</li>
-                </ul>
-              </div>
+                <div className="bg-muted/50 rounded-lg p-4 text-sm">
+                  <h4 className="font-medium mb-2">Como funciona:</h4>
+                  <ul className="space-y-1 text-muted-foreground">
+                    <li>• <strong>Aluno novo:</strong> Receberá um email para criar conta</li>
+                    <li>• <strong>Aluno existente:</strong> Receberá um email para aceitar o vínculo</li>
+                    <li>• <strong>Aluno vinculado a outro personal trainer:</strong> Convite será bloqueado automaticamente</li>
+                  </ul>
+                </div>
 
-              <div className="flex gap-4 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate("/alunos")}
-                  className="flex-1"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="flex-1"
-                >
-                  {isLoading ? "Enviando..." : "Enviar Convite"}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+                <div className="flex gap-4 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => navigate("/alunos")}
+                    className="flex-1"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="flex-1"
+                  >
+                    {isLoading ? "Enviando..." : "Enviar Convite"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
