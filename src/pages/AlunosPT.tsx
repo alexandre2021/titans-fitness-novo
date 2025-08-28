@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, Users, Plus, Mail, MailCheck, X, Send } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { UserPlus, Users, Plus, Mail, MailCheck, Trash2, Send, ChevronDown, ChevronRight } from "lucide-react";
 import { useAlunos } from "@/hooks/useAlunos";
 import { usePTProfile } from "@/hooks/usePTProfile";
 import { useAuth } from "@/hooks/useAuth";
@@ -28,6 +29,7 @@ const AlunosPT = () => {
   const { profile } = usePTProfile();
   const { alunos, loading, filtros, setFiltros, desvincularAluno, totalAlunos } = useAlunos();
   const [convitesPendentes, setConvitesPendentes] = useState<ConvitePendente[]>([]);
+  const [convitesCollapsed, setConvitesCollapsed] = useState(true);
 
   // Carregar convites pendentes
   const carregarConvitesPendentes = useCallback(async () => {
@@ -180,56 +182,67 @@ const AlunosPT = () => {
 
       {/* Convites Pendentes */}
       {convitesPendentes.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Send className="h-5 w-5" />
-              Convites Pendentes
-              <Badge variant="secondary" className="ml-auto">
-                {convitesPendentes.length}
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {convitesPendentes.map((convite) => (
-                <div key={convite.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    {getConviteIcon(convite.tipo_convite)}
-                    <div className="flex flex-col">
-                      <span className="font-medium">{convite.email_convidado}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {getConviteDescricao(convite.tipo_convite)} • {formatarDataRelativa(convite.created_at)}
-                      </span>
+        <Collapsible open={!convitesCollapsed} onOpenChange={(open) => setConvitesCollapsed(!open)}>
+          <Card>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="hover:bg-muted/50 cursor-pointer">
+                <CardTitle className="flex items-center gap-2">
+                  {convitesCollapsed ? (
+                    <ChevronRight className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                  <Send className="h-5 w-5" />
+                  Convites Pendentes
+                  <Badge variant="secondary" className="ml-auto">
+                    {convitesPendentes.length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent>
+                <div className="space-y-3">
+                  {convitesPendentes.map((convite) => (
+                    <div key={convite.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        {getConviteIcon(convite.tipo_convite)}
+                        <div className="flex flex-col">
+                          <span className="font-medium">{convite.email_convidado}</span>
+                          <span className="text-sm text-muted-foreground">
+                            {getConviteDescricao(convite.tipo_convite)} • {formatarDataRelativa(convite.created_at)}
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => cancelarConvite(convite.id, convite.email_convidado)}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => cancelarConvite(convite.id, convite.email_convidado)}
-                    className="text-muted-foreground hover:text-destructive"
+                  ))}
+                </div>
+                <div className="mt-4 pt-4 border-t">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleConvidarAluno}
+                    className="w-full"
                   >
-                    <X className="h-4 w-4" />
+                    <Plus className="h-4 w-4 mr-2" />
+                    Enviar Novo Convite
                   </Button>
                 </div>
-              ))}
-            </div>
-            <div className="mt-4 pt-4 border-t">
-              <Button 
-                variant="outline" 
-                onClick={handleConvidarAluno}
-                className="w-full"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Enviar Novo Convite
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       )}
 
-      {alunos.length === 0 && filtros.busca === '' && filtros.situacao === 'todos' && filtros.genero === 'todos' ? (
-        // Estado vazio - nenhum aluno cadastrado
+      {(alunos.length === 0 && convitesPendentes.length === 0 && filtros.busca === '' && filtros.situacao === 'todos' && filtros.genero === 'todos') ? (
+        // Estado vazio - nenhum aluno cadastrado e nenhum convite pendente
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-16">
             <Users className="h-16 w-16 text-muted-foreground mb-4" />
@@ -252,6 +265,17 @@ const AlunosPT = () => {
               <UserPlus className="h-5 w-5" />
               Convidar Aluno
             </Button>
+          </CardContent>
+        </Card>
+      ) : (alunos.length === 0 && convitesPendentes.length > 0 && filtros.busca === '' && filtros.situacao === 'todos' && filtros.genero === 'todos') ? (
+        // Estado com convites pendentes mas sem alunos
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Users className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Nenhum aluno</h3>
+            <p className="text-muted-foreground text-center">
+              Aguardando resposta dos convites enviados
+            </p>
           </CardContent>
         </Card>
       ) : (
