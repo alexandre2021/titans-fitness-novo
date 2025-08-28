@@ -22,6 +22,7 @@ import { EditPessoalModal } from "./EditPessoalModal";
 import { EditProfissionalModal } from "./EditProfissionalModal";
 import { EditRedesSociaisModal } from "./EditRedesSociaisModal";
 import { PasswordChangeSection } from "./PasswordChangeSection";
+import { AccountCancellationSection } from "./AccountCancellationSection";
 
 interface ProfileData {
   nome_completo: string;
@@ -142,6 +143,7 @@ export const PerfilTabs = ({ profile, onProfileUpdate }: PerfilTabsProps) => {
         <TabsTrigger value="profissional">Profissional</TabsTrigger>
         <TabsTrigger value="redes">Redes Sociais</TabsTrigger>
         <TabsTrigger value="seguranca">Segurança</TabsTrigger>
+        <TabsTrigger value="conta">Conta</TabsTrigger>
       </TabsList>
 
       <TabsContent value="pessoal">
@@ -243,6 +245,10 @@ export const PerfilTabs = ({ profile, onProfileUpdate }: PerfilTabsProps) => {
 
       <TabsContent value="seguranca">
         <PasswordChangeSection />
+      </TabsContent>
+
+      <TabsContent value="conta">
+        <AccountCancellationSection />
       </TabsContent>
 
       {/* Modais Responsivos */}

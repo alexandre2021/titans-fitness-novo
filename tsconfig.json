@@ -14,7 +14,7 @@
     "skipLibCheck": true,
     "allowJs": true,
     "noUnusedLocals": false,
-    "strictNullChecks": false,
-    "lib": ["deno.ns"]
-  }
+    "strictNullChecks": false
+  },
+  "exclude": ["api", "node_modules"]
 }

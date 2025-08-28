@@ -17,7 +17,7 @@ import {
   Cake,
   Mail,
   MailCheck,
-  X,
+  Trash2,
   Send
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -465,7 +465,11 @@ const IndexPT = () => {
                 <CardTitle className="flex items-center gap-2">
                   <Send className="h-5 w-5" />
                   Convites Pendentes
-                  <Badge variant="secondary" className="ml-auto">
+                  <Badge 
+                    variant="secondary" 
+                    className={`ml-auto text-white ${convitesPendentes.length === 1 ? 'rounded-full w-6 h-6 flex items-center justify-center p-0 md:rounded-full md:w-6 md:h-6' : ''}`}
+                    style={{ backgroundColor: '#AA1808' }}
+                  >
                     {convitesPendentes.length}
                   </Badge>
                 </CardTitle>
@@ -489,7 +493,7 @@ const IndexPT = () => {
                         onClick={() => cancelarConvite(convite.id, convite.email_convidado)}
                         className="text-muted-foreground hover:text-destructive"
                       >
-                        <X className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   ))}

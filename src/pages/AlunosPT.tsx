@@ -185,16 +185,20 @@ const AlunosPT = () => {
         <Collapsible open={!convitesCollapsed} onOpenChange={(open) => setConvitesCollapsed(!open)}>
           <Card>
             <CollapsibleTrigger asChild>
-              <CardHeader className="hover:bg-muted/50 cursor-pointer">
+              <CardHeader className="cursor-pointer bg-white">
                 <CardTitle className="flex items-center gap-2">
                   {convitesCollapsed ? (
-                    <ChevronRight className="h-4 w-4" />
-                  ) : (
                     <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 rotate-90" />
                   )}
                   <Send className="h-5 w-5" />
                   Convites Pendentes
-                  <Badge variant="secondary" className="ml-auto">
+                  <Badge 
+                    variant="secondary" 
+                    className={`ml-auto text-white ${convitesPendentes.length === 1 ? 'rounded-full w-6 h-6 flex items-center justify-center p-0 md:rounded-full md:w-6 md:h-6' : ''}`}
+                    style={{ backgroundColor: '#AA1808' }}
+                  >
                     {convitesPendentes.length}
                   </Badge>
                 </CardTitle>
