@@ -1,19 +1,34 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, Filter, Dumbbell } from "lucide-react";
+import { Plus, Search, Filter, Dumbbell, ShieldAlert, Info, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useExercicios } from "@/hooks/useExercicios";
-import { usePTProfile } from "@/hooks/usePTProfile";
 import { ExercicioCard } from "@/components/exercicios/ExercicioCard";
 import { FiltrosExercicios } from "@/components/exercicios/FiltrosExercicios";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const ExerciciosPT = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const LIMITE_EXERCICIOS_PERSONALIZADOS = 100;
   
   // Usar o hook personalizado
   const {
@@ -27,30 +42,17 @@ const ExerciciosPT = () => {
     refetch
   } = useExercicios();
 
-  // Buscar dados do perfil do PT
-  const { profile } = usePTProfile();
-
   const [activeTab, setActiveTab] = useState<"padrao" | "personalizados">("padrao");
   const [showFilters, setShowFilters] = useState(false);
+  const isMobile = useIsMobile();
+  const [isLimitInfoOpen, setIsLimitInfoOpen] = useState(false);
   const [busca, setBusca] = useState("");
 
   const handleNovoExercicio = () => {
-    if (!profile) {
-      toast({
-        title: "Erro",
-        description: "Perfil não carregado. Tente novamente.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Verificar limite do plano - usar valor padrão se não definido
-    const limiteExercicios = profile.limite_exercicios || 10;
-    
-    if (totalPersonalizados >= limiteExercicios) {
+    if (totalPersonalizados >= LIMITE_EXERCICIOS_PERSONALIZADOS) {
       toast({
         title: "Limite atingido",
-        description: `Você atingiu o limite de ${limiteExercicios} exercícios personalizados do seu plano atual. Faça upgrade para criar mais exercícios.`,
+        description: `Você atingiu o limite de ${LIMITE_EXERCICIOS_PERSONALIZADOS} exercícios personalizados. Para criar novos, remova algum exercício antigo.`,
         variant: "destructive",
       });
       return;
@@ -60,22 +62,10 @@ const ExerciciosPT = () => {
   };
 
   const handleCriarCopia = (exercicioId: string) => {
-    if (!profile) {
-      toast({
-        title: "Erro",
-        description: "Perfil não carregado. Tente novamente.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Verificar limite do plano - usar valor padrão se não definido
-    const limiteExercicios = profile.limite_exercicios || 10;
-    
-    if (totalPersonalizados >= limiteExercicios) {
+    if (totalPersonalizados >= LIMITE_EXERCICIOS_PERSONALIZADOS) {
       toast({
         title: "Limite atingido",
-        description: `Você atingiu o limite de ${limiteExercicios} exercícios personalizados do seu plano atual. Faça upgrade para criar mais exercícios.`,
+        description: `Você atingiu o limite de ${LIMITE_EXERCICIOS_PERSONALIZADOS} exercícios personalizados. Para criar novos, remova algum exercício antigo.`,
         variant: "destructive",
       });
       return;
@@ -135,7 +125,7 @@ const ExerciciosPT = () => {
     filtros_ativos: filtros
   });
 
-  const canAddMore = !profile || totalPersonalizados < (profile.limite_exercicios || 10);
+  const canAddMore = totalPersonalizados < LIMITE_EXERCICIOS_PERSONALIZADOS;
 
   if (loading) {
     return (
@@ -168,15 +158,20 @@ const ExerciciosPT = () => {
               Gerencie seus exercícios
             </p>
           </div>
-          {activeTab === "personalizados" && (
-            <Button 
-              onClick={handleNovoExercicio}
-              size="icon"
-              className="rounded-full"
-              disabled={!canAddMore}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
+          {activeTab === "personalizados" && (canAddMore ? (
+              <Button
+                onClick={handleNovoExercicio}
+                size="icon"
+                className="rounded-full"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" onClick={() => setIsLimitInfoOpen(true)}>
+                <Info className="h-4 w-4 mr-1" />
+                Limite
+              </Button>
+            )
           )}
         </div>
 
@@ -188,21 +183,20 @@ const ExerciciosPT = () => {
               Gerencie seus exercícios padrão e personalizados
             </p>
           </div>
-          {activeTab === "personalizados" && (
-            <Button 
-              onClick={handleNovoExercicio} 
-              className="flex items-center gap-2"
-              disabled={!canAddMore}
-            >
-              {canAddMore ? (
-                <>
-                  <Plus className="h-4 w-4" />
-                  Novo Exercício
-                </>
-              ) : (
-                "Limite Atingido"
-              )}
-            </Button>
+          {activeTab === "personalizados" && (canAddMore ? (
+              <Button 
+                onClick={handleNovoExercicio} 
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Exercício
+              </Button>
+            ) : (
+                <Button variant="outline" onClick={() => setIsLimitInfoOpen(true)} className="flex items-center gap-2">
+                  <ShieldAlert className="h-4 w-4" />
+                  Limite Atingido
+                </Button>
+            )
           )}
         </div>
       </div>
@@ -382,34 +376,26 @@ const ExerciciosPT = () => {
                 <p className="text-muted-foreground text-center mb-6 max-w-md">
                   Crie exercícios personalizados a partir dos exercícios padrão ou do zero
                 </p>
-                {canAddMore ? (
+                {canAddMore && (
                   <Button onClick={handleNovoExercicio} size="lg" className="flex items-center gap-2">
                     <Plus className="h-5 w-5" />
                     Exercício personalizado
                   </Button>
-                ) : (
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Limite de exercícios atingido
-                    </p>
-                    <Button variant="outline" size="lg">
-                      Fazer Upgrade
-                    </Button>
-                  </div>
                 )}
               </CardContent>
             </Card>
           ) : (
             <>
               {/* Estatísticas */}
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="hidden md:flex items-center gap-4 text-sm text-muted-foreground">
                 <span>{exerciciosFiltrados.length} exercício(s) encontrado(s)</span>
-                {profile && (
-                  <>
-                    <span>•</span>
-                    <span>{totalPersonalizados}/{profile.limite_exercicios || 10} exercícios do plano</span>
-                  </>
-                )}
+                <span>•</span>
+                <span>{totalPersonalizados} de {LIMITE_EXERCICIOS_PERSONALIZADOS} exercícios personalizados</span>
+              </div>
+
+              <div className="flex md:hidden items-center justify-between text-sm text-muted-foreground">
+                <span>{exerciciosFiltrados.length} encontrado(s)</span>
+                <span>{totalPersonalizados}/{LIMITE_EXERCICIOS_PERSONALIZADOS} personalizados</span>
               </div>
 
               {/* Lista de exercícios personalizados */}
@@ -438,6 +424,49 @@ const ExerciciosPT = () => {
           )}
         </TabsContent>
       </Tabs>
+
+      {isMobile ? (
+        <Drawer open={isLimitInfoOpen} onOpenChange={setIsLimitInfoOpen}>
+          <DrawerContent className="max-h-[90vh]">
+            <DrawerHeader className="relative text-left">
+              <DrawerTitle className="flex items-center gap-2">
+                <Info className="h-5 w-5 text-blue-500" />
+                Limite de Exercícios
+              </DrawerTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsLimitInfoOpen(false)}
+                className="absolute right-2 top-2 h-8 w-8 rounded-full"
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Fechar</span>
+              </Button>
+            </DrawerHeader>
+            <div className="p-4 text-sm text-muted-foreground overflow-y-auto">
+              Você alcançou o limite de <strong>{LIMITE_EXERCICIOS_PERSONALIZADOS} exercícios personalizados</strong>.
+              <br /><br />
+              Para criar novos, você pode revisar e excluir exercícios antigos que não estão mais em uso.
+            </div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Dialog open={isLimitInfoOpen} onOpenChange={setIsLimitInfoOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Info className="h-5 w-5 text-blue-500" />
+                Limite de Exercícios Atingido
+              </DialogTitle>
+              <DialogDescription className="pt-4">
+                Você alcançou o limite de <strong>{LIMITE_EXERCICIOS_PERSONALIZADOS} exercícios personalizados</strong>.
+                <br /><br />
+                Para criar novos exercícios, você pode revisar e excluir exercícios antigos que não estão mais em uso.
+              </DialogDescription>
+            </DialogHeader>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };

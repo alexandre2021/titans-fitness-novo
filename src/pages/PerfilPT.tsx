@@ -1,13 +1,45 @@
+import { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { usePTProfile } from "@/hooks/usePTProfile";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { Tables } from "@/integrations/supabase/types";
 import { AvatarSection } from "@/components/perfil/AvatarSection";
 import { PerfilTabs } from "@/components/perfil/PerfilTabs";
 
+type PTProfile = Tables<'personal_trainers'>;
+
 const PerfilPT = () => {
   const navigate = useNavigate();
-  const { profile, loading } = usePTProfile();
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<PTProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('personal_trainers')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (error) throw error;
+        setProfile(data);
+      } catch (error) {
+        console.error("Erro ao buscar perfil do PT:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchProfile();
+    }
+  }, [user]);
 
   const handleProfileUpdate = () => {
     // Force re-fetch of profile data by reloading the hook

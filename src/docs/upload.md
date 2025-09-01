@@ -10,22 +10,12 @@ A estratégia se baseia em uma **Abordagem Híbrida**, dividindo as responsabili
 -   **Backend (Função Serverless):** Executa o processamento pesado e final (conversão de formato, compressão, transcodificação), garantindo consistência e qualidade máxima.
 
 ## 2. Quota de Armazenamento por Personal Trainer
-
--   Cada Personal Trainer (PT) terá uma quota inicial de **100 MB** para armazenamento de mídias de exercícios personalizados.
--   Esta quota será utilizada para os arquivos otimizados e armazenados nos buckets da Cloudflare.
-
-## 3. Estimativa de Armazenamento por Exercício
-
-A estimativa de uso da quota por exercício cadastrado com 2 imagens e 1 vídeo é:
-
--   **Vídeo (12s @ 500kbps):** ~750 KB
--   **Imagem 1 (WebP otimizada):** ~150 KB (estimativa)
--   **Imagem 2 (WebP otimizada):** ~150 KB (estimativa)
--   **Total por Exercício: ~1050 KB** (Aproximadamente **1.05 MB**)
-
-O cálculo de ~95 exercícios representa o **pior cenário**, onde todos os exercícios possuem 2 imagens e 1 vídeo. Como a expectativa é que a maioria dos exercícios tenha apenas o vídeo (~750 KB), **é razoável e seguro manter a estimativa de que a quota de 100 MB permitirá ao PT armazenar, em média, cerca de 100 exercícios personalizados.**
-
-## 4. Fluxo de Upload Detalhado
+ 
+-   Em vez de uma quota de armazenamento em MB, o controle é feito pela **quantidade de exercícios personalizados** que um Personal Trainer (PT) pode criar.
+-   O limite padrão para um novo PT é de **100 exercícios personalizados**.
+-   Este limite é definido pelo plano de assinatura do PT e controlado pela coluna `limite_exercicios` na tabela `personal_trainers`.
+ 
+## 3. Fluxo de Upload Detalhado
 
 ### 4.1. Imagens (JPG, PNG)
 
@@ -70,7 +60,7 @@ O objetivo é transformar um vídeo grande de celular em um arquivo de vídeo le
 4.  **Feedback Final (Opcional, mas recomendado):**
     -   Após o processamento, o backend pode usar a **`Push API`** para enviar uma notificação ao PT, confirmando que o exercício está pronto.
 
-## 5. Tecnologias e APIs Envolvidas
+## 4. Tecnologias e APIs Envolvidas
 
 -   **`<canvas> API`:** Para pré-redimensionamento rápido de imagens no cliente.
 -   **Network Information API:** Para detectar a qualidade da rede do usuário.
@@ -78,61 +68,24 @@ O objetivo é transformar um vídeo grande de celular em um arquivo de vídeo le
 -   **Background Sync API:** Para agendar tarefas para serem executadas quando houver boa conexão.
 -   **Service Worker:** O motor que executa tarefas em segundo plano (uploads, etc.).
 -   **Push API:** Para enviar notificações de volta para o usuário.
-
 ---
 
-## 6. Controle de Quota de Armazenamento (100 MB por PT)
+## 5. Implementação do Controle de Limite
 
-Para gerenciar a quota de 100 MB de cada PT de forma eficiente e precisa, usaremos uma abordagem híbrida de "Extrato + Saldo" no banco de dados.
+A abordagem de limitar pela quantidade de exercícios simplifica drasticamente a implementação.
 
-### 6.1. A Tabela de Controle (O "Extrato")
+### 5.1. Fluxo de Validação
 
-Criaremos uma nova tabela `pt_media_assets` para registrar cada arquivo individualmente.
+1.  **Frontend (Validação de UI):**
+    -   Antes de permitir que o PT acesse as páginas "Novo Exercício" ou "Copiar Exercício", a aplicação verifica a contagem atual de exercícios personalizados do PT contra o valor da coluna `limite_exercicios` (obtida do perfil do PT).
+    -   Se o limite for atingido, os botões de criação são desabilitados e uma mensagem informativa é exibida.
 
-```sql
--- Estrutura da tabela pt_media_assets
-CREATE TABLE pt_media_assets (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  pt_id UUID REFERENCES personal_trainers(id) ON DELETE CASCADE,
-  exercicio_id UUID REFERENCES exercicios(id) ON DELETE SET NULL,
-  file_path TEXT NOT NULL, -- Caminho do arquivo no Cloudflare R2
-  file_size_bytes BIGINT NOT NULL, -- Tamanho do arquivo em bytes
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-```
+2.  **Backend (Validação de Segurança):**
+    -   A função serverless responsável por criar um novo exercício (`INSERT INTO exercicios`) realiza uma verificação final e autoritativa no banco de dados.
+    -   Ela executa um `SELECT COUNT(*)` na tabela `exercicios` para o `pt_id` em questão antes de confirmar a inserção. Isso previne qualquer tentativa de burlar a validação do frontend.
 
-### 6.2. A Coluna de Controle (O "Saldo")
+### 5.2. Vantagens da Abordagem
 
-Adicionaremos uma coluna na tabela `personal_trainers` para ter um acesso rápido ao uso total.
-
-```sql
--- Adicionar coluna na tabela de PTs
-ALTER TABLE personal_trainers
-ADD COLUMN storage_used_bytes BIGINT DEFAULT 0;
-```
-
-### 6.3. Fluxo de Funcionamento na Prática
-
-#### Ao Fazer Upload de um Novo Arquivo
-
-1.  Após a otimização, obtemos o tamanho final do arquivo em bytes.
-2.  Lemos o valor `storage_used_bytes` atual do PT.
-3.  Verificamos se `storage_used_bytes + novo_tamanho <= 104857600` (100MB).
-4.  **Se houver espaço**, executamos uma transação no banco:
-    a.  `UPDATE personal_trainers SET storage_used_bytes = storage_used_bytes + novo_tamanho WHERE id = pt_id`.
-    b.  `INSERT` do novo arquivo na tabela `pt_media_assets`.
-5.  **Se não houver espaço**, retornamos um erro ao usuário.
-
-#### Ao Deletar um Arquivo
-
-1.  A partir do `file_path` ou `exercicio_id`, encontramos o registro em `pt_media_assets` para obter o `file_size_bytes`.
-2.  Executamos uma transação no banco:
-    a.  `UPDATE personal_trainers SET storage_used_bytes = storage_used_bytes - tamanho_do_arquivo WHERE id = pt_id`.
-    b.  `DELETE` do registro na tabela `pt_media_assets`.
-3.  Finalmente, deletamos o arquivo do Cloudflare R2.
-
-### 6.4. Vantagens da Abordagem
-
--   **Performance:** A verificação da quota é instantânea, lendo apenas um campo.
--   **Precisão:** Cada byte é contabilizado em um registro detalhado.
--   **Robustez:** O sistema é resiliente e fácil de auditar ou recalcular em caso de inconsistências.
+-   **Simplicidade:** Elimina a necessidade de tabelas de controle (`pt_media_assets`) e transações complexas para gerenciar bytes. A lógica se resume a uma consulta `COUNT`.
+-   **Melhor UX:** Para o usuário, "Você usou 35 de 100 exercícios" é muito mais claro e tangível do que "Você usou 34.7 MB de 100 MB".
+-   **Alinhamento com o Modelo de Negócio:** A quantidade de exercícios é uma métrica de valor mais direta para os planos de assinatura.

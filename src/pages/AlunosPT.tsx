@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { UserPlus, Users, Plus, Mail, MailCheck, Trash2, Send, ChevronDown, ChevronRight } from "lucide-react";
 import { useAlunos } from "@/hooks/useAlunos";
-import { usePTProfile } from "@/hooks/usePTProfile";
 import { useAuth } from "@/hooks/useAuth";
 import { AlunoCard } from "@/components/alunos/AlunoCard";
 import { FiltrosAlunos } from "@/components/alunos/FiltrosAlunos";
@@ -26,8 +25,7 @@ const AlunosPT = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { profile } = usePTProfile();
-  const { alunos, loading, filtros, setFiltros, desvincularAluno, totalAlunos } = useAlunos();
+  const { alunos, loading, filtros, setFiltros, desvincularAluno } = useAlunos();
   const [convitesPendentes, setConvitesPendentes] = useState<ConvitePendente[]>([]);
   const [convitesCollapsed, setConvitesCollapsed] = useState(true);
 
@@ -85,18 +83,6 @@ const AlunosPT = () => {
   }, [carregarConvitesPendentes]);
 
   const handleConvidarAluno = () => {
-    if (!profile) return;
-
-    // Verificar limite do plano
-    if (totalAlunos >= profile.limite_alunos) {
-      toast({
-        title: "Limite atingido",
-        description: `Você atingiu o limite de ${profile.limite_alunos} alunos do seu plano atual. Faça upgrade para adicionar mais alunos.`,
-        variant: "destructive",
-      });
-      return;
-    }
-
     navigate("/convite-aluno");
   };
 
@@ -290,12 +276,6 @@ const AlunosPT = () => {
           {/* Estatísticas */}
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span>{alunos.length} aluno(s) encontrado(s)</span>
-            {profile && (
-              <span>•</span>
-            )}
-            {profile && (
-              <span>{totalAlunos}/{profile.limite_alunos} alunos do plano</span>
-            )}
           </div>
 
           {/* Lista de alunos */}

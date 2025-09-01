@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -10,13 +11,30 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LogOut, User, Settings } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { usePTProfile } from "@/hooks/usePTProfile";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
+
+type PTProfile = Tables<'personal_trainers'>;
 
 const PTMobileHeader = () => {
   const { user, signOut } = useAuth();
-  const { profile } = usePTProfile();
   const location = useLocation();
   const navigate = useNavigate();
+  const [profile, setProfile] = useState<PTProfile | null>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      try {
+        const { data, error } = await supabase.from('personal_trainers').select('*').eq('id', user.id).single();
+        if (error) throw error;
+        setProfile(data);
+      } catch (error) {
+        console.error("Erro ao buscar perfil do PT no header mobile:", error);
+      }
+    };
+    if (user) fetchProfile();
+  }, [user]);
 
   const getPageTitle = (): React.ReactNode => {
     switch (location.pathname) {
@@ -55,7 +73,7 @@ const PTMobileHeader = () => {
       return <AvatarImage src={profile.avatar_image_url} />;
     }
     
-    const letter = profile?.avatar_letter || profile?.nome_completo?.charAt(0) || 'PT';
+    const letter = profile?.avatar_letter || profile?.nome_completo?.charAt(0) || user?.user_metadata?.full_name?.charAt(0) || 'P';
     const color = profile?.avatar_color || '#3B82F6';
     
     return (

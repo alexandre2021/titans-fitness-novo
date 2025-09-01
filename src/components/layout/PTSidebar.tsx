@@ -1,9 +1,11 @@
+import { useState, useEffect } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Home, Users, Dumbbell, LogOut, User, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
-import { usePTProfile } from "@/hooks/usePTProfile";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,11 +14,36 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+type PTProfile = Tables<'personal_trainers'>;
+
 const PTSidebar = () => {
   const { user, signOut } = useAuth();
-  const { profile } = usePTProfile();
   const location = useLocation();
   const navigate = useNavigate();
+
+  const [profile, setProfile] = useState<PTProfile | null>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      try {
+        const { data, error } = await supabase
+          .from('personal_trainers')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (error) throw error;
+        setProfile(data);
+      } catch (error) {
+        console.error("Erro ao buscar perfil do PT na sidebar:", error);
+      }
+    };
+
+    if (user) {
+      fetchProfile();
+    }
+  }, [user]);
 
   const navigationItems = [
     {
@@ -48,7 +75,7 @@ const PTSidebar = () => {
       return <AvatarImage src={profile.avatar_image_url} />;
     }
     
-    const letter = profile?.avatar_letter || profile?.nome_completo?.charAt(0) || 'PT';
+    const letter = profile?.avatar_letter || profile?.nome_completo?.charAt(0) || user?.user_metadata?.full_name?.charAt(0) || 'P';
     const color = profile?.avatar_color || '#3B82F6';
     
     return (
@@ -99,7 +126,7 @@ const PTSidebar = () => {
               </Avatar>
               <div className="flex flex-col items-start text-sm">
                 <span className="font-medium">
-                  {profile?.nome_completo || 'Personal Trainer'}
+                  {profile?.nome_completo || user?.user_metadata?.full_name || 'Personal Trainer'}
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {user?.email}

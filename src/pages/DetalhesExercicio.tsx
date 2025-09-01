@@ -17,6 +17,7 @@ const DetalhesExercicio = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const [loading, setLoading] = useState(true);
   const [exercicio, setExercicio] = useState<Exercicio | null>(null);
@@ -29,10 +30,6 @@ const DetalhesExercicio = () => {
     video?: string;
   }>({});
   const [loadingImages, setLoadingImages] = useState(false);
-
-  // Usuário real via contexto
-  const { user } = useAuth();
-  const profile = { limite_exercicios: 10 };
 
   // ✅ NOVA FUNÇÃO: Obter URL para exercícios PERSONALIZADOS (Cloudflare)
   const getSignedImageUrlPersonalizado = useCallback(async (filename: string): Promise<string> => {
@@ -176,7 +173,7 @@ const DetalhesExercicio = () => {
   // Carregar exercício
   useEffect(() => {
     const fetchExercicio = async () => {
-      if (!id) {
+      if (!id || !user) {
         navigate('/exercicios-pt');
         return;
       }
@@ -234,41 +231,10 @@ const DetalhesExercicio = () => {
   }, [id, user, navigate, toast, loadSignedUrls]);
 
   const handleCriarCopia = () => {
-    if (!exercicio || !profile) return;
-
-    // Verificar limite do plano (só para exercícios padrão)
-    if (exercicio.tipo === 'padrao') {
-      // Buscar quantos exercícios personalizados o PT já tem
-      const checkLimitAndNavigate = async () => {
-        try {
-          const { data, error } = await supabase
-            .from('exercicios')
-            .select('id')
-            .eq('pt_id', user?.id)
-            .eq('tipo', 'personalizado')
-            .eq('is_ativo', true);
-
-          if (error) throw error;
-
-          const totalPersonalizados = data?.length || 0;
-
-          if (totalPersonalizados >= profile.limite_exercicios) {
-            toast({
-              title: "Limite atingido",
-              description: `Você atingiu o limite de ${profile.limite_exercicios} exercícios personalizados do seu plano atual.`,
-              variant: "destructive",
-            });
-            return;
-          }
-
-          navigate(`/exercicios-pt/copia/${exercicio.id}`);
-        } catch (error) {
-          console.error('❌ Erro ao verificar limite:', error);
-        }
-      };
-
-      checkLimitAndNavigate();
-    }
+    if (!exercicio) return;
+    // A verificação de limite agora é feita na página principal de exercícios.
+    // Aqui, apenas navegamos para a página de cópia.
+    navigate(`/exercicios-pt/copia/${exercicio.id}`);
   };
 
   const handleEditar = () => {

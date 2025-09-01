@@ -939,7 +939,7 @@ export type Database = {
       }
     }
     Enums: {
-      plano_tipo: "gratuito" | "basico" | "premium" | "profissional"
+      plano_tipo: "gratuito"
     }
     CompositeTypes: {
       http_header: {
@@ -1083,7 +1083,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      plano_tipo: ["gratuito", "basico", "premium", "profissional"],
+      plano_tipo: ["gratuito"],
     },
   },
 } as const

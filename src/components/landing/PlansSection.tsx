@@ -5,45 +5,18 @@ import { Check, Star } from "lucide-react";
 const PlansSection = () => {
   const plans = [
     {
-      name: "Gratuito",
+      name: "Plano Gratuito",
       price: "R$ 0",
-      period: "/mês",
-      description: "Perfeito para começar",
-      features: [
-        "Até 5 alunos",
-        "Até 50 exercícios personalizados",
-        "Suporte por email"
-      ],
-      isPopular: false,
-      ctaText: "Começar Grátis"
-    },
-    {
-      name: "Essencial",
-      price: "R$ 49",
-      period: "/mês",
-      description: "Para Personal Trainers estabelecidos",
-      features: [
-        "Até 50 alunos",
-        "Até 500 exercícios personalizados",
-        "IA para criação de treinos",
-        "Suporte prioritário"
-      ],
-      isPopular: true,
-      ctaText: "Começar Teste Grátis"
-    },
-    {
-      name: "Pró",
-      price: "R$ 129",
-      period: "/mês",
-      description: "Para estúdios e academias",
+      period: "para sempre",
+      description: "Todas as funcionalidades essenciais, sem custo.",
       features: [
         "Alunos ilimitados",
-        "Exercícios personalizados ilimitados",
-        "IA para criação de treinos",
-        "Suporte prioritário"
+        "Até 100 exercícios personalizados",
+        "Acesso ao app do aluno",
+        "Suporte por email"
       ],
-      isPopular: false,
-      ctaText: "Falar com Vendas"
+      isPopular: true,
+      ctaText: "Começar Gratuitamente"
     }
   ];
 
@@ -52,29 +25,24 @@ const PlansSection = () => {
       <div className="container mx-auto px-6">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold text-text-primary mb-4">
-            Planos que crescem com você
+            Um plano simples e gratuito
           </h2>
           <p className="text-xl text-text-secondary max-w-3xl mx-auto">
-            Escolha o plano ideal para o seu momento profissional. 
-            Todos incluem teste gratuito de 14 dias, sem compromisso.
+            Oferecemos um plano gratuito e generoso para que você possa gerenciar
+            seus alunos e treinos sem preocupações.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <div className="flex justify-center">
           {plans.map((plan, index) => (
             <Card 
               key={index} 
-              className={`relative border-border ${
-                plan.isPopular 
-                  ? 'border-primary border-2 shadow-lg scale-105' 
-                  : ''
-              }`}
+              className="relative border-primary border-2 shadow-lg max-w-sm"
             >
               {plan.isPopular && (
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-semibold flex items-center">
-                    <Star className="w-4 h-4 mr-1" />
-                    Mais Popular
+                  <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-semibold">
+                    Nosso Compromisso
                   </div>
                 </div>
               )}
@@ -110,15 +78,6 @@ const PlansSection = () => {
               </CardContent>
             </Card>
           ))}
-        </div>
-        
-        <div className="text-center mt-12">
-          <p className="text-text-secondary mb-4">
-            Precisa de algo personalizado? Fale conosco!
-          </p>
-          <Button variant="outline" className="border-text-navigation text-text-navigation hover:bg-text-navigation hover:text-white">
-            Contato Comercial
-          </Button>
         </div>
       </div>
     </section>

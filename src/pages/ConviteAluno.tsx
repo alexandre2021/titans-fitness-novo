@@ -19,7 +19,6 @@ import { ArrowLeft, Mail, AlertCircle, CheckCircle, UserX } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { usePTProfile } from "@/hooks/usePTProfile";
 
 const formSchema = z.object({
   email_aluno: z.string().email("Email inválido"),
@@ -51,7 +50,6 @@ const ConviteAluno = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { profile } = usePTProfile();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -127,7 +125,7 @@ const ConviteAluno = () => {
   };
 
   const handleEnviarConvite = async (data: FormData) => {
-    if (!user || !profile) {
+    if (!user) {
       toast({
         title: "Erro",
         description: "Dados do usuário não encontrados.",
@@ -144,7 +142,7 @@ const ConviteAluno = () => {
         body: {
           email_aluno: data.email_aluno,
           personal_trainer_id: user.id,
-          nome_personal: profile.nome_completo,
+          nome_personal: user.user_metadata.full_name,
         }
       });
 
