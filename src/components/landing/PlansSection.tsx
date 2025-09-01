@@ -1,13 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, Star } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const PlansSection = () => {
+  const navigate = useNavigate();
   const plans = [
     {
-      name: "Plano Gratuito",
-      price: "R$ 0",
-      period: "para sempre",
+      name: "Gratuito para sempre",
+      price: "R$ 0,00",
       description: "Todas as funcionalidades essenciais, sem custo.",
       features: [
         "Alunos ilimitados",
@@ -16,7 +17,7 @@ const PlansSection = () => {
         "Suporte por email"
       ],
       isPopular: true,
-      ctaText: "Começar Gratuitamente"
+      ctaText: "Cadastre-se"
     }
   ];
 
@@ -25,7 +26,7 @@ const PlansSection = () => {
       <div className="container mx-auto px-6">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold text-text-primary mb-4">
-            Um plano simples e gratuito
+            Um plano completo e gratuito
           </h2>
           <p className="text-xl text-text-secondary max-w-3xl mx-auto">
             Oferecemos um plano gratuito e generoso para que você possa gerenciar
@@ -51,7 +52,6 @@ const PlansSection = () => {
                 <CardTitle className="text-text-primary text-2xl">{plan.name}</CardTitle>
                 <div className="mt-4">
                   <span className="text-4xl font-bold text-text-primary">{plan.price}</span>
-                  <span className="text-text-secondary">{plan.period}</span>
                 </div>
                 <p className="text-text-secondary mt-2">{plan.description}</p>
               </CardHeader>
@@ -69,9 +69,10 @@ const PlansSection = () => {
                 <Button 
                   className={`w-full ${
                     plan.isPopular 
-                      ? 'bg-primary hover:bg-primary/90 text-primary-foreground' 
+                      ? 'bg-primary hover:bg-primary/80 text-primary-foreground' 
                       : 'bg-secondary hover:bg-secondary/90 text-secondary-foreground'
                   }`}
+                  onClick={() => navigate('/cadastro')}
                 >
                   {plan.ctaText}
                 </Button>

@@ -18,14 +18,14 @@ const HeroSection = () => {
         
         <div className="flex justify-center">
           <Link to="/cadastro">
-            <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 text-lg">
-              Começar Gratuitamente
+            <Button size="lg" className="bg-primary hover:bg-primary/80 text-primary-foreground px-8 py-4 text-lg">
+              Cadastre-se
             </Button>
           </Link>
         </div>
         
         <p className="text-text-secondary mt-6 text-sm">
-          ✓ Grátis para começar • ✓ Sem cartão de crédito • ✓ Configuração em 5 minutos
+          ✓ Gratuito para sempre • ✓ Solução completa • ✓ Configuração em 5 minutos
         </p>
       </div>
     </section>

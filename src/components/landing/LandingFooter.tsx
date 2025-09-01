@@ -34,7 +34,7 @@ const LandingFooter = () => {
             <h3 className="font-semibold mb-4 text-gray-800">Produto</h3>
             <ul className="space-y-2">
               <li><a href="#funcionalidades" className="text-gray-600 hover:text-gray-800 transition-colors">Funcionalidades</a></li>
-              <li><a href="#planos" className="text-gray-600 hover:text-gray-800 transition-colors">Planos</a></li>
+              <li><a href="#planos" className="text-gray-600 hover:text-gray-800 transition-colors">Plano</a></li>
               <li><a href="#" className="text-gray-600 hover:text-gray-800 transition-colors">API</a></li>
               <li><a href="#" className="text-gray-600 hover:text-gray-800 transition-colors">Integrações</a></li>
             </ul>
