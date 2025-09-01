@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { MENSAGENS, SESSAO_STATUS } from '@/constants/exercicio.constants';
 import { supabase } from '@/integrations/supabase/client';
 import { ExercicioData, SerieData, SessaoData } from '@/types/exercicio.types';
+import { useToast } from '@/hooks/use-toast';
 import { exercicioUtils } from '@/utils/exercicio.utils';
 
 // Tipagens para dados do Supabase
@@ -48,14 +49,37 @@ interface ProgressoSupabase {
   observacoes: string | null;
 }
 
+// Interface para tipar a resposta do PDF
+interface PdfResponse {
+  pdf_base64: string;
+}
+
+// Interface expandida para SessaoData com rotina completa
+interface SessaoCompleta extends SessaoData {
+  rotinas: {
+    nome: string;
+    permite_execucao_aluno: boolean;
+    status: string; // ✅ Adicionando status da rotina
+    alunos: {
+      nome_completo: string;
+    } | null;
+  };
+  treinos: {
+    nome: string;
+  } | null;
+}
+
 export const useExercicioExecucao = (
-  sessaoData: SessaoData, 
+  sessaoData: SessaoData | null,
   modoExecucao: 'pt' | 'aluno', 
-  cronometroPausado: boolean = false
+  cronometroPausado: boolean = false,
+  navigate: (path: string) => void
 ) => {
   const [exercicios, setExercicios] = useState<ExercicioData[]>([]);
   const [loading, setLoading] = useState(true);
   const [tempoSessao, setTempoSessao] = useState(0);
+  const [sessaoInvalida, setSessaoInvalida] = useState(false);
+  const { toast } = useToast();
 
   // Carregar tempo salvo da sessão pausada
   useEffect(() => {
@@ -68,26 +92,93 @@ export const useExercicioExecucao = (
 
   // Timer da sessão (só conta se não estiver pausado)
   useEffect(() => {
-    if (cronometroPausado || loading) return;
+    if (cronometroPausado || loading || sessaoInvalida) return;
 
     const interval = setInterval(() => {
       setTempoSessao(prev => prev + 1);
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [cronometroPausado, loading]);
+  }, [cronometroPausado, loading, sessaoInvalida]);
 
   // Carregar exercícios da rotina e progresso salvo
   useEffect(() => {
     let cancelado = false;
-    
-    async function carregarExercicios() {
-      if (!sessaoData?.treino_id) return;
-      
-      try {
-        setLoading(true);
 
-        // Buscar exercícios do treino
+    const validarEcarregarExercicios = async () => {
+      // Helper para centralizar o tratamento de erros e redirecionamento
+      const handleInvalidSession = (title: string, description: string) => {
+        if (cancelado) return;
+        toast({ title, description, variant: "destructive" });
+        setSessaoInvalida(true);
+        if (sessaoData) {
+          const redirectPath = modoExecucao === 'aluno' ? '/minhas-rotinas' : `/alunos-rotinas/${sessaoData.aluno_id}`;
+          navigate(redirectPath);
+        } else {
+          navigate(modoExecucao === 'aluno' ? '/minhas-rotinas' : '/alunos');
+        }
+      };
+
+      if (!sessaoData) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setSessaoInvalida(false);
+
+      try {
+        // ✅ 1. Buscar dados completos da sessão incluindo rotina
+        const { data: sessaoCompleta, error: sessaoError } = await supabase
+          .from('execucoes_sessao')
+          .select(`
+            *,
+            rotinas!inner (
+              nome,
+              permite_execucao_aluno,
+              status,
+              alunos (
+                nome_completo
+              )
+            ),
+            treinos (
+              nome
+            )
+          `)
+          .eq('id', sessaoData.id)
+          .single();
+
+        if (sessaoError || !sessaoCompleta) {
+          console.error('❌ Erro ao buscar dados da sessão:', sessaoError);
+          handleInvalidSession("Sessão não encontrada", "Não foi possível carregar os dados desta sessão.");
+          return;
+        }
+
+        // ✅ Verificação de robustez: Checar se a junção com 'alunos' funcionou
+        if (!sessaoCompleta.rotinas?.alunos || typeof sessaoCompleta.rotinas.alunos.nome_completo !== 'string') {
+          console.error('❌ Falha na junção: não foi possível carregar os dados do aluno para a sessão.', sessaoCompleta);
+          handleInvalidSession("Erro de Dados da Sessão", "O aluno associado a esta sessão não foi encontrado. A sessão pode estar corrompida.");
+          return;
+        }
+
+        const sessaoComRotina = sessaoCompleta as SessaoCompleta;
+
+        // ✅ 2. Validar status da rotina
+        const statusRotina = sessaoComRotina.rotinas?.status;
+        if (statusRotina === 'Cancelada' || statusRotina === 'Bloqueada') {
+          console.log(`🚫 Acesso bloqueado. Status da rotina: ${sessaoComRotina.rotinas?.status}`);
+          handleInvalidSession("Rotina Indisponível", `Esta rotina foi ${statusRotina.toLowerCase()} e não pode mais ser executada.`);
+          return;
+        }
+
+        // ✅ 3. Validar permissão de execução do aluno
+        if (modoExecucao === 'aluno' && !sessaoComRotina.rotinas?.permite_execucao_aluno) {
+          console.log(`🚫 Acesso bloqueado. Aluno não tem permissão para executar esta rotina.`);
+          handleInvalidSession("Execução não permitida", "Você não tem permissão para iniciar esta rotina. Fale com seu Personal Trainer.");
+          return;
+        }
+
+        // ✅ 4. Buscar exercícios da rotina
         const { data: exerciciosData, error } = await supabase
           .from('exercicios_rotina')
           .select(`
@@ -112,7 +203,7 @@ export const useExercicioExecucao = (
               intervalo_apos_serie
             )
           `)
-          .eq('treino_id', sessaoData.treino_id)
+          .eq('treino_id', sessaoCompleta.treino_id) // ✅ Usando sessaoCompleta.treino_id
           .order('ordem');
 
         if (error) throw new Error(`Erro ao carregar exercícios: ${error.message}`);
@@ -181,18 +272,17 @@ export const useExercicioExecucao = (
             
             if (progressoSerie) {
               if (ex.exercicio_2_id) {
-                // Série combinada - usar repeticoes_1/repeticoes_2 para exercícios separados
+                // Série combinada - usar repeticoes_1/repeticoes_2 para exercícios separados.
+                // Não preencher repeticoes_executadas/carga_executada aqui, pois são para séries simples.
                 return {
                   ...serieBase,
-                  repeticoes_executadas: progressoSerie.repeticoes_executadas_1 || 0,
-                  carga_executada: progressoSerie.carga_executada_1 || 0,
                   repeticoes_1: progressoSerie.repeticoes_executadas_1 || 0,
                   carga_1: progressoSerie.carga_executada_1 || 0,
                   repeticoes_2: progressoSerie.repeticoes_executadas_2 || 0,
                   carga_2: progressoSerie.carga_executada_2 || 0,
                   carga_dropset_executada: progressoSerie.carga_dropset || 0,
                   observacoes: progressoSerie.observacoes || '',
-                  executada: Boolean(progressoSerie.repeticoes_executadas_1 || progressoSerie.repeticoes_executadas_2)
+                  executada: progressoSerie.repeticoes_executadas_1 !== null || progressoSerie.repeticoes_executadas_2 !== null
                 };
               } else {
                 // Série simples
@@ -202,7 +292,7 @@ export const useExercicioExecucao = (
                   carga_executada: progressoSerie.carga_executada_1 || 0,
                   carga_dropset_executada: progressoSerie.carga_dropset || 0,
                   observacoes: progressoSerie.observacoes || '',
-                  executada: Boolean(progressoSerie.repeticoes_executadas_1)
+                  executada: progressoSerie.repeticoes_executadas_1 !== null
                 };
               }
             }
@@ -226,16 +316,21 @@ export const useExercicioExecucao = (
         });
 
         if (!cancelado) setExercicios(exerciciosFormatados);
-      } catch (error) {
-        console.error('Erro ao carregar exercícios:', error);
-      } finally {
-        if (!cancelado) setLoading(false);
-      }
-    }
 
-    carregarExercicios();
+      } catch (error) {
+        console.error("Erro ao carregar dados da sessão:", error);
+        toast({ title: "Erro", description: "Não foi possível carregar os dados da sessão.", variant: "destructive" });
+        setSessaoInvalida(true);
+      } finally {
+        if (!cancelado) {
+          setLoading(false);
+        }
+      }
+    };
+
+    validarEcarregarExercicios();
     return () => { cancelado = true; };
-  }, [sessaoData.id, sessaoData.treino_id]);
+  }, [sessaoData, modoExecucao, navigate, toast]);
 
   // Atualizar série executada
   const atualizarSerieExecutada = useCallback((
@@ -248,8 +343,25 @@ export const useExercicioExecucao = (
         return {
           ...ex,
           series: ex.series.map((serie, sIndex) => {
-            if (sIndex === serieIndex) {
-              return { ...serie, ...dadosSerie };
+            if (sIndex === serieIndex) {              
+              const novaSerie = { ...serie, ...dadosSerie };
+
+              // Lógica Definitiva: Uma série é considerada executada se os dados de execução
+              // (repetições ou carga) são passados, mesmo que sejam 0.
+              const isExecuted = dadosSerie.repeticoes_executadas !== undefined || dadosSerie.carga_executada !== undefined ||
+                                 dadosSerie.repeticoes_1 !== undefined || dadosSerie.carga_1 !== undefined ||
+                                 dadosSerie.repeticoes_2 !== undefined || dadosSerie.carga_2 !== undefined;
+
+              if (isExecuted) {
+                novaSerie.executada = true;
+                // ✅ CORREÇÃO: Se for série combinada, popular os campos genéricos
+                // para que as funções de contagem funcionem corretamente.
+                if (ex.exercicio_2_id) {
+                  novaSerie.repeticoes_executadas = dadosSerie.repeticoes_1 ?? novaSerie.repeticoes_1 ?? 0;
+                }
+              }
+
+              return novaSerie;
             }
             return serie;
           })
@@ -261,6 +373,8 @@ export const useExercicioExecucao = (
 
   // Pausar sessão
   const pausarSessao = useCallback(async (): Promise<boolean> => {
+    if (sessaoInvalida || !sessaoData) return false;
+
     try {
       setLoading(true);
       console.log(`⏸️ Pausando sessão - Modo: ${modoExecucao}`);
@@ -305,16 +419,19 @@ export const useExercicioExecucao = (
     } finally {
       setLoading(false);
     }
-  }, [modoExecucao, tempoSessao, exercicios, sessaoData.id]);
+  }, [modoExecucao, tempoSessao, exercicios, sessaoData, sessaoInvalida]);
 
   // Verificar se rotina está completa
-  const verificarRotinaCompleta = useCallback(async (rotinaId: string): Promise<boolean> => {
+  const verificarRotinaCompleta = useCallback(async (
+    rotinaId: string, 
+    sessaoConcluidaId: string
+  ): Promise<boolean> => {
     try {
-      console.log('🔍 Verificando se rotina está completa:', rotinaId);
+      console.log(`🔍 Verificando se rotina ${rotinaId} está completa (ignorando a sessão recém-concluída ${sessaoConcluidaId})`);
       
       const { data: sessoes, error } = await supabase
         .from('execucoes_sessao')
-        .select('status')
+        .select('id, status')
         .eq('rotina_id', rotinaId);
 
       if (error) {
@@ -327,19 +444,22 @@ export const useExercicioExecucao = (
         return false;
       }
 
-      // Contar sessões por status usando strings diretas
+      // Contar sessões pendentes, ignorando a que acabamos de concluir.
       const sessoesPendentes = sessoes.filter(s => 
-        s.status === 'em_aberto' || s.status === 'em_andamento' || s.status === 'pausada'
+        s.id !== sessaoConcluidaId && // Ignora a sessão atual
+        (s.status === 'em_aberto' || 
+         s.status === 'em_andamento' || 
+         s.status === 'pausada')
       );
-      const sessoesCompletas = sessoes.filter(s => s.status === 'concluida');
+      const totalSessoes = sessoes.length;
 
       console.log(`📊 Status das sessões:`, {
-        total: sessoes.length,
-        completas: sessoesCompletas.length,
+        total: totalSessoes,
         pendentes: sessoesPendentes.length,
+        concluidasEstimadas: totalSessoes - sessoesPendentes.length 
       });
 
-      const rotinaCompleta = sessoesPendentes.length === 0 && sessoesCompletas.length > 0;
+      const rotinaCompleta = sessoesPendentes.length === 0 && totalSessoes > 0;
       console.log(rotinaCompleta ? '✅ Rotina COMPLETA!' : '⏳ Rotina ainda em andamento');
       
       return rotinaCompleta;
@@ -375,6 +495,7 @@ export const useExercicioExecucao = (
   // Arquivar rotina completa
   const arquivarRotinaCompleta = useCallback(async (rotinaId: string): Promise<boolean> => {
     try {
+      console.log('🚨 ATENÇÃO: A função arquivarRotinaCompleta foi chamada com o rotinaId:', rotinaId);
       console.log('🗄️ Iniciando processo de arquivamento da rotina...');
       
       // 1. Buscar dados completos da rotina para gerar PDF
@@ -412,48 +533,73 @@ export const useExercicioExecucao = (
         console.error('⚠️ Erro ao buscar rotinas arquivadas, o processo de arquivamento continuará, mas a limpeza pode não ocorrer.', countError);
       }
 
+      // ✅ CORREÇÃO FINAL: Lógica FIFO robusta que deleta todos os excedentes de uma vez
       if (rotinasArquivadas && rotinasArquivadas.length >= 4) {
-        console.log(` FIFO: Limite de ${rotinasArquivadas.length} rotinas atingido. Removendo a mais antiga.`);
-        
-        const maisAntiga = rotinasArquivadas.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
-        
-        console.log(`🗑️ Rotina mais antiga a ser removida: ${maisAntiga.id}, criada em: ${maisAntiga.created_at}`);
+        console.log(`--- INÍCIO LÓGICA FIFO ---`);
+        console.log(`Total de rotinas arquivadas encontradas: ${rotinasArquivadas.length}. Limite é 4.`);
 
-        // Deletar PDF associado
-        if (maisAntiga.pdf_url) {
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                const accessToken = session?.access_token;
-                if (!accessToken) throw new Error("Usuário não autenticado para deletar PDF.");
+        const rotinasOrdenadas = rotinasArquivadas.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        const LIMITE_ROTINAS = 4;
+        
+        // Calcula quantas rotinas precisam ser removidas para ficar com (LIMITE - 1) antes de adicionar a nova.
+        const numeroParaDeletar = rotinasOrdenadas.length - (LIMITE_ROTINAS - 1);
+        
+        if (numeroParaDeletar > 0) {
+          const rotinasParaDeletar = rotinasOrdenadas.slice(0, numeroParaDeletar);
+          console.log(`Calculado que ${numeroParaDeletar} rotina(s) precisam ser deletadas.`);
+          console.log('Rotinas a serem deletadas:', rotinasParaDeletar.map(r => ({ id: r.id, created_at: r.created_at })));
 
-                const deleteResponse = await fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/delete-image', {
+          const idsParaDeletar = rotinasParaDeletar.map(r => r.id);
+          const urlsPdfParaDeletar = rotinasParaDeletar.map(r => r.pdf_url).filter((url): url is string => !!url);
+
+          // 1. Deletar os PDFs associados do Cloudflare
+          if (urlsPdfParaDeletar.length > 0) {
+            console.log(`Deletando ${urlsPdfParaDeletar.length} PDFs do Cloudflare...`);
+            const { data: { session } } = await supabase.auth.getSession();
+            const accessToken = session?.access_token;
+
+            if (accessToken) {
+              const deletePdfPromises = urlsPdfParaDeletar.map(async (pdfUrl) => {
+                const filename = pdfUrl.split('/').pop()?.split('?')[0];
+                if (!filename) {
+                  console.warn(`⚠️ Não foi possível extrair nome do arquivo de: ${pdfUrl}`);
+                  return;
+                }
+                try {
+                  const response = await fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/delete-image', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
-                    body: JSON.stringify({ file_url: maisAntiga.pdf_url, bucket_type: 'rotinas' })
-                });
-
-                if (!deleteResponse.ok) {
-                    const errorText = await deleteResponse.text();
-                    throw new Error(`Falha ao deletar PDF da rotina antiga: ${errorText}`);
+                    body: JSON.stringify({ filename, bucket_type: 'rotinas' })
+                  });
+                  if (!response.ok) {
+                    console.error(`Falha ao deletar PDF ${filename}: ${await response.text()}`);
+                  } else {
+                    console.log(`✅ PDF ${filename} deletado.`);
+                  }
+                } catch (e) {
+                  console.error(`❌ Erro na chamada para deletar PDF ${filename}:`, e);
                 }
-                console.log('✅ PDF da rotina antiga deletado com sucesso:', maisAntiga.pdf_url);
-
-            } catch (pdfError) {
-                console.error('❌ Erro ao deletar PDF da rotina antiga. O registro no banco será removido mesmo assim.', pdfError);
+              });
+              await Promise.allSettled(deletePdfPromises);
+            } else {
+              console.warn('⚠️ Usuário não autenticado, pulando deleção de PDFs.');
             }
-        }
+          }
 
-        // Deletar registro do banco
-        const { error: deleteError } = await supabase
-          .from('rotinas_arquivadas')
-          .delete()
-          .eq('id', maisAntiga.id);
+          // 2. Deletar os registros do banco de dados de uma só vez
+          if (idsParaDeletar.length > 0) {
+            console.log(`Deletando ${idsParaDeletar.length} registros da tabela 'rotinas_arquivadas'...`);
+            const { error: deleteError } = await supabase.from('rotinas_arquivadas').delete().in('id', idsParaDeletar);
 
-        if (deleteError) {
-          console.error('❌ Erro ao deletar o registro da rotina arquivada mais antiga:', deleteError);
-        } else {
-          console.log('✅ Registro da rotina mais antiga deletado do banco de dados.');
+            if (deleteError) {
+              console.error('❌ Erro ao deletar registros do banco:', deleteError);
+              throw new Error("Falha ao limpar rotinas antigas do banco de dados.");
+            } else {
+              console.log('✅ Registros antigos deletados do banco com sucesso.');
+            }
+          }
         }
+        console.log(`--- FIM LÓGICA FIFO ---`);
       }
       // --- FIM DA LÓGICA FIFO ---
 
@@ -479,9 +625,9 @@ export const useExercicioExecucao = (
         return false;
       }
 
-      const dadosParaPDF = {
-        rotina: rotinaCompleta,
-        treinos: rotinaCompleta.treinos || [],
+      // ✅ CORREÇÃO: A função de PDF espera um objeto com a chave "rotina".
+      const payloadParaPDF = {
+        rotina: rotinaCompleta, // `rotinaCompleta` já contém os dados do PT
         execucoes: execucoes || []
       };
 
@@ -491,7 +637,7 @@ export const useExercicioExecucao = (
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`
         },
-        body: JSON.stringify(dadosParaPDF)
+        body: JSON.stringify(payloadParaPDF)
       });
 
       if (!pdfResponse.ok) {
@@ -499,7 +645,7 @@ export const useExercicioExecucao = (
         return false;
       }
 
-      const { pdf_base64 } = await pdfResponse.json();
+      const { pdf_base64 } = (await pdfResponse.json()) as PdfResponse;
       console.log('✅ PDF gerado com sucesso!');
 
       // 4. Upload do PDF para Cloudflare R2
@@ -557,22 +703,15 @@ export const useExercicioExecucao = (
 
       // 7. Deletar rotina e dados relacionados (cascata)
       console.log('🗑️ Removendo rotina da base ativa...');
-      
-      await supabase.from('execucoes_series').delete().in('execucao_sessao_id', 
-        execucoes?.map(e => e.id) || []
-      );
-      
-      await supabase.from('execucoes_sessao').delete().eq('rotina_id', rotinaId);
-      
-      for (const treino of rotinaCompleta.treinos || []) {
-        for (const exercicio of treino.exercicios_rotina || []) {
-          await supabase.from('series').delete().eq('exercicio_id', exercicio.id);
-        }
-        await supabase.from('exercicios_rotina').delete().eq('treino_id', treino.id);
-      }
-      
-      await supabase.from('treinos').delete().eq('rotina_id', rotinaId);
-      await supabase.from('rotinas').delete().eq('id', rotinaId);
+
+      // ✅ MELHORIA: A exclusão em cascata deve ser feita no banco de dados (ON DELETE CASCADE).
+      // Esta única chamada deletará a rotina e todos os seus dados relacionados (treinos, exercícios, séries, sessões, etc.).
+      const { error: deleteError } = await supabase
+        .from('rotinas')
+        .delete()
+        .eq('id', rotinaId);
+
+      if (deleteError) throw new Error(`Falha ao remover a rotina da base ativa: ${deleteError.message}`);
 
       console.log('🎉 Processo de arquivamento concluído com sucesso!');
       return true;
@@ -583,18 +722,18 @@ export const useExercicioExecucao = (
     }
   }, []);
 
-  // Finalizar sessão completa
+  // ✅ CORREÇÃO: Finalizar sessão completa COM arquivamento automático
   const salvarExecucaoCompleta = useCallback(async (): Promise<boolean> => {
+    if (sessaoInvalida || !sessaoData) return false;
+
     try {
       setLoading(true);
       console.log(`💾 Finalizando sessão definitivamente - Modo: ${modoExecucao}`);
       
       const totalSeriesExecutadas = exercicioUtils.contarSeriesExecutadas(exercicios);
-      console.log(`📊 Séries executadas: ${totalSeriesExecutadas}`);
-
-      // Atualizar sessão para concluída
       const tempoTotalMinutos = Math.floor(tempoSessao / 60);
       
+      // 1. Atualizar sessão para concluída
       const { error: updateError } = await supabase
         .from('execucoes_sessao')
         .update({
@@ -605,11 +744,9 @@ export const useExercicioExecucao = (
         })
         .eq('id', sessaoData.id);
 
-      if (updateError) {
-        throw new Error(`Erro ao finalizar sessão: ${updateError.message}`);
-      }
+      if (updateError) throw new Error(`Erro ao finalizar sessão: ${updateError.message}`);
 
-      // Salvar todas as séries
+      // 2. Salvar todas as séries
       const execucoesSeries = exercicioUtils.prepararDadosExecucaoSeries(exercicios, sessaoData.id);
       
       if (execucoesSeries.length > 0) {
@@ -620,55 +757,52 @@ export const useExercicioExecucao = (
             ignoreDuplicates: false
           });
 
-        if (seriesError) {
-          throw new Error(`Erro ao salvar execução das séries: ${seriesError.message}`);
-        }
+        if (seriesError) throw new Error(`Erro ao salvar execução das séries: ${seriesError.message}`);
       }
 
       console.log(`✅ Sessão finalizada com sucesso! Modo: ${modoExecucao} | Séries: ${totalSeriesExecutadas} | Tempo: ${tempoTotalMinutos}min`);
 
-      // Verificar se rotina está completa
-      console.log('🔍 Verificando se a rotina está completa...');
-      const rotinaCompleta = await verificarRotinaCompleta(sessaoData.rotina_id);
-      
+      // 3. ✅ CORREÇÃO: Verificar se a rotina inteira foi concluída e processar arquivamento
+      const rotinaCompleta = await verificarRotinaCompleta(sessaoData.rotina_id, sessaoData.id);
       if (rotinaCompleta) {
-        console.log('🎉 Rotina completa detectada! Iniciando processo de arquivamento...');
+        console.log('🎉 Rotina completa detectada! Iniciando processo completo...');
         
-        // Primeiro atualizar status para Concluída (para o usuário ver)
+        // Atualizar status primeiro
         const statusAtualizado = await atualizarStatusRotina(sessaoData.rotina_id);
-        
         if (statusAtualizado) {
-          console.log('✅ Status atualizado! Iniciando arquivamento completo...');
+          console.log('✅ Status atualizado, iniciando arquivamento...');
           
-          // Arquivar rotina completa (gerar PDF, upload, arquivar e deletar)
-          const arquivada = await arquivarRotinaCompleta(sessaoData.rotina_id);
-          
-          if (arquivada) {
-            console.log('🏆 ROTINA TOTALMENTE CONCLUÍDA E ARQUIVADA!');
-            console.log('📄 PDF gerado e salvo no Cloudflare');
-            console.log('🗄️ Dados históricos preservados');
-            console.log('🗑️ Rotina removida das tabelas ativas');
+          // 🚨 CORREÇÃO PRINCIPAL: Executar arquivamento automático
+          const arquivamentoConcluido = await arquivarRotinaCompleta(sessaoData.rotina_id);
+          if (arquivamentoConcluido) {
+            console.log('🎉 Rotina arquivada automaticamente com sucesso!');
           } else {
-            console.log('⚠️ Rotina marcada como concluída, mas houve erro no arquivamento automático.');
+            console.error('❌ Falha no arquivamento automático da rotina');
+            // Não falha a finalização da sessão por causa do arquivamento
           }
         } else {
-          console.log('⚠️ Rotina está completa, mas houve erro ao atualizar status.');
+          console.error('❌ Falha ao atualizar status da rotina');
         }
-      } else {
-        console.log('⏳ Rotina ainda em andamento, continuando normalmente...');
       }
 
-      return true;
+      return true; // Retorna sucesso
+
     } catch (error) {
       console.error('❌ Erro ao finalizar sessão:', error);
-      return false;
+      toast({
+        title: "Erro ao Finalizar",
+        description: "Não foi possível salvar a sessão. Tente novamente.",
+        variant: "destructive"
+      });
+      return false; // Retorna falha
     } finally {
       setLoading(false);
     }
-  }, [exercicios, sessaoData, tempoSessao, modoExecucao, verificarRotinaCompleta, atualizarStatusRotina, arquivarRotinaCompleta]);
+  }, [exercicios, sessaoData, tempoSessao, modoExecucao, verificarRotinaCompleta, atualizarStatusRotina, arquivarRotinaCompleta, sessaoInvalida, toast]);
 
   return {
     exercicios,
+    sessaoData, // Retorna os dados da sessão para o componente usar
     loading,
     tempoSessao,
     atualizarSerieExecutada,

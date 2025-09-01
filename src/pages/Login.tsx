@@ -35,7 +35,11 @@ const Login = () => {
       });
 
       if (error) {
-        toast.error(`Erro no login: ${error.message}`);
+        let errorMessage = `Erro no login: ${error.message}`;
+        if (error.message === "Email not confirmed") {
+          errorMessage = "Email não confirmado. Por favor, verifique sua caixa de entrada.";
+        }
+        toast.error(errorMessage);
         setIsLoading(false);
         return;
       }
@@ -99,7 +103,7 @@ const Login = () => {
           </CardHeader>
           
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-text-primary">
                   Email

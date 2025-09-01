@@ -40,13 +40,15 @@ const CORES_GRUPOS_MUSCULARES = {
 const STATUS_ROTINA = [
   'Ativa',                 // Nasce ativa e está liberada para execução
   'Bloqueada',            // Aluno atrasou pagamento, acesso suspenso
-  'Concluída'             // Finalizada (todas as sessões executadas)
+  'Concluída',             // Finalizada (todas as sessões executadas)
+  'Cancelada'              // Cancelada devido à exclusão do PT ou outra ação administrativa
 ];
 
 const CORES_STATUS_ROTINA = {
   'Ativa': 'bg-green-100 text-green-800',  
   'Bloqueada': 'bg-red-100 text-red-800',
-  'Concluída': 'bg-gray-100 text-gray-800'
+  'Concluída': 'bg-gray-100 text-gray-800',
+  'Cancelada': 'bg-orange-100 text-orange-800'
 };
 ```
 
@@ -57,15 +59,17 @@ const CORES_STATUS_ROTINA = {
 const STATUS_SESSAO = [
   'em_aberto',  // Sessão criada, aguardando execução
   'em_andamento',  // Execução iniciada
-  'pausada',       // Pausada temporariamente durante execução
-  'concluida'      // Finalizada
+  'pausada',       // Pausada temporariamente durante a execução
+  'concluida',     // Finalizada com sucesso pelo aluno/PT
+  'cancelada'      // Cancelada devido à exclusão do PT ou outra ação administrativa
 ];
 
 const CORES_STATUS_SESSAO = {
   'em_aberto': 'bg-blue-100 text-blue-800',
   'em_andamento': 'bg-green-100 text-green-800',
   'pausada': 'bg-yellow-100 text-yellow-800',
-  'concluida': 'bg-gray-100 text-gray-800'
+  'concluida': 'bg-gray-100 text-gray-800',
+  'cancelada': 'bg-orange-100 text-orange-800'
 };
 ```
 

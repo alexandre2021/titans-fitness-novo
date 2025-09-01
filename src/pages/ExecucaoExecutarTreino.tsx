@@ -84,53 +84,71 @@ export default function ExecucaoExecutarTreino() {
   }, [sessaoData]);
 
   // ✅ FUNÇÃO PARA DETERMINAR MODO
-  const determinarModoExecucao = useCallback(async (userId: string, sessao: SessaoData): Promise<'pt' | 'aluno'> => {
+  const determinarModoExecucao = useCallback(async (userId: string, sessao: SessaoData): Promise<'pt' | 'aluno' | null> => {
     try {
-      // Verificar se é Personal Trainer
-      const { data: ptData, error: ptError } = await supabase
-        .from('personal_trainers')
-        .select('id, nome_completo')
+      // 1. Descobrir o tipo de usuário a partir da tabela de perfis
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('user_type')
         .eq('id', userId)
         .single();
 
-      if (!ptError && ptData) {
-        // É Personal Trainer
+      if (profileError || !profile) {
+        throw new Error('Perfil de usuário não encontrado.');
+      }
+
+      const { user_type } = profile;
+
+      // 2. Agir com base no tipo de usuário
+      if (user_type === 'personal_trainer') {
+        const { data: ptData, error: ptError } = await supabase
+          .from('personal_trainers')
+          .select('id, nome_completo')
+          .eq('id', userId)
+          .single();
+
+        if (ptError || !ptData) {
+          throw new Error('Dados do Personal Trainer não encontrados.');
+        }
+        
         setUserProfile({
           user_type: 'personal_trainer',
           id: ptData.id,
           nome_completo: ptData.nome_completo
         });
         return 'pt';
-      }
-
-      // Verificar se é Aluno
-      const { data: alunoData, error: alunoError } = await supabase
-        .from('alunos')
-        .select('id, nome_completo')
-        .eq('id', userId)
-        .single();
-
-      if (!alunoError && alunoData) {
-        // É Aluno - verificar se pode executar
-        if (!sessao.rotinas?.permite_execucao_aluno) {
+      } 
+      
+      else if (user_type === 'aluno') {
+        // Validações para o aluno
+        if (userId !== sessao.aluno_id) {
           toast({
             variant: "destructive",
             title: "Acesso Negado",
-            description: "Esta rotina não permite execução independente pelo aluno. Procure seu Personal Trainer.",
+            description: "Você não tem permissão para executar a sessão de outro aluno.",
           });
           navigate(-1);
-          return 'aluno';
+          return null; // Retorna null para indicar falha na validação
         }
 
-        // Verificar se é o aluno correto
-        if (alunoData.id !== sessao.aluno_id) {
+        if (!sessao.rotinas?.permite_execucao_aluno) {
           toast({
             variant: "destructive",
-            title: "Erro",
-            description: "Você não tem permissão para executar esta sessão",
+            title: "Execução não Permitida",
+            description: "Esta rotina não permite execução independente. Fale com seu Personal Trainer.",
           });
           navigate(-1);
-          return 'aluno';
+          return null;
+        }
+
+        const { data: alunoData, error: alunoError } = await supabase
+          .from('alunos')
+          .select('id, nome_completo')
+          .eq('id', userId)
+          .single();
+
+        if (alunoError || !alunoData) {
+          throw new Error('Dados do Aluno não encontrados.');
         }
 
         setUserProfile({
@@ -139,26 +157,23 @@ export default function ExecucaoExecutarTreino() {
           nome_completo: alunoData.nome_completo
         });
         return 'aluno';
+      } 
+      
+      else {
+        // Caso para 'admin' ou outro tipo não esperado
+        throw new Error(`Tipo de usuário '${user_type}' não autorizado para executar treinos.`);
       }
 
-      // Não é nem PT nem Aluno
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Tipo de usuário não identificado",
-      });
-      navigate(-1);
-      return 'aluno';
-
     } catch (error) {
-      console.error('Erro ao determinar modo de execução:', error);
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      console.error('Erro ao determinar modo de execução:', errorMessage);
       toast({
         variant: "destructive",
-        title: "Erro",
-        description: "Erro ao verificar permissões",
+        title: "Erro de Permissão",
+        description: errorMessage,
       });
       navigate(-1);
-      return 'aluno';
+      return null; // Retorna null em caso de erro
     }
   }, [navigate, toast]);
 

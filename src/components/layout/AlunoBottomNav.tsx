@@ -9,8 +9,8 @@ const AlunoBottomNav = () => {
       icon: Home,
     },
     {
-      title: "Treinos",
-      href: "/treinos-aluno",
+      title: "Rotinas",
+      href: "/minhas-rotinas",
       icon: Dumbbell,
     },
     {

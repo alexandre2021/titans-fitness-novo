@@ -490,7 +490,7 @@ const IndexPT = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => cancelarConvite(convite.id, convite.email_convidado)}
+                        onClick={() => { void cancelarConvite(convite.id, convite.email_convidado); }}
                         className="text-muted-foreground hover:text-destructive"
                       >
                         <Trash2 className="h-4 w-4" />

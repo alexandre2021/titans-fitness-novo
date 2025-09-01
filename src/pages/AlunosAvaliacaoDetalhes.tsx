@@ -333,7 +333,7 @@ const AlunosAvaliacaoDetalhes = () => {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold md:text-3xl">Avaliação de {formatters.date(avaliacao.data_avaliacao)}</h1>
+          <h1 className="text-2xl font-bold md:text-3xl">Avaliação de {avaliacao.data_avaliacao.split('-').reverse().join('/')}</h1>
           <p className="text-muted-foreground">Detalhes completos da avaliação física</p>
         </div>
       </div>
@@ -353,9 +353,7 @@ const AlunosAvaliacaoDetalhes = () => {
             </div>
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">
-                {formatters.date(avaliacao.data_avaliacao)}
-              </span>
+              <span className="text-sm text-muted-foreground">{avaliacao.data_avaliacao.split('-').reverse().join('/')}</span>
             </div>
           </div>
         </CardHeader>
@@ -423,7 +421,7 @@ const AlunosAvaliacaoDetalhes = () => {
             </div>
             <div className="text-center">
               <p className="text-sm text-muted-foreground">Data</p>
-              <p className="text-lg font-semibold">{formatters.date(avaliacao.data_avaliacao)}</p>
+              <p className="text-lg font-semibold">{avaliacao.data_avaliacao.split('-').reverse().join('/')}</p>
             </div>
           </div>
         </CardContent>

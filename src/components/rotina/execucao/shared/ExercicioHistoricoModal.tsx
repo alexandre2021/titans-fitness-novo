@@ -303,16 +303,7 @@ export const ExercicioHistoricoModal = ({
   return (
     <Dialog open={visible} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader className="relative">
-          {/* ✅ Botão X para fechar - Desktop (padronizado) */}
-          <button
-            onClick={onClose}
-            className="absolute right-6 top-4 p-1 hover:bg-gray-100 rounded-full transition-colors"
-            aria-label="Fechar"
-          >
-            <X className="h-5 w-5 text-gray-500" />
-          </button>
-          
+        <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <BarChart3 className="h-5 w-5 text-primary" />
             <span>Histórico de Execuções</span>

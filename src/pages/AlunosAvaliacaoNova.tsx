@@ -78,7 +78,6 @@ const AlunosAvaliacaoNova = () => {
   
   // Estados principais
   const [aluno, setAluno] = useState<AlunoInfo | null>(null);
-  const [avaliacoes, setAvaliacoes] = useState<AvaliacaoFisica[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -100,11 +99,6 @@ const AlunosAvaliacaoNova = () => {
     localStorage.removeItem('novaAvaliacaoImagens');
     navigate(`/alunos-avaliacoes/${id}`);
   };
-  
-  // Estados do aviso de intervalo
-  const [showIntervalWarning, setShowIntervalWarning] = useState(false);
-  const [intervalDays, setIntervalDays] = useState(0);
-  const [pendingFormData, setPendingFormData] = useState<NovaAvaliacaoForm | null>(null);
   
   // Estados das imagens
   const [imageFiles, setImageFiles] = useState<{
@@ -155,50 +149,46 @@ const AlunosAvaliacaoNova = () => {
   const deletarImagensDaAvaliacao = async (avaliacao: AvaliacaoFisica) => {
     const { data: { session } } = await supabase.auth.getSession();
     const accessToken = session?.access_token;
-    
-    const promises = [];
-    if (avaliacao.foto_frente_url) {
-      promises.push(fetch(DELETE_IMAGE_ENDPOINT, {
+
+    const urlsParaDeletar = [
+      avaliacao.foto_frente_url,
+      avaliacao.foto_lado_url,
+      avaliacao.foto_costas_url,
+    ].filter(Boolean) as string[];
+
+    if (urlsParaDeletar.length === 0) {
+      console.log(`ℹ️ Nenhuma imagem para deletar na avaliação antiga ${avaliacao.id}.`);
+      return;
+    }
+
+    console.log(`🗑️ Tentando deletar ${urlsParaDeletar.length} imagens da avaliação ${avaliacao.id}:`, urlsParaDeletar);
+
+    const promises = urlsParaDeletar.map(filename => {
+      if (!filename) return Promise.resolve();
+
+      // ✅ CORREÇÃO: A chave no body foi alterada de 'file_url' para 'filename'.
+      return fetch(DELETE_IMAGE_ENDPOINT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`
         },
         body: JSON.stringify({
-          file_url: avaliacao.foto_frente_url,
+          filename: filename,
           bucket_type: 'avaliacoes'
         })
-      }));
-    }
-    if (avaliacao.foto_lado_url) {
-      promises.push(fetch(DELETE_IMAGE_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        },
-        body: JSON.stringify({
-          file_url: avaliacao.foto_lado_url,
-          bucket_type: 'avaliacoes'
-        })
-      }));
-    }
-    if (avaliacao.foto_costas_url) {
-      promises.push(fetch(DELETE_IMAGE_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        },
-        body: JSON.stringify({
-          file_url: avaliacao.foto_costas_url,
-          bucket_type: 'avaliacoes'
-        })
-      }));
-    }
+      });
+    });
     
     try {
-      await Promise.allSettled(promises);
+      const results = await Promise.allSettled(promises);
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          console.log(`✅ Imagem ${urlsParaDeletar[index]} deletada com sucesso.`);
+        } else {
+          console.error(`❌ Falha ao deletar imagem ${urlsParaDeletar[index]}:`, result.reason);
+        }
+      });
     } catch (err) {
       console.error("Erro geral ao deletar imagens:", err);
     }
@@ -230,19 +220,6 @@ const AlunosAvaliacaoNova = () => {
         }
 
         setAluno(alunoData);
-
-        // Buscar avaliações físicas para verificar intervalo
-        const { data: avaliacoesData, error: avaliacoesError } = await supabase
-          .from('avaliacoes_fisicas')
-          .select('*')
-          .eq('aluno_id', id)
-          .order('created_at', { ascending: false });
-
-        if (avaliacoesError) {
-          console.error('Erro ao buscar avaliações:', avaliacoesError);
-        } else {
-          setAvaliacoes(avaliacoesData || []);
-        }
 
       } catch (error) {
         console.error('Erro ao buscar dados:', error);
@@ -281,47 +258,43 @@ const AlunosAvaliacaoNova = () => {
     return peso / (alturaM * alturaM);
   };
 
-  const checkIntervalAndSave = async (data: NovaAvaliacaoForm) => {
-    if (avaliacoes.length > 0) {
-      const ultimaAvaliacao = new Date(avaliacoes[0].data_avaliacao);
-      const hoje = new Date();
-      const diffTime = Math.abs(hoje.getTime() - ultimaAvaliacao.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      if (diffDays < 30) {
-        setIntervalDays(diffDays);
-        setPendingFormData(data);
-        setShowIntervalWarning(true);
-        return;
-      }
-    }
-
-    await salvarAvaliacao(data);
-  };
-
   const salvarAvaliacao = async (data: NovaAvaliacaoForm) => {
     setSaving(true);
     try {
       const imc = calcularIMC(data.peso, data.altura);
       const hoje = new Date().toISOString().split('T')[0];
 
-      // Se já temos 4 avaliações, remover a mais antiga (incluindo imagens)
-      if (avaliacoes.length >= 4) {
-        // Buscar avaliações ordenadas por created_at ASC (mais antiga primeiro) para FIFO correto
-        const { data: avaliacoesParaFifo } = await supabase
-          .from('avaliacoes_fisicas')
-          .select('*')
-          .eq('aluno_id', id)
-          .order('created_at', { ascending: true });
+      // Lógica FIFO Robusta: buscar avaliações e remover o excedente para manter o limite de 4.
+      const { data: avaliacoesAtuais, error: fetchError } = await supabase
+        .from('avaliacoes_fisicas')
+        .select('*')
+        .eq('aluno_id', id)
+        .order('created_at', { ascending: true }); // Mais antigas primeiro
 
-        if (avaliacoesParaFifo && avaliacoesParaFifo.length >= 4) {
-          const maisAntiga = avaliacoesParaFifo[0]; // Primeira = mais antiga
-          console.log('🗑️ Deletando avaliação mais antiga:', maisAntiga.id);
-          await deletarImagensDaAvaliacao(maisAntiga);
-          await supabase
-            .from('avaliacoes_fisicas')
-            .delete()
-            .eq('id', maisAntiga.id);
+      if (fetchError) throw fetchError;
+
+      if (avaliacoesAtuais && avaliacoesAtuais.length >= 4) {
+        const LIMITE_AVALIACOES = 4;
+        // Calcula quantas avaliações precisam ser removidas para, após adicionar a nova, o total ser 4.
+        const numeroParaDeletar = avaliacoesAtuais.length - (LIMITE_AVALIACOES - 1);
+
+        if (numeroParaDeletar > 0) {
+          const avaliacoesParaDeletar = avaliacoesAtuais.slice(0, numeroParaDeletar);
+          console.log(`🗑️ Limite de ${LIMITE_AVALIACOES} atingido. Deletando ${numeroParaDeletar} avaliação(ões) mais antigas.`);
+
+          // Deleta as imagens associadas em paralelo
+          const deletePromises = avaliacoesParaDeletar.map(avaliacao => deletarImagensDaAvaliacao(avaliacao));
+          await Promise.all(deletePromises);
+
+          // Deleta os registros do banco de dados de uma só vez
+          const idsParaDeletar = avaliacoesParaDeletar.map(a => a.id);
+          const { error: deleteError } = await supabase.from('avaliacoes_fisicas').delete().in('id', idsParaDeletar);
+
+          if (deleteError) {
+            console.error('❌ Erro ao deletar registros antigos do banco:', deleteError);
+            throw new Error("Falha ao limpar avaliações antigas do banco de dados.");
+          }
+          console.log('✅ Registros antigos de avaliação deletados com sucesso.');
         }
       }
 
@@ -460,7 +433,7 @@ const AlunosAvaliacaoNova = () => {
       </Card>
 
       {/* Formulário */}
-      <form onSubmit={form.handleSubmit(checkIntervalAndSave)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(salvarAvaliacao)} className="space-y-6">
         {/* Dados Básicos */}
         <Card>
           <CardHeader>
@@ -711,35 +684,6 @@ const AlunosAvaliacaoNova = () => {
         </Button>
       </div>
       </form>
-
-      {/* Modal de Aviso de Intervalo */}
-      <AlertDialog open={showIntervalWarning} onOpenChange={setShowIntervalWarning}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Intervalo entre avaliações</AlertDialogTitle>
-            <AlertDialogDescription>
-              Última avaliação há {intervalDays} dias. Recomendamos aguardar mais {30 - intervalDays} dias para resultados mais precisos. Deseja criar uma nova avaliação mesmo assim?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setShowIntervalWarning(false);
-              setPendingFormData(null);
-            }}>
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              if (pendingFormData) {
-                salvarAvaliacao(pendingFormData);
-              }
-              setShowIntervalWarning(false);
-              setPendingFormData(null);
-            }}>
-              Criar mesmo assim
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };

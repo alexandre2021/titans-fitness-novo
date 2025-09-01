@@ -16,6 +16,8 @@ Este documento centraliza as regras de negócio e os modelos de relacionamento d
   - [4. Gestão de Rotinas de Treino](#4-gestão-de-rotinas-de-treino)
   - [5. Gestão de Contas de Usuário](#5-gestão-de-contas-de-usuário)
   - [6. Gestão de Avaliações](#6-gestão-de-avaliações)
+- [Parte III: Padrões de Interface de Usuário (UI)](#parte-iii-padrões-de-interface-de-usuário-ui)
+  - [7. Modais de Confirmação e Alerta](#7-modais-de-confirmação-e-alerta)
 
 ---
 
@@ -218,3 +220,18 @@ A remoção de um vínculo é uma operação não destrutiva, que preserva a con
 Esta seção detalha as regras de negócio relacionadas à criação, posse e ciclo de vida das avaliações.
 
 - **REGRA 6.1 (Limite de Avaliações Físicas):** Um aluno pode ter no máximo 4 avaliações físicas. Ao criar uma nova avaliação que exceda este limite, a avaliação mais antiga é automaticamente removida (lógica FIFO). Este processo de exclusão é iniciado pela aplicação, que primeiro remove as imagens associadas do bucket de armazenamento e depois o registro da avaliação no banco de dados.
+
+---
+
+# Parte III: Padrões de Interface de Usuário (UI)
+
+Esta seção define os padrões de componentes e interações que devem ser seguidos para manter a consistência visual e a experiência do usuário em toda a plataforma.
+
+## 7. Modais de Confirmação e Alerta
+
+- **REGRA 7.1 (Padrão de Modal Responsivo):** Todas as novas janelas modais destinadas a exibir informações importantes ou a solicitar uma confirmação do usuário (como alertas, diálogos de confirmação de exclusão, etc.) devem obrigatoriamente utilizar o componente padronizado `ResponsiveAlertDialog`.
+    - **Fundamento:** Este padrão garante uma experiência de usuário coesa e adaptável a diferentes dispositivos.
+    - **Comportamento Esperado:**
+        - **Em telas grandes (Desktop):** O componente deve ser renderizado como um `Dialog` (caixa de diálogo centralizada).
+        - **Em telas pequenas (Mobile):** O componente deve ser renderizado como um `Drawer` (painel que desliza da parte inferior da tela).
+    - **Implementação:** O componente `ResponsiveAlertDialog` encapsula essa lógica, utilizando o hook `useMediaQuery` para detectar o tamanho da tela e renderizar a variação visual apropriada. Qualquer nova implementação deve importar e usar este componente em vez de criar modais customizados ou usar o `AlertDialog` padrão.

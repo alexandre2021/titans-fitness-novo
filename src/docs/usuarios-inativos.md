@@ -1,25 +1,43 @@
 # Documentação do Processo de Exclusão de Usuários Inativos
 
+
 Este documento descreve o fluxo automatizado para identificar, notificar e, finalmente, excluir usuários inativos da plataforma Titans Fitness.
+
 
 ## Visão Geral
 
+
 O processo é projetado para gerenciar os recursos da plataforma de forma eficiente, removendo contas que não estão mais em uso. Ele é dividido em duas fases principais: um aviso de inatividade e a exclusão definitiva.
+
 
 - **Limite para Aviso:** 60 dias de inatividade.
 - **Limite para Exclusão:** 90 dias de inatividade.
 
+
+## Tipos de Usuários Processados
+
+
+O sistema processa dois tipos de usuários:
+- **Alunos:** Contas de usuários finais da plataforma
+- **Personal Trainers:** Contas de profissionais que atendem alunos
+
+
 ## Fluxo do Processo
+
 
 O fluxo é orquestrado por um conjunto de ferramentas que garantem a execução periódica e segura das operações.
 
+
 ### 1. Agendamento (Cron Job no GitHub Actions)
+
 
 - **O que faz:** Inicia todo o processo de verificação.
 - **Como funciona:** Um arquivo de workflow do GitHub Actions (`.github/workflows/cron-check-users.yml`) é configurado para rodar em um cronograma pré-definido (diariamente).
 - **Ação:** Ele envia uma requisição `POST` segura para um endpoint da Vercel. A segurança é garantida pelo envio de um `CRON_SECRET` no cabeçalho de autorização.
 
+
 ### 2. Endpoint da Vercel (Serverless Function)
+
 
 - **O que faz:** Contém a lógica principal para verificar e processar os usuários.
 - **Localização:** `api/cron/check-inactive-users.ts`
@@ -27,52 +45,136 @@ O fluxo é orquestrado por um conjunto de ferramentas que garantem a execução 
     1.  **Autenticação:** A função primeiro valida o `CRON_SECRET` recebido para garantir que a chamada foi originada pelo GitHub Actions.
     2.  **Busca e Filtragem de Usuários:**
         - Ela se conecta ao Supabase e busca todos os usuários registrados na tabela `auth.users`.
-        - **Importante:** Usuários com e-mails na lista de `PROTECTED_EMAILS` (contas de sistema, personal trainers, etc.) são **ignorados** para evitar exclusões acidentais.
-        - Para cada usuário restante, verifica-se sua existência e tipo na tabela `public.alunos`. Apenas usuários identificados como `aluno` são processados.
-    3.  **Análise de Inatividade:** Para cada **aluno** elegível, a função verifica a data do `last_sign_in_at` (último login) ou `created_at` (se nunca logou).
-        - Se o último login/criação foi entre 60 e 89 dias atrás, o aluno é adicionado a uma lista de "aviso".
-        - Se o último login/criação foi há 90 dias ou mais, o aluno é adicionado a uma lista de "exclusão".
+        - **Importante:** Usuários com e-mails na lista de `PROTECTED_EMAILS` são **ignorados** para evitar exclusões acidentais.
+        - Para cada usuário, verifica-se sua existência e tipo na tabela `user_profiles` (aluno ou personal_trainer).
+    3.  **Análise de Inatividade:** Para cada usuário elegível, a função verifica a data do `last_sign_in_at` (último login) ou `created_at` (se nunca logou).
+        - Se o último login/criação foi entre 60 e 89 dias atrás, o usuário é adicionado a uma lista de "aviso".
+        - Se o último login/criação foi há 90 dias ou mais, o usuário é adicionado a uma lista de "exclusão".
+
 
 ### 3. Envio de Email de Alerta (60 dias)
+
 
 - **O que faz:** Notifica o usuário sobre a inatividade da conta.
 - **Como funciona:**
     - Para cada usuário na lista de "aviso", a função `check-inactive-users` utiliza a API do **Brevo (antigo Sendinblue)** para enviar um email.
     - O email informa ao usuário que sua conta será excluída em 30 dias se ele não fizer login.
     - O template do email segue a identidade visual da Titans Fitness para garantir consistência.
+    - Após o envio, o campo `last_warning_email_sent_at` é atualizado na tabela correspondente (`alunos` ou `personal_trainers`) para evitar spam de avisos.
+
 
 ### 4. Processo de Exclusão (90 dias)
 
-Este é um processo de duas etapas para garantir que todos os dados do usuário sejam removidos.
 
-#### Etapa 1: Exclusão de Arquivos no Cloudflare R2
+Este é um processo de múltiplas etapas para garantir que todos os dados do usuário sejam removidos. O processo varia conforme o tipo de usuário.
 
-- **O que faz:** Remove todos os arquivos pessoais do usuário (imagens e PDFs) que estão armazenados no Cloudflare R2.
-- **Como funciona:**
-    1.  A função `check-inactive-users` primeiro coleta as URLs de todos os arquivos associados ao usuário a ser excluído, buscando em tabelas como:
-        - `alunos` (avatar_image_url)
-        - `avaliacoes_fisicas` (fotos da avaliação)
-        - `rotinas_arquivadas` (PDFs de rotinas)
-    2.  Para cada arquivo encontrado, a função invoca uma **Edge Function** do Supabase (`delete-image`).
-    3.  A Edge Function `delete-image` recebe o nome do arquivo e o bucket, e executa a exclusão diretamente no Cloudflare R2.
 
-#### Etapa 2: Exclusão do Usuário no Supabase
+#### Para Alunos
 
-- **O que faz:** Remove o registro do usuário do sistema de autenticação e, por consequência, todos os seus dados relacionados no banco de dados.
-- **Como funciona:**
-    - Após a tentativa de exclusão dos arquivos, a função `check-inactive-users` utiliza o `supabaseAdmin.auth.admin.deleteUser(user.id)` para deletar o usuário do `auth.users`.
-    - Graças às políticas de `ON DELETE CASCADE` configuradas no banco de dados, a exclusão do usuário em `auth.users` aciona um efeito cascata, removendo todos os registros vinculados a ele em outras tabelas (perfis, avaliações, rotinas, etc.).
+##### Etapa 1: Exclusão de Arquivos
 
-## Resumo do Fluxo
+A função coleta e remove todos os arquivos pessoais do aluno dos seus respectivos armazenamentos:
 
-1.  **GitHub Actions (diariamente)**: `POST` para `api/cron/check-inactive-users`.
-2.  **Vercel Function**:
-    - Valida a requisição.
-    - Busca usuários no Supabase.
-    - Identifica usuários inativos por 60+ e 90+ dias.
-3.  **Para usuários com 60-89 dias de inatividade**:
-    - Envia email de alerta via Brevo.
-4.  **Para usuários com 90+ dias de inatividade**:
-    - **Passo 1**: Chama a Edge Function `delete-image` para remover arquivos do Cloudflare R2.
-    - **Passo 2**: Deleta o usuário do `auth.users`, que aciona a exclusão em cascata dos dados restantes.
-5.  **Fim do processo**.
+1.  **Avatar do aluno** (bucket: `avatars` no Supabase Storage)
+    -   Busca na tabela `alunos` os campos `avatar_type` e `avatar_image_url`.
+    -   Se `avatar_type = 'image'`, o arquivo é removido do Supabase Storage.
+
+2.  **Fotos de avaliações físicas** (bucket: `avaliacoes` no Cloudflare R2)
+    -   Busca na tabela `avaliacoes_fisicas`: `foto_frente_url`, `foto_lado_url`, `foto_costas_url`.
+
+3.  **PDFs de rotinas** (bucket: `rotinas` no Cloudflare R2)
+    -   Busca na tabela `rotinas_arquivadas`: `pdf_url`.
+
+##### Etapa 2: Exclusão do Usuário
+- Remove o registro do usuário do `auth.users`
+- As políticas `ON DELETE CASCADE` removem automaticamente todos os dados relacionados
+
+#### Para Personal Trainers
+
+##### Etapa 1: Exclusão de Arquivos
+
+1.  **Avatar do Personal Trainer** (bucket: `avatars` no Supabase Storage)
+    -   Busca na tabela `personal_trainers` os campos `avatar_type` e `avatar_image_url`.
+    -   Se `avatar_type = 'image'`, o arquivo é removido do Supabase Storage.
+
+2.  **Mídias de exercícios** (bucket: `exercicios` no Cloudflare R2)
+    -   Busca na tabela `exercicios`: `imagem_1_url`, `imagem_2_url`, `video_url`.
+    -   Remove todas as mídias associadas aos exercícios criados pelo PT.
+
+##### Etapa 2: Desvinculação de Alunos
+- Atualiza a tabela `alunos` definindo `personal_trainer_id = null` para todos os alunos vinculados
+- Isso preserva os dados dos alunos enquanto remove apenas a vinculação com o PT
+
+
+##### Etapa 3: Exclusão do Usuário
+- Remove o registro do usuário do `auth.users`
+- As políticas `ON DELETE CASCADE` removem automaticamente os dados do PT (como `personal_trainers` e `user_profiles`).
+- **Importante**: Rotinas associadas ao PT não são excluídas; o campo `personal_trainer_id` na tabela `rotinas` é definido como `NULL` (`ON DELETE SET NULL`).
+- **Importante**: Exercícios que usam exercícios do PT como base (`exercicio_padrao_id`) terão essa referência definida como `NULL` (`ON DELETE SET NULL`).
+
+#### Processo de Exclusão de Arquivos
+
+O processo varia conforme o local de armazenamento:
+
+-   **Para arquivos no Cloudflare R2 (`avaliacoes`, `rotinas`, `exercicios`):**
+    1.  A função `check-inactive-users` extrai o nome do arquivo da URL completa.
+    2.  Invoca a **Edge Function** do Supabase (`delete-image`) passando o `filename` e o `bucket_type`.
+    3.  A Edge Function `delete-image` executa a exclusão diretamente no Cloudflare R2.
+
+-   **Para avatares no Supabase Storage (`avatars`):**
+    1.  A função `check-inactive-users` extrai o nome do arquivo da URL.
+    2.  A exclusão é feita diretamente através da API do Supabase Storage (`supabase.storage.from('avatars').remove(...)`).
+
+## Estrutura de Armazenamento de Mídia
+
+O sistema utiliza diferentes serviços de armazenamento para otimizar custos e performance.
+
+### Supabase Storage
+
+-   **`avatars`**: Imagens de perfil de alunos e personal trainers. Este bucket é usado para permitir a atualização dinâmica de avatares na interface através de URLs assinadas.
+
+### Cloudflare R2
+
+-   **`avaliacoes`**: Fotos de avaliações físicas dos alunos.
+-   **`rotinas`**: PDFs de rotinas de treino arquivadas.
+-   **`exercicios`**: Imagens e vídeos de exercícios criados por personal trainers.
+
+
+## Proteções e Segurança
+
+
+### Emails Protegidos
+Lista hardcoded de emails que nunca são processados:
+- Contas administrativas
+- Contas de sistema
+- Personal trainers críticos
+
+
+### Autenticação
+- Todas as operações requerem `CRON_SECRET` válido
+- Utiliza Service Role Key para operações administrativas no Supabase
+- Edge Functions herdam a autenticação da função principal
+
+
+### Logs e Monitoramento
+- Logs detalhados de cada etapa do processo
+- Contadores de usuários processados e arquivos removidos
+- Logs específicos para falhas na exclusão de arquivos
+
+
+## Resumo do Fluxo Completo
+
+
+1. **GitHub Actions (diariamente)**: `POST` para `api/cron/check-inactive-users`
+2. **Vercel Function**:
+   - Valida a requisição
+   - Busca usuários no Supabase por tipo
+   - Identifica usuários inativos por 60+ e 90+ dias
+3. **Para usuários com 60-89 dias de inatividade**:
+   - Envia email de alerta via Brevo
+   - Atualiza `last_warning_email_sent_at`
+4. **Para usuários com 90+ dias de inatividade**:
+   - **Alunos**: Remove avatars, fotos de avaliação e PDFs de rotina
+   - **Personal Trainers**: Remove avatars, mídias de exercícios e desvincula alunos
+   - **Para ambos**: Deleta usuário do `auth.users` (cascata remove dados restantes)
+5. **Retorna estatísticas**: Usuários avisados, excluídos e arquivos removidos

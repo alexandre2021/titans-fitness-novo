@@ -32,6 +32,8 @@ const OnboardingAlunoDadosBasicos = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showQuestionarioModal, setShowQuestionarioModal] = useState(false);
 
+  const hoje = new Date().toISOString().split("T")[0]; // Formato YYYY-MM-DD
+
   // Carregar email do usuário autenticado e dados do profile
   useEffect(() => {
     const loadUserData = async () => {
@@ -231,6 +233,7 @@ const OnboardingAlunoDadosBasicos = () => {
                   id="data_nascimento"
                   type="date"
                   value={formData.data_nascimento}
+                  max={hoje}
                   onChange={(e) => handleInputChange('data_nascimento', e.target.value)}
                 />
               </div>

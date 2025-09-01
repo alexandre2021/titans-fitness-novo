@@ -33,7 +33,7 @@ const Termos = () => {
         
         <div className="prose prose-gray max-w-none">
           <p className="text-text-secondary text-lg mb-8">
-            Última atualização: 21 de agosto de 2025
+            Última atualização: 29 de agosto de 2025
           </p>
 
           <section className="mb-8">
@@ -80,13 +80,12 @@ const Termos = () => {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-text-primary mb-4">4. Exclusão de Contas por Inatividade</h2>
+            <h2 className="text-2xl font-semibold text-text-primary mb-4">4. Política de Contas e Inatividade</h2>
             <div className="bg-orange-50 border-l-4 border-orange-500 p-4 mb-4">
-              <p className="text-text-primary font-semibold mb-2">Política de Inatividade</p>
+              <p className="text-text-primary font-semibold mb-2">Exclusão de Contas por Inatividade</p>
               <p className="text-text-secondary">
-                Contas que permanecerem inativas por <strong>90 (noventa) dias consecutivos</strong> serão 
-                automaticamente excluídas de nossa plataforma. Esta política se aplica exclusivamente a 
-                contas de <strong>Alunos</strong>.
+                Contas de <strong>Alunos e Personal Trainers</strong> que permanecerem inativas por <strong>90 (noventa) dias consecutivos</strong> serão 
+                automaticamente programadas para exclusão de nossa plataforma.
               </p>
             </div>
             <ul className="list-disc pl-6 text-text-secondary space-y-2 mb-4">
@@ -94,6 +93,7 @@ const Termos = () => {
               <li><strong>Aviso prévio:</strong> Usuários recebem um email de aviso aos 60 dias de inatividade</li>
               <li><strong>Dados:</strong> Após a exclusão, todos os dados serão permanentemente removidos e não poderão ser recuperados</li>
               <li><strong>Reativação:</strong> Para evitar a exclusão, basta fazer login na plataforma antes do prazo</li>
+              <li><strong>Personal Trainers:</strong> A exclusão de uma conta de Personal Trainer resultará no cancelamento de todas as rotinas ativas e na desvinculação de todos os alunos associados.</li>
             </ul>
           </section>
 

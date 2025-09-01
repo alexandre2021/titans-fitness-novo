@@ -20,6 +20,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { EditAlunoModal } from "./EditAlunoModal";
 import { PasswordChangeSection } from "./PasswordChangeSection";
+import { AccountCancellationSection } from "./AccountCancellationSection";
 
 interface AlunoProfileData {
   nome_completo: string;
@@ -140,6 +141,7 @@ export const AlunoPerfilTabs = ({ profile, onProfileUpdate }: AlunoPerfilTabsPro
         <TabsTrigger value="basicas">Informações Básicas</TabsTrigger>
         <TabsTrigger value="fisicas">Informações Físicas</TabsTrigger>
         <TabsTrigger value="seguranca">Segurança</TabsTrigger>
+        <TabsTrigger value="conta">Conta</TabsTrigger>
       </TabsList>
 
       <TabsContent value="basicas">
@@ -208,6 +210,10 @@ export const AlunoPerfilTabs = ({ profile, onProfileUpdate }: AlunoPerfilTabsPro
 
       <TabsContent value="seguranca">
         <PasswordChangeSection />
+      </TabsContent>
+
+      <TabsContent value="conta">
+        <AccountCancellationSection userType="aluno" />
       </TabsContent>
 
       <ResponsiveModal

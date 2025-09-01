@@ -23,7 +23,8 @@ import {
   Calendar,
   CalendarCheck, // ✅ Adicionado
   FileText,
-  Download
+  Download,
+  X
 } from 'lucide-react';
 import { BicepsFlexed } from 'lucide-react';
 import {
@@ -59,6 +60,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useExercicioLookup } from '@/hooks/useExercicioLookup';
 import { useToast } from '@/hooks/use-toast';
+import RotinaDetalhesModal from '@/components/rotina/RotinaDetalhesModal';
 
 // Hook para detectar se é mobile
 const useIsMobile = () => {
@@ -91,11 +93,20 @@ const ResponsiveModal = ({ open, onOpenChange, title, children }: ResponsiveModa
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-h-[90vh]">
-          <DrawerHeader className="text-left">
-            <DrawerTitle>{title}</DrawerTitle>
-          </DrawerHeader>
-          <div className="px-4 pb-4 overflow-y-auto">
+        <DrawerContent className="max-h-[90vh] flex flex-col">
+          <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+            <DrawerTitle className="text-lg font-semibold">{title}</DrawerTitle>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => onOpenChange(false)}
+              className="h-8 w-8 rounded-full flex-shrink-0"
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Fechar</span>
+            </Button>
+          </div>
+          <div className="px-4 pb-4 overflow-y-auto flex-1">
             {children}
           </div>
         </DrawerContent>
@@ -155,13 +166,22 @@ interface RotinaArquivada {
   created_at: string;
 }
 
-const AlunosRotinas = () => {
-  const { id } = useParams<{ id: string }>();
+interface PaginaRotinasProps {
+  modo: 'personal' | 'aluno';
+}
+
+const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   const navigate = useNavigate();
+  const params = useParams<{ id: string }>();
   const { user } = useAuth();
   const { getExercicioInfo } = useExercicioLookup();
   const { toast } = useToast();
   
+  // Deriva o alunoId do contexto de rota (para PT) ou de autenticação (para Aluno)
+  // O 'id' do useParams corresponde ao :id na rota /alunos-rotinas/:id
+  const alunoId = modo === 'personal' ? params.id : user?.id;
+
+  // Estados permanecem os mesmos
   const [aluno, setAluno] = useState<AlunoInfo | null>(null);
   const [rotinas, setRotinas] = useState<Rotina[]>([]);
   const [rotinasArquivadas, setRotinasArquivadas] = useState<RotinaArquivada[]>([]);
@@ -174,18 +194,19 @@ const AlunosRotinas = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [navegandoNovaRotina, setNavegandoNovaRotina] = useState(false);
+  const [showDetalhesModal, setShowDetalhesModal] = useState(false);
 
   useEffect(() => {
     const fetchDados = async () => {
-      if (!id || !user) return;
+      if (!alunoId || !user) return;
 
       try {
         // Buscar informações do aluno
         const { data: alunoData, error: alunoError } = await supabase
           .from('alunos')
           .select('id, nome_completo, email, avatar_type, avatar_image_url, avatar_letter, avatar_color')
-          .eq('id', id)
-          .eq('personal_trainer_id', user.id)
+          .eq('id', alunoId)
+          // A segurança de acesso (se o PT pode ver o aluno, ou se o aluno é ele mesmo) é garantida pela RLS (Row Level Security) do Supabase.
           .single();
 
         if (alunoError) {
@@ -205,8 +226,8 @@ const AlunosRotinas = () => {
         const { data: rotinasData, error: rotinasError } = await supabase
           .from('rotinas')
           .select('*')
-          .eq('aluno_id', id)
-          .eq('personal_trainer_id', user.id)
+          .eq('aluno_id', alunoId)
+          // A RLS garante que o PT só veja rotinas de seus alunos e o aluno só veja as suas.
           .neq('status', 'Concluída')
           .order('created_at', { ascending: false });
 
@@ -220,7 +241,7 @@ const AlunosRotinas = () => {
         const { data: arquivadasData, error: arquivadasError } = await supabase
           .from('rotinas_arquivadas')
           .select('*')
-          .eq('aluno_id', id)
+          .eq('aluno_id', alunoId)
           .order('created_at', { ascending: false });
 
         if (!arquivadasError && arquivadasData) {
@@ -240,7 +261,7 @@ const AlunosRotinas = () => {
     };
 
     fetchDados();
-  }, [id, user, navigate, toast]);
+  }, [alunoId, user, navigate, toast, modo]);
 
   const renderAvatar = () => {
     if (!aluno) return null;
@@ -262,8 +283,9 @@ const AlunosRotinas = () => {
   const getStatusBadge = (status: string) => {
     const statusColors = {
       'Ativa': 'bg-green-100 text-green-800',
-      'Bloqueada': 'bg-red-100 text-red-800',
-      'Concluída': 'bg-gray-100 text-gray-800'
+      'Bloqueada': 'bg-red-100 text-red-800',      
+      'Concluída': 'bg-gray-100 text-gray-800',
+      'Cancelada': 'bg-orange-100 text-orange-800'
     };
     const colorClass = statusColors[status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800';
     return (
@@ -309,11 +331,21 @@ const AlunosRotinas = () => {
   };
 
   const handleVerDetalhes = (rotinaId: string) => {
-    navigate(`/alunos-rotinas/${id}/${rotinaId}`);
+    const rotinaSelecionada = rotinas.find(r => r.id === rotinaId);
+    setSelectedRotina(rotinaSelecionada || null);
+    if (modo === 'personal') {
+      // Para o PT, "Detalhes" leva à página de gerenciamento da rotina.
+      navigate(`/alunos-rotinas/${alunoId}/${rotinaId}`);
+    } else {
+      setShowDetalhesModal(true);
+    }
   };
 
   const handleTreinar = (rotinaId: string) => {
-    navigate(`/execucao-rotina/selecionar-treino/${rotinaId}`);
+    // Passa o modo atual para a próxima página, para que ela saiba como buscar os dados.
+    navigate(`/execucao-rotina/selecionar-treino/${rotinaId}`, {
+      state: { modo: modo }
+    });
   };
 
   const handleVisualizarPDF = async (pdfUrl: string, nomeRotina: string) => {
@@ -361,116 +393,35 @@ const AlunosRotinas = () => {
     }
   };
 
-  const handleAtivarRotina = async (rotina: Rotina) => {
+  const handleUpdateRotinaStatus = async (rotina: Rotina, novoStatus: 'Ativa' | 'Bloqueada') => {
     setIsUpdatingStatus(true);
-    
     try {
       const { error } = await supabase
         .from('rotinas')
-        .update({ status: 'Ativa' })
+        .update({ status: novoStatus })
         .eq('id', rotina.id)
         .eq('personal_trainer_id', user?.id);
-
+  
       if (error) {
-        console.error('Erro ao ativar rotina:', error);
+        console.error(`Erro ao alterar status para ${novoStatus}:`, error);
         toast({
           title: "Erro",
-          description: "Não foi possível ativar a rotina. Tente novamente.",
+          description: `Não foi possível alterar o status da rotina. Tente novamente.`,
           variant: "destructive",
         });
       } else {
         // Atualizar lista local
         setRotinas(prev => prev.map(r => 
-          r.id === rotina.id ? { ...r, status: 'Ativa' } : r
+          r.id === rotina.id ? { ...r, status: novoStatus } : r
         ));
         
         toast({
-          title: "Rotina ativada",
-          description: "A rotina está pronta para execução.",
+          title: `Rotina ${novoStatus === 'Ativa' ? 'Ativada' : 'Bloqueada'}`,
+          description: `O status da rotina foi atualizado.`,
         });
       }
     } catch (error) {
-      console.error('Erro ao ativar rotina:', error);
-      toast({
-        title: "Erro",
-        description: "Ocorreu um erro inesperado. Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdatingStatus(false);
-    }
-  };
-
-  const handleBloquearRotina = async (rotina: Rotina) => {
-    setIsUpdatingStatus(true);
-    
-    try {
-      const { error } = await supabase
-        .from('rotinas')
-        .update({ status: 'Bloqueada' })
-        .eq('id', rotina.id)
-        .eq('personal_trainer_id', user?.id);
-
-      if (error) {
-        console.error('Erro ao bloquear rotina:', error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível bloquear a rotina. Tente novamente.",
-          variant: "destructive",
-        });
-      } else {
-        // Atualizar lista local
-        setRotinas(prev => prev.map(r => 
-          r.id === rotina.id ? { ...r, status: 'Bloqueada' } : r
-        ));
-        
-        toast({
-          title: "Rotina bloqueada",
-          description: "A rotina foi bloqueada por falta de pagamento.",
-        });
-      }
-    } catch (error) {
-      console.error('Erro ao bloquear rotina:', error);
-      toast({
-        title: "Erro",
-        description: "Ocorreu um erro inesperado. Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdatingStatus(false);
-    }
-  };
-
-  const handleReativarRotina = async (rotina: Rotina) => {
-    setIsUpdatingStatus(true);
-    
-    try {
-      const { error } = await supabase
-        .from('rotinas')
-        .update({ status: 'Ativa' })
-        .eq('id', rotina.id)
-        .eq('personal_trainer_id', user?.id);
-
-      if (error) {
-        console.error('Erro ao reativar rotina:', error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível reativar a rotina. Tente novamente.",
-          variant: "destructive",
-        });
-      } else {
-        // Atualizar lista local
-        setRotinas(prev => prev.map(r => 
-          r.id === rotina.id ? { ...r, status: 'Ativa' } : r
-        ));
-        
-        toast({
-          title: "Rotina reativada",
-          description: "A rotina está ativa novamente.",
-        });
-      }
-    } catch (error) {
-      console.error('Erro ao reativar rotina:', error);
+      console.error(`Erro inesperado ao alterar status para ${novoStatus}:`, error);
       toast({
         title: "Erro",
         description: "Ocorreu um erro inesperado. Tente novamente.",
@@ -553,6 +504,21 @@ const AlunosRotinas = () => {
       );
     }
 
+    if (rotina.status === 'Cancelada') {
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0" disabled>
+              <MoreVertical className="h-4 w-4 text-muted-foreground" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem disabled>Rotina Cancelada</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    }
+
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -565,14 +531,13 @@ const AlunosRotinas = () => {
             <Eye className="mr-2 h-4 w-4" />
             Detalhes
           </DropdownMenuItem>
-
-          {rotina.status === 'Ativa' && (
+          {rotina.status === 'Ativa' && modo === 'personal' && (
             <>
               <DropdownMenuItem onClick={() => handleTreinar(rotina.id)}>
                 <Play className="mr-2 h-4 w-4" />
                 Treinar
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleBloquearRotina(rotina)}>
+              <DropdownMenuItem onClick={() => handleUpdateRotinaStatus(rotina, 'Bloqueada')}>
                 <Ban className="mr-2 h-4 w-4" />
                 Bloquear
               </DropdownMenuItem>
@@ -586,9 +551,19 @@ const AlunosRotinas = () => {
             </>
           )}
 
-          {rotina.status === 'Bloqueada' && (
+          {rotina.status === 'Ativa' && modo === 'aluno' && (
+            <DropdownMenuItem onClick={() => handleTreinar(rotina.id)}>
+              <Play className="mr-2 h-4 w-4" />
+              Treinar
+            </DropdownMenuItem>
+          )}
+
+          {rotina.status === 'Bloqueada' && modo === 'aluno' && (
+            <DropdownMenuItem disabled>Rotina Bloqueada</DropdownMenuItem>
+          )}
+          {rotina.status === 'Bloqueada' && modo === 'personal' && (
             <>
-              <DropdownMenuItem onClick={() => handleReativarRotina(rotina)}>
+              <DropdownMenuItem onClick={() => handleUpdateRotinaStatus(rotina, 'Ativa')}>
                 <Activity className="mr-2 h-4 w-4" />
                 Reativar
               </DropdownMenuItem>
@@ -625,8 +600,8 @@ const AlunosRotinas = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button 
-              variant="ghost" 
-              onClick={() => navigate('/alunos')}
+              variant="ghost"
+              onClick={() => navigate(modo === 'personal' ? '/alunos' : '/index-aluno')}
               className="h-10 w-10 p-0"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -651,7 +626,7 @@ const AlunosRotinas = () => {
           <div className="flex items-center gap-4">
             <Button 
               variant="ghost" 
-              onClick={() => navigate('/alunos')}
+              onClick={() => navigate(modo === 'personal' ? '/alunos' : '/index-aluno')}
               className="h-10 w-10 p-0"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -681,17 +656,17 @@ const AlunosRotinas = () => {
     <div className="flex items-center gap-4">
       <Button 
         variant="ghost" 
-        onClick={() => navigate('/alunos')}
+        onClick={() => navigate(modo === 'personal' ? '/alunos' : '/index-aluno')}
         className="h-10 w-10 p-0"
       >
         <ArrowLeft className="h-4 w-4" />
       </Button>
       <div>
         <h1 className="text-3xl font-bold">Rotinas</h1>
-        <p className="text-muted-foreground">Gerencie as rotinas de {aluno.nome_completo}</p>
+        <p className="text-muted-foreground">{modo === 'personal' ? `Gerencie as rotinas de ${aluno.nome_completo}` : 'Suas rotinas de treino'}</p>
       </div>
     </div>
-    {activeTab === "atual" && (
+    {activeTab === "atual" && modo === 'personal' && (
       <Button
         onClick={() => {
           if (rotinas.length > 0) {
@@ -703,7 +678,7 @@ const AlunosRotinas = () => {
             return;
           }
           setNavegandoNovaRotina(true);
-          navigate(`/rotinas-criar/${id}/configuracao`);
+          navigate(`/rotinas-criar/${alunoId}/configuracao`);
         }}
         variant="default"
         disabled={navegandoNovaRotina}
@@ -719,18 +694,18 @@ const AlunosRotinas = () => {
     <div className="flex items-center gap-4">
       <Button 
         variant="ghost" 
-        onClick={() => navigate('/alunos')}
+        onClick={() => navigate(modo === 'personal' ? '/alunos' : '/index-aluno')}
         className="h-10 w-10 p-0"
       >
         <ArrowLeft className="h-4 w-4" />
       </Button>
       <div>
         <h1 className="text-3xl font-bold">Rotinas</h1>
-        <p className="text-sm text-muted-foreground">Gerencie as rotinas</p>
+        <p className="text-sm text-muted-foreground">{modo === 'personal' ? 'Gerencie as rotinas' : 'Suas rotinas de treino'}</p>
       </div>
     </div>
     {/* Botão só com ícone + igual ao de Alunos */}
-    {activeTab === "atual" && (
+    {activeTab === "atual" && modo === 'personal' && (
       <Button
         onClick={() => {
           if (rotinas.length > 0) {
@@ -742,7 +717,7 @@ const AlunosRotinas = () => {
             return;
           }
           setNavegandoNovaRotina(true);
-          navigate(`/rotinas-criar/${id}/configuracao`);
+          navigate(`/rotinas-criar/${alunoId}/configuracao`);
         }}
         disabled={navegandoNovaRotina}
         size="icon"
@@ -755,7 +730,7 @@ const AlunosRotinas = () => {
 </div>
 
         {/* Informações do Aluno */}
-        <Card>
+        {modo === 'personal' && <Card>
           <CardHeader>
             <div className="flex items-center gap-4">
               <Avatar className="h-12 w-12">
@@ -767,7 +742,7 @@ const AlunosRotinas = () => {
               </div>
             </div>
           </CardHeader>
-        </Card>
+        </Card>}
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "atual" | "concluidas")}>
@@ -804,12 +779,12 @@ const AlunosRotinas = () => {
                     <Dumbbell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                     <h3 className="text-lg font-semibold mb-2">Nenhuma rotina</h3>
                     <p className="text-muted-foreground mb-6">
-                      Este aluno não possui nenhuma rotina no momento. Crie uma nova rotina personalizada.
+                      {modo === 'personal' ? 'Este aluno não possui nenhuma rotina no momento. Crie uma nova rotina personalizada.' : 'Você ainda não tem uma rotina. Fale com seu Personal Trainer.'}
                     </p>
-                    <Button
+                    {modo === 'personal' && <Button
                       onClick={() => {
                         setNavegandoNovaRotina(true);
-                        navigate(`/rotinas-criar/${id}/configuracao`);
+                        navigate(`/rotinas-criar/${alunoId}/configuracao`);
                       }}
                       disabled={navegandoNovaRotina}
                       variant="default"
@@ -817,6 +792,7 @@ const AlunosRotinas = () => {
                       <Plus className="h-4 w-4 mr-2" />
                       Nova Rotina
                     </Button>
+                    }
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -1069,8 +1045,15 @@ const AlunosRotinas = () => {
     </Button>
   </div>
 </ResponsiveModal>
+
+      <RotinaDetalhesModal
+        rotina={selectedRotina}
+        open={showDetalhesModal}
+        onOpenChange={setShowDetalhesModal}
+        ResponsiveModal={ResponsiveModal}
+      />
     </>
   );
 };
 
-export default AlunosRotinas;
+export default PaginaRotinas;

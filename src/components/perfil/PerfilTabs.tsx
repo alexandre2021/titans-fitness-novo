@@ -1,4 +1,4 @@
-// src/components/perfil/PerfilTabs.tsx
+// src/components/perfil/PerfilTabs.tsx (versão para Personal Trainers)
 
 import { useState, useEffect } from "react";
 import { Edit } from "lucide-react";
@@ -248,7 +248,7 @@ export const PerfilTabs = ({ profile, onProfileUpdate }: PerfilTabsProps) => {
       </TabsContent>
 
       <TabsContent value="conta">
-        <AccountCancellationSection />
+        <AccountCancellationSection userType="personal_trainer" />
       </TabsContent>
 
       {/* Modais Responsivos */}

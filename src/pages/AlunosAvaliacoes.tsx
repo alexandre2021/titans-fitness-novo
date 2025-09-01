@@ -4,23 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, BarChart3, TrendingUp, Calendar, Plus, Eye, MoreVertical, Trash2 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { ArrowLeft, BarChart3, TrendingUp, Calendar, Plus, Eye, MoreVertical, Trash2, Info } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { ResponsiveAlertDialog } from '@/components/ui/responsive-alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -63,6 +49,11 @@ const AlunosAvaliacoes = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [avaliacaoParaExcluir, setAvaliacaoParaExcluir] = useState<AvaliacaoFisica | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Estados para o modal de aviso de intervalo
+  const [showIntervalWarning, setShowIntervalWarning] = useState(false);
+  const [intervalDays, setIntervalDays] = useState(0);
+
   const handleExcluirAvaliacao = (avaliacao: AvaliacaoFisica) => {
     setAvaliacaoParaExcluir(avaliacao);
     setShowDeleteDialog(true);
@@ -255,9 +246,33 @@ const AlunosAvaliacoes = () => {
 
   const progressoPeso = calcularProgressoPeso();
 
-  // Navegação para páginas dedicadas
   const handleNovaAvaliacao = () => {
-    navigate(`/alunos-avaliacoes/${id}/nova`);
+    // Se existem avaliações, verificar o intervalo
+    if (avaliacoes && avaliacoes.length > 0) {
+      const ultimaAvaliacaoData = avaliacoes[0].data_avaliacao; // Formato "YYYY-MM-DD"
+      
+      // Lógica de data robusta para evitar bugs de fuso horário
+      const [year, month, day] = ultimaAvaliacaoData.split('-').map(Number);
+      // new Date(year, month-1, day) cria a data à meia-noite no fuso horário LOCAL
+      const ultimaAvaliacao = new Date(year, month - 1, day);
+      
+      const hoje = new Date();
+      // Zera a hora para comparar apenas os dias
+      hoje.setHours(0, 0, 0, 0);
+
+      const diffTime = hoje.getTime() - ultimaAvaliacao.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays < 30) {
+        setIntervalDays(diffDays);
+        setShowIntervalWarning(true);
+      } else {
+        navigate(`/alunos-avaliacoes/${id}/nova`);
+      }
+    } else {
+      // Se não houver nenhuma avaliação, navega direto
+      navigate(`/alunos-avaliacoes/${id}/nova`);
+    }
   };
 
   const handleVerDetalhes = (avaliacaoId: string) => {
@@ -436,9 +451,7 @@ const AlunosAvaliacoes = () => {
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">
-                          {formatters.date(avaliacao.data_avaliacao)}
-                        </span>
+                        <span className="font-medium">{avaliacao.data_avaliacao.split('-').reverse().join('/')}</span>
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -458,27 +471,6 @@ const AlunosAvaliacoes = () => {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-      {/* Modal de Confirmação de Exclusão */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Avaliação</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir esta avaliação? Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmarExclusao}
-              disabled={isDeleting}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              {isDeleting ? 'Excluindo...' : 'Excluir'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
                     
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div>
@@ -519,6 +511,46 @@ const AlunosAvaliacoes = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de Confirmação de Exclusão */}
+      <ResponsiveAlertDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="Excluir Avaliação"
+        description={
+          <>
+            Tem certeza que deseja excluir a avaliação de <strong>{avaliacaoParaExcluir ? avaliacaoParaExcluir.data_avaliacao.split('-').reverse().join('/') : ''}</strong>? 
+            Esta ação não pode ser desfeita.
+          </>
+        }
+      >
+        <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Cancelar</Button>
+        <Button onClick={handleConfirmarExclusao} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+          {isDeleting ? 'Excluindo...' : 'Excluir'}
+        </Button>
+      </ResponsiveAlertDialog>
+
+      {/* Modal de Aviso de Intervalo */}
+      <ResponsiveAlertDialog
+        open={showIntervalWarning}
+        onOpenChange={setShowIntervalWarning}
+        title="Intervalo entre avaliações"
+        description={
+          <>
+            A última avaliação foi realizada há apenas {intervalDays} dia(s). O ideal é aguardar pelo menos 30 dias para obter uma comparação de resultados mais precisa.
+            <br/><br/>
+            Deseja criar uma nova avaliação mesmo assim?
+          </>
+        }
+      >
+        <Button variant="outline" onClick={() => setShowIntervalWarning(false)}>Cancelar</Button>
+        <Button onClick={() => {
+          setShowIntervalWarning(false);
+          navigate(`/alunos-avaliacoes/${id}/nova`);
+        }}>
+          Criar mesmo assim
+        </Button>
+      </ResponsiveAlertDialog>
     </div>
   );
 };

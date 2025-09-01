@@ -87,13 +87,48 @@ const ResponsiveModal = ({ open, onOpenChange, title, description, children }: R
   );
 };
 
-export const AccountCancellationSection = () => {
+// Configurações por tipo de usuário
+const getCancellationConfig = (userType: 'personal_trainer' | 'aluno') => {
+  if (userType === 'personal_trainer') {
+    return {
+      warningText: "Todos os alunos vinculados a você serão automaticamente desvinculados, mas suas contas e históricos serão preservados.",
+      consequences: [
+        "• Sua conta será permanentemente excluída",
+        "• Todos os seus exercícios criados serão removidos", 
+        "• Rotinas ativas serão canceladas automaticamente",
+        "• Alunos vinculados serão automaticamente desvinculados",
+        "• Históricos dos alunos serão preservados",
+        "• Esta ação não pode ser desfeita"
+      ]
+    };
+  } else {
+    return {
+      warningText: "Seu histórico de treinos e avaliações físicas serão permanentemente removidos.",
+      consequences: [
+        "• Sua conta será permanentemente excluída",
+        "• Todas as suas avaliações físicas serão removidas",
+        "• Histórico de treinos será deletado",
+        "• PDFs de rotinas arquivadas serão removidos",
+        "• Você será desvinculado do seu Personal Trainer",
+        "• Esta ação não pode ser desfeita"
+      ]
+    };
+  }
+};
+
+interface AccountCancellationSectionProps {
+  userType: 'personal_trainer' | 'aluno';
+}
+
+export const AccountCancellationSection = ({ userType }: AccountCancellationSectionProps) => {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [confirmationText, setConfirmationText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+
+  const config = getCancellationConfig(userType);
 
   const handleAccountCancellation = async () => {
     if (confirmationText.toLowerCase() !== 'cancelar conta') {
@@ -112,7 +147,7 @@ export const AccountCancellationSection = () => {
     try {
       // Chama a Edge Function para cancelar a conta
       const { error } = await supabase.functions.invoke('cancel-account', {
-        body: { user_type: 'personal_trainer' }
+        body: { user_type: userType }
       });
 
       if (error) {
@@ -157,8 +192,7 @@ export const AccountCancellationSection = () => {
             </p>
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
               <p className="text-sm text-yellow-800">
-                <strong>Importante:</strong> Todos os alunos vinculados a você serão automaticamente desvinculados, 
-                mas suas contas e históricos serão preservados.
+                <strong>Importante:</strong> {config.warningText}
               </p>
             </div>
           </div>
@@ -185,11 +219,9 @@ export const AccountCancellationSection = () => {
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <h4 className="font-medium text-red-800 mb-2">O que acontecerá:</h4>
             <ul className="text-sm text-red-700 space-y-1">
-              <li>• Sua conta será permanentemente excluída</li>
-              <li>• Todos os seus exercícios criados serão removidos</li>
-              <li>• Alunos vinculados serão automaticamente desvinculados</li>
-              <li>• Históricos dos alunos serão preservados</li>
-              <li>• Esta ação não pode ser desfeita</li>
+              {config.consequences.map((consequence, index) => (
+                <li key={index}>{consequence}</li>
+              ))}
             </ul>
           </div>
 

@@ -1,6 +1,6 @@
 // src/pages/ExecucaoSelecionarTreino.tsx
 import React, { useCallback, useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -51,6 +51,7 @@ interface SessaoDetalhada {
 export default function ExecucaoSelecionarTreino() {
   const { rotinaId } = useParams<{ rotinaId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
 
   // ✅ ESTADOS MIGRADOS DO RN
@@ -69,6 +70,9 @@ export default function ExecucaoSelecionarTreino() {
   const [treinoSelecionado, setTreinoSelecionado] = useState<TreinoComContadores | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [tipoModal, setTipoModal] = useState<'continuar_ou_nova' | 'escolher_sessao'>('continuar_ou_nova');
+
+  // ✅ MODO DE EXECUÇÃO (aluno ou pt)
+  const modo = location.state?.modo || 'aluno';
 
   // ✅ FUNÇÕES UTILITÁRIAS MIGRADAS
   const calcularDiasDesde = useCallback((dataStr: string): number => {
@@ -315,33 +319,25 @@ export default function ExecucaoSelecionarTreino() {
   }, []);
 
   // ✅ CARREGAR DADOS
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (currentRotinaId: string) => {
     try {
       setLoading(true);
 
       // Verificar autenticação
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
-        navigate('/login');
-        return;
+        throw new Error("Usuário não autenticado");
       }
 
       // Buscar rotina
       const { data: rotinaData, error: rotinaError } = await supabase
         .from('rotinas')
         .select('id, nome, descricao, aluno_id, status')
-        .eq('id', rotinaId)
-        .eq('personal_trainer_id', user.id)
+        .eq('id', currentRotinaId)
         .single();
 
       if (rotinaError || !rotinaData) {
-        toast({
-          variant: "destructive",
-          title: "Erro",
-          description: "Rotina não encontrada",
-        });
-        navigate(-1);
-        return;
+        throw new Error("Rotina não encontrada");
       }
       setRotina(rotinaData);
 
@@ -353,13 +349,7 @@ export default function ExecucaoSelecionarTreino() {
         .single();
 
       if (alunoError || !alunoData) {
-        toast({
-          variant: "destructive",
-          title: "Erro",
-          description: "Dados do aluno não encontrados",
-        });
-        navigate(-1);
-        return;
+        throw new Error("Dados do aluno não encontrados");
       }
       setAluno(alunoData);
 
@@ -367,20 +357,18 @@ export default function ExecucaoSelecionarTreino() {
       const { data: treinosData, error: treinosError } = await supabase
         .from('treinos')
         .select('id, nome, grupos_musculares, ordem')
-        .eq('rotina_id', rotinaId)
+        .eq('rotina_id', currentRotinaId)
         .order('ordem');
 
       if (treinosError) {
-        console.error('Erro ao buscar treinos:', treinosError);
-        setTreinos([]);
-        return;
+        throw new Error("Erro ao buscar treinos");
       }
 
       // Enriquecer treinos com contagem de sessões
       const treinosEnriquecidos = await Promise.all(
         (treinosData || []).map(async (treino) => {
-          const contagem = await contarSessoesPorTreino(treino.id);
-          const sessoesEmAndamento = await buscarSessoesEmAndamento(treino.id);
+          const contagem = await contarSessoesPorTreino(treino.id); // Esta função já usa rotinaId do hook
+          const sessoesAtivas = await buscarSessoesEmAndamento(treino.id); // Esta função já usa rotinaId do hook
 
           return {
             ...treino,
@@ -390,7 +378,7 @@ export default function ExecucaoSelecionarTreino() {
             tem_pausada: contagem.pausadas,
             sessoes_pausadas_count: contagem.pausadasCount,     // ← NOVO
             sessoes_em_andamento_count: contagem.emAndamentoCount, // ← NOVO
-            sessao_em_andamento_id: sessoesEmAndamento[0]?.id
+            sessao_em_andamento_id: sessoesAtivas[0]?.id
           };
         })
       );
@@ -402,18 +390,22 @@ export default function ExecucaoSelecionarTreino() {
       const sugerido = calcularTreinoSugerido(ultimoTreino, treinosEnriquecidos);
       setTreinoSugerido(sugerido);
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao carregar dados:', error);
+      let errorMessage = "Erro ao carregar dados da rotina";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Erro ao carregar dados da rotina",
+        description: errorMessage,
       });
       navigate(-1);
     } finally {
       setLoading(false);
     }
-  }, [rotinaId, navigate, toast, contarSessoesPorTreino, buscarSessoesEmAndamento, buscarUltimaSessao, calcularTreinoSugerido]);
+  }, [navigate, toast, contarSessoesPorTreino, buscarSessoesEmAndamento, buscarUltimaSessao, calcularTreinoSugerido]);
 
   // ✅ INICIAR TREINO
   const iniciarTreino = async (treino: TreinoComContadores) => {
@@ -501,14 +493,16 @@ export default function ExecucaoSelecionarTreino() {
       }
 
       console.log('Sessão iniciada com sucesso:', sessaoAtualizada.id);
-      navigate(`/execucao-rotina/executar-treino/${sessaoAtualizada.id}`);
+      navigate(`/execucao-rotina/executar-treino/${sessaoAtualizada.id}`, {
+        state: { modo: modo }
+      });
 
     } catch (error) {
       console.error('Erro ao iniciar nova sessão:', error);
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Erro inesperado ao iniciar nova sessão",
+        description: "Erro inesperado ao iniciar nova sessão.",
       });
     }
   };
@@ -519,13 +513,17 @@ export default function ExecucaoSelecionarTreino() {
     
     const sessaoParaContinuar = sessoesEmAndamento[0];
     setModalVisible(false);
-    navigate(`/execucao-rotina/executar-treino/${sessaoParaContinuar.id}`);
+    navigate(`/execucao-rotina/executar-treino/${sessaoParaContinuar.id}`, {
+      state: { modo: modo }
+    });
   };
 
   // ✅ CONTINUAR SESSÃO ESPECÍFICA
   const continuarSessaoEspecifica = (sessaoId: string) => {
     setModalVisible(false);
-    navigate(`/execucao-rotina/executar-treino/${sessaoId}`);
+    navigate(`/execucao-rotina/executar-treino/${sessaoId}`, {
+      state: { modo: modo }
+    });
   };
 
   // ✅ NOVA SESSÃO
@@ -555,8 +553,9 @@ export default function ExecucaoSelecionarTreino() {
   // ✅ CARREGAR DADOS
   useEffect(() => {
     if (!rotinaId) return;
-    loadData();
-  }, [loadData, rotinaId]);
+    // Passamos rotinaId diretamente para garantir que a função use o valor mais recente
+    loadData(rotinaId);
+  }, [rotinaId, loadData]);
 
   // ✅ LOADING
   if (loading) {

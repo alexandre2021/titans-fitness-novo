@@ -57,8 +57,6 @@ const ExercicioDetalhesContent: React.FC<{
   loading: boolean;
   onClose: () => void;
 }> = ({ isMobile, exercicio, loading, onClose }) => {
-  const GET_IMAGE_URL_ENDPOINT = 'https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/get-image-url';
-  
   const [mediaUrls, setMediaUrls] = useState<{ 
     imagem1?: string; 
     imagem2?: string; 
@@ -89,150 +87,86 @@ const ExercicioDetalhesContent: React.FC<{
       .join('\n');
   };
 
-  async function getSignedUrl(filename: string): Promise<string> {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token;
-      if (!accessToken) {
-        throw new Error("Usuário não autenticado");
-      }
-      
-      const response = await fetch(GET_IMAGE_URL_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        },
-        body: JSON.stringify({
-          filename,
-          bucket_type: 'exercicios'
-        })
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Erro ao obter URL da mídia: ${response.status} - ${errorText}`);
-      }
-      
-      const result = await response.json();
-      
-      if (!result.success || !result.url) {
-        throw new Error('URL não retornada pelo servidor');
-      }
-      
-      return result.url;
-    } catch (error) {
-      console.error('Erro ao obter URL assinada:', error);
-      throw error;
-    }
-  }
-
-  // Função para construir URL do Supabase (exercícios padrão)
-  const getSupabaseUrl = (filename: string, grupoMuscular: string): string => {
-    const { data } = supabase.storage
-      .from('exercicios-padrao')
-      .getPublicUrl(`${grupoMuscular.toLowerCase()}/${filename}`);
-    return data.publicUrl;
-  };
-
   // Função para converter URL do YouTube para embed
   const getYouTubeEmbedUrl = (url: string): string | null => {
     const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/)?.[1];
     return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
   };
 
-  // Função para carregar mídias do exercício
-  const loadMedia = useCallback(async (exercicio: ExercicioDetalhes) => {
-    setIsLoadingMedia(true);
-    setMediaUrls({});
-    
-    try {
-      const urls: { imagem1?: string; imagem2?: string; video?: string } = {};
-      
-      if (exercicio.tipo === 'padrao') {
-        // Exercícios padrão - URLs diretas do Supabase
-        if (exercicio.imagem_1_url) {
-          let filename = exercicio.imagem_1_url;
-          if (filename.includes('/')) {
-            filename = filename.split('/').pop() || filename;
-          }
-          urls.imagem1 = getSupabaseUrl(filename, exercicio.grupo_muscular);
-        }
-        
-        if (exercicio.imagem_2_url) {
-          let filename = exercicio.imagem_2_url;
-          if (filename.includes('/')) {
-            filename = filename.split('/').pop() || filename;
-          }
-          urls.imagem2 = getSupabaseUrl(filename, exercicio.grupo_muscular);
-        }
-        
-        if (exercicio.video_url) {
-          let filename = exercicio.video_url;
-          if (filename.includes('/')) {
-            filename = filename.split('/').pop() || filename;
-          }
-          urls.video = getSupabaseUrl(filename, exercicio.grupo_muscular);
-        }
-      } else {
-        // Exercícios personalizados - URLs assinadas do Cloudflare
-        if (exercicio.imagem_1_url) {
-          try {
-            let filename = exercicio.imagem_1_url;
-            if (filename.includes('/')) {
-              filename = filename.split('/').pop()?.split('?')[0] || filename;
-            }
-            if (filename) {
-              urls.imagem1 = await getSignedUrl(filename);
-            }
-          } catch (error) {
-            console.error('Erro ao carregar imagem 1:', error);
-          }
-        }
-        
-        if (exercicio.imagem_2_url) {
-          try {
-            let filename = exercicio.imagem_2_url;
-            if (filename.includes('/')) {
-              filename = filename.split('/').pop()?.split('?')[0] || filename;
-            }
-            if (filename) {
-              urls.imagem2 = await getSignedUrl(filename);
-            }
-          } catch (error) {
-            console.error('Erro ao carregar imagem 2:', error);
-          }
-        }
-        
-        if (exercicio.video_url) {
-          try {
-            let filename = exercicio.video_url;
-            if (filename.includes('/')) {
-              filename = filename.split('/').pop()?.split('?')[0] || filename;
-            }
-            if (filename) {
-              urls.video = await getSignedUrl(filename);
-            }
-          } catch (error) {
-            console.error('Erro ao carregar vídeo:', error);
-          }
-        }
-      }
-      
-      setMediaUrls(urls);
-    } catch (error) {
-      console.error('Erro geral ao carregar mídias:', error);
-    } finally {
-      setIsLoadingMedia(false);
-    }
+  // --- LÓGICA DE MÍDIA CORRIGIDA (COPIADA DE DetalhesExercicio.tsx) ---
+
+  const getSignedImageUrlPersonalizado = useCallback(async (filename: string): Promise<string> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = session?.access_token;
+    if (!accessToken) throw new Error("Usuário não autenticado para obter URL assinada.");
+
+    const response = await fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/get-image-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+      body: JSON.stringify({ filename, bucket_type: 'exercicios' })
+    });
+
+    if (!response.ok) throw new Error(`Erro da Edge Function: ${await response.text()}`);
+    const result = await response.json();
+    if (!result.success || !result.url) throw new Error('URL assinada não retornada pelo servidor.');
+    return result.url;
   }, []);
 
-  // Carregar mídias quando exercício for carregado
-  useEffect(() => {
-    if (exercicio) {
-      loadMedia(exercicio);
+  const getPublicImageUrlPadrao = useCallback((imagePath: string): string => {
+    if (imagePath.includes('/storage/v1/object/public/exercicios-padrao/')) {
+      return imagePath;
     }
-  }, [exercicio, loadMedia]);
+    const { data: { publicUrl } } = supabase.storage.from('exercicios-padrao').getPublicUrl(imagePath);
+    return publicUrl;
+  }, []);
+
+  const getImageUrl = useCallback(async (imagePath: string, tipo: 'padrao' | 'personalizado'): Promise<string> => {
+    if (tipo === 'personalizado') {
+      const filename = imagePath.split('/').pop()?.split('?')[0] || imagePath;
+      return getSignedImageUrlPersonalizado(filename);
+    } else {
+      return getPublicImageUrlPadrao(imagePath);
+    }
+  }, [getSignedImageUrlPersonalizado, getPublicImageUrlPadrao]);
+
+  useEffect(() => {
+    const loadMedia = async () => {
+      if (!exercicio) {
+        setMediaUrls({});
+        return;
+      }
+
+      setIsLoadingMedia(true);
+      setMediaUrls({});
+      
+      try {
+        const urls: typeof mediaUrls = {};
+        const tipoExercicio = exercicio.tipo as 'padrao' | 'personalizado';
+
+        if (exercicio.imagem_1_url) {
+          urls.imagem1 = await getImageUrl(exercicio.imagem_1_url, tipoExercicio);
+        }
+        if (exercicio.imagem_2_url) {
+          urls.imagem2 = await getImageUrl(exercicio.imagem_2_url, tipoExercicio);
+        }
+        if (exercicio.video_url) {
+          urls.video = await getImageUrl(exercicio.video_url, tipoExercicio);
+        }
+        
+        setMediaUrls(urls);
+      } catch (error) {
+        console.error("Erro ao carregar mídias do exercício na modal:", error);
+      } finally {
+        setIsLoadingMedia(false);
+      }
+    };
+
+    if (exercicio) {
+      void loadMedia();
+    }
+  }, [exercicio, getImageUrl]);
+
+  // --- FIM DA LÓGICA DE MÍDIA ---
 
   return (
     <>
@@ -243,13 +177,6 @@ const ExercicioDetalhesContent: React.FC<{
             <Dumbbell className="h-5 w-5 text-primary" />
             <span className="font-semibold">Detalhes do Exercício</span>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-            aria-label="Fechar"
-          >
-            <X className="h-5 w-5 text-gray-500" />
-          </button>
         </div>
       </div>
 

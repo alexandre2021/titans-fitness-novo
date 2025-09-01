@@ -47,6 +47,8 @@ const OnboardingPTInformacoesBasicas = () => {
     },
   });
 
+  const hoje = new Date().toISOString().split("T")[0]; // Formato YYYY-MM-DD
+
   useEffect(() => {
     const fetchProfile = async () => {
       if (user) {
@@ -182,6 +184,7 @@ const OnboardingPTInformacoesBasicas = () => {
               <Input
                 id="dataNascimento"
                 type="date"
+                max={hoje}
                 {...register("dataNascimento")}
                 className="border-border focus:ring-primary"
               />

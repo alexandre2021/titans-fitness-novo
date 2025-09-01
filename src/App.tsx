@@ -18,21 +18,17 @@ import CadastroAluno from "./pages/CadastroAluno";
 import ConfirmacaoEmail from "./pages/ConfirmacaoEmail";
 import Login from "./pages/Login";
 import ConviteInvalido from "./pages/ConviteInvalido";
-import Termos from "./pages/Termos";
-import Privacidade from "./pages/Privacidade";
-import DashboardPT from "./pages/DashboardPT";
-import DashboardAluno from "./pages/DashboardAluno";
+import Termos from "./pages/Termos"; 
+import Privacidade from "./pages/Privacidade"; 
 import OnboardingAlunoDadosBasicos from "./pages/OnboardingAlunoDadosBasicos";
 import OnboardingAlunoDescricaoSaude from "./pages/OnboardingAlunoQuestionarioSaude";
-import AlunoLayout from "./components/layout/AlunoLayout";
 import IndexAluno from "./pages/IndexAluno";
-import TreinosAluno from "./pages/TreinosAluno";
 import AvaliacoesAluno from "./pages/AvaliacoesAluno";
 import PerfilAluno from "./pages/PerfilAluno";
 import OnboardingPTInformacoesBasicas from "./pages/OnboardingPTInformacoesBasicas";
 import OnboardingPTExperienciaProfissional from "./pages/OnboardingPTExperienciaProfissional";
 import OnboardingPTRedesSociais from "./pages/OnboardingPTRedesSociais";
-import PTLayout from "./components/layout/PTLayout";
+import ProtectedRoutes from "./components/layout/ProtectedRoutes"; // ✅ Importa o novo componente
 import IndexPT from "./pages/IndexPT";
 import AlunosPT from "./pages/AlunosPT";
 import ConviteAluno from "./pages/ConviteAluno";
@@ -43,10 +39,10 @@ import PerfilPT from "./pages/PerfilPT";
 import ConfiguracoesPT from "./pages/ConfiguracoesPT";
 import DetalhesAluno from "./pages/DetalhesAluno";
 import AlunosParQ from "./pages/AlunosParQ";
+import PaginaRotinas from "./pages/PaginaRotinas"; // ✅ Importa o novo componente de rotinas
 import AlunosAvaliacoes from "./pages/AlunosAvaliacoes";
 import AlunosAvaliacaoNova from "./pages/AlunosAvaliacaoNova";
-import AlunosAvaliacaoDetalhes from "./pages/AlunosAvaliacaoDetalhes";
-import AlunosRotinas from "./pages/AlunosRotinas";
+import AlunosAvaliacaoDetalhes from "./pages/AlunosAvaliacaoDetalhes"; 
 import AlunosRotinaDetalhes from "./pages/AlunosRotinaDetalhes";
 import RotinaConfiguracao from "./pages/RotinaConfiguracao";
 import RotinaTreinos from "./pages/RotinaTreinos";
@@ -82,108 +78,48 @@ const App = () => (
             <Route path="/esqueci-senha" element={<EsqueciSenha />} />
             <Route path="/resetar-senha" element={<ResetarSenha />} />
             
-            {/* ✅ ROTAS PROTEGIDAS - Personal Trainer */}
-            <Route path="/index-pt" element={<AuthGuard><PTLayout /></AuthGuard>}>
-              <Route index element={<IndexPT />} />
-            </Route>
-            <Route path="/alunos" element={<AuthGuard><PTLayout /></AuthGuard>}>
-              <Route index element={<AlunosPT />} />
-            </Route>
-            <Route path="/convite-aluno" element={<AuthGuard><PTLayout /></AuthGuard>}>
-              <Route index element={<ConviteAluno />} />
-            </Route>
-            <Route path="/exercicios-pt" element={<AuthGuard><PTLayout /></AuthGuard>}>
-              <Route index element={<ExerciciosPT />} />
-            </Route>
-            <Route path="/exercicios-pt/novo" element={<AuthGuard><PTLayout /></AuthGuard>}>
-              <Route index element={<NovoExercicio />} />
-            </Route>
-            <Route path="/exercicios-pt/copia/:id" element={<AuthGuard><PTLayout /></AuthGuard>}>
-              <Route index element={<CopiaExercicio />} />
-            </Route>
-            <Route path="/exercicios-pt/editar/:id" element={<AuthGuard><PTLayout /></AuthGuard>}>
-              <Route index element={<EditarExercicio />} />
-            </Route>
-            <Route path="/exercicios-pt/detalhes/:id" element={<AuthGuard><PTLayout /></AuthGuard>}>
-              <Route index element={<DetalhesExercicio />} />
-            </Route>
-
-            {/* Rotinas - Criador */}
-            <Route path="/rotinas-criar/:alunoId/configuracao" element={<AuthGuard><PTLayout /></AuthGuard>}>
-              <Route index element={<RotinaConfiguracao />} />
-            </Route>
-            <Route path="/rotinas-criar/:alunoId/treinos" element={<AuthGuard><PTLayout /></AuthGuard>}>
-              <Route index element={<RotinaTreinos />} />
-            </Route>
-            <Route path="/rotinas-criar/:alunoId/exercicios" element={<AuthGuard><PTLayout /></AuthGuard>}>
-              <Route index element={<RotinaExercicios />} />
-            </Route>
-            <Route path="/rotinas-criar/:alunoId/revisao" element={<AuthGuard><PTLayout /></AuthGuard>}>
-              <Route index element={<RotinaRevisao />} />
-            </Route>
-
-            {/* ✅ EXECUÇÃO DE ROTINAS */}
-            <Route path="/execucao-rotina/selecionar-treino/:rotinaId" element={<AuthGuard><PTLayout /></AuthGuard>}>
-              <Route index element={<ExecucaoSelecionarTreino />} />
-            </Route>
-            <Route path="/execucao-rotina/executar-treino/:sessaoId" element={<AuthGuard><PTLayout /></AuthGuard>}>
-              <Route index element={<ExecucaoExecutarTreino />} />
-            </Route>
-
-            <Route path="/agenda-pt" element={<AuthGuard><PTLayout /></AuthGuard>}>
-              <Route index element={<AgendaPT />} />
-            </Route>
-            <Route path="/mensagens-pt" element={<AuthGuard><PTLayout /></AuthGuard>}>
-              <Route index element={<MensagensPT />} />
-            </Route>
-            <Route path="/perfil-pt" element={<AuthGuard><PTLayout /></AuthGuard>}>
-              <Route index element={<PerfilPT />} />
-            </Route>
-            <Route path="/configuracoes-pt" element={<AuthGuard><PTLayout /></AuthGuard>}>
-              <Route index element={<ConfiguracoesPT />} />
-            </Route>
-            <Route path="/detalhes-aluno/:id" element={<AuthGuard><PTLayout /></AuthGuard>}>
-              <Route index element={<DetalhesAluno />} />
-            </Route>
-            <Route path="/alunos-parq/:id" element={<AuthGuard><PTLayout /></AuthGuard>}>
-              <Route index element={<AlunosParQ />} />
-            </Route>
-            <Route path="/alunos-avaliacoes/:id" element={<AuthGuard><PTLayout /></AuthGuard>}>
-              <Route index element={<AlunosAvaliacoes />} />
-            </Route>
-            <Route path="/alunos-avaliacoes/:id/nova" element={<AuthGuard><PTLayout /></AuthGuard>}>
-              <Route index element={<AlunosAvaliacaoNova />} />
-            </Route>
-            <Route path="/alunos-avaliacoes/:id/:avaliacaoId" element={<AuthGuard><PTLayout /></AuthGuard>}>
-              <Route index element={<AlunosAvaliacaoDetalhes />} />
-            </Route>
-            <Route path="/alunos-rotinas/:id" element={<AuthGuard><PTLayout /></AuthGuard>}>
-              <Route index element={<AlunosRotinas />} />
-            </Route>
-            <Route path="/alunos-rotinas/:id/:rotinaId" element={<AuthGuard><PTLayout /></AuthGuard>}>
-              <Route index element={<AlunosRotinaDetalhes />} />
-            </Route>
-            
-            {/* ✅ ROTAS PROTEGIDAS - Aluno */}
-            <Route path="/index-aluno" element={<AuthGuard><AlunoLayout /></AuthGuard>}>
-              <Route index element={<IndexAluno />} />
-            </Route>
-            <Route path="/treinos-aluno" element={<AuthGuard><AlunoLayout /></AuthGuard>}>
-              <Route index element={<TreinosAluno />} />
-            </Route>
-            <Route path="/avaliacoes-aluno" element={<AuthGuard><AlunoLayout /></AuthGuard>}>
-              <Route index element={<AvaliacoesAluno />} />
-            </Route>
-            <Route path="/perfil-aluno" element={<AuthGuard><AlunoLayout /></AuthGuard>}>
-              <Route index element={<PerfilAluno />} />
-            </Route>
-            
-            {/* ✅ ROTAS DE ONBOARDING - PROTEGIDAS */}
+            {/* ROTAS DE ONBOARDING (sem layout, mas protegidas) */}
             <Route path="/onboarding-aluno/dados-basicos" element={<AuthGuard><OnboardingAlunoDadosBasicos /></AuthGuard>} />
             <Route path="/onboarding-aluno/descricao-saude" element={<AuthGuard><OnboardingAlunoDescricaoSaude /></AuthGuard>} />
             <Route path="/onboarding-pt/informacoes-basicas" element={<AuthGuard><OnboardingPTInformacoesBasicas /></AuthGuard>} />
             <Route path="/onboarding-pt/experiencia-profissional" element={<AuthGuard><OnboardingPTExperienciaProfissional /></AuthGuard>} />
             <Route path="/onboarding-pt/redes-sociais" element={<AuthGuard><OnboardingPTRedesSociais /></AuthGuard>} />
+            
+            {/* ✅ ROTAS PROTEGIDAS (PT e Aluno) - O layout é decidido pelo ProtectedRoutes */}
+            <Route element={<AuthGuard><ProtectedRoutes /></AuthGuard>}>
+              {/* Rotas do PT */}
+              <Route path="/index-pt" element={<IndexPT />} />
+              <Route path="/alunos" element={<AlunosPT />} />
+              <Route path="/convite-aluno" element={<ConviteAluno />} />
+              <Route path="/exercicios-pt" element={<ExerciciosPT />} />
+              <Route path="/exercicios-pt/novo" element={<NovoExercicio />} />
+              <Route path="/exercicios-pt/copia/:id" element={<CopiaExercicio />} />
+              <Route path="/exercicios-pt/editar/:id" element={<EditarExercicio />} />
+              <Route path="/exercicios-pt/detalhes/:id" element={<DetalhesExercicio />} />
+              <Route path="/agenda-pt" element={<AgendaPT />} />
+              <Route path="/mensagens-pt" element={<MensagensPT />} />
+              <Route path="/perfil-pt" element={<PerfilPT />} />
+              <Route path="/configuracoes-pt" element={<ConfiguracoesPT />} />
+              <Route path="/detalhes-aluno/:id" element={<DetalhesAluno />} />
+              <Route path="/alunos-parq/:id" element={<AlunosParQ />} />
+              <Route path="/alunos-rotinas/:id" element={<PaginaRotinas modo="personal" />} />
+              <Route path="/alunos-avaliacoes/:id" element={<AlunosAvaliacoes />} />
+              <Route path="/alunos-avaliacoes/:id/nova" element={<AlunosAvaliacaoNova />} />
+              <Route path="/alunos-avaliacoes/:id/:avaliacaoId" element={<AlunosAvaliacaoDetalhes />} />
+              <Route path="/alunos-rotinas/:id/:rotinaId" element={<AlunosRotinaDetalhes />} />
+              <Route path="/rotinas-criar/:alunoId/configuracao" element={<RotinaConfiguracao />} /> 
+              <Route path="/rotinas-criar/:alunoId/treinos" element={<RotinaTreinos />} />
+              <Route path="/rotinas-criar/:alunoId/exercicios" element={<RotinaExercicios />} />
+              <Route path="/rotinas-criar/:alunoId/revisao" element={<RotinaRevisao />} />
+              {/* Rotas do Aluno */}
+              <Route path="/index-aluno" element={<IndexAluno />} />
+              <Route path="/minhas-rotinas" element={<PaginaRotinas modo="aluno" />} />
+              <Route path="/avaliacoes-aluno" element={<AvaliacoesAluno />} />
+              <Route path="/perfil-aluno" element={<PerfilAluno />} />
+              {/* Rotas de Execução (Compartilhadas) */}
+              <Route path="/execucao-rotina/selecionar-treino/:rotinaId" element={<ExecucaoSelecionarTreino />} />
+              <Route path="/execucao-rotina/executar-treino/:sessaoId" element={<ExecucaoExecutarTreino />} />
+            </Route>
             
             {/* ✅ 404 - SEMPRE POR ÚLTIMO */}
             <Route path="*" element={<NotFound />} />

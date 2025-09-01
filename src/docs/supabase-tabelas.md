@@ -178,7 +178,7 @@ Este documento descreve a estrutura completa das tabelas do banco de dados, incl
 | `nome` | 2 | `character varying` | False | `` | `` | `` |  |
 | `descricao` | 3 | `text` | True | `` | `` | `` |  |
 | `aluno_id` | 4 | `uuid` | False | `` | `FOREIGN KEY` | `fk_rotinas_aluno` | `public.alunos(id)` |
-| `personal_trainer_id` | 5 | `uuid` | False | `` | `FOREIGN KEY` | `fk_rotinas_personal` | `public.personal_trainers(id)` |
+| `personal_trainer_id` | 5 | `uuid` | True | `` | `FOREIGN KEY (ON DELETE SET NULL)` | `fk_rotinas_personal` | `public.personal_trainers(id)` |
 | `treinos_por_semana` | 6 | `integer` | False | `` | `` | `` |  |
 | `dificuldade` | 7 | `character varying` | False | `` | `` | `` |  |
 | `duracao_semanas` | 8 | `integer` | False | `` | `` | `` |  |
@@ -193,7 +193,7 @@ Este documento descreve a estrutura completa das tabelas do banco de dados, incl
 | `pdf_email_enviado` | 17 | `boolean` | True | `false` | `` | `` |  |
 | `observacoes_rotina` | 18 | `text` | True | `` | `` | `` |  |
 
-**Status Possíveis**: ativa, pausada, finalizada, cancelada  
+**Status Possíveis**: Ativa, Bloqueada, Concluída, Cancelada  
 **Objetivos Comuns**: Emagrecimento, Ganho de Massa, Condicionamento, Reabilitação
 
 ---
@@ -272,7 +272,7 @@ Este documento descreve a estrutura completa das tabelas do banco de dados, incl
 | `modo_execucao` | 11 | `character varying` | True | `'pt'::character varying` | `CHECK` | `execucoes_sessao_modo_execucao_check` |  |
 | `tempo_decorrido` | 12 | `integer` | True | `0` | `` | `` |  |
 
-**Status Possíveis**: nao_iniciada, em_andamento, finalizada, cancelada  
+**Status Possíveis**: em_aberto, em_andamento, pausada, concluida, cancelada  
 **Modos de Execução**: pt (personal trainer), aluno
 
 ---

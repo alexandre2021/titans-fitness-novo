@@ -1,5 +1,6 @@
 // src/components/rotina/execucao/Executor.tsx
 import React, { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -28,7 +29,7 @@ import { RegistroSerieSimples } from './shared/RegistroSerieSimples';
 
 interface Props {
   sessaoId: string;
-  sessaoData: SessaoData;
+  sessaoData: SessaoData; // ✅ Recebe sessaoData como prop
   userProfile: UserProfile;
   modoExecucao: 'pt' | 'aluno';
   onSessaoFinalizada: () => void;
@@ -36,12 +37,13 @@ interface Props {
 
 export const Executor = ({ 
   sessaoId, 
-  sessaoData, 
+  sessaoData, // ✅ Usa a prop
   userProfile, 
   modoExecucao,
   onSessaoFinalizada 
 }: Props) => {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   
   // Estados dos modais
   const [modalIntervaloSerie, setModalIntervaloSerie] = useState(false);
@@ -49,7 +51,6 @@ export const Executor = ({
   const [modalDetalhesVisible, setModalDetalhesVisible] = useState(false);
   const [modalHistoricoVisible, setModalHistoricoVisible] = useState(false);
   const [modalPausarVisible, setModalPausarVisible] = useState(false);
-  const [modalFinalizarIncompleta, setModalFinalizarIncompleta] = useState(false);
   
   const [exercicioSelecionado, setExercicioSelecionado] = useState('');
   const [dadosCronometroSerie, setDadosCronometroSerie] = useState<CronometroSerieData | null>(null);
@@ -67,7 +68,7 @@ export const Executor = ({
     setCronometroPausado(false);
   }, [sessaoId]);
 
-  // Hook principal
+  // Hook principal - ✅ CORRIGIDO: passa sessaoData ao invés de sessaoId
   const {
     exercicios,
     loading,
@@ -75,7 +76,24 @@ export const Executor = ({
     atualizarSerieExecutada,
     pausarSessao,
     salvarExecucaoCompleta,
-  } = useExercicioExecucao(sessaoData, modoExecucao, cronometroPausado);
+  } = useExercicioExecucao(sessaoData, modoExecucao, cronometroPausado, navigate);
+
+  // 🔥 DEBUG: Log dos exercícios sempre que mudarem
+  useEffect(() => {
+    console.log('🔥 DEBUG - EXERCÍCIOS ATUALIZADOS:', exercicios);
+    exercicios.forEach((exercicio, exIdx) => {
+      console.log(`Exercício ${exIdx}:`, {
+        exercicio_1_id: exercicio.exercicio_1_id,
+        series: exercicio.series.map((serie, sIdx) => ({
+          numero: serie.numero_serie,
+          executada: serie.executada,
+          repeticoes_executadas: serie.repeticoes_executadas,
+          carga_executada: serie.carga_executada,
+          observacoes: serie.observacoes
+        }))
+      });
+    });
+  }, [exercicios]);
 
   // Lookup de nomes dos exercícios
   const exercicioIds: string[] = React.useMemo(() => {
@@ -120,46 +138,47 @@ export const Executor = ({
     }
   }, [sessaoPausada, cronometroPausado]);
 
-  // ✅ FUNÇÃO MOVIDA PARA ANTES - finalizarSessao
+  // ✅ FUNÇÃO SIMPLIFICADA - finalizarSessao (igual ao PT)
   const finalizarSessao = useCallback(async () => {
-    // Verificação de completude apenas para aluno
-    if (modoExecucao === 'aluno') {
-      const totalSeries = exercicios.reduce((total, exercicio) => {
-        return total + exercicio.series.length;
-      }, 0);
-      
-      const seriesExecutadas = exercicios.reduce((total, exercicio) => {
-        return total + exercicio.series.filter(serie => serie.executada).length;
-      }, 0);
-      
-      const percentual = Math.round((seriesExecutadas / totalSeries) * 100);
-      
-      if (percentual !== 100) {
-        setModalFinalizarIncompleta(true);
-        return;
-      }
-    }
+    console.log('🔥 DEBUG - INICIANDO finalizarSessao');
+    console.log('🔥 DEBUG - modoExecucao:', modoExecucao);
+    console.log('🔥 DEBUG - SEM VERIFICAÇÃO DE COMPLETUDE - Finalizando direto...');
     
-    // Finalizar direto
+    // Finalizar direto (igual ao PT)
+    console.log('🔥 DEBUG - Chamando salvarExecucaoCompleta...');
     setFinalizando(true);
     const sucesso = await salvarExecucaoCompleta();
     
     if (sucesso) {
+      console.log('🔥 DEBUG - Execução salva com sucesso!');
       onSessaoFinalizada();
+    } else {
+      console.log('🔥 DEBUG - ERRO ao salvar execução!');
     }
     
     setFinalizando(false);
-  }, [modoExecucao, exercicios, salvarExecucaoCompleta, onSessaoFinalizada]);
+  }, [modoExecucao, salvarExecucaoCompleta, onSessaoFinalizada]);
 
   // ✅ AGORA completarSerie pode usar finalizarSessao
   const completarSerie = useCallback((exercicioIndex: number, serieIndex: number) => {
+    console.log('🔥 DEBUG - COMPLETANDO SÉRIE:', { exercicioIndex, serieIndex });
+    
     atualizarSerieExecutada(exercicioIndex, serieIndex, { executada: true });
     
     const exercicio = exercicios[exercicioIndex];
     const serie = exercicio.series[serieIndex];
     
+    console.log('🔥 DEBUG - Série sendo completada:', {
+      numero_serie: serie.numero_serie,
+      executada_antes: serie.executada,
+      exercicioIndex,
+      serieIndex
+    });
+    
     const ehUltimaSerie = exercicioUtils.ehUltimaSerie(serie, exercicio.series);
     const ehUltimoExercicio = exercicioUtils.ehUltimoExercicio(exercicioIndex, exercicios.length);
+    
+    console.log('🔥 DEBUG - Flags:', { ehUltimaSerie, ehUltimoExercicio });
     
     // ✅ VERIFICAR SE TODAS AS SÉRIES ESTÃO COMPLETAS
     const verificarSessaoCompleta = () => {
@@ -185,24 +204,37 @@ export const Executor = ({
         total + ex.series.filter(s => s.executada).length, 0
       );
 
+      console.log('🔥 DEBUG - verificarSessaoCompleta:', {
+        totalSeries,
+        seriesExecutadas,
+        todasCompletas: seriesExecutadas === totalSeries,
+        exerciciosAtualizados: exerciciosAtualizados.map(ex => ({
+          series: ex.series.map(s => ({ numero: s.numero_serie, executada: s.executada }))
+        }))
+      });
+
       return seriesExecutadas === totalSeries;
     };
 
-    // ✅ LÓGICA DE INTERVALOS E FINALIZAÇÃO CORRIGIDA
+    // ✅ LÓGICA DE INTERVALOS E FINALIZAÇÃO SIMPLIFICADA
     if (!ehUltimaSerie) {
+      console.log('🔥 DEBUG - Não é última série, iniciando intervalo...');
       // Intervalo entre séries
       const intervaloSerie = serie.intervalo_apos_serie || EXERCICIO_CONSTANTS.INTERVALO_PADRAO_SERIE;
       setDadosCronometroSerie({ intervalo: intervaloSerie });
       setModalIntervaloSerie(true);
     } else {
+      console.log('🔥 DEBUG - É ÚLTIMA SÉRIE, verificando se sessão está completa...');
       // ✅ ÚLTIMA SÉRIE DE QUALQUER EXERCÍCIO
       // Primeiro: verificar se TODAS as séries estão completas
       if (verificarSessaoCompleta()) {
-        // 🚀 FINALIZAR AUTOMATICAMENTE (independente da ordem de execução)
+        console.log('🔥 DEBUG - SESSÃO COMPLETA! Finalizando automaticamente...');
+        // 🚀 FINALIZAR AUTOMATICAMENTE (sem verificação de completude)
         setTimeout(() => {
           finalizarSessao();
         }, 500); // Pequeno delay para melhor UX (mostrar série como completa primeiro)
       } else if (!ehUltimoExercicio) {
+        console.log('🔥 DEBUG - Ainda há exercícios, iniciando intervalo entre exercícios...');
         // Só mostra intervalo entre exercícios se ainda há exercícios não executados
         // E se não é o último exercício por índice
         const intervaloExercicio = exercicio.intervalo_apos_exercicio || EXERCICIO_CONSTANTS.INTERVALO_PADRAO_EXERCICIO;
@@ -213,23 +245,13 @@ export const Executor = ({
           proximoExercicio: lookup[proximoExercicio.exercicio_1_id]?.nome || ''
         });
         setModalIntervaloExercicio(true);
+      } else {
+        console.log('🔥 DEBUG - É último exercício mas sessão não está completa, aguardando...');
       }
       // Se ehUltimoExercicio = true mas verificarSessaoCompleta() = false,
       // significa que há outros exercícios ainda não executados, então não faz nada
     }
   }, [exercicios, atualizarSerieExecutada, lookup, finalizarSessao]); // ✅ finalizarSessao nas dependências
-
-  const forcarFinalizacao = useCallback(async () => {
-    setModalFinalizarIncompleta(false);
-    setFinalizando(true);
-    
-    const sucesso = await salvarExecucaoCompleta();
-    if (sucesso) {
-      onSessaoFinalizada();
-    }
-    
-    setFinalizando(false);
-  }, [salvarExecucaoCompleta, onSessaoFinalizada]);
 
   // Loading
   if (loading) {
@@ -364,6 +386,9 @@ export const Executor = ({
                             setModalDetalhesVisible(true);
                           }}
                           onSave={(reps1, carga1, reps2, carga2, obs) => {
+                            console.log('🔥 DEBUG - Salvando série combinada:', {
+                              exIndex, sIndex, reps1, carga1, reps2, carga2, obs
+                            });
                             atualizarSerieExecutada(exIndex, sIndex, {
                               repeticoes_executadas: reps1,
                               carga_executada: carga1,
@@ -394,6 +419,9 @@ export const Executor = ({
                         executada={serie.executada}
                         isPesoCorporal={exercicio.equipamento_1 === 'Peso Corporal'}
                         onSave={(reps, carga, dropsetReps, dropsetCarga, obs) => {
+                          console.log('🔥 DEBUG - Salvando série simples:', {
+                            exIndex, sIndex, reps, carga, dropsetReps, dropsetCarga, obs
+                          });
                           atualizarSerieExecutada(exIndex, sIndex, {
                             repeticoes_executadas: reps,
                             carga_executada: carga,
@@ -444,7 +472,10 @@ export const Executor = ({
 
             <Button
               size="lg"
-              onClick={finalizarSessao}
+              onClick={() => {
+                console.log('🔥 DEBUG - BOTÃO FINALIZAR CLICADO');
+                finalizarSessao();
+              }}
               disabled={finalizando || pausando || loading}
               className="flex-1"
             >
@@ -580,74 +611,6 @@ export const Executor = ({
           </Dialog>
         );
       })()}
-
-      {/* Modal de Finalizar Incompleta (apenas para aluno) */}
-      {modoExecucao === 'aluno' && (
-        <Dialog open={modalFinalizarIncompleta} onOpenChange={setModalFinalizarIncompleta}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="flex items-center space-x-2">
-                <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                <span>Finalizar Sessão Incompleta</span>
-              </DialogTitle>
-              <DialogDescription>
-                {(() => {
-                  const totalSeries = exercicios.reduce((total, exercicio) => {
-                    return total + exercicio.series.length;
-                  }, 0);
-                  
-                  const seriesExecutadas = exercicios.reduce((total, exercicio) => {
-                    return total + exercicio.series.filter(serie => serie.executada).length;
-                  }, 0);
-                  
-                  const seriesRestantes = totalSeries - seriesExecutadas;
-                  const percentual = Math.round((seriesExecutadas / totalSeries) * 100);
-                  
-                  return (
-                    <div className="space-y-3">
-                      <p>
-                        {seriesExecutadas === 0 
-                          ? 'Nenhuma série foi executada.'
-                          : `Ainda restam ${seriesRestantes} série${seriesRestantes !== 1 ? 's' : ''} por executar.`
-                        }
-                      </p>
-                      
-                      <p className="text-sm text-muted-foreground">
-                        Deseja mesmo finalizar a sessão?
-                      </p>
-                      
-                      <div className="bg-muted p-3 rounded-lg">
-                        <p className="text-sm font-medium">
-                          📊 Progresso: {seriesExecutadas}/{totalSeries} séries ({percentual}%)
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="flex flex-col space-y-3 pt-4">
-              <Button 
-                variant="destructive"
-                onClick={forcarFinalizacao}
-                disabled={finalizando}
-                className="w-full"
-              >
-                {finalizando ? 'Finalizando...' : 'Finalizar Mesmo Assim'}
-              </Button>
-              
-              <Button 
-                variant="outline"
-                onClick={() => setModalFinalizarIncompleta(false)}
-                className="w-full"
-              >
-                Cancelar
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   );
 };

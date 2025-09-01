@@ -33,7 +33,7 @@ const Privacidade = () => {
         
         <div className="prose prose-gray max-w-none">
           <p className="text-text-secondary text-lg mb-8">
-            Última atualização: 18 de agosto de 2025
+            Última atualização: 29 de agosto de 2025
           </p>
 
           <section className="mb-8">
