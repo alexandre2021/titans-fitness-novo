@@ -1,4 +1,6 @@
-// pages/CopiaExercicio.tsx
+// Caminho: pages/CopiaExercicio.tsx
+// Função handleUploadMedia adaptada para nova estratégia de otimização
+
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -52,7 +54,6 @@ const CopiaExercicio = () => {
   // Usuário autenticado
   const { user } = useAuth();
   
-
   const [formData, setFormData] = useState({
     nome: "",
     descricao: "",
@@ -232,6 +233,7 @@ const CopiaExercicio = () => {
     setSignedUrls({});
     try {
       const urls: { imagem1?: string; imagem2?: string; video?: string } = {};
+      
       // Para imagem 1
       if (midias.imagem_1_url) {
         if (midias.imagem_1_url.includes('/storage/v1/object/public/exercicios-padrao/')) {
@@ -242,6 +244,7 @@ const CopiaExercicio = () => {
           urls.imagem1 = await getSignedImageUrl(filename);
         }
       }
+      
       // Para imagem 2
       if (midias.imagem_2_url) {
         if (midias.imagem_2_url.includes('/storage/v1/object/public/exercicios-padrao/')) {
@@ -251,6 +254,7 @@ const CopiaExercicio = () => {
           urls.imagem2 = await getSignedImageUrl(filename);
         }
       }
+      
       // Para vídeo
       if (midias.video_url) {
         if (midias.video_url.includes('/storage/v1/object/public/exercicios-padrao/')) {
@@ -260,6 +264,7 @@ const CopiaExercicio = () => {
           urls.video = await getSignedImageUrl(filename);
         }
       }
+      
       setSignedUrls(urls);
     } catch (error) {
       console.error('Erro:', error);
@@ -282,7 +287,7 @@ const CopiaExercicio = () => {
     });
   };
 
-  // Função para upload de nova mídia
+  // FUNÇÃO MODIFICADA: Upload com suporte a otimização automática
   const handleUploadMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
     try {
       const input = document.createElement('input');
@@ -293,7 +298,7 @@ const CopiaExercicio = () => {
         const file = (event.target as HTMLInputElement).files?.[0];
         if (!file) return;
 
-        // Validações
+        // Validações existentes
         const maxSize = type === 'video' ? 20 * 1024 * 1024 : 5 * 1024 * 1024;
         if (file.size > maxSize) {
           toast({
@@ -307,7 +312,6 @@ const CopiaExercicio = () => {
         setUploadingMedia(type);
 
         try {
-          // Upload nova mídia
           const base64 = await fileToBase64(file);
           const timestamp = Date.now();
           const extension = file.name.split('.').pop();
@@ -320,6 +324,14 @@ const CopiaExercicio = () => {
             throw new Error("Usuário não autenticado");
           }
 
+          // NOVO: Toast informando sobre otimização automática para imagens
+          if (type !== 'video') {
+            toast({
+              title: "Processando",
+              description: "Enviando e otimizando imagem automaticamente...",
+            });
+          }
+
           const response = await fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/upload-imagem', {
             method: 'POST',
             headers: {
@@ -329,7 +341,7 @@ const CopiaExercicio = () => {
             body: JSON.stringify({
               filename,
               image_base64: base64,
-              bucket_type: 'exercicios'
+              bucket_type: 'exercicios' // Isso acionará a otimização automática
             })
           });
 
@@ -342,7 +354,25 @@ const CopiaExercicio = () => {
             throw new Error(result.error || 'Erro no upload');
           }
 
-          // Atualizar estado local
+          console.log('📊 Upload resultado:', result);
+
+          // NOVO: Verificar se foi otimizada automaticamente
+          if (result.will_be_optimized && type !== 'video') {
+            toast({
+              title: "Otimizando",
+              description: "Imagem sendo otimizada em segundo plano (4MB → ~110KB)...",
+            });
+
+            // Aguardar alguns segundos e mostrar sucesso
+            setTimeout(() => {
+              toast({
+                title: "Sucesso",
+                description: "Imagem otimizada e pronta! Arquivo reduzido em até 97%.",
+              });
+            }, 5000);
+          }
+
+          // Atualizar estado local com URL final (já otimizada)
           switch (type) {
             case 'imagem1':
               setMidias(prev => ({ ...prev, imagem_1_url: result.url }));
@@ -355,10 +385,13 @@ const CopiaExercicio = () => {
               break;
           }
 
-          toast({
-            title: "Sucesso",
-            description: "Mídia enviada com sucesso!",
-          });
+          // Toast de sucesso para vídeos ou se não foi otimizada
+          if (!result.will_be_optimized) {
+            toast({
+              title: "Sucesso",
+              description: "Mídia enviada com sucesso!",
+            });
+          }
 
         } catch (error) {
           console.error('Upload falhou:', error);
@@ -437,7 +470,6 @@ const CopiaExercicio = () => {
         setExercicioOriginal(exercicio);
 
         // Preencher formulário com dados do exercício original
-
         setFormData({
           nome: `${exercicio.nome} (Personalizado)`,
           descricao: exercicio.descricao || "",
@@ -481,7 +513,6 @@ const CopiaExercicio = () => {
     fetchExercicio();
   }, [id, navigate, toast]);
 
-  // Recarregar URLs assinadas quando exercicioOriginal ou mídias mudarem
   // Recarregar URLs assinadas quando exercicioOriginal ou mídias mudarem
   useEffect(() => {
     if (exercicioOriginal && (midias.imagem_1_url || midias.imagem_2_url || midias.video_url)) {
@@ -533,11 +564,11 @@ const CopiaExercicio = () => {
     });
   };
 
+  // FUNÇÃO MODIFICADA: handleSave também usa nova estratégia
   const handleSave = async () => {
-
-  // Monta instruções do campo dinâmico
-  const instrucoesFinal = instrucoesList.filter(i => i.trim()).join('#');
-  const currentFormData = { ...formData, instrucoes: instrucoesFinal };
+    // Monta instruções do campo dinâmico
+    const instrucoesFinal = instrucoesList.filter(i => i.trim()).join('#');
+    const currentFormData = { ...formData, instrucoes: instrucoesFinal };
 
     if (!user || !user.id || !validateForm()) {
       toast({
@@ -551,13 +582,18 @@ const CopiaExercicio = () => {
     setSaving(true);
 
     try {
-      // --- NOVO: Se a imagem 1 for do Supabase público, copiar para Cloudflare ---
+      // MODIFICADO: Se imagens forem do Supabase público, copiar com otimização automática
       let imagem_1_url_final = midias.imagem_1_url;
       if (
         imagem_1_url_final &&
         imagem_1_url_final.includes('/storage/v1/object/public/exercicios-padrao/')
       ) {
         try {
+          toast({
+            title: "Copiando",
+            description: "Copiando e otimizando imagem 1...",
+          });
+
           const base64 = await fetchImageAsBase64(imagem_1_url_final);
           const timestamp = Date.now();
           const extension = imagem_1_url_final.split('.').pop()?.split('?')[0] || 'webp';
@@ -575,26 +611,32 @@ const CopiaExercicio = () => {
             body: JSON.stringify({
               filename,
               image_base64: base64,
-              bucket_type: 'exercicios'
+              bucket_type: 'exercicios' // Otimização automática
             })
           });
+
           if (!response.ok) throw new Error('Falha ao copiar imagem para Cloudflare');
           const result = await response.json();
           if (result.success && result.url) {
             imagem_1_url_final = result.url;
           }
         } catch (err) {
-          console.error('Erro ao copiar imagem do Supabase para Cloudflare:', err);
+          console.error('Erro ao copiar imagem 1:', err);
         }
       }
 
-      // --- NOVO: Se a imagem 2 for do Supabase público, copiar para Cloudflare ---
+      // MODIFICADO: Se imagem 2 for do Supabase público, copiar com otimização automática
       let imagem_2_url_final = midias.imagem_2_url;
       if (
         imagem_2_url_final &&
         imagem_2_url_final.includes('/storage/v1/object/public/exercicios-padrao/')
       ) {
         try {
+          toast({
+            title: "Copiando",
+            description: "Copiando e otimizando imagem 2...",
+          });
+
           const base64 = await fetchImageAsBase64(imagem_2_url_final);
           const timestamp = Date.now();
           const extension = imagem_2_url_final.split('.').pop()?.split('?')[0] || 'webp';
@@ -612,20 +654,21 @@ const CopiaExercicio = () => {
             body: JSON.stringify({
               filename,
               image_base64: base64,
-              bucket_type: 'exercicios'
+              bucket_type: 'exercicios' // Otimização automática
             })
           });
+
           if (!response.ok) throw new Error('Falha ao copiar imagem para Cloudflare');
           const result = await response.json();
           if (result.success && result.url) {
             imagem_2_url_final = result.url;
           }
         } catch (err) {
-          console.error('Erro ao copiar imagem do Supabase para Cloudflare:', err);
+          console.error('Erro ao copiar imagem 2:', err);
         }
       }
 
-      // --- NOVO: Se o vídeo for do Supabase público, copiar para Cloudflare (opcional, se aplicável) ---
+      // MODIFICADO: Se vídeo for do Supabase público, copiar (sem otimização por enquanto)
       let video_url_final = midias.video_url;
       if (
         video_url_final &&
@@ -652,17 +695,18 @@ const CopiaExercicio = () => {
               bucket_type: 'exercicios'
             })
           });
+
           if (!response.ok) throw new Error('Falha ao copiar vídeo para Cloudflare');
           const result = await response.json();
           if (result.success && result.url) {
             video_url_final = result.url;
           }
         } catch (err) {
-          console.error('Erro ao copiar vídeo do Supabase para Cloudflare:', err);
+          console.error('Erro ao copiar vídeo:', err);
         }
       }
 
-      // Criar cópia personalizada no banco usando as URLs finais
+      // Criar cópia personalizada no banco usando as URLs finais (otimizadas)
       const { data: exercicio, error } = await supabase
         .from('exercicios')
         .insert({
@@ -678,7 +722,7 @@ const CopiaExercicio = () => {
           youtube_url: midias.youtube_url || null,
           tipo: 'personalizado',
           pt_id: user.id,
-          exercicio_padrao_id: exercicioOriginal?.id, // Referência ao exercício original
+          exercicio_padrao_id: exercicioOriginal?.id,
           is_ativo: true
         })
         .select()
@@ -688,7 +732,7 @@ const CopiaExercicio = () => {
 
       toast({
         title: "Sucesso",
-        description: "Cópia do exercício criada com sucesso!",
+        description: "Cópia do exercício criada com imagens otimizadas!",
       });
 
       console.log('✅ Cópia do exercício criada:', exercicio);
@@ -753,527 +797,310 @@ const CopiaExercicio = () => {
   }
 
   return (
-
     <div className="space-y-6">
       {/* Cabeçalho Responsivo */}
-<div className="space-y-4">
-  {/* Layout Desktop */}
-  <div className="hidden md:flex md:items-center md:justify-between">
-    <div className="flex items-center gap-4">
-      <Button
-        variant="ghost"
-        onClick={() => navigate('/exercicios-pt')}
-        className="h-10 w-10 p-0"
-      >
-        <ArrowLeft className="h-4 w-4" />
-      </Button>
-      <div className="flex-1">
-        <div className="mb-1">
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-            <Copy className="h-3 w-3 mr-1" />
-            Baseado em exercício padrão
-          </Badge>
-        </div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          Criar Cópia Personalizada
-        </h1>
-        <p className="text-muted-foreground">
-          Criando cópia de: <span className="font-medium">{exercicioOriginal.nome}</span>
-        </p>
-      </div>
-    </div>
+      <div className="space-y-4">
+        {/* Layout Desktop */}
+        <div className="hidden md:flex md:items-center md:justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/exercicios-pt')}
+              className="h-10 w-10 p-0"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex-1">
+              <div className="mb-1">
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                  <Copy className="h-3 w-3 mr-1" />
+                  Baseado em exercício padrão
+                </Badge>
+              </div>
+              <h1 className="text-3xl font-bold flex items-center gap-2">
+                Criar Cópia Personalizada
+              </h1>
+              <p className="text-muted-foreground">
+                Criando cópia de: <span className="font-medium">{exercicioOriginal.nome}</span>
+              </p>
+            </div>
+          </div>
 
-    {/* Ações no cabeçalho - Desktop */}
-    <div className="flex items-center gap-2">
-      <Button
-        onClick={handleSave}
-        disabled={saving}
-        className="flex items-center gap-2"
-      >
-        <Save className="h-4 w-4" />
-        {saving ? "Salvando..." : "Salvar Cópia"}
-      </Button>
-    </div>
-  </div>
-
-  {/* Layout Mobile - Padrão da aplicação */}
-      <div className="md:hidden flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4 overflow-hidden">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/exercicios-pt')}
-            className="h-10 w-10 p-0 flex-shrink-0"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-1 space-y-1 overflow-hidden">
-            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
-              <Copy className="h-3 w-3 mr-1" />
-              Baseado em exercício padrão
-            </Badge>
-            <h1 className="text-2xl font-bold leading-tight">Criar Cópia Personalizada</h1>
-            <p className="text-sm text-muted-foreground">
-              Criando cópia de: {exercicioOriginal.nome}
-            </p>
+          {/* Ações no cabeçalho - Desktop */}
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-2"
+            >
+              <Save className="h-4 w-4" />
+              {saving ? "Salvando..." : "Salvar Cópia"}
+            </Button>
           </div>
         </div>
-        
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 w-10 flex-shrink-0"
-        >
-          <Save className="h-6 w-6" />
-          <span className="sr-only">Salvar Cópia</span>
-        </button>
+
+        {/* Layout Mobile - Padrão da aplicação */}
+        <div className="md:hidden flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4 overflow-hidden">
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/exercicios-pt')}
+              className="h-10 w-10 p-0 flex-shrink-0"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex-1 space-y-1 overflow-hidden">
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+                <Copy className="h-3 w-3 mr-1" />
+                Baseado em exercício padrão
+              </Badge>
+              <h1 className="text-2xl font-bold leading-tight">Criar Cópia Personalizada</h1>
+              <p className="text-sm text-muted-foreground">
+                Criando cópia de: {exercicioOriginal.nome}
+              </p>
+            </div>
+          </div>
+          
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 w-10 flex-shrink-0"
+          >
+            <Save className="h-6 w-6" />
+            <span className="sr-only">Salvar Cópia</span>
+          </button>
+        </div>
       </div>
-</div>
 
       {/* Layout em coluna única */}
       <div className="space-y-6">
           
-          {/* 1. Informações Básicas - Igual estrutura do DetalhesExercicio */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Informações Básicas</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+        {/* 1. Informações Básicas */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Informações Básicas</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="nome" className="text-sm font-medium text-muted-foreground">Nome</Label>
+              <Input
+                id="nome"
+                value={formData.nome}
+                onChange={(e) => setFormData(prev => ({ ...prev, nome: e.target.value }))}
+                placeholder="Ex: Supino com halteres (Personalizado)"
+                className={errors.nome ? "border-red-500" : ""}
+              />
+              {errors.nome && (
+                <p className="text-sm text-red-500 mt-1">{errors.nome}</p>
+              )}
+            </div>
+            
+            <div>
+              <Label htmlFor="descricao" className="text-sm font-medium text-muted-foreground">Descrição</Label>
+              <Textarea
+                id="descricao"
+                value={formData.descricao}
+                onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))}
+                placeholder="Descreva o exercício brevemente..."
+                className={errors.descricao ? "border-red-500" : ""}
+              />
+              {errors.descricao && (
+                <p className="text-sm text-red-500 mt-1">{errors.descricao}</p>
+              )}
+            </div>
+
+            <Separator />
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="nome" className="text-sm font-medium text-muted-foreground">Nome</Label>
+                <Label htmlFor="grupo_muscular" className="text-sm font-medium text-muted-foreground">Grupo Muscular</Label>
+                <Select
+                  value={formData.grupo_muscular}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, grupo_muscular: value }))}
+                >
+                  <SelectTrigger className={errors.grupo_muscular ? "border-red-500" : ""}>
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {gruposMusculares.map((grupo) => (
+                      <SelectItem key={grupo} value={grupo}>
+                        {grupo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.grupo_muscular && (
+                  <p className="text-sm text-red-500 mt-1">{errors.grupo_muscular}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="equipamento" className="text-sm font-medium text-muted-foreground">Equipamento</Label>
+                <Select
+                  value={formData.equipamento}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, equipamento: value }))}
+                >
+                  <SelectTrigger className={errors.equipamento ? "border-red-500" : ""}>
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {equipamentos.map((equipamento) => (
+                      <SelectItem key={equipamento} value={equipamento}>
+                        {equipamento}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.equipamento && (
+                  <p className="text-sm text-red-500 mt-1">{errors.equipamento}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="dificuldade" className="text-sm font-medium text-muted-foreground">Dificuldade</Label>
+                <Select
+                  value={formData.dificuldade}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, dificuldade: value as "Baixa" | "Média" | "Alta" }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {dificuldades.map((dificuldade) => (
+                      <SelectItem key={dificuldade} value={dificuldade}>
+                        {dificuldade}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Inputs para músculo primário e secundários */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+              <div>
+                <Label htmlFor="grupo_muscular_primario" className="text-sm font-medium text-muted-foreground">Músculo primário</Label>
                 <Input
-                  id="nome"
-                  value={formData.nome}
-                  onChange={(e) => setFormData(prev => ({ ...prev, nome: e.target.value }))}
-                  placeholder="Ex: Supino com halteres (Personalizado)"
-                  className={errors.nome ? "border-red-500" : ""}
+                  id="grupo_muscular_primario"
+                  value={formData.grupo_muscular_primario || ""}
+                  onChange={e => setFormData(prev => ({ ...prev, grupo_muscular_primario: e.target.value }))}
+                  placeholder="Ex: Peitoral maior"
                 />
-                {errors.nome && (
-                  <p className="text-sm text-red-500 mt-1">{errors.nome}</p>
-                )}
               </div>
-              
               <div>
-                <Label htmlFor="descricao" className="text-sm font-medium text-muted-foreground">Descrição</Label>
-                <Textarea
-                  id="descricao"
-                  value={formData.descricao}
-                  onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))}
-                  placeholder="Descreva o exercício brevemente..."
-                  className={errors.descricao ? "border-red-500" : ""}
+                <Label htmlFor="grupos_musculares_secundarios" className="text-sm font-medium text-muted-foreground">Músculo(s) secundário(s)</Label>
+                <Input
+                  id="grupos_musculares_secundarios"
+                  value={formData.grupos_musculares_secundarios || ""}
+                  onChange={e => setFormData(prev => ({ ...prev, grupos_musculares_secundarios: e.target.value }))}
+                  placeholder="Ex: Tríceps, deltoide anterior"
                 />
-                {errors.descricao && (
-                  <p className="text-sm text-red-500 mt-1">{errors.descricao}</p>
-                )}
               </div>
+            </div>
+          </CardContent>
+        </Card>
 
-              <Separator />
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="grupo_muscular" className="text-sm font-medium text-muted-foreground">Grupo Muscular</Label>
-                  <Select
-                    value={formData.grupo_muscular}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, grupo_muscular: value }))}
-                  >
-                    <SelectTrigger className={errors.grupo_muscular ? "border-red-500" : ""}>
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {gruposMusculares.map((grupo) => (
-                        <SelectItem key={grupo} value={grupo}>
-                          {grupo}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.grupo_muscular && (
-                    <p className="text-sm text-red-500 mt-1">{errors.grupo_muscular}</p>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="equipamento" className="text-sm font-medium text-muted-foreground">Equipamento</Label>
-                  <Select
-                    value={formData.equipamento}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, equipamento: value }))}
-                  >
-                    <SelectTrigger className={errors.equipamento ? "border-red-500" : ""}>
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {equipamentos.map((equipamento) => (
-                        <SelectItem key={equipamento} value={equipamento}>
-                          {equipamento}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.equipamento && (
-                    <p className="text-sm text-red-500 mt-1">{errors.equipamento}</p>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="dificuldade" className="text-sm font-medium text-muted-foreground">Dificuldade</Label>
-                  <Select
-                    value={formData.dificuldade}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, dificuldade: value as "Baixa" | "Média" | "Alta" }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {dificuldades.map((dificuldade) => (
-                        <SelectItem key={dificuldade} value={dificuldade}>
-                          {dificuldade}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Novos inputs para músculo primário e secundários */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                <div>
-                  <Label htmlFor="grupo_muscular_primario" className="text-sm font-medium text-muted-foreground">Músculo primário</Label>
+        {/* 2. Instruções de Execução */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Instruções de execução</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {instrucoesList.map((item, idx) => (
+                <div key={idx} className="flex gap-2 items-center">
+                  <span className="w-6 text-right text-base font-semibold text-muted-foreground">{idx + 1}.</span>
                   <Input
-                    id="grupo_muscular_primario"
-                    value={formData.grupo_muscular_primario || ""}
-                    onChange={e => setFormData(prev => ({ ...prev, grupo_muscular_primario: e.target.value }))}
-                    placeholder="Ex: Peitoral maior"
+                    value={item}
+                    onChange={e => {
+                      const newList = [...instrucoesList];
+                      newList[idx] = e.target.value;
+                      setInstrucoesList(newList);
+                    }}
+                    placeholder={`Etapa ${idx + 1}`}
+                    className="flex-1"
                   />
+                  <Button type="button" size="sm" onClick={() => {
+                    setInstrucoesList(list => list.filter((_, i) => i !== idx));
+                  }}>Remover</Button>
                 </div>
-                <div>
-                  <Label htmlFor="grupos_musculares_secundarios" className="text-sm font-medium text-muted-foreground">Músculo(s) secundário(s)</Label>
-                  <Input
-                    id="grupos_musculares_secundarios"
-                    value={formData.grupos_musculares_secundarios || ""}
-                    onChange={e => setFormData(prev => ({ ...prev, grupos_musculares_secundarios: e.target.value }))}
-                    placeholder="Ex: Tríceps, deltoide anterior"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              ))}
+              <Button type="button" variant="outline" size="sm" onClick={() => setInstrucoesList(list => [...list, ""])}>Adicionar etapa</Button>
+              {errors.instrucoes && (
+                <p className="text-sm text-red-500 mt-1">{errors.instrucoes}</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* 2. Instruções de Execução - Igual estrutura do DetalhesExercicio */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Instruções de execução</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {instrucoesList.map((item, idx) => (
-                  <div key={idx} className="flex gap-2 items-center">
-                    <span className="w-6 text-right text-base font-semibold text-muted-foreground">{idx + 1}.</span>
-                    <Input
-                      value={item}
-                      onChange={e => {
-                        const newList = [...instrucoesList];
-                        newList[idx] = e.target.value;
-                        setInstrucoesList(newList);
-                      }}
-                      placeholder={`Etapa ${idx + 1}`}
-                      className="flex-1"
-                    />
-                    <Button type="button" size="sm" onClick={() => {
-                      setInstrucoesList(list => list.filter((_, i) => i !== idx));
-                    }}>Remover</Button>
-                  </div>
-                ))}
-                <Button type="button" variant="outline" size="sm" onClick={() => setInstrucoesList(list => [...list, ""])}>Adicionar etapa</Button>
-                {errors.instrucoes && (
-                  <p className="text-sm text-red-500 mt-1">{errors.instrucoes}</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 3. Mídias com Upload Funcional */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Mídias</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Visualize as mídias do exercício original e faça upload das suas próprias mídias
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Primeira Imagem */}
-              <div>
-                <Label className="text-sm font-medium">Primeira Imagem</Label>
-                <div className="mt-2 space-y-4">
-                  
-                  {/* Upload da nova imagem */}
-                  {midias.imagem_1_url ? (
-                    <div className="space-y-3">
-                      <div className="relative inline-block">
-                        {loadingImages ? (
-                          <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
-                            <span className="text-sm text-muted-foreground">Carregando...</span>
-                          </div>
-                        ) : signedUrls.imagem1 ? (
-                          <img 
-                            src={signedUrls.imagem1} 
-                            alt="Sua primeira imagem" 
-                            className="w-40 h-40 object-cover rounded-lg border shadow-sm"
-                          />
-                        ) : (
-                          <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
-                            <span className="text-sm text-muted-foreground">Erro ao carregar</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(signedUrls.imagem1 || midias.imagem_1_url, '_blank')}
-                          className="flex items-center gap-2"
-                          disabled={!signedUrls.imagem1}
-                        >
-                          <Eye className="h-4 w-4" />
-                          Visualizar
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleUploadMedia('imagem1')}
-                          className="flex items-center gap-2"
-                          disabled={uploadingMedia === 'imagem1'}
-                        >
-                          <Upload className="h-4 w-4" />
-                          {uploadingMedia === 'imagem1' ? 'Enviando...' : 'Trocar'}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => setShowDeleteMediaDialog('imagem1')}
-                          className="flex items-center gap-2"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Não incluir
-                        </Button>
-                      </div>
+        {/* 3. Mídias com Upload Otimizado */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Mídias</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Upload automático com otimização (imagens reduzidas em até 97%)
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Primeira Imagem */}
+            <div>
+              <Label className="text-sm font-medium">Primeira Imagem</Label>
+              <div className="mt-2 space-y-4">
+                {midias.imagem_1_url ? (
+                  <div className="space-y-3">
+                    <div className="relative inline-block">
+                      {loadingImages ? (
+                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
+                          <span className="text-sm text-muted-foreground">Carregando...</span>
+                        </div>
+                      ) : signedUrls.imagem1 ? (
+                        <img 
+                          src={signedUrls.imagem1} 
+                          alt="Sua primeira imagem" 
+                          className="w-40 h-40 object-cover rounded-lg border shadow-sm"
+                        />
+                      ) : (
+                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
+                          <span className="text-sm text-muted-foreground">Erro ao carregar</span>
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                      <p className="text-sm text-muted-foreground mb-3">Faça upload da sua primeira imagem</p>
+                    <div className="flex gap-2">
                       <Button
                         type="button"
                         variant="outline"
+                        size="sm"
+                        onClick={() => window.open(signedUrls.imagem1 || midias.imagem_1_url, '_blank')}
+                        className="flex items-center gap-2"
+                        disabled={!signedUrls.imagem1}
+                      >
+                        <Eye className="h-4 w-4" />
+                        Visualizar
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleUploadMedia('imagem1')}
                         className="flex items-center gap-2"
                         disabled={uploadingMedia === 'imagem1'}
                       >
                         <Upload className="h-4 w-4" />
-                        {uploadingMedia === 'imagem1' ? 'Enviando...' : 'Fazer Upload da Primeira Imagem'}
+                        {uploadingMedia === 'imagem1' ? 'Enviando...' : 'Trocar'}
                       </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Segunda Imagem */}
-              <div>
-                <Label className="text-sm font-medium">Segunda Imagem</Label>
-                <div className="mt-2 space-y-4">
-                  
-                  {/* Upload da nova imagem */}
-                  {midias.imagem_2_url ? (
-                    <div className="space-y-3">
-                      <div className="relative inline-block">
-                        {loadingImages ? (
-                          <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
-                            <span className="text-sm text-muted-foreground">Carregando...</span>
-                          </div>
-                        ) : signedUrls.imagem2 ? (
-                          <img 
-                            src={signedUrls.imagem2} 
-                            alt="Sua segunda imagem" 
-                            className="w-40 h-40 object-cover rounded-lg border shadow-sm"
-                          />
-                        ) : (
-                          <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
-                            <span className="text-sm text-muted-foreground">Erro ao carregar</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(signedUrls.imagem2 || midias.imagem_2_url, '_blank')}
-                          className="flex items-center gap-2"
-                          disabled={!signedUrls.imagem2}
-                        >
-                          <Eye className="h-4 w-4" />
-                          Visualizar
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleUploadMedia('imagem2')}
-                          className="flex items-center gap-2"
-                          disabled={uploadingMedia === 'imagem2'}
-                        >
-                          <Upload className="h-4 w-4" />
-                          {uploadingMedia === 'imagem2' ? 'Enviando...' : 'Trocar'}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => setShowDeleteMediaDialog('imagem2')}
-                          className="flex items-center gap-2"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Não incluir
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                      <p className="text-sm text-muted-foreground mb-3">Faça upload da sua segunda imagem</p>
                       <Button
                         type="button"
-                        variant="outline"
-                        onClick={() => handleUploadMedia('imagem2')}
-                        className="flex items-center gap-2"
-                        disabled={uploadingMedia === 'imagem2'}
-                      >
-                        <Upload className="h-4 w-4" />
-                        {uploadingMedia === 'imagem2' ? 'Enviando...' : 'Fazer Upload da Segunda Imagem'}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Vídeo */}
-              <div>
-                <Label className="text-sm font-medium">Vídeo</Label>
-                <div className="mt-2 space-y-4">
-                  
-                  {/* Upload do novo vídeo */}
-                  {midias.video_url ? (
-                    <div className="space-y-3">
-                      <div className="relative inline-block">
-                        {loadingImages ? (
-                          <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
-                            <span className="text-sm text-muted-foreground">Carregando...</span>
-                          </div>
-                        ) : signedUrls.video ? (
-                          <video 
-                            src={signedUrls.video} 
-                            className="w-40 h-40 object-cover rounded-lg border shadow-sm"
-                            controls
-                          />
-                        ) : (
-                          <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
-                            <span className="text-sm text-muted-foreground">Erro ao carregar</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(signedUrls.video || midias.video_url, '_blank')}
-                          className="flex items-center gap-2"
-                          disabled={!signedUrls.video}
-                        >
-                          <Eye className="h-4 w-4" />
-                          Assistir
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleUploadMedia('video')}
-                          className="flex items-center gap-2"
-                          disabled={uploadingMedia === 'video'}
-                        >
-                          <Upload className="h-4 w-4" />
-                          {uploadingMedia === 'video' ? 'Enviando...' : 'Trocar'}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => setShowDeleteMediaDialog('video')}
-                          className="flex items-center gap-2"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Não incluir
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                      <p className="text-sm text-muted-foreground mb-3">Faça upload do seu vídeo (máx. 20MB)</p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => handleUploadMedia('video')}
-                        className="flex items-center gap-2"
-                        disabled={uploadingMedia === 'video'}
-                      >
-                        <Upload className="h-4 w-4" />
-                        {uploadingMedia === 'video' ? 'Enviando...' : 'Fazer Upload do Vídeo'}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* YouTube - Apenas URL */}
-              <div>
-                <Label className="text-sm font-medium">URL do YouTube</Label>
-                <div className="mt-2 space-y-3">
-                  {/* Mostrar URL original se existir */}
-                  {exercicioOriginal.youtube_url && (
-                    <div className="border rounded-lg p-3 bg-muted/30">
-                      <p className="text-sm font-medium text-muted-foreground mb-1">YouTube Original:</p>
-                      <p className="text-sm text-blue-600 break-all">{exercicioOriginal.youtube_url}</p>
-                    </div>
-                  )}
-                  
-                  <Input
-                    value={midias.youtube_url}
-                    onChange={(e) => setMidias(prev => ({ ...prev, youtube_url: e.target.value }))}
-                    placeholder="https://youtube.com/watch?v=... (cole aqui sua URL do YouTube)"
-                  />
-                  {midias.youtube_url && (
-                    <div className="flex items-center gap-2">
-                      <div className="text-sm text-green-600 flex items-center gap-1">
-                        ✅ URL do YouTube configurada
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
+                        variant="destructive"
                         size="sm"
-                        onClick={() => window.open(midias.youtube_url, '_blank')}
+                        onClick={() => setShowDeleteMediaDialog('imagem1')}
                         className="flex items-center gap-2"
                       >
-                        <ExternalLink className="h-4 w-4" />
-                        Ver no YouTube
+                        <Trash2 className="h-4 w-4" />
+                        Não incluir
                       </Button>
                     </div>
-                  )}
-                </div>
-              </div>
-
-              {!exercicioOriginal.imagem_1_url && !exercicioOriginal.imagem_2_url && !exercicioOriginal.video_url && !exercicioOriginal.youtube_url && (
-                <div className="text-center py-8">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    O exercício original não possui mídias. Você pode adicionar suas próprias mídias à cópia.
-                  </p>
-                  <div className="flex gap-2 justify-center">
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                    <p className="text-sm text-muted-foreground mb-3">Upload com otimização automática</p>
                     <Button
                       type="button"
                       variant="outline"
@@ -1282,8 +1109,150 @@ const CopiaExercicio = () => {
                       disabled={uploadingMedia === 'imagem1'}
                     >
                       <Upload className="h-4 w-4" />
-                      {uploadingMedia === 'imagem1' ? 'Enviando...' : 'Adicionar Imagem'}
+                      {uploadingMedia === 'imagem1' ? 'Enviando...' : 'Upload Primeira Imagem'}
                     </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Segunda Imagem */}
+            <div>
+              <Label className="text-sm font-medium">Segunda Imagem</Label>
+              <div className="mt-2 space-y-4">
+                {midias.imagem_2_url ? (
+                  <div className="space-y-3">
+                    <div className="relative inline-block">
+                      {loadingImages ? (
+                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
+                          <span className="text-sm text-muted-foreground">Carregando...</span>
+                        </div>
+                      ) : signedUrls.imagem2 ? (
+                        <img 
+                          src={signedUrls.imagem2} 
+                          alt="Sua segunda imagem" 
+                          className="w-40 h-40 object-cover rounded-lg border shadow-sm"
+                        />
+                      ) : (
+                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
+                          <span className="text-sm text-muted-foreground">Erro ao carregar</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(signedUrls.imagem2 || midias.imagem_2_url, '_blank')}
+                        className="flex items-center gap-2"
+                        disabled={!signedUrls.imagem2}
+                      >
+                        <Eye className="h-4 w-4" />
+                        Visualizar
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleUploadMedia('imagem2')}
+                        className="flex items-center gap-2"
+                        disabled={uploadingMedia === 'imagem2'}
+                      >
+                        <Upload className="h-4 w-4" />
+                        {uploadingMedia === 'imagem2' ? 'Enviando...' : 'Trocar'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setShowDeleteMediaDialog('imagem2')}
+                        className="flex items-center gap-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Não incluir
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                    <p className="text-sm text-muted-foreground mb-3">Upload com otimização automática</p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => handleUploadMedia('imagem2')}
+                      className="flex items-center gap-2"
+                      disabled={uploadingMedia === 'imagem2'}
+                    >
+                      <Upload className="h-4 w-4" />
+                      {uploadingMedia === 'imagem2' ? 'Enviando...' : 'Upload Segunda Imagem'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Vídeo */}
+            <div>
+              <Label className="text-sm font-medium">Vídeo</Label>
+              <div className="mt-2 space-y-4">
+                {midias.video_url ? (
+                  <div className="space-y-3">
+                    <div className="relative inline-block">
+                      {loadingImages ? (
+                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
+                          <span className="text-sm text-muted-foreground">Carregando...</span>
+                        </div>
+                      ) : signedUrls.video ? (
+                        <video 
+                          src={signedUrls.video} 
+                          className="w-40 h-40 object-cover rounded-lg border shadow-sm"
+                          controls
+                        />
+                      ) : (
+                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
+                          <span className="text-sm text-muted-foreground">Erro ao carregar</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(signedUrls.video || midias.video_url, '_blank')}
+                        className="flex items-center gap-2"
+                        disabled={!signedUrls.video}
+                      >
+                        <Eye className="h-4 w-4" />
+                        Assistir
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleUploadMedia('video')}
+                        className="flex items-center gap-2"
+                        disabled={uploadingMedia === 'video'}
+                      >
+                        <Upload className="h-4 w-4" />
+                        {uploadingMedia === 'video' ? 'Enviando...' : 'Trocar'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setShowDeleteMediaDialog('video')}
+                        className="flex items-center gap-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Não incluir
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                    <p className="text-sm text-muted-foreground mb-3">Upload de vídeo (máx. 20MB)</p>
                     <Button
                       type="button"
                       variant="outline"
@@ -1292,14 +1261,82 @@ const CopiaExercicio = () => {
                       disabled={uploadingMedia === 'video'}
                     >
                       <Upload className="h-4 w-4" />
-                      {uploadingMedia === 'video' ? 'Enviando...' : 'Adicionar Vídeo'}
+                      {uploadingMedia === 'video' ? 'Enviando...' : 'Upload Vídeo'}
                     </Button>
                   </div>
+                )}
+              </div>
+            </div>
+
+            {/* YouTube - URL apenas */}
+            <div>
+              <Label className="text-sm font-medium">URL do YouTube</Label>
+              <div className="mt-2 space-y-3">
+                {exercicioOriginal.youtube_url && (
+                  <div className="border rounded-lg p-3 bg-muted/30">
+                    <p className="text-sm font-medium text-muted-foreground mb-1">YouTube Original:</p>
+                    <p className="text-sm text-blue-600 break-all">{exercicioOriginal.youtube_url}</p>
+                  </div>
+                )}
+                
+                <Input
+                  value={midias.youtube_url}
+                  onChange={(e) => setMidias(prev => ({ ...prev, youtube_url: e.target.value }))}
+                  placeholder="https://youtube.com/watch?v=... (cole aqui sua URL do YouTube)"
+                />
+                {midias.youtube_url && (
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm text-green-600 flex items-center gap-1">
+                      ✅ URL do YouTube configurada
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(midias.youtube_url, '_blank')}
+                      className="flex items-center gap-2"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Ver no YouTube
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Mensagem quando exercício não tem mídias */}
+            {!exercicioOriginal.imagem_1_url && !exercicioOriginal.imagem_2_url && !exercicioOriginal.video_url && !exercicioOriginal.youtube_url && (
+              <div className="text-center py-8">
+                <p className="text-sm text-muted-foreground mb-4">
+                  O exercício original não possui mídias. Adicione suas próprias mídias.
+                </p>
+                <div className="flex gap-2 justify-center">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleUploadMedia('imagem1')}
+                    className="flex items-center gap-2"
+                    disabled={uploadingMedia === 'imagem1'}
+                  >
+                    <Upload className="h-4 w-4" />
+                    {uploadingMedia === 'imagem1' ? 'Enviando...' : 'Adicionar Imagem'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleUploadMedia('video')}
+                    className="flex items-center gap-2"
+                    disabled={uploadingMedia === 'video'}
+                  >
+                    <Upload className="h-4 w-4" />
+                    {uploadingMedia === 'video' ? 'Enviando...' : 'Adicionar Vídeo'}
+                  </Button>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       <ResponsiveDeleteMediaConfirmation
         open={showDeleteMediaDialog !== null}

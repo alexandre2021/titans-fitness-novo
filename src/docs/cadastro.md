@@ -99,6 +99,12 @@ Ao submeter o formulário, todo o processo é executado via Edge Function `regis
 - Implementa rollback automático em caso de falha
 - Invalida convite após uso bem-sucedido
 
+### `invalidate-invite`
+- Após o a conclusão do cadastro excluir o convite aceito da tabela `convites`
+
+---
+
+
 ## Necessidade do Vínculo PT-Aluno
 
 - Todo aluno deve estar vinculado a um personal trainer existente.

@@ -379,7 +379,7 @@ const AvaliacoesAluno = () => {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Nenhuma avaliação ainda</h3>
+            <h3 className="text-lg font-semibold mb-2">Nenhuma avaliação</h3>
             <p className="text-muted-foreground">
               Suas avaliações físicas aparecerão aqui quando realizadas pelo seu Personal Trainer.
             </p>
