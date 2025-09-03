@@ -111,19 +111,6 @@ export default function CadastroAluno() {
     }
   }, [form]);
 
-  const invalidateToken = async (conviteId: string, token: string) => {
-    try {
-      await supabase.functions.invoke('invalidate-invite', {
-        body: { 
-          conviteId,
-          token 
-        }
-      });
-    } catch (error) {
-      console.error('Erro ao invalidar token:', error);
-    }
-  };
-
   useEffect(() => {
     // Aguarda a verificação de autenticação terminar
     if (authLoading) {
@@ -168,6 +155,9 @@ export default function CadastroAluno() {
     }
   }, [authLoading, user, searchParams, validateToken, form, toast]);
 
+  // ============================================
+  // NOVA IMPLEMENTAÇÃO COM EDGE FUNCTION
+  // ============================================
   const onSubmit = async (data: FormData) => {
     if (tokenValidation.status !== 'valid' || !tokenValidation.conviteData) {
       toast({
@@ -181,92 +171,75 @@ export default function CadastroAluno() {
     setIsLoading(true);
 
     try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            nome_completo: data.nome_completo,
-            user_type: 'aluno',
-          }
+      console.log("=== INICIANDO CADASTRO VIA EDGE FUNCTION ===");
+      
+      // Chama a Edge Function que vai executar todo o processo de cadastro
+      const { data: result, error } = await supabase.functions.invoke('register-student', {
+        body: {
+          // Dados do aluno
+          nome_completo: data.nome_completo,
+          email: data.email,
+          password: data.password,
+          
+          // Dados do convite
+          convite_id: tokenValidation.conviteData.id,
+          token_convite: tokenValidation.conviteData.token_convite,
+          personal_trainer_id: tokenValidation.conviteData.personal_trainer_id,
+          
+          // Metadados para configuração do avatar
+          avatar_letter: data.nome_completo.charAt(0).toUpperCase(),
+          avatar_color: '#60A5FA'
         }
       });
 
-      if (authError) {
+      console.log("Resultado da Edge Function:", result);
+
+      if (error) {
+        console.error('Erro na Edge Function:', error);
         toast({
           title: "Erro no cadastro",
-          description: authError.message === 'User already registered' 
-            ? "Este email já está cadastrado. Tente fazer login." 
-            : "Ocorreu um erro ao realizar o cadastro. Verifique os dados e tente novamente.",
+          description: "Erro interno no servidor. Tente novamente.",
           variant: "destructive",
         });
         return;
       }
 
-      if (!authData.user) {
+      if (!result.success) {
+        console.error('Erro retornado pela Edge Function:', result.error);
+        
+        // Tratar erros específicos retornados pela Edge Function
+        let errorMessage = "Erro ao realizar o cadastro. Tente novamente.";
+        
+        if (result.error?.includes('User already registered')) {
+          errorMessage = "Este email já está cadastrado. Tente fazer login.";
+        } else if (result.error?.includes('Invalid invite')) {
+          errorMessage = "Token de convite inválido ou expirado.";
+        } else if (result.error) {
+          errorMessage = result.error;
+        }
+
         toast({
-          title: "Erro",
-          description: "Erro ao criar usuário.",
+          title: "Erro no cadastro",
+          description: errorMessage,
           variant: "destructive",
         });
         return;
       }
 
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .insert({
-          id: authData.user.id,
-          user_type: 'aluno'
-        });
-
-      if (profileError) {
-        console.error('Erro ao criar perfil:', profileError);
-      }
-
-      const ptId = tokenValidation.conviteData.personal_trainer_id;
-      const { error: alunoError } = await supabase
-        .from('alunos')
-        .insert({
-          id: authData.user.id,
-          personal_trainer_id: ptId,
-          nome_completo: data.nome_completo,
-          email: data.email,
-          telefone: null,
-          avatar_type: 'letter',
-          avatar_letter: data.nome_completo.charAt(0).toUpperCase(),
-          avatar_color: '#60A5FA',
-          onboarding_completo: false,
-          status: 'ativo'
-        });
-
-      if (alunoError) {
-        console.error('Erro ao criar aluno:', alunoError);
-        toast({
-          title: "Erro",
-          description: "Erro ao finalizar cadastro. Tente novamente.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Invalidar o token após uso bem-sucedido
-      await invalidateToken(
-        tokenValidation.conviteData.id,
-        tokenValidation.conviteData.token_convite
-      );
-
+      // Sucesso!
+      console.log("Cadastro realizado com sucesso!");
+      
       toast({
         title: "Sucesso!",
         description: `Cadastro realizado com sucesso! Agora você treina com ${tokenValidation.ptName}. Faça login para começar.`,
         duration: 5000,
       });
 
-      await supabase.auth.signOut();
+      // Redirecionar para login
       navigate('/login?message=cadastro_sucesso');
 
     } catch (error) {
-      console.error('Erro no cadastro:', error);
+      console.error('Erro inesperado no cadastro:', error);
       toast({
         title: "Erro",
         description: "Erro inesperado. Tente novamente.",
@@ -274,6 +247,7 @@ export default function CadastroAluno() {
       });
     } finally {
       setIsLoading(false);
+      console.log("=== FIM DO PROCESSO DE CADASTRO ===");
     }
   };
 
@@ -296,8 +270,8 @@ export default function CadastroAluno() {
         </div>
       </header>
 
-      <main className="flex-1 flex justify-center px-6 pt-8 pb-6 md:pt-16 md:pb-12">
-        <Card className="w-full max-w-md border-border shadow-lg">
+      <main className="flex-1 flex justify-center px-6 pt-8 pb-6 md:pt-16 md:pb-12" style={{backgroundColor: 'red'}}>
+        <Card className="w-full max-w-md border-border shadow-lg" style={{backgroundColor: 'red'}}>
           <CardHeader className="text-center">
             <CardTitle className="text-2xl text-text-primary">
               Complete seu Cadastro
