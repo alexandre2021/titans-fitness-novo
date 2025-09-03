@@ -1,3 +1,7 @@
+// ===========================================
+// 1. FRONTEND - CadastroAluno.tsx (ATUALIZADO)
+// ===========================================
+
 import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -270,8 +274,8 @@ export default function CadastroAluno() {
         </div>
       </header>
 
-      <main className="flex-1 flex justify-center px-6 pt-8 pb-6 md:pt-16 md:pb-12" style={{backgroundColor: 'red'}}>
-        <Card className="w-full max-w-md border-border shadow-lg" style={{backgroundColor: 'red'}}>
+      <main className="flex-1 flex justify-center px-6 pt-8 pb-6 md:pt-16 md:pb-12">
+        <Card className="w-full max-w-md border-border shadow-lg">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl text-text-primary">
               Complete seu Cadastro
