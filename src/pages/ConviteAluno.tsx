@@ -20,11 +20,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 
+
 const formSchema = z.object({
   email_aluno: z.string().email("Email inválido"),
 });
 
+
 type FormData = z.infer<typeof formSchema>;
+
 
 const ConviteAluno = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -34,7 +37,7 @@ const ConviteAluno = () => {
     titulo: string;
     mensagem: string;
   } | null>(null);
-  
+ 
   const [tokenValidation, setTokenValidation] = useState<{
     isValidating: boolean;
     isValid: boolean;
@@ -46,10 +49,11 @@ const ConviteAluno = () => {
     };
     error?: string;
   } | null>(null);
-  
+ 
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -58,15 +62,17 @@ const ConviteAluno = () => {
     },
   });
 
+
   // Validar token na URL ao carregar a página
   useEffect(() => {
     const validateToken = async (token: string) => {
       setTokenValidation({ isValidating: true, isValid: false });
-      
+     
       try {
         const { data, error } = await supabase.functions.invoke('validate-invite', {
           body: { token }
         });
+
 
         if (error) {
           console.error('Erro na validação do token:', error);
@@ -77,6 +83,7 @@ const ConviteAluno = () => {
           });
           return;
         }
+
 
         if (data?.success) {
           form.setValue('email_aluno', data.convite.email_convidado);
@@ -102,27 +109,30 @@ const ConviteAluno = () => {
       }
     };
 
+
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
-    
+   
     if (token) {
       validateToken(token);
     }
   }, [form]);
 
+
   // Função para invalidar o token após uso bem-sucedido
   const invalidateToken = async (conviteId: string, token: string) => {
     try {
       await supabase.functions.invoke('invalidate-invite', {
-        body: { 
+        body: {
           conviteId,
-          token 
+          token
         }
       });
     } catch (error) {
       console.error('Erro ao invalidar token:', error);
     }
   };
+
 
   const handleEnviarConvite = async (data: FormData) => {
     if (!user) {
@@ -134,17 +144,31 @@ const ConviteAluno = () => {
       return;
     }
 
+
     setIsLoading(true);
     setResultado(null);
 
+
     try {
+      // Buscar nome na tabela personal_trainers para garantir que temos o nome mais atualizado.
+      const { data: ptData } = await supabase
+        .from('personal_trainers')
+        .select('nome_completo')
+        .eq('id', user.id)
+        .single();
+
+
+      const nomePersonal = ptData?.nome_completo || user.user_metadata?.full_name || 'Personal Trainer';
+
+
       const { data: responseData, error } = await supabase.functions.invoke('enviar-convite', {
         body: {
           email_aluno: data.email_aluno,
           personal_trainer_id: user.id,
-          nome_personal: user.user_metadata.full_name,
-        }
+          nome_personal: nomePersonal,
+        },
       });
+
 
       if (error) {
         console.error('Error response from function:', error);
@@ -156,6 +180,7 @@ const ConviteAluno = () => {
         return;
       }
 
+
       if (responseData?.success) {
         if (tokenValidation?.conviteData) {
           await invalidateToken(
@@ -163,7 +188,7 @@ const ConviteAluno = () => {
             tokenValidation.conviteData.token_convite
           );
         }
-        
+       
         setResultado({
           tipo: 'sucesso',
           cenario: responseData.cenario,
@@ -199,6 +224,7 @@ const ConviteAluno = () => {
           });
       }
 
+
     } catch (e) {
       console.error("Unhandled exception in handleEnviarConvite:", e);
       setResultado({
@@ -211,6 +237,7 @@ const ConviteAluno = () => {
     }
   };
 
+
   const getAlertIcon = (tipo: string) => {
     switch (tipo) {
       case 'sucesso': return <CheckCircle className="h-4 w-4" />;
@@ -220,6 +247,7 @@ const ConviteAluno = () => {
     }
   };
 
+
   const getAlertVariant = (tipo: string): "default" | "destructive" => {
     switch (tipo) {
       case 'sucesso': return 'default';
@@ -228,6 +256,7 @@ const ConviteAluno = () => {
       default: return 'destructive';
     }
   };
+
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
@@ -248,6 +277,7 @@ const ConviteAluno = () => {
         </div>
       </div>
 
+
       {/* Validação de Token */}
       {tokenValidation && (
         <Card className="border-l-4 border-l-blue-500">
@@ -258,7 +288,7 @@ const ConviteAluno = () => {
                 <span className="text-sm">Validando convite...</span>
               </div>
             )}
-            
+           
             {!tokenValidation.isValidating && tokenValidation.isValid && tokenValidation.conviteData && (
               <Alert>
                 <CheckCircle className="h-4 w-4" />
@@ -274,7 +304,7 @@ const ConviteAluno = () => {
                 </AlertDescription>
               </Alert>
             )}
-            
+           
             {!tokenValidation.isValidating && !tokenValidation.isValid && tokenValidation.error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
@@ -282,9 +312,9 @@ const ConviteAluno = () => {
                   <div>
                     <strong>Convite inválido</strong>
                     <p className="mt-1 text-sm">{tokenValidation.error}</p>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="mt-2"
                       onClick={() => navigate('/login')}
                     >
@@ -298,6 +328,7 @@ const ConviteAluno = () => {
         </Card>
       )}
 
+
       {/* Resultado do convite */}
       {resultado && (
         <Alert variant={getAlertVariant(resultado.tipo)} className="border-l-4">
@@ -310,7 +341,7 @@ const ConviteAluno = () => {
               </AlertDescription>
               {resultado.tipo === 'sucesso' && (
                 <div className="mt-3">
-                  <Button 
+                  <Button
                     onClick={() => navigate("/alunos")}
                     size="sm"
                   >
@@ -322,6 +353,7 @@ const ConviteAluno = () => {
           </div>
         </Alert>
       )}
+
 
       {/* Formulário ou mensagem de indisponibilidade */}
       {tokenValidation && !tokenValidation.isValid && !tokenValidation.isValidating ? (
@@ -346,13 +378,13 @@ const ConviteAluno = () => {
                       <FormControl>
                         <div className="relative">
                           <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input 
-                            type="email" 
+                          <Input
+                            type="email"
                             placeholder="Digite o email do aluno"
                             className="pl-10"
                             disabled={tokenValidation?.isValid || isLoading}
                             readOnly={tokenValidation?.isValid}
-                            {...field} 
+                            {...field}
                           />
                           {tokenValidation?.isValid && (
                             <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -371,6 +403,7 @@ const ConviteAluno = () => {
                   )}
                 />
 
+
                 <div className="bg-muted/50 rounded-lg p-4 text-sm">
                   <h4 className="font-medium mb-2">Como funciona:</h4>
                   <ul className="space-y-1 text-muted-foreground">
@@ -379,6 +412,7 @@ const ConviteAluno = () => {
                     <li>• <strong>Aluno vinculado a outro personal trainer:</strong> Convite será bloqueado automaticamente</li>
                   </ul>
                 </div>
+
 
                 <div className="flex gap-4 pt-4">
                   <Button
@@ -406,4 +440,6 @@ const ConviteAluno = () => {
   );
 };
 
+
 export default ConviteAluno;
+
