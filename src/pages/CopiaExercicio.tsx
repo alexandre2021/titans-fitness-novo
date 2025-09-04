@@ -68,11 +68,11 @@ const CopiaExercicio = () => {
   // Campo dinâmico para instruções
   const [instrucoesList, setInstrucoesList] = useState<string[]>([]);
 
-  const [midias, setMidias] = useState({
-    imagem_1_url: "",
-    imagem_2_url: "",
-    video_url: "",
-    youtube_url: "",
+  // MODIFICAÇÃO: O estado agora pode armazenar a URL (string) ou o arquivo (File)
+  const [midias, setMidias] = useState<{
+    [key: string]: string | File | null;
+  }>({
+    imagem_1_url: null, imagem_2_url: null, video_url: null, youtube_url: null
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -83,7 +83,6 @@ const CopiaExercicio = () => {
     video?: string;
   }>({});
   const [loadingImages, setLoadingImages] = useState(false);
-  const [uploadingMedia, setUploadingMedia] = useState<string | null>(null);
 
   const gruposMusculares = [
   'Peito',
@@ -226,45 +225,45 @@ const CopiaExercicio = () => {
 
   // Função para carregar URLs assinadas das mídias
   const loadSignedUrls = useCallback(async () => {
-    if (!midias.imagem_1_url && !midias.imagem_2_url && !midias.video_url) {
+    const midiasParaCarregar = Object.fromEntries(Object.entries(midias).filter(([, value]) => typeof value === 'string' && value));
+    if (Object.keys(midiasParaCarregar).length === 0) {
       return;
     }
     setLoadingImages(true);
     setSignedUrls({});
     try {
       const urls: { imagem1?: string; imagem2?: string; video?: string } = {};
-      
-      // Para imagem 1
-      if (midias.imagem_1_url) {
-        if (midias.imagem_1_url.includes('/storage/v1/object/public/exercicios-padrao/')) {
-          // Imagem pública do Supabase: usar URL diretamente
-          urls.imagem1 = midias.imagem_1_url;
-        } else {
-          const filename = midias.imagem_1_url.split('/').pop()?.split('?')[0] || midias.imagem_1_url;
-          urls.imagem1 = await getSignedImageUrl(filename);
+
+      const processarUrl = async (urlValue: string | File | null) => {
+        if (typeof urlValue !== 'string' || !urlValue) return undefined;
+        if (urlValue.includes('/storage/v1/object/public/exercicios-padrao/')) {
+          return urlValue;
         }
+        const filename = urlValue.split('/').pop()?.split('?')[0] || urlValue;
+        return getSignedImageUrl(filename);
+      };
+
+      const [url1, url2, urlVideo] = await Promise.all([
+        processarUrl(midias.imagem_1_url),
+        processarUrl(midias.imagem_2_url),
+        processarUrl(midias.video_url),
+      ]);
+
+      if (url1) {
+        urls.imagem1 = url1;
       }
-      
-      // Para imagem 2
-      if (midias.imagem_2_url) {
-        if (midias.imagem_2_url.includes('/storage/v1/object/public/exercicios-padrao/')) {
-          urls.imagem2 = midias.imagem_2_url;
-        } else {
-          const filename = midias.imagem_2_url.split('/').pop()?.split('?')[0] || midias.imagem_2_url;
-          urls.imagem2 = await getSignedImageUrl(filename);
-        }
+      if (url2) {
+        urls.imagem2 = url2;
       }
-      
-      // Para vídeo
-      if (midias.video_url) {
-        if (midias.video_url.includes('/storage/v1/object/public/exercicios-padrao/')) {
-          urls.video = midias.video_url;
-        } else {
-          const filename = midias.video_url.split('/').pop()?.split('?')[0] || midias.video_url;
-          urls.video = await getSignedImageUrl(filename);
-        }
+      if (urlVideo) {
+        urls.video = urlVideo;
       }
-      
+
+      // MODIFICAÇÃO: Gerar URLs locais para previews de arquivos não salvos
+      if (midias.imagem_1_url instanceof File) urls.imagem1 = URL.createObjectURL(midias.imagem_1_url);
+      if (midias.imagem_2_url instanceof File) urls.imagem2 = URL.createObjectURL(midias.imagem_2_url);
+      if (midias.video_url instanceof File) urls.video = URL.createObjectURL(midias.video_url);
+
       setSignedUrls(urls);
     } catch (error) {
       console.error('Erro:', error);
@@ -287,150 +286,39 @@ const CopiaExercicio = () => {
     });
   };
 
-  // FUNÇÃO MODIFICADA: Upload com suporte a otimização automática
-  const handleUploadMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
-    try {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = type === 'video' ? 'video/*' : 'image/*';
+  // FUNÇÃO MODIFICADA: Agora apenas seleciona o arquivo e o guarda no estado
+  const handleSelectMedia = (type: 'imagem1' | 'imagem2' | 'video') => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = type === 'video' ? 'video/*' : 'image/*';
 
-      input.onchange = async (event) => {
-        const file = (event.target as HTMLInputElement).files?.[0];
-        if (!file) return;
+    input.onchange = (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (!file) return;
 
-        // Validações existentes
-        const maxSize = type === 'video' ? 20 * 1024 * 1024 : 5 * 1024 * 1024;
-        if (file.size > maxSize) {
-          toast({
-            title: "Erro",
-            description: `Arquivo muito grande. Máximo: ${type === 'video' ? '20MB' : '5MB'}`,
-            variant: "destructive",
-          });
-          return;
-        }
+      const maxSize = type === 'video' ? 20 * 1024 * 1024 : 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        toast({
+          title: "Erro",
+          description: `Arquivo muito grande. Máximo: ${type === 'video' ? '20MB' : '5MB'}`,
+          variant: "destructive",
+        });
+        return;
+      }
 
-        setUploadingMedia(type);
+      // MODIFICAÇÃO: Guarda o objeto File no estado, não faz upload
+      const key = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'video_url';
+      setMidias(prev => ({ ...prev, [key]: file }));
+    };
 
-        try {
-          const base64 = await fileToBase64(file);
-          const timestamp = Date.now();
-          const extension = file.name.split('.').pop();
-          const filename = `exercicio_${timestamp}_${Math.random().toString(36).substring(7)}.${extension}`;
-
-          console.log('📤 Fazendo upload:', { filename, type, size: file.size });
-
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session?.access_token) {
-            throw new Error("Usuário não autenticado");
-          }
-
-          // NOVO: Toast informando sobre otimização automática para imagens
-          if (type !== 'video') {
-            toast({
-              title: "Processando",
-              description: "Enviando e otimizando imagem automaticamente...",
-            });
-          }
-
-          const response = await fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/upload-imagem', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`
-            },
-            body: JSON.stringify({
-              filename,
-              image_base64: base64,
-              bucket_type: 'exercicios' // Isso acionará a otimização automática
-            })
-          });
-
-          if (!response.ok) {
-            throw new Error(`Erro no upload: ${response.status}`);
-          }
-
-          const result = await response.json();
-          if (!result.success) {
-            throw new Error(result.error || 'Erro no upload');
-          }
-
-          console.log('📊 Upload resultado:', result);
-
-          // NOVO: Verificar se foi otimizada automaticamente
-          if (result.will_be_optimized && type !== 'video') {
-            toast({
-              title: "Otimizando",
-              description: "Imagem sendo otimizada em segundo plano (4MB → ~110KB)...",
-            });
-
-            // Aguardar alguns segundos e mostrar sucesso
-            setTimeout(() => {
-              toast({
-                title: "Sucesso",
-                description: "Imagem otimizada e pronta! Arquivo reduzido em até 97%.",
-              });
-            }, 5000);
-          }
-
-          // Atualizar estado local com URL final (já otimizada)
-          switch (type) {
-            case 'imagem1':
-              setMidias(prev => ({ ...prev, imagem_1_url: result.url }));
-              break;
-            case 'imagem2':
-              setMidias(prev => ({ ...prev, imagem_2_url: result.url }));
-              break;
-            case 'video':
-              setMidias(prev => ({ ...prev, video_url: result.url }));
-              break;
-          }
-
-          // Toast de sucesso para vídeos ou se não foi otimizada
-          if (!result.will_be_optimized) {
-            toast({
-              title: "Sucesso",
-              description: "Mídia enviada com sucesso!",
-            });
-          }
-
-        } catch (error) {
-          console.error('Upload falhou:', error);
-          toast({
-            title: "Erro",
-            description: "Falha no upload. Tente novamente.",
-            variant: "destructive",
-          });
-        } finally {
-          setUploadingMedia(null);
-        }
-      };
-
-      input.click();
-
-    } catch (error) {
-      console.error('Erro ao abrir seletor:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao abrir seletor de arquivo.",
-        variant: "destructive",
-      });
-    }
+    input.click();
   };
 
   // Função para deletar mídia
   const handleDeleteMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
     try {
-      switch (type) {
-        case 'imagem1':
-          setMidias(prev => ({ ...prev, imagem_1_url: '' }));
-          break;
-        case 'imagem2':
-          setMidias(prev => ({ ...prev, imagem_2_url: '' }));
-          break;
-        case 'video':
-          setMidias(prev => ({ ...prev, video_url: '' }));
-          break;
-      }
+      const key = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'video_url';
+      setMidias(prev => ({ ...prev, [key]: null }));
 
       toast({
         title: "Sucesso",
@@ -490,10 +378,10 @@ const CopiaExercicio = () => {
 
         // Preencher mídias (URLs do exercício original)
         setMidias({
-          imagem_1_url: exercicio.imagem_1_url || "",
-          imagem_2_url: exercicio.imagem_2_url || "",
-          video_url: exercicio.video_url || "",
-          youtube_url: exercicio.youtube_url || "",
+          imagem_1_url: exercicio.imagem_1_url || null,
+          imagem_2_url: exercicio.imagem_2_url || null,
+          video_url: exercicio.video_url || null,
+          youtube_url: exercicio.youtube_url || null,
         });
 
         console.log('✅ Exercício original carregado:', exercicio);
@@ -515,11 +403,11 @@ const CopiaExercicio = () => {
 
   // Recarregar URLs assinadas quando exercicioOriginal ou mídias mudarem
   useEffect(() => {
-    if (exercicioOriginal && (midias.imagem_1_url || midias.imagem_2_url || midias.video_url)) {
+    if (exercicioOriginal) {
       console.log('🔄 Recarregando URLs assinadas...');
       loadSignedUrls();
     }
-  }, [exercicioOriginal, midias.imagem_1_url, midias.imagem_2_url, midias.video_url, loadSignedUrls]);
+  }, [exercicioOriginal, midias, loadSignedUrls]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -564,7 +452,49 @@ const CopiaExercicio = () => {
     });
   };
 
-  // FUNÇÃO MODIFICADA: handleSave também usa nova estratégia
+  // NOVA FUNÇÃO: Centraliza a lógica de upload que agora está no handleSave
+  const uploadFile = async (file: File | string): Promise<string | null> => {
+    if (typeof file === 'string') {
+      // Se for uma URL pública do Supabase, baixa e faz upload
+      if (file.includes('/storage/v1/object/public/exercicios-padrao/')) {
+        const base64 = await fetchImageAsBase64(file);
+        const extension = file.split('.').pop()?.split('?')[0] || 'webp';
+        return uploadBase64(base64, extension);
+      }
+      // Se for uma URL já do Cloudflare, mantém
+      return file;
+    }
+
+    if (file instanceof File) {
+      const base64 = await fileToBase64(file);
+      const extension = file.name.split('.').pop() || 'webp';
+      return uploadBase64(base64, extension);
+    }
+
+    return null;
+  };
+
+  const uploadBase64 = async (base64: string, extension: string): Promise<string | null> => {
+    const timestamp = Date.now();
+    const filename = `exercicio_${timestamp}_${Math.random().toString(36).substring(7)}.${extension}`;
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) throw new Error('Usuário não autenticado');
+
+    const response = await fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/upload-imagem', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify({ filename, image_base64: base64, bucket_type: 'exercicios' })
+    });
+
+    if (!response.ok) throw new Error('Falha no upload da mídia');
+    const result = await response.json();
+    if (!result.success || !result.url) throw new Error(result.error || 'URL não retornada pelo servidor');
+
+    return result.url;
+  };
+
+  // FUNÇÃO MODIFICADA: handleSave agora orquestra os uploads
   const handleSave = async () => {
     // Monta instruções do campo dinâmico
     const instrucoesFinal = instrucoesList.filter(i => i.trim()).join('#');
@@ -582,129 +512,14 @@ const CopiaExercicio = () => {
     setSaving(true);
 
     try {
-      // MODIFICADO: Se imagens forem do Supabase público, copiar com otimização automática
-      let imagem_1_url_final = midias.imagem_1_url;
-      if (
-        imagem_1_url_final &&
-        imagem_1_url_final.includes('/storage/v1/object/public/exercicios-padrao/')
-      ) {
-        try {
-          toast({
-            title: "Copiando",
-            description: "Copiando e otimizando imagem 1...",
-          });
+      toast({ title: "Processando", description: "Salvando e otimizando mídias..." });
 
-          const base64 = await fetchImageAsBase64(imagem_1_url_final);
-          const timestamp = Date.now();
-          const extension = imagem_1_url_final.split('.').pop()?.split('?')[0] || 'webp';
-          const filename = `exercicio_${timestamp}_${Math.random().toString(36).substring(7)}.${extension}`;
-
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session?.access_token) throw new Error('Usuário não autenticado');
-
-          const response = await fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/upload-imagem', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`
-            },
-            body: JSON.stringify({
-              filename,
-              image_base64: base64,
-              bucket_type: 'exercicios' // Otimização automática
-            })
-          });
-
-          if (!response.ok) throw new Error('Falha ao copiar imagem para Cloudflare');
-          const result = await response.json();
-          if (result.success && result.url) {
-            imagem_1_url_final = result.url;
-          }
-        } catch (err) {
-          console.error('Erro ao copiar imagem 1:', err);
-        }
-      }
-
-      // MODIFICADO: Se imagem 2 for do Supabase público, copiar com otimização automática
-      let imagem_2_url_final = midias.imagem_2_url;
-      if (
-        imagem_2_url_final &&
-        imagem_2_url_final.includes('/storage/v1/object/public/exercicios-padrao/')
-      ) {
-        try {
-          toast({
-            title: "Copiando",
-            description: "Copiando e otimizando imagem 2...",
-          });
-
-          const base64 = await fetchImageAsBase64(imagem_2_url_final);
-          const timestamp = Date.now();
-          const extension = imagem_2_url_final.split('.').pop()?.split('?')[0] || 'webp';
-          const filename = `exercicio_${timestamp}_${Math.random().toString(36).substring(7)}.${extension}`;
-
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session?.access_token) throw new Error('Usuário não autenticado');
-
-          const response = await fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/upload-imagem', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`
-            },
-            body: JSON.stringify({
-              filename,
-              image_base64: base64,
-              bucket_type: 'exercicios' // Otimização automática
-            })
-          });
-
-          if (!response.ok) throw new Error('Falha ao copiar imagem para Cloudflare');
-          const result = await response.json();
-          if (result.success && result.url) {
-            imagem_2_url_final = result.url;
-          }
-        } catch (err) {
-          console.error('Erro ao copiar imagem 2:', err);
-        }
-      }
-
-      // MODIFICADO: Se vídeo for do Supabase público, copiar (sem otimização por enquanto)
-      let video_url_final = midias.video_url;
-      if (
-        video_url_final &&
-        video_url_final.includes('/storage/v1/object/public/exercicios-padrao/')
-      ) {
-        try {
-          const base64 = await fetchImageAsBase64(video_url_final);
-          const timestamp = Date.now();
-          const extension = video_url_final.split('.').pop()?.split('?')[0] || 'mp4';
-          const filename = `exercicio_${timestamp}_${Math.random().toString(36).substring(7)}.${extension}`;
-
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session?.access_token) throw new Error('Usuário não autenticado');
-
-          const response = await fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/upload-imagem', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`
-            },
-            body: JSON.stringify({
-              filename,
-              image_base64: base64,
-              bucket_type: 'exercicios'
-            })
-          });
-
-          if (!response.ok) throw new Error('Falha ao copiar vídeo para Cloudflare');
-          const result = await response.json();
-          if (result.success && result.url) {
-            video_url_final = result.url;
-          }
-        } catch (err) {
-          console.error('Erro ao copiar vídeo:', err);
-        }
-      }
+      // MODIFICAÇÃO: Processa e faz upload de cada mídia apenas agora
+      const [imagem_1_url_final, imagem_2_url_final, video_url_final] = await Promise.all([
+        uploadFile(midias.imagem_1_url as File | string),
+        uploadFile(midias.imagem_2_url as File | string),
+        uploadFile(midias.video_url as File | string),
+      ]);
 
       // Criar cópia personalizada no banco usando as URLs finais (otimizadas)
       const { data: exercicio, error } = await supabase
@@ -716,10 +531,10 @@ const CopiaExercicio = () => {
           equipamento: currentFormData.equipamento,
           dificuldade: currentFormData.dificuldade,
           instrucoes: currentFormData.instrucoes.trim(),
-          imagem_1_url: imagem_1_url_final || null,
-          imagem_2_url: imagem_2_url_final || null,
-          video_url: video_url_final || null,
-          youtube_url: midias.youtube_url || null,
+          imagem_1_url: imagem_1_url_final,
+          imagem_2_url: imagem_2_url_final,
+          video_url: video_url_final,
+          youtube_url: midias.youtube_url as string || null,
           tipo: 'personalizado',
           pt_id: user.id,
           exercicio_padrao_id: exercicioOriginal?.id,
@@ -1068,7 +883,7 @@ const CopiaExercicio = () => {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => window.open(signedUrls.imagem1 || midias.imagem_1_url, '_blank')}
+                        onClick={() => window.open(signedUrls.imagem1 || midias.imagem_1_url as string, '_blank')}
                         className="flex items-center gap-2"
                         disabled={!signedUrls.imagem1}
                       >
@@ -1079,12 +894,12 @@ const CopiaExercicio = () => {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => handleUploadMedia('imagem1')}
+                        onClick={() => handleSelectMedia('imagem1')}
                         className="flex items-center gap-2"
-                        disabled={uploadingMedia === 'imagem1'}
+                        disabled={saving}
                       >
                         <Upload className="h-4 w-4" />
-                        {uploadingMedia === 'imagem1' ? 'Enviando...' : 'Trocar'}
+                        {saving ? 'Salvando...' : 'Trocar'}
                       </Button>
                       <Button
                         type="button"
@@ -1104,12 +919,12 @@ const CopiaExercicio = () => {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => handleUploadMedia('imagem1')}
+                      onClick={() => handleSelectMedia('imagem1')}
                       className="flex items-center gap-2"
-                      disabled={uploadingMedia === 'imagem1'}
+                    disabled={saving}
                     >
                       <Upload className="h-4 w-4" />
-                      {uploadingMedia === 'imagem1' ? 'Enviando...' : 'Upload Primeira Imagem'}
+                    {saving ? 'Salvando...' : 'Upload Primeira Imagem'}
                     </Button>
                   </div>
                 )}
@@ -1144,7 +959,7 @@ const CopiaExercicio = () => {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => window.open(signedUrls.imagem2 || midias.imagem_2_url, '_blank')}
+                        onClick={() => window.open(signedUrls.imagem2 || midias.imagem_2_url as string, '_blank')}
                         className="flex items-center gap-2"
                         disabled={!signedUrls.imagem2}
                       >
@@ -1155,12 +970,12 @@ const CopiaExercicio = () => {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => handleUploadMedia('imagem2')}
+                        onClick={() => handleSelectMedia('imagem2')}
                         className="flex items-center gap-2"
-                        disabled={uploadingMedia === 'imagem2'}
+                        disabled={saving}
                       >
                         <Upload className="h-4 w-4" />
-                        {uploadingMedia === 'imagem2' ? 'Enviando...' : 'Trocar'}
+                        {saving ? 'Salvando...' : 'Trocar'}
                       </Button>
                       <Button
                         type="button"
@@ -1180,12 +995,12 @@ const CopiaExercicio = () => {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => handleUploadMedia('imagem2')}
+                      onClick={() => handleSelectMedia('imagem2')}
                       className="flex items-center gap-2"
-                      disabled={uploadingMedia === 'imagem2'}
+                    disabled={saving}
                     >
                       <Upload className="h-4 w-4" />
-                      {uploadingMedia === 'imagem2' ? 'Enviando...' : 'Upload Segunda Imagem'}
+                    {saving ? 'Salvando...' : 'Upload Segunda Imagem'}
                     </Button>
                   </div>
                 )}
@@ -1220,7 +1035,7 @@ const CopiaExercicio = () => {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => window.open(signedUrls.video || midias.video_url, '_blank')}
+                        onClick={() => window.open(signedUrls.video || midias.video_url as string, '_blank')}
                         className="flex items-center gap-2"
                         disabled={!signedUrls.video}
                       >
@@ -1231,12 +1046,12 @@ const CopiaExercicio = () => {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => handleUploadMedia('video')}
+                        onClick={() => handleSelectMedia('video')}
                         className="flex items-center gap-2"
-                        disabled={uploadingMedia === 'video'}
+                        disabled={saving}
                       >
                         <Upload className="h-4 w-4" />
-                        {uploadingMedia === 'video' ? 'Enviando...' : 'Trocar'}
+                        {saving ? 'Salvando...' : 'Trocar'}
                       </Button>
                       <Button
                         type="button"
@@ -1256,12 +1071,12 @@ const CopiaExercicio = () => {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => handleUploadMedia('video')}
+                      onClick={() => handleSelectMedia('video')}
                       className="flex items-center gap-2"
-                      disabled={uploadingMedia === 'video'}
+                    disabled={saving}
                     >
                       <Upload className="h-4 w-4" />
-                      {uploadingMedia === 'video' ? 'Enviando...' : 'Upload Vídeo'}
+                    {saving ? 'Salvando...' : 'Upload Vídeo'}
                     </Button>
                   </div>
                 )}
@@ -1280,7 +1095,7 @@ const CopiaExercicio = () => {
                 )}
                 
                 <Input
-                  value={midias.youtube_url}
+                  value={midias.youtube_url as string}
                   onChange={(e) => setMidias(prev => ({ ...prev, youtube_url: e.target.value }))}
                   placeholder="https://youtube.com/watch?v=... (cole aqui sua URL do YouTube)"
                 />
@@ -1293,7 +1108,7 @@ const CopiaExercicio = () => {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => window.open(midias.youtube_url, '_blank')}
+                      onClick={() => window.open(midias.youtube_url as string, '_blank')}
                       className="flex items-center gap-2"
                     >
                       <ExternalLink className="h-4 w-4" />
@@ -1314,22 +1129,22 @@ const CopiaExercicio = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => handleUploadMedia('imagem1')}
+                    onClick={() => handleSelectMedia('imagem1')}
                     className="flex items-center gap-2"
-                    disabled={uploadingMedia === 'imagem1'}
+                    disabled={saving}
                   >
                     <Upload className="h-4 w-4" />
-                    {uploadingMedia === 'imagem1' ? 'Enviando...' : 'Adicionar Imagem'}
+                    {saving ? 'Salvando...' : 'Adicionar Imagem'}
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => handleUploadMedia('video')}
+                    onClick={() => handleSelectMedia('video')}
                     className="flex items-center gap-2"
-                    disabled={uploadingMedia === 'video'}
+                    disabled={saving}
                   >
                     <Upload className="h-4 w-4" />
-                    {uploadingMedia === 'video' ? 'Enviando...' : 'Adicionar Vídeo'}
+                    {saving ? 'Salvando...' : 'Adicionar Vídeo'}
                   </Button>
                 </div>
               </div>

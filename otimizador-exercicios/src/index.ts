@@ -1,6 +1,8 @@
 // /otimizador-exercicios/src/index.ts
 // Usando a biblioteca mais leve e recomendada: @jsquash/webp
-import { encode } from "@jsquash/webp";
+import { encode as encodeWebp } from "@jsquash/webp";
+import { decode as decodeJpeg } from "@jsquash/jpeg";
+import { decode as decodePng } from "@jsquash/png";
 
 export interface Env {
   EXERCICIOS_PT_BUCKET: R2Bucket;
@@ -28,7 +30,18 @@ export default {
 };
 
 async function optimizeImage(filename: string, env: Env): Promise<void> {
-  const objectKey = `originais/${filename}`;
+  // CORREÇÃO 1: O filename recebido já é o caminho completo (ex: 'originais/nome.jpg')
+  // Não precisamos adicionar o prefixo 'originais/' novamente.
+  const objectKey = filename;
+  // Extrai apenas o nome do arquivo do caminho completo (ex: 'nome.jpg')
+  const baseFilename = filename.split('/').pop();
+
+  // Adiciona uma verificação para garantir que baseFilename não é undefined.
+  if (!baseFilename) {
+    console.error(`❌ Não foi possível extrair o nome do arquivo de: ${filename}`);
+    throw new Error(`Could not extract base filename from ${filename}`);
+  }
+
   const originalObject = await env.EXERCICIOS_PT_BUCKET.get(objectKey);
 
   if (!originalObject) {
@@ -40,14 +53,29 @@ async function optimizeImage(filename: string, env: Env): Promise<void> {
     // 1. Baixar imagem original do bucket R2
     const originalBuffer = await originalObject.arrayBuffer();
     const originalSize = originalBuffer.byteLength;
+    const contentType = originalObject.httpMetadata?.contentType;
+
+    let imageData;
+
+    // NOVO: Decodificar a imagem para o formato ImageData antes de otimizar
+    if (contentType === 'image/jpeg' || contentType === 'image/jpg') {
+      imageData = await decodeJpeg(originalBuffer);
+    } else if (contentType === 'image/png') {
+      imageData = await decodePng(originalBuffer);
+    } else {
+      // Se o tipo não for suportado, lança um erro para evitar processamento incorreto.
+      throw new Error(`Unsupported content type for optimization: ${contentType}`);
+    }
 
     // 2. Processar a imagem com a biblioteca @jsquash/webp
-    // A função `encode` aceita um Uint8Array
-    const optimizedBuffer = await encode(new Uint8Array(originalBuffer), {
+    // A função `encode` do @jsquash/webp espera um objeto ImageData
+    const optimizedBuffer = await encodeWebp(imageData, {
       quality: 75,
     });
     const optimizedSize = optimizedBuffer.byteLength;
-    const newFileName = filename.replace(/\.(jpg|jpeg|png|webp)$/i, '.webp');
+
+    // CORREÇÃO 2: Usar o nome base do arquivo para criar o novo nome, não o caminho completo.
+    const newFileName = baseFilename.replace(/\.(jpg|jpeg|png|webp)$/i, '.webp');
     const newKey = `tratadas/${newFileName}`;
 
     // 3. Salvar imagem otimizada na pasta 'tratadas/'
