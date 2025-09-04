@@ -1,4 +1,8 @@
-interface Env {
+// /otimizador-exercicios/src/index.ts
+// Usando a biblioteca mais leve e recomendada: @jsquash/webp
+import { encode } from "@jsquash/webp";
+
+export interface Env {
   EXERCICIOS_PT_BUCKET: R2Bucket;
   R2_PUBLIC_URL: string;
   SUPABASE_CALLBACK_URL: string;
@@ -6,79 +10,75 @@ interface Env {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const url = new URL(request.url);
-    
-    if (url.pathname === '/process-upload' && request.method === 'POST') {
+    // Otimizar a imagem no upload
+    if (request.method === 'POST') {
       try {
-        const { objectKey } = await request.json() as { objectKey: string };
-        await optimizeImage(objectKey, env);
-        return new Response(JSON.stringify({ success: true }));
+        const { filename } = await request.json() as { filename: string };
+        await optimizeImage(filename, env);
+        return new Response(JSON.stringify({ success: true, message: 'Otimização iniciada.' }));
       } catch (error) {
+        console.error('💥 Erro no Worker:', error);
         return new Response(JSON.stringify({ error: String(error) }), { status: 500 });
       }
     }
-    
-    return new Response('Otimizador Canvas ativo!');
+
+    // Retorno padrão para outras requisições
+    return new Response('Otimizador de imagens de exercícios ativo!');
   }
 };
 
-async function optimizeImage(objectKey: string, env: Env): Promise<void> {
-  if (!objectKey.startsWith('originais/')) return;
-  
-  try {
-    // 1. Baixar imagem original
-    const originalObject = await env.EXERCICIOS_PT_BUCKET.get(objectKey);
-    if (!originalObject) throw new Error('Arquivo não encontrado');
+async function optimizeImage(filename: string, env: Env): Promise<void> {
+  const objectKey = `originais/${filename}`;
+  const originalObject = await env.EXERCICIOS_PT_BUCKET.get(objectKey);
 
+  if (!originalObject) {
+    console.log('⚠️ Arquivo não encontrado no R2. Pulando otimização.');
+    return;
+  }
+
+  try {
+    // 1. Baixar imagem original do bucket R2
     const originalBuffer = await originalObject.arrayBuffer();
     const originalSize = originalBuffer.byteLength;
-    const fileName = objectKey.split('/').pop() || 'image';
-    
-    // 2. Processar com Canvas API
-    const blob = new Blob([originalBuffer]);
-    const bitmap = await createImageBitmap(blob);
-    
-    // Redimensionar para 360p (640x360)
-    const canvas = new OffscreenCanvas(640, 360);
-    const ctx = canvas.getContext('2d')!;
-    ctx.drawImage(bitmap, 0, 0, 640, 360);
-    
-    // Converter para WebP com 80% qualidade
-    const webpBlob = await canvas.convertToBlob({
-      type: 'image/webp',
-      quality: 0.8
+
+    // 2. Processar a imagem com a biblioteca @jsquash/webp
+    // A função `encode` aceita um Uint8Array
+    const optimizedBuffer = await encode(new Uint8Array(originalBuffer), {
+      quality: 75,
     });
-    
-    const optimizedBuffer = await webpBlob.arrayBuffer();
     const optimizedSize = optimizedBuffer.byteLength;
-    
-    // 3. Salvar imagem otimizada
-    const newFileName = fileName.replace(/\.(jpg|jpeg|png|webp)$/i, '.webp');
+    const newFileName = filename.replace(/\.(jpg|jpeg|png|webp)$/i, '.webp');
     const newKey = `tratadas/${newFileName}`;
-    
+
+    // 3. Salvar imagem otimizada na pasta 'tratadas/'
     await env.EXERCICIOS_PT_BUCKET.put(newKey, optimizedBuffer, {
       httpMetadata: { contentType: 'image/webp' }
     });
 
-    // 4. Callback
+    // 4. Deletar imagem original da pasta 'originais/'
+    await env.EXERCICIOS_PT_BUCKET.delete(objectKey);
+    console.log(`🗑️ Original deletado: ${objectKey}`);
+
+    // 5. Enviar callback para a Edge Function de retorno
+    const publicUrl = `${env.R2_PUBLIC_URL}/${newKey}`;
+    const compressionRatio = `${(((originalSize - optimizedSize) / originalSize) * 100).toFixed(1)}%`;
+
     await fetch(env.SUPABASE_CALLBACK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         originalKey: objectKey,
         optimizedKey: newKey,
-        publicUrl: `${env.R2_PUBLIC_URL}/${newKey}`,
-        originalSize: originalSize,
-        optimizedSize: optimizedSize,
-        compressionRatio: `${(((originalSize - optimizedSize) / originalSize) * 100).toFixed(1)}%`
+        publicUrl,
+        originalSize,
+        optimizedSize,
+        compressionRatio
       })
     });
+    console.log('✅ Callback enviado com sucesso.');
 
-    // 5. Deletar original
-    await env.EXERCICIOS_PT_BUCKET.delete(objectKey);
-    
   } catch (error) {
-    console.error('Erro:', error);
+    console.error('❌ Erro no processo de otimização:', error);
     throw error;
   }
 }
