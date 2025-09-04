@@ -225,8 +225,9 @@ const CopiaExercicio = () => {
 
   // Função para carregar URLs assinadas das mídias
   const loadSignedUrls = useCallback(async () => {
-    const midiasParaCarregar = Object.fromEntries(Object.entries(midias).filter(([, value]) => typeof value === 'string' && value));
-    if (Object.keys(midiasParaCarregar).length === 0) {
+    const temMidiaParaProcessar = Object.values(midias).some(v => v);
+    if (!temMidiaParaProcessar) {
+      setSignedUrls({});
       return;
     }
     setLoadingImages(true);
@@ -489,9 +490,14 @@ const CopiaExercicio = () => {
 
     if (!response.ok) throw new Error('Falha no upload da mídia');
     const result = await response.json();
-    if (!result.success || !result.url) throw new Error(result.error || 'URL não retornada pelo servidor');
+    if (!result.success) {
+      throw new Error(result.error || 'Falha no upload da mídia');
+    }
 
-    return result.url;
+    // Para uploads otimizados, a URL não vem na hora. Usamos o 'filename' retornado como placeholder.
+    // Para outros, a 'url' virá. Se não vier nenhum dos dois, lança erro.
+    if (!result.url && !result.filename) throw new Error('URL ou filename não retornado pelo servidor');
+    return result.filename || result.url;
   };
 
   // FUNÇÃO MODIFICADA: handleSave agora orquestra os uploads
@@ -538,7 +544,8 @@ const CopiaExercicio = () => {
           tipo: 'personalizado',
           pt_id: user.id,
           exercicio_padrao_id: exercicioOriginal?.id,
-          is_ativo: true
+          is_ativo: true,
+          status_midia: 'processando' // NOVO: Define o status inicial como processando
         })
         .select()
         .single();

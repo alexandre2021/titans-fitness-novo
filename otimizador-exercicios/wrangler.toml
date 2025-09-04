@@ -1,4 +1,3 @@
-# Caminho: /otimizador-exercicios/wrangler.toml
 name = "otimizador-exercicios"
 main = "src/index.ts"
 compatibility_date = "2024-03-20"
@@ -11,3 +10,8 @@ bucket_name = "exerciciospt"
 [vars]
 R2_PUBLIC_URL = "https://pub-603a853d566c4189804443d1f5951dc6.r2.dev"
 SUPABASE_CALLBACK_URL = "https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/retorno-tratadas"
+
+[[rules]]
+globs = ["**/*.wasm"]
+type = "CompiledWasm"
+fallthrough = false

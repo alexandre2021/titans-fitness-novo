@@ -36,22 +36,22 @@ O objetivo é transformar uma imagem grande de celular em um arquivo **WebP otim
 
 #### Backend (Fluxo Assíncrono):
 
-1.  **Edge Function `upload-imagem` (Supabase):**
+1.  **Edge Function `upload-imagem` (Supabase):** (Ponto de Entrada)
     -   Recebe a imagem original.
     -   Salva o arquivo sem processamento na pasta `originais/` do bucket R2 da Cloudflare.
     -   Imediatamente dispara o Worker `otimizador-exercicios` da Cloudflare com o nome do arquivo.
     -   Retorna uma resposta de sucesso para o frontend, indicando que o upload foi iniciado (o frontend não precisa esperar pela otimização).
 
-2.  **Worker `otimizador-exercicios` (Cloudflare):**
+2.  **Worker `otimizador-exercicios` (Cloudflare):** (Processamento Pesado)
     -   Baixa a imagem original da pasta `originais/`.
-    -   Executa o processamento de otimização pesada usando a biblioteca `@jsquash/webp`:
-        -   Converte o formato para **WebP**.
-        -   Aplica **75%** de qualidade de compressão.
+    -   Executa o processamento de otimização pesada usando as bibliotecas `@jsquash`:
+        -   **Redimensiona** a imagem para um tamanho máximo (ex: 640px de largura).
+        -   Converte o formato para **WebP** com **75%** de qualidade de compressão.
     -   Salva o arquivo final otimizado na pasta `tratadas/` do bucket R2.
     -   Deleta a imagem original da pasta `originais/` para liberar espaço.
     -   Dispara um callback para a Edge Function de retorno do Supabase.
 
-3.  **Edge Function `retorno-tratadas` (Supabase):**
+3.  **Edge Function `retorno-tratadas` (Supabase):** (Finalização)
     -   Recebe o callback do Worker com a URL da imagem otimizada.
     -   Atualiza a URL na tabela `exercicios` do banco de dados, substituindo a URL temporária pela URL final e otimizada.
 
@@ -133,17 +133,17 @@ A nova solução de otimização de imagens é um fluxo assíncrono e desacoplad
 
 -   **Upload para o R2 (Edge Function):**
     -   A Edge Function `upload-imagem` usa as credenciais de autenticação (AWS Signature V4) para fazer o upload da imagem original para a pasta `originais/` do bucket R2.
-    -   Esta etapa deve ser rápida, pois não há processamento de imagem.
 
 -   **Disparo do Worker (Edge Function):**
     -   Após o upload para o R2, a Edge Function faz uma nova requisição (assíncrona) para a URL do Worker `otimizador-exercicios`.
     -   Esta requisição dispara o processo de otimização.
 
 -   **Processamento no Worker (Cloudflare):**
-    -   O Worker baixa a imagem original do R2.
-    -   Utiliza a biblioteca `@jsquash/webp` para otimizar o arquivo para um WebP de 75% de qualidade.
-    -   Salva a imagem otimizada em uma nova pasta `tratadas/`.
-    -   Deleta a imagem original da pasta `originais/` para economizar espaço de armazenamento.
+    -   O Worker baixa a imagem original do R2 e a decodifica.
+    -   **Etapa 1 (Redimensionamento):** Usa `@jsquash/resize` para diminuir as dimensões da imagem para um tamanho máximo (ex: 640px de largura), resolvendo o problema de limite de memória.
+    -   **Etapa 2 (Compressão):** Usa `@jsquash/webp` para converter a imagem já redimensionada para o formato WebP com 75% de qualidade.
+    -   Salva a imagem final e otimizada na pasta `tratadas/`.
+    -   Deleta a imagem original da pasta `originais/`.
 
 -   **Atualização no Banco de Dados (Worker -> Edge Function):**
     -   Após o processamento, o Worker envia um callback assíncrono para a Edge Function `retorno-tratadas` no Supabase.
@@ -159,3 +159,63 @@ A nova solução de otimização de imagens é um fluxo assíncrono e desacoplad
 -   **Processamento Confiável:** A otimização é delegada a um Worker da Cloudflare, que é um ambiente de execução rápido e confiável, independentemente da carga do servidor principal.
 -   **Desacoplamento:** O fluxo é desacoplado, o que significa que se o Worker falhar, o upload inicial ainda terá sido bem-sucedido e a imagem estará disponível na pasta `originais/` para um reprocessamento posterior, se necessário.
 -   **Custo-Benefício:** A Cloudflare Workers é uma solução de baixo custo para tarefas de processamento assíncronas, evitando que o backend principal seja sobrecarregado.
+
+---
+
+## 7. Lições Aprendidas - A Saga do WebAssembly no Cloudflare Workers
+
+A integração de bibliotecas baseadas em WebAssembly (WASM), como a `@jsquash`, no ambiente do Cloudflare Workers (usando Wrangler 4) provou ser um desafio significativo devido a problemas de configuração do build. As seguintes abordagens foram tentadas e falharam, e a documentação delas serve para evitar a repetição desses erros no futuro.
+
+### Tentativa 1: Imports com `?url` (Falhou)
+-   **Abordagem:** Tentar importar os arquivos `.wasm` diretamente de `node_modules` usando o sufixo `?url`.
+-   **Problema:** O empacotador do Wrangler (esbuild) não consegue resolver caminhos dentro de `node_modules` para esse tipo de asset. Ele procura os arquivos `.wasm` em um caminho relativo dentro da pasta `src/`, resultando em um erro `File not found`.
+
+### Tentativa 2: Configuração `[build.transpile]` (Falhou)
+-   **Abordagem:** Usar a seção `[build.transpile]` no `wrangler.toml` para instruir o empacotador a tratar arquivos `.wasm` como assets.
+-   **Problema:** Esta sintaxe foi removida ou alterada no Wrangler 4. O deploy falha com o erro `Unexpected fields found`, indicando que a configuração não é mais suportada.
+
+### Tentativa 3: Configuração `[[rules]]` (Falhou para o Build)
+-   **Abordagem:** Usar a seção `[[rules]]` no `wrangler.toml` com `type = "CompiledWasm"`.
+-   **Problema:** Esta configuração instrui o *ambiente de execução* da Cloudflare sobre como lidar com módulos WASM, mas não resolve o problema do *processo de build*. O empacotador ainda não consegue encontrar os arquivos em `node_modules`, e o build falha antes mesmo do deploy.
+
+### ✅ A Solução Definitiva e Robusta
+
+A única abordagem que funcionou de forma consistente e eliminou toda a complexidade do processo de build foi:
+
+1.  **Copiar os Arquivos `.wasm` para o Projeto:**
+    -   Criar uma pasta `src/wasm` dentro do projeto do Worker.
+    -   Manualmente (ou via script) copiar todos os arquivos `.wasm` necessários (`mozjpeg_dec.wasm`, `squoosh_png_dec.wasm`, `squoosh_webp_enc.wasm`, `resize.wasm`, etc.) de `node_modules` para `src/wasm`.
+
+2.  **Usar Imports Relativos:**
+    -   Alterar todas as importações no código (`src/index.ts`) para usar caminhos relativos.
+    -   Exemplo: `import jpegDecWasm from './wasm/mozjpeg_dec.wasm';`
+
+3.  **Remover Configurações do `wrangler.toml`:**
+    -   Remover completamente as seções `[build.transpile]` e `[[rules]]` relacionadas ao WASM. O Wrangler já sabe como lidar com arquivos `.wasm` locais por padrão.
+
+**Conclusão:** Esta abordagem torna o Worker autossuficiente e independente da lógica de resolução de módulos do Wrangler, que se mostrou pouco confiável para este caso de uso.
+
+---
+
+## 8. Estratégia de Redimensionamento para Controle de Memória
+
+O diagnóstico inicial de `Exceeded Memory Limit` no Worker revelou um ponto crítico: o problema não é o tamanho do arquivo em disco (ex: 2MB), mas sim o **consumo de RAM quando a imagem é descompactada**.
+
+### A Causa do Erro
+
+Uma imagem JPEG/PNG é um formato comprimido. Ao ser decodificada para processamento (por exemplo, para converter para WebP), ela é expandida para um buffer de pixels brutos na memória.
+
+-   **Exemplo:** Uma imagem de 4000x3000 pixels, quando descompactada, ocupa `4000 * 3000 * 4 bytes` (para RGBA) = **48 MB de RAM**.
+
+Essa alocação de memória, somada à sobrecarga da própria biblioteca WASM, ultrapassa facilmente o limite de 128 MB do Worker, causando a falha.
+
+### A Solução: Redimensionar Antes de Comprimir
+
+A estratégia implementada ataca o problema na raiz, garantindo que a operação mais pesada (codificação para WebP) seja feita em uma imagem pequena.
+
+1.  **Decodificar:** A imagem original é carregada e decodificada para um objeto `ImageData`.
+2.  **Redimensionar:** Usando a biblioteca `@jsquash/resize`, uma **nova e menor** `ImageData` é criada com as dimensões máximas definidas (ex: 360x360 para imagens 1:1 ou 640px de largura para retangulares).
+3.  **Liberar Memória:** A `ImageData` original e gigante é descartada, liberando a RAM que ela ocupava.
+4.  **Codificar:** Apenas a `ImageData` pequena e redimensionada é enviada para a biblioteca `@jsquash/webp`. Como a imagem agora é pequena, a operação de codificação consome pouquíssima memória e é executada com sucesso e rapidez.
+
+Esta abordagem garante que o Worker permaneça sempre dentro dos limites de memória, independentemente do tamanho da imagem original enviada pelo usuário.
