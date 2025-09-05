@@ -924,7 +924,7 @@ const CopiaExercicio = () => {
                         <img 
                           src={signedUrls.imagem1} 
                           alt="Sua primeira imagem" 
-                          className="w-40 h-40 object-cover rounded-lg border shadow-sm"
+                          className="max-w-40 max-h-40 object-contain rounded-lg border shadow-sm bg-muted"
                         />
                       ) : (
                         <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
@@ -942,7 +942,7 @@ const CopiaExercicio = () => {
                         disabled={!signedUrls.imagem1}
                       >
                         <Eye className="h-4 w-4" />
-                        Visualizar
+                        Ver
                       </Button>
                       <Button
                         type="button"
@@ -981,16 +981,6 @@ const CopiaExercicio = () => {
                         <Camera className="h-4 w-4" />
                         Tirar Foto
                       </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => handleSelectMedia('imagem1')}
-                        className="flex items-center gap-2"
-                        disabled={saving}
-                      >
-                        <Upload className="h-4 w-4" />
-                        Escolher Arquivo
-                      </Button>
                     </div>
                   </div>
                 )}
@@ -1012,7 +1002,7 @@ const CopiaExercicio = () => {
                         <img 
                           src={signedUrls.imagem2} 
                           alt="Sua segunda imagem" 
-                          className="w-40 h-40 object-cover rounded-lg border shadow-sm"
+                          className="max-w-40 max-h-40 object-contain rounded-lg border shadow-sm bg-muted"
                         />
                       ) : (
                         <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
@@ -1030,7 +1020,7 @@ const CopiaExercicio = () => {
                         disabled={!signedUrls.imagem2}
                       >
                         <Eye className="h-4 w-4" />
-                        Visualizar
+                        Ver
                       </Button>
                       <Button
                         type="button"
@@ -1068,16 +1058,6 @@ const CopiaExercicio = () => {
                       >
                         <Camera className="h-4 w-4" />
                         Tirar Foto
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => handleSelectMedia('imagem2')}
-                        className="flex items-center gap-2"
-                        disabled={saving}
-                      >
-                        <Upload className="h-4 w-4" />
-                        Escolher Arquivo
                       </Button>
                     </div>
                   </div>

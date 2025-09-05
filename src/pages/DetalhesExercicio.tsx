@@ -402,7 +402,7 @@ const DetalhesExercicio = () => {
                         <img 
                           src={signedUrls.imagem1} 
                           alt="Primeira imagem do exercício" 
-                          className="w-40 h-40 object-cover rounded-lg border shadow-sm"
+                          className="max-w-40 max-h-40 object-contain rounded-lg border shadow-sm bg-muted"
                           onError={(e) => {
                             console.error('Erro ao carregar imagem 1');
                             e.currentTarget.style.display = 'none';
@@ -447,7 +447,7 @@ const DetalhesExercicio = () => {
                         <img 
                           src={signedUrls.imagem2} 
                           alt="Segunda imagem do exercício" 
-                          className="w-40 h-40 object-cover rounded-lg border shadow-sm"
+                          className="max-w-40 max-h-40 object-contain rounded-lg border shadow-sm bg-muted"
                           onError={(e) => {
                             console.error('Erro ao carregar imagem 2');
                             e.currentTarget.style.display = 'none';

@@ -682,7 +682,7 @@ const NovoExercicio = () => {
                         <img 
                           src={signedUrls.imagem1} 
                           alt="Primeira imagem" 
-                          className="w-40 h-40 object-cover rounded-lg border shadow-sm"
+                          className="max-w-40 max-h-40 object-contain rounded-lg border shadow-sm bg-muted"
                         />
                       ) : (
                         <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
@@ -758,7 +758,7 @@ const NovoExercicio = () => {
                         <img 
                           src={signedUrls.imagem2} 
                           alt="Segunda imagem" 
-                          className="w-40 h-40 object-cover rounded-lg border shadow-sm"
+                          className="max-w-40 max-h-40 object-contain rounded-lg border shadow-sm bg-muted"
                         />
                       ) : (
                         <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
