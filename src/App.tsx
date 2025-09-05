@@ -55,6 +55,9 @@ import ResetarSenha from "./pages/ResetarSenha";
 import ExecucaoSelecionarTreino from "./pages/ExecucaoSelecionarTreino";
 import ExecucaoExecutarTreino from "./pages/ExecucaoExecutarTreino";
 
+// ✅ IMPORTAÇÃO PARA PWA
+import PwaInstallPrompt from "@/components/pwa/PwaInstallPrompt";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -64,6 +67,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <PwaInstallPrompt />
           <Routes>
             {/* ✅ ROTAS PÚBLICAS - SEM AUTHGUARD */}
             <Route path="/" element={<Index />} />

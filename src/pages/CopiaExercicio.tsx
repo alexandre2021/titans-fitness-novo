@@ -31,11 +31,12 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Save, Copy, Upload, Trash2, Eye, ExternalLink } from "lucide-react";
+import { ArrowLeft, Save, Copy, Upload, Trash2, Eye, ExternalLink, Camera, Video } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from "@/hooks/useAuth";
+import { VideoRecorder } from '@/components/media/VideoRecorder'; // Importar o novo componente
 import { Tables } from "@/integrations/supabase/types";
 
 type Exercicio = Tables<"exercicios">;
@@ -49,6 +50,7 @@ const CopiaExercicio = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [exercicioOriginal, setExercicioOriginal] = useState<Exercicio | null>(null);
+  const [showVideoRecorder, setShowVideoRecorder] = useState(false);
   const [showDeleteMediaDialog, setShowDeleteMediaDialog] = useState<string | null>(null);
   
   // Usuário autenticado
@@ -287,13 +289,50 @@ const CopiaExercicio = () => {
     });
   };
 
-  // FUNÇÃO MODIFICADA: Agora apenas seleciona o arquivo e o guarda no estado
-  const handleSelectMedia = (type: 'imagem1' | 'imagem2' | 'video') => {
+  // Função para redimensionar imagem no frontend
+  const resizeImageFile = (file: File, maxWidth = 640): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+      const img = new Image();
+      
+      img.onload = () => {
+        // Calcular dimensões mantendo proporção
+        const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+        canvas.width = img.width * ratio;
+        canvas.height = img.height * ratio;
+        
+        // Desenhar imagem redimensionada
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        // Converter para blob/file
+        canvas.toBlob((blob) => {
+          const resizedFile = new File([blob!], file.name, {
+            type: 'image/jpeg',
+            lastModified: Date.now()
+          });
+          resolve(resizedFile);
+        }, 'image/jpeg', 0.85);
+      };
+      
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  // FUNÇÃO MODIFICADA: Agora redimensiona antes de guardar
+  const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'video', capture: boolean = false) => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = type === 'video' ? 'video/*' : 'image/*';
 
-    input.onchange = (event) => {
+    // Ponto chave: se for para capturar e for mobile, abre a câmera
+    if (capture && isMobile) {
+      input.capture = type === 'video' ? 'user' : 'environment'; // 'user' para selfie, 'environment' para traseira
+    } else if (capture && !isMobile) {
+      toast({ title: "Funcionalidade móvel", description: "Tirar fotos ou gravar vídeos está disponível apenas no celular." });
+    }
+
+    input.onchange = async (event) => {
       const file = (event.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
@@ -307,12 +346,24 @@ const CopiaExercicio = () => {
         return;
       }
 
-      // MODIFICAÇÃO: Guarda o objeto File no estado, não faz upload
+      // RESIZE para imagens antes de guardar no estado
+      let finalFile = file;
+      if (type === 'imagem1' || type === 'imagem2') {
+        finalFile = await resizeImageFile(file, 640);
+        console.log(`Imagem redimensionada: ${file.size} -> ${finalFile.size} bytes`);
+      }
+
       const key = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'video_url';
-      setMidias(prev => ({ ...prev, [key]: file }));
+      setMidias(prev => ({ ...prev, [key]: finalFile }));
     };
 
     input.click();
+  };
+
+  const handleRecordingComplete = (videoBlob: Blob) => {
+    const videoFile = new File([videoBlob], `gravacao_${Date.now()}.webm`, { type: 'video/webm' });
+    setMidias(prev => ({ ...prev, video_url: videoFile }));
+    setShowVideoRecorder(false);
   };
 
   // Função para deletar mídia
@@ -922,17 +973,29 @@ const CopiaExercicio = () => {
                   </div>
                 ) : (
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    <p className="text-sm text-muted-foreground mb-3">Upload com otimização automática</p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => handleSelectMedia('imagem1')}
-                      className="flex items-center gap-2"
-                    disabled={saving}
-                    >
-                      <Upload className="h-4 w-4" />
-                    {saving ? 'Salvando...' : 'Upload Primeira Imagem'}
-                    </Button>
+                    <p className="text-sm text-muted-foreground mb-3">Adicione uma imagem para o exercício.</p>
+                    <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                      <Button
+                        type="button"
+                        variant="default"
+                        onClick={() => handleSelectMedia('imagem1', true)}
+                        className="flex items-center gap-2"
+                        disabled={saving || !isMobile}
+                      >
+                        <Camera className="h-4 w-4" />
+                        Tirar Foto
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleSelectMedia('imagem1')}
+                        className="flex items-center gap-2"
+                        disabled={saving}
+                      >
+                        <Upload className="h-4 w-4" />
+                        Escolher Arquivo
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -998,17 +1061,29 @@ const CopiaExercicio = () => {
                   </div>
                 ) : (
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    <p className="text-sm text-muted-foreground mb-3">Upload com otimização automática</p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => handleSelectMedia('imagem2')}
-                      className="flex items-center gap-2"
-                    disabled={saving}
-                    >
-                      <Upload className="h-4 w-4" />
-                    {saving ? 'Salvando...' : 'Upload Segunda Imagem'}
-                    </Button>
+                    <p className="text-sm text-muted-foreground mb-3">Adicione uma segunda imagem (opcional).</p>
+                     <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                      <Button
+                        type="button"
+                        variant="default"
+                        onClick={() => handleSelectMedia('imagem2', true)}
+                        className="flex items-center gap-2"
+                        disabled={saving || !isMobile}
+                      >
+                        <Camera className="h-4 w-4" />
+                        Tirar Foto
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleSelectMedia('imagem2')}
+                        className="flex items-center gap-2"
+                        disabled={saving}
+                      >
+                        <Upload className="h-4 w-4" />
+                        Escolher Arquivo
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1074,17 +1149,32 @@ const CopiaExercicio = () => {
                   </div>
                 ) : (
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    <p className="text-sm text-muted-foreground mb-3">Upload de vídeo (máx. 20MB)</p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => handleSelectMedia('video')}
-                      className="flex items-center gap-2"
-                    disabled={saving}
-                    >
-                      <Upload className="h-4 w-4" />
-                    {saving ? 'Salvando...' : 'Upload Vídeo'}
-                    </Button>
+                    <p className="text-sm text-muted-foreground mb-3">Adicione um vídeo para o exercício.</p>
+                    <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                      <Button
+                        type="button"
+                        variant="default"
+                        onClick={() => {
+                          if (isMobile) setShowVideoRecorder(true);
+                          else toast({ title: "Funcionalidade móvel", description: "A gravação de vídeo está disponível apenas no celular." });
+                        }}
+                        className="flex items-center gap-2"
+                        disabled={saving || !isMobile}
+                      >
+                        <Video className="h-4 w-4" />
+                        Gravar Vídeo
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleSelectMedia('video')}
+                        className="flex items-center gap-2"
+                        disabled={saving}
+                      >
+                        <Upload className="h-4 w-4" />
+                        Escolher Arquivo
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1166,6 +1256,12 @@ const CopiaExercicio = () => {
         onConfirm={() => showDeleteMediaDialog && handleDeleteMedia(showDeleteMediaDialog as 'imagem1' | 'imagem2' | 'video')}
         title="Não incluir mídia na cópia"
         description="Esta mídia não será incluída na sua cópia personalizada. O exercício original não será alterado."
+      />
+
+      <VideoRecorder 
+        open={showVideoRecorder}
+        onOpenChange={setShowVideoRecorder}
+        onRecordingComplete={handleRecordingComplete}
       />
     </div>
   );

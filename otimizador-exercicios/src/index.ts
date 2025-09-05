@@ -26,7 +26,7 @@ async function initializeWasm() {
     initWebpEncoder(webpEncWasm),
   ]);
   wasmInitialized = true;
-  console.log('🚀 Módulos WASM inicializados com sucesso.');
+  console.log('🚀 Módulos WASM de otimização inicializados com sucesso.');
 }
 
 export default {

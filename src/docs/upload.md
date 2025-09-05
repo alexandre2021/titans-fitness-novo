@@ -68,18 +68,16 @@ O objetivo é transformar um vídeo grande de celular em um arquivo de vídeo le
     -   **Se a rede for lenta (2G/3G/Modo Economia):** O app exibe a mensagem: "Sua conexão está lenta. O vídeo será enviado quando você se conectar a uma rede mais rápida." O arquivo é salvo temporariamente no **IndexedDB** (uma base de dados no navegador) e uma tarefa é registrada com a **Background Sync API**.
 
 #### Service Worker (Em Segundo Plano):
-
 1.  A **Background Sync API** automaticamente "acorda" o Service Worker quando uma conexão de boa qualidade é detectada.
 2.  O Service Worker recupera o vídeo do IndexedDB e o envia para o backend. Este processo é resiliente a fechamento do app e perda de conexão.
 
-#### Backend (Função Serverless):
-
-1.  Recebe o vídeo original (já validado pela duração).
-2.  Executa o processamento pesado:
+#### Backend (Supabase Edge Function):
+1.  A Edge Function do Supabase recebe o vídeo original (já validado pela duração).
+2.  Executa o processamento pesado usando uma versão do **FFmpeg** compilada para WebAssembly:
     -   Remove a faixa de áudio.
     -   Redimensiona a resolução para **360p**.
     -   Re-codifica o vídeo com um bitrate constante de **500 kbps**.
-3.  Salva o arquivo final otimizado no bucket `exerciciospt`.
+3.  Salva o arquivo final otimizado no bucket R2 da Cloudflare.
 
 #### Feedback Final (Opcional, mas recomendado):
 
@@ -219,3 +217,34 @@ A estratégia implementada ataca o problema na raiz, garantindo que a operação
 4.  **Codificar:** Apenas a `ImageData` pequena e redimensionada é enviada para a biblioteca `@jsquash/webp`. Como a imagem agora é pequena, a operação de codificação consome pouquíssima memória e é executada com sucesso e rapidez.
 
 Esta abordagem garante que o Worker permaneça sempre dentro dos limites de memória, independentemente do tamanho da imagem original enviada pelo usuário.
+
+---
+
+## 9. Arquitetura de Processamento: A Ferramenta Certa para Cada Tarefa
+
+A plataforma utiliza uma arquitetura híbrida, escolhendo a ferramenta serverless mais adequada para cada tipo de processamento de mídia. Isso garante eficiência, escalabilidade e controle de custos.
+
+### Processamento de Imagens: Cloudflare Workers
+
+O processamento de imagens é uma tarefa relativamente rápida e que se beneficia da execução na borda (edge), mais próxima do usuário.
+
+-   **Por que o Worker?** Ideal para tarefas curtas e de baixa latência. A otimização de uma imagem, após o redimensionamento, é uma operação que se encaixa perfeitamente nesse modelo.
+-   **Paralelismo e Memória:** A plataforma da Cloudflare é altamente paralela. Se 10 usuários fizerem upload de imagens ao mesmo tempo, 10 instâncias separadas do Worker serão iniciadas. **Cada instância possui seu próprio limite de 128 MB de memória**, o que significa que o processamento de uma imagem não interfere no de outra. O erro de memória que encontramos foi resolvido porque agora cada instância processa uma imagem pequena, mantendo-se confortavelmente dentro do seu próprio limite de 128 MB.
+
+### Processamento de Vídeos: Supabase Edge Functions
+
+A transcodificação de vídeo é uma tarefa computacionalmente intensiva e demorada, inadequada para o ambiente restrito de um Worker.
+
+-   **Por que a Edge Function?** As Edge Functions do Supabase (baseadas em Deno) oferecem um ambiente mais robusto e com limites mais altos, ideal para tarefas de backend mais pesadas.
+    -   **Limite de Tempo:** **Até 60 segundos** de execução por invocação no plano gratuito, uma margem segura para transcodificar um vídeo de 12 segundos. Em contraste, o Worker da Cloudflare tem um limite de CPU muito mais restrito.
+    -   **Flexibilidade:** Permite a execução de ferramentas complexas como o **FFmpeg** (compilado para WebAssembly), que é o padrão da indústria para manipulação de vídeo.
+-   **Paralelismo:** Assim como os Workers, as Edge Functions são escaláveis. Se múltiplos usuários enviarem vídeos simultaneamente, o Supabase iniciará instâncias paralelas da função para processar cada vídeo, sem filas ou esperas.
+
+### Conclusão da Estratégia
+
+A arquitetura foi desenhada para usar a ferramenta certa para cada trabalho:
+
+-   **Imagens:** Tarefa rápida e leve, ideal para a agilidade e a execução na borda dos **Cloudflare Workers**.
+-   **Vídeos:** Tarefa pesada e demorada, que exige os recursos e o tempo de execução maiores das **Supabase Edge Functions**.
+
+Este esforço de design garante que a plataforma seja robusta, escalável e não encontre os mesmos gargalos de memória ao lidar com diferentes tipos de mídia.
