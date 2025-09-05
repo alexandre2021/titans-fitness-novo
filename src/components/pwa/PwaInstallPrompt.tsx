@@ -9,6 +9,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Estendemos a interface de Event para incluir as propriedades específicas do BeforeInstallPromptEvent
 interface BeforeInstallPromptEvent extends Event {
@@ -21,6 +22,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const PwaInstallPrompt = () => {
+  const isMobile = useIsMobile();
   const [installPromptEvent, setInstallPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
@@ -45,7 +47,8 @@ const PwaInstallPrompt = () => {
     setInstallPromptEvent(null); // O prompt só pode ser usado uma vez.
   };
 
-  if (!installPromptEvent) {
+  // Mostra o botão apenas em dispositivos móveis quando o prompt estiver disponível
+  if (!installPromptEvent || !isMobile) {
     return null;
   }
 

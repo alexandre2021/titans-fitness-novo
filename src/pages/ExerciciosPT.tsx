@@ -13,6 +13,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -47,6 +48,7 @@ const ExerciciosPT = () => {
   const isMobile = useIsMobile();
   const [isLimitInfoOpen, setIsLimitInfoOpen] = useState(false);
   const [busca, setBusca] = useState("");
+  const [showDesktopCopyWarning, setShowDesktopCopyWarning] = useState(false);
 
   const handleNovoExercicio = () => {
     if (totalPersonalizados >= LIMITE_EXERCICIOS_PERSONALIZADOS) {
@@ -71,7 +73,11 @@ const ExerciciosPT = () => {
       return;
     }
 
-    navigate(`/exercicios-pt/copia/${exercicioId}`);
+    if (isMobile) {
+      navigate(`/exercicios-pt/copia/${exercicioId}`);
+    } else {
+      setShowDesktopCopyWarning(true);
+    }
   };
 
   const handleExcluirExercicio = async (exercicioId: string) => {
@@ -467,6 +473,26 @@ const ExerciciosPT = () => {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Modal de aviso para copiar no desktop */}
+      <Dialog open={showDesktopCopyWarning} onOpenChange={setShowDesktopCopyWarning}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Funcionalidade Otimizada para Celular</DialogTitle>
+            <DialogDescription className="pt-4 space-y-3">
+              <p>
+                Para uma melhor experiência, recomendamos copiar e personalizar exercícios usando seu celular.
+              </p>
+              <p>
+                Isso permite que você use a câmera para tirar fotos e gravar vídeos da execução do exercício diretamente no app.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-end mt-4">
+            <Button type="button" onClick={() => setShowDesktopCopyWarning(false)}>Entendi</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

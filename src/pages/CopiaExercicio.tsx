@@ -936,7 +936,7 @@ const CopiaExercicio = () => {
                         </div>
                       )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <Button
                         type="button"
                         variant="outline"
@@ -950,14 +950,25 @@ const CopiaExercicio = () => {
                       </Button>
                       <Button
                         type="button"
+                        variant="default"
+                        size="sm"
+                        onClick={() => handleSelectMedia('imagem1', true)}
+                        className="flex items-center gap-2"
+                        disabled={saving || !isMobile}
+                      >
+                        <Camera className="h-4 w-4" />
+                        Tirar Foto
+                      </Button>
+                      <Button
+                        type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => handleSelectMedia('imagem1')}
+                        onClick={() => handleSelectMedia('imagem1', false)}
                         className="flex items-center gap-2"
                         disabled={saving}
                       >
                         <Upload className="h-4 w-4" />
-                        {saving ? 'Salvando...' : 'Trocar'}
+                        Escolher Arquivo
                       </Button>
                       <Button
                         type="button"
@@ -1024,7 +1035,7 @@ const CopiaExercicio = () => {
                         </div>
                       )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <Button
                         type="button"
                         variant="outline"
@@ -1038,14 +1049,25 @@ const CopiaExercicio = () => {
                       </Button>
                       <Button
                         type="button"
+                        variant="default"
+                        size="sm"
+                        onClick={() => handleSelectMedia('imagem2', true)}
+                        className="flex items-center gap-2"
+                        disabled={saving || !isMobile}
+                      >
+                        <Camera className="h-4 w-4" />
+                        Tirar Foto
+                      </Button>
+                      <Button
+                        type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => handleSelectMedia('imagem2')}
+                        onClick={() => handleSelectMedia('imagem2', false)}
                         className="flex items-center gap-2"
                         disabled={saving}
                       >
                         <Upload className="h-4 w-4" />
-                        {saving ? 'Salvando...' : 'Trocar'}
+                        Escolher Arquivo
                       </Button>
                       <Button
                         type="button"
@@ -1112,7 +1134,7 @@ const CopiaExercicio = () => {
                         </div>
                       )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <Button
                         type="button"
                         variant="outline"
@@ -1126,14 +1148,25 @@ const CopiaExercicio = () => {
                       </Button>
                       <Button
                         type="button"
+                        variant="default"
+                        size="sm"
+                        onClick={() => { if (isMobile) setShowVideoRecorder(true); else toast({ title: "Funcionalidade móvel", description: "A gravação de vídeo está disponível apenas no celular." }); }}
+                        className="flex items-center gap-2"
+                        disabled={saving || !isMobile}
+                      >
+                        <Video className="h-4 w-4" />
+                        Gravar Vídeo
+                      </Button>
+                      <Button
+                        type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => handleSelectMedia('video')}
+                        onClick={() => handleSelectMedia('video', false)}
                         className="flex items-center gap-2"
                         disabled={saving}
                       >
                         <Upload className="h-4 w-4" />
-                        {saving ? 'Salvando...' : 'Trocar'}
+                        Escolher Arquivo
                       </Button>
                       <Button
                         type="button"
@@ -1268,4 +1301,3 @@ const CopiaExercicio = () => {
 };
 
 export default CopiaExercicio;
-
