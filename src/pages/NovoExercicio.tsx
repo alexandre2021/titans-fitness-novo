@@ -833,7 +833,7 @@ const NovoExercicio = () => {
                       ) : signedUrls.video ? (
                         <video 
                           src={signedUrls.video} 
-                          className="w-40 h-40 object-cover rounded-lg border shadow-sm"
+                          className="max-w-40 max-h-40 object-contain rounded-lg border shadow-sm bg-muted"
                           controls
                         />
                       ) : (

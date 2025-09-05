@@ -666,7 +666,8 @@ const CopiaExercicio = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      <div className="space-y-6">
       {/* Cabeçalho Responsivo */}
       <div className="space-y-4">
         {/* Layout Desktop */}
@@ -695,17 +696,7 @@ const CopiaExercicio = () => {
             </div>
           </div>
 
-          {/* Ações no cabeçalho - Desktop */}
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex items-center gap-2"
-            >
-              <Save className="h-4 w-4" />
-              {saving ? "Salvando..." : "Salvar Cópia"}
-            </Button>
-          </div>
+          {/* Ações no cabeçalho - Desktop (Botão foi movido para flutuante) */}
         </div>
 
         {/* Layout Mobile - Padrão da aplicação */}
@@ -729,15 +720,7 @@ const CopiaExercicio = () => {
               </p>
             </div>
           </div>
-          
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 w-10 flex-shrink-0"
-          >
-            <Save className="h-6 w-6" />
-            <span className="sr-only">Salvar Cópia</span>
-          </button>
+          {/* Botão Salvar movido para flutuante */}
         </div>
       </div>
 
@@ -1229,7 +1212,36 @@ const CopiaExercicio = () => {
         onOpenChange={setShowVideoRecorder}
         onRecordingComplete={handleRecordingComplete}
       />
+
+      {/* Botão Salvar Flutuante */}
+      <div className="fixed bottom-20 md:bottom-6 left-4 md:left-6 z-50">
+        {/* Mobile: Round floating button */}
+        <Button
+          onClick={handleSave}
+          disabled={saving}
+          className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center"
+        >
+          {saving ? (
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-foreground"></div>
+          ) : (
+            <Save className="h-6 w-6" />
+          )}
+          <span className="sr-only">Salvar Cópia</span>
+        </Button>
+
+        {/* Desktop: Standard floating button */}
+        <Button
+          onClick={handleSave}
+          disabled={saving}
+          className="hidden md:flex items-center gap-2 shadow-lg"
+          size="lg"
+        >
+          <Save className="h-4 w-4" />
+          {saving ? "Salvando..." : "Salvar Cópia"}
+        </Button>
+      </div>
     </div>
+    </>
   );
 };
 

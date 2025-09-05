@@ -150,15 +150,6 @@ const Login = () => {
                 </div>
               </div>
               
-              <div className="flex items-center justify-between">
-                <Link 
-                  to="/esqueci-senha" 
-                  className="text-sm text-primary hover:underline"
-                >
-                  Esqueci minha senha
-                </Link>
-              </div>
-              
               <Button 
                 type="submit" 
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
@@ -166,6 +157,12 @@ const Login = () => {
               >
                 {isLoading ? "Entrando..." : "Entrar"}
               </Button>
+
+              <div className="text-center">
+                <Link to="/esqueci-senha" className="text-sm text-primary hover:underline">
+                  Esqueci minha senha
+                </Link>
+              </div>
             </form>
             
             <div className="mt-6 text-center">

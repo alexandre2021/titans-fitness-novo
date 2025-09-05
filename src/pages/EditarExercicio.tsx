@@ -561,8 +561,6 @@ const EditarExercicio = () => {
                     <div className="relative inline-block">
                       {loadingImages ? (
                         <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center"><span className="text-sm text-muted-foreground">Carregando...</span></div>
-                      ) : signedUrls.video ? (
-                        <video src={signedUrls.video} className="w-40 h-40 object-cover rounded-lg border shadow-sm" controls />
                       ) : (
                         <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center"><span className="text-sm text-muted-foreground">Erro ao carregar</span></div>
                       )}

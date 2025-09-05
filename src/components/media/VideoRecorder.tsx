@@ -19,6 +19,7 @@ export const VideoRecorder = ({ open, onOpenChange, onRecordingComplete }: Video
   const [isRecording, setIsRecording] = useState(false);
   const [countdown, setCountdown] = useState(12);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
@@ -61,6 +62,12 @@ export const VideoRecorder = ({ open, onOpenChange, onRecordingComplete }: Video
           setStream(mediaStream);
           if (videoRef.current) {
             videoRef.current.srcObject = mediaStream;
+            videoRef.current.onloadedmetadata = () => {
+              if (videoRef.current) {
+                const { videoWidth, videoHeight } = videoRef.current;
+                setOrientation(videoWidth > videoHeight ? 'landscape' : 'portrait');
+              }
+            };
           }
         } catch (err) {
           console.error("Erro ao acessar a câmera:", err);
@@ -117,7 +124,11 @@ export const VideoRecorder = ({ open, onOpenChange, onRecordingComplete }: Video
         <div className="relative">
           <video ref={videoRef} autoPlay playsInline muted className="w-full h-auto" />
           {isRecording && (
-            <div className="absolute top-4 left-4 bg-red-600 text-white text-2xl font-bold rounded-full h-16 w-16 flex items-center justify-center">
+            <div className={`absolute bg-red-600 text-white text-2xl font-bold rounded-full h-16 w-16 flex items-center justify-center
+              ${orientation === 'portrait' 
+                ? 'top-4 left-4' 
+                : 'top-1/2 left-4 -translate-y-1/2'
+              }`}>
               {countdown}
             </div>
           )}
