@@ -54,13 +54,13 @@ const Login = () => {
 
         if (profile?.user_type === 'aluno') {
           toast.success('Login realizado com sucesso!');
-          window.location.href = '/index-aluno';
+          navigate('/index-aluno');
         } else if (profile?.user_type === 'personal_trainer') {
           toast.success('Login realizado com sucesso!');
-          window.location.href = '/index-pt';
+          navigate('/index-pt');
         } else {
           toast.success('Login realizado com sucesso!');
-          window.location.href = '/';
+          navigate('/');
         }
       }
     } catch (error) {
@@ -168,4 +168,3 @@ const Login = () => {
 };
 
 export default Login;
-
