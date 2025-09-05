@@ -46,7 +46,8 @@ export const VideoRecorder = ({ open, onOpenChange, onRecordingComplete }: Video
 
   // Efeito para iniciar a câmera quando o modal abre
   useEffect(() => {
-    if (open) {
+    // A condição `!stream` previne um loop de re-renderização que causa o pisca-pisca.
+    if (open && !stream) {
       const startCamera = async () => {
         try {
           const mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -68,8 +69,8 @@ export const VideoRecorder = ({ open, onOpenChange, onRecordingComplete }: Video
       };
       startCamera();
     } else {
-      // Limpa o stream quando o modal fecha
-      if (stream) {
+      // Limpa o stream quando o modal fecha, se ele existir
+      if (stream && !open) {
         stream.getTracks().forEach(track => track.stop());
         setStream(null);
       }

@@ -475,24 +475,39 @@ const ExerciciosPT = () => {
       )}
 
       {/* Modal de aviso para copiar no desktop */}
-      <Dialog open={showDesktopCopyWarning} onOpenChange={setShowDesktopCopyWarning}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Funcionalidade Otimizada para Celular</DialogTitle>
-            <DialogDescription className="pt-4 space-y-3">
-              <p>
-                Para uma melhor experiência, recomendamos copiar e personalizar exercícios usando seu celular.
-              </p>
-              <p>
-                Isso permite que você use a câmera para tirar fotos e gravar vídeos da execução do exercício diretamente no app.
-              </p>
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="sm:justify-end mt-4">
-            <Button type="button" onClick={() => setShowDesktopCopyWarning(false)}>Entendi</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {isMobile ? (
+        <Drawer open={showDesktopCopyWarning} onOpenChange={setShowDesktopCopyWarning}>
+          <DrawerContent>
+            <DrawerHeader className="text-left">
+              <DrawerTitle>Funcionalidade Otimizada para Celular</DrawerTitle>
+            </DrawerHeader>
+            <div className="p-4 space-y-4">
+              <div className="text-sm text-muted-foreground space-y-3">
+                <p>Para uma melhor experiência, recomendamos copiar e personalizar exercícios usando seu celular.</p>
+                <p>Isso permite que você use a câmera para tirar fotos e gravar vídeos da execução do exercício diretamente no app.</p>
+              </div>
+              <DrawerFooter className="pt-4 px-0">
+                <Button onClick={() => setShowDesktopCopyWarning(false)}>Entendi</Button>
+              </DrawerFooter>
+            </div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Dialog open={showDesktopCopyWarning} onOpenChange={setShowDesktopCopyWarning}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Funcionalidade Otimizada para Celular</DialogTitle>
+              <DialogDescription className="pt-4 space-y-3">
+                <p>Para uma melhor experiência, recomendamos copiar e personalizar exercícios usando seu celular.</p>
+                <p>Isso permite que você use a câmera para tirar fotos e gravar vídeos da execução do exercício diretamente no app.</p>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="sm:justify-end mt-4">
+              <Button type="button" onClick={() => setShowDesktopCopyWarning(false)}>Entendi</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };

@@ -149,9 +149,7 @@ const CopiaExercicio = () => {
                   <Button
                     onClick={onConfirm}
                     variant="destructive"
-                  >
-                    Não incluir
-                  </Button>
+                  >Excluir</Button>
               </div>
             </div>
           </DrawerContent>
@@ -177,9 +175,7 @@ const CopiaExercicio = () => {
             <Button
               onClick={onConfirm}
               variant="destructive"
-            >
-              Não incluir
-            </Button>
+            >Excluir</Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -950,35 +946,24 @@ const CopiaExercicio = () => {
                       </Button>
                       <Button
                         type="button"
-                        variant="default"
+                        variant="outline"
                         size="sm"
                         onClick={() => handleSelectMedia('imagem1', true)}
                         className="flex items-center gap-2"
                         disabled={saving || !isMobile}
                       >
                         <Camera className="h-4 w-4" />
-                        Tirar Foto
+                        Nova Foto
                       </Button>
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => handleSelectMedia('imagem1', false)}
-                        className="flex items-center gap-2"
-                        disabled={saving}
-                      >
-                        <Upload className="h-4 w-4" />
-                        Escolher Arquivo
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
                         onClick={() => setShowDeleteMediaDialog('imagem1')}
                         className="flex items-center gap-2"
                       >
                         <Trash2 className="h-4 w-4" />
-                        Não incluir
+                        Excluir
                       </Button>
                     </div>
                   </div>
@@ -1049,35 +1034,24 @@ const CopiaExercicio = () => {
                       </Button>
                       <Button
                         type="button"
-                        variant="default"
+                        variant="outline"
                         size="sm"
                         onClick={() => handleSelectMedia('imagem2', true)}
                         className="flex items-center gap-2"
                         disabled={saving || !isMobile}
                       >
                         <Camera className="h-4 w-4" />
-                        Tirar Foto
+                        Nova Foto
                       </Button>
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => handleSelectMedia('imagem2', false)}
-                        className="flex items-center gap-2"
-                        disabled={saving}
-                      >
-                        <Upload className="h-4 w-4" />
-                        Escolher Arquivo
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
                         onClick={() => setShowDeleteMediaDialog('imagem2')}
                         className="flex items-center gap-2"
                       >
                         <Trash2 className="h-4 w-4" />
-                        Não incluir
+                        Excluir
                       </Button>
                     </div>
                   </div>
@@ -1148,35 +1122,24 @@ const CopiaExercicio = () => {
                       </Button>
                       <Button
                         type="button"
-                        variant="default"
+                        variant="outline"
                         size="sm"
                         onClick={() => { if (isMobile) setShowVideoRecorder(true); else toast({ title: "Funcionalidade móvel", description: "A gravação de vídeo está disponível apenas no celular." }); }}
                         className="flex items-center gap-2"
                         disabled={saving || !isMobile}
                       >
                         <Video className="h-4 w-4" />
-                        Gravar Vídeo
+                        Novo Vídeo
                       </Button>
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => handleSelectMedia('video', false)}
-                        className="flex items-center gap-2"
-                        disabled={saving}
-                      >
-                        <Upload className="h-4 w-4" />
-                        Escolher Arquivo
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
                         onClick={() => setShowDeleteMediaDialog('video')}
                         className="flex items-center gap-2"
                       >
                         <Trash2 className="h-4 w-4" />
-                        Não incluir
+                        Excluir
                       </Button>
                     </div>
                   </div>
@@ -1196,16 +1159,6 @@ const CopiaExercicio = () => {
                       >
                         <Video className="h-4 w-4" />
                         Gravar Vídeo
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => handleSelectMedia('video')}
-                        className="flex items-center gap-2"
-                        disabled={saving}
-                      >
-                        <Upload className="h-4 w-4" />
-                        Escolher Arquivo
                       </Button>
                     </div>
                   </div>
@@ -1287,8 +1240,8 @@ const CopiaExercicio = () => {
         open={showDeleteMediaDialog !== null}
         onOpenChange={(open) => !open && setShowDeleteMediaDialog(null)}
         onConfirm={() => showDeleteMediaDialog && handleDeleteMedia(showDeleteMediaDialog as 'imagem1' | 'imagem2' | 'video')}
-        title="Não incluir mídia na cópia"
-        description="Esta mídia não será incluída na sua cópia personalizada. O exercício original não será alterado."
+        title="Excluir mídia da cópia"
+        description="Esta mídia será removida da sua cópia personalizada. O exercício original não será alterado."
       />
 
       <VideoRecorder 
