@@ -40,7 +40,6 @@ const Login = () => {
           errorMessage = "Email não confirmado. Por favor, verifique sua caixa de entrada.";
         }
         toast.error(errorMessage);
-        setIsLoading(false);
         return;
       }
 
@@ -66,6 +65,7 @@ const Login = () => {
     } catch (error) {
       toast.error("Erro inesperado no login");
       console.error("Erro no login:", error);
+    } finally {
       setIsLoading(false);
     }
   };
