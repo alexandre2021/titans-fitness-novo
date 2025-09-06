@@ -118,8 +118,8 @@ O processo varia conforme o local de armazenamento:
 
 -   **Para arquivos no Cloudflare R2 (`avaliacoes`, `rotinas`, `exercicios`):**
     1.  A função `check-inactive-users` extrai o nome do arquivo da URL completa.
-    2.  Invoca a **Edge Function** do Supabase (`delete-image`) passando o `filename` e o `bucket_type`.
-    3.  A Edge Function `delete-image` executa a exclusão diretamente no Cloudflare R2.
+    2.  Invoca a **Edge Function** do Supabase (`delete-media`) passando o `filename` e o `bucket_type`.
+    3.  A Edge Function `delete-media` executa a exclusão diretamente no Cloudflare R2.
 
 -   **Para avatares no Supabase Storage (`avatars`):**
     1.  A função `check-inactive-users` extrai o nome do arquivo da URL.

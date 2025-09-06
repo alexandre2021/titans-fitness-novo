@@ -566,7 +566,7 @@ export const useExercicioExecucao = (
                   return;
                 }
                 try {
-                  const response = await fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/delete-image', {
+                  const response = await fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/delete-media', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
                     body: JSON.stringify({ filename, bucket_type: 'rotinas' })

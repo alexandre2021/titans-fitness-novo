@@ -151,7 +151,7 @@ export const useExercicios = () => {
       }
 
       // Chamar edge function de deleção
-      const { data, error } = await supabase.functions.invoke('delete-image', {
+      const { data, error } = await supabase.functions.invoke('delete-media', {
         body: {
           filename,
           bucket_type: 'exercicios'

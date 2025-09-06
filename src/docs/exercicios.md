@@ -102,7 +102,7 @@ Database (Supabase)
 │
 Edge Functions (Cloudflare)
 ├── upload-imagem (bucket: exerciciospt)
-├── delete-image (limpeza de mídias)
+├── delete-media (limpeza de mídias)
 ├── get-image-url (URLs assinadas)
 │
 Hooks Existentes
@@ -150,7 +150,7 @@ src/
 └── supabase/functions/ (Edge Functions)
     ├── upload-imagem/
     │   └── index.ts                  # Upload para Cloudflare
-    ├── delete-image/
+    ├── delete-media/
     │   └── index.ts                  # Deleção do Cloudflare
     └── get-image-url/
         └── index.ts                  # URLs assinadas

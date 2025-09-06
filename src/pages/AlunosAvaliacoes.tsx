@@ -87,7 +87,7 @@ const AlunosAvaliacoes = () => {
         const filename = fileUrl.split('?')[0].split('/').pop();
         if (filename) {
           deletePromises.push(
-            supabase.functions.invoke('delete-image', {
+            supabase.functions.invoke('delete-media', {
               body: {
                 filename,
                 bucket_type: 'avaliacoes' // Especifica o bucket correto

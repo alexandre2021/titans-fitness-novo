@@ -69,7 +69,7 @@ interface NovaAvaliacaoForm {
 
 const AlunosAvaliacaoNova = () => {
   const UPLOAD_IMAGE_ENDPOINT = 'https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/upload-imagem';
-  const DELETE_IMAGE_ENDPOINT = 'https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/delete-image';
+  const DELETE_IMAGE_ENDPOINT = 'https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/delete-media';
 
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();

@@ -1,14 +1,14 @@
-# Nova Estratégia de Upload de Mídia (Cliente Inteligente)
+# Arquitetura de Upload de Mídia (Cliente Inteligente + Upload Direto)
 
-Este documento descreve a nova arquitetura para upload de mídias (imagens e vídeos), que transfere a responsabilidade do processamento pesado para o frontend, simplificando radicalmente o backend.
+Este documento descreve a arquitetura para upload de mídias (imagens e vídeos), que combina processamento no cliente com uploads diretos para o Cloudflare R2, evitando gargalos no backend.
 **Pré-requisito:** Esta arquitetura assume que a aplicação será um **Progressive Web App (PWA)** para garantir acesso confiável à câmera e uma experiência de usuário nativa.
 
 ---
 
-## 1. Princípio Central: Cliente Inteligente, Backend Simples
+## 1. Princípio Central: Cliente Inteligente, Backend como Porteiro
 
--   **O Problema Anterior:** O processamento de imagens e vídeos no backend (Cloudflare Worker / Edge Function) era complexo, caro e propenso a erros de limite de memória (`Exceeded Memory Limit`).
--   **A Nova Solução:** O frontend se torna responsável por **capturar, redimensionar e comprimir** a mídia antes do upload. O backend apenas recebe um arquivo já otimizado e o armazena.
+-   **O Problema:** Enviar arquivos grandes (imagens/vídeos) através de uma Edge Function do Supabase consome rapidamente a cota de transferência de dados (50MB/mês no plano gratuito), tornando a aplicação não escalável.
+-   **A Solução:** O frontend continua responsável por **capturar, redimensionar e comprimir** a mídia. No entanto, em vez de enviar o arquivo para a função, ele pede uma **permissão de upload** (URL pré-assinada) e envia o arquivo pesado **diretamente para o Cloudflare R2**. O backend atua apenas como um "porteiro" que autoriza a operação, sem lidar com o tráfego pesado.
 
 ---
 
@@ -28,8 +28,16 @@ Este fluxo é **exclusivo para dispositivos móveis** para garantir uma experiê
     -   O método `context.drawImage()` é usado para desenhar a imagem no canvas, forçando as dimensões para um padrão (ex: **640x360 pixels**). Isso garante o redimensionamento.
     -   Em seguida, o método `canvas.toDataURL('image/jpeg', 0.85)` exporta a imagem do canvas como uma string **base64**, já comprimida em formato JPEG com 85% de qualidade.
 
-4.  **Upload para o Backend:**
-    -   Apenas a string base64 resultante (que é leve e otimizada) é enviada para a nossa Edge Function.
+4.  **Pedido de Permissão de Upload:**
+    -   O frontend chama a Edge Function `upload-media` com os metadados do arquivo (nome, tipo).
+    -   A função valida a autenticação do usuário e gera uma **URL de upload pré-assinada** para o Cloudflare R2, válida por um curto período.
+
+5.  **Upload Direto para o Cloudflare R2:**
+    -   O frontend usa a URL pré-assinada recebida para enviar o objeto `File` (a imagem otimizada) diretamente para o bucket do Cloudflare R2, usando o método `PUT`.
+    -   O tráfego pesado **não passa pelo Supabase**.
+
+6.  **Confirmação no Banco de Dados:**
+    -   Após o upload ser bem-sucedido, o frontend atualiza a tabela `exercicios` no Supabase com o caminho do novo arquivo.
 
 ---
 
@@ -51,19 +59,19 @@ Assim como as imagens, este fluxo é **exclusivo para dispositivos móveis**.
     -   A gravação é parada automaticamente após 12 segundos com `mediaRecorder.stop()`.
 
 4.  **Upload para o Backend:**
-    -   Apenas o `Blob` de vídeo resultante (leve e otimizado) é enviado para a Edge Function.
+    -   O fluxo é idêntico ao de imagens: o frontend pede uma URL pré-assinada para a função `upload-media` e envia o `Blob` de vídeo diretamente para o Cloudflare R2.
 
 ---
 
-## 4. Backend Simplificado
+## 4. Backend como Porteiro
 
-A complexidade do backend é drasticamente reduzida.
+A complexidade de processamento de mídia no backend é eliminada. A função agora tem um papel de controle de acesso.
 
--   **Edge Function `upload-midia`:**
-    1.  Recebe a string base64 (imagem) ou o `Blob` (vídeo).
-    2.  Decodifica/converte para um buffer.
-    3.  Salva o arquivo final **diretamente na pasta de destino** no R2 (ex: `tratadas/`).
-    4.  Retorna a URL final imediatamente (fluxo síncrono).
+-   **Edge Function `upload-media`:**
+    1.  Recebe uma requisição do frontend com uma `action` (`generate_upload_url` ou `delete_file`).
+    2.  Valida o token de autenticação do usuário.
+    3.  Para `generate_upload_url`: Gera e retorna uma URL pré-assinada de `PUT` para o Cloudflare R2.
+    4.  Para `delete_file`: Executa a exclusão do arquivo no Cloudflare R2.
 
 -   **Componentes Removidos da Arquitetura:**
     -   Worker `otimizador-exercicios`.
@@ -74,10 +82,10 @@ A complexidade do backend é drasticamente reduzida.
 
 ## 5. Vantagens da Nova Arquitetura
 
--   **Elimina Erros de Memória:** O problema de `Exceeded Memory Limit` no backend é completamente resolvido.
--   **Simplicidade Radical:** A arquitetura do backend se torna trivial, reduzindo a complexidade, o tempo de desenvolvimento e a manutenção.
+-   **Escalabilidade:** Resolve o gargalo de 50MB/mês de transferência do Supabase, permitindo uploads ilimitados (dentro dos limites do Cloudflare R2).
+-   **Segurança:** O acesso para escrita e exclusão no bucket R2 é controlado pela Edge Function, que valida a autenticação do usuário. As chaves secretas nunca são expostas no frontend.
 -   **Performance Superior:** Uploads quase instantâneos para o usuário, mesmo em redes de academia (3G/4G).
--   **Redução de Custos:** Menos tempo de CPU em funções serverless, menos tráfego de dados e menos armazenamento.
+-   **Redução de Custos:** Evita custos de transferência de dados no Supabase e utiliza o armazenamento de baixo custo do R2.
 -   **Padronização:** Todas as mídias são padronizadas em formato e tamanho no cliente, garantindo consistência visual no app.
 -   **Concessão Principal:** A criação de exercícios com novas mídias (fotos/vídeos) se torna uma funcionalidade primariamente para dispositivos móveis, o que está alinhado com o caso de uso de um PT em campo.
 -   **Segurança Aprimorada:** A validação de hardware (câmera) impede que usuários em desktop burlem o fluxo de captura de mídia, garantindo que a funcionalidade seja usada como projetado.

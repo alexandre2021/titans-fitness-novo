@@ -85,7 +85,7 @@ function getStoragePathFromUrl(url: string, bucketName: string): string | null {
  */
 async function deleteCloudflareFile(filename: string, bucket_type: 'avaliacoes' | 'rotinas' | 'exercicios'): Promise<boolean> {
   try {
-    const { data: response, error } = await supabase.functions.invoke<DeleteImageResponse>('delete-image', {
+    const { data: response, error } = await supabase.functions.invoke<DeleteImageResponse>('delete-media', {
       body: { filename, bucket_type }
     });
 
