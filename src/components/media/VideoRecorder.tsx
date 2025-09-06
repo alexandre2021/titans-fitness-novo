@@ -1,151 +1,153 @@
-// src/components/media/VideoRecorder.tsx
-
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
-import { Video, X } from 'lucide-react';
+import { Camera, X, Video, Circle } from 'lucide-react';
+import { toast as sonnerToast } from "sonner";
 
 interface VideoRecorderProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onRecordingComplete: (blob: Blob) => void;
+  onRecordingComplete: (videoBlob: Blob) => void;
 }
 
-export const VideoRecorder = ({ open, onOpenChange, onRecordingComplete }: VideoRecorderProps) => {
+export function VideoRecorder({ open, onOpenChange, onRecordingComplete }: VideoRecorderProps) {
+  const toast = sonnerToast;
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordedChunksRef = useRef<Blob[]>([]);
-
+  const streamRef = useRef<MediaStream | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [countdown, setCountdown] = useState(12);
-  const [stream, setStream] = useState<MediaStream | null>(null);
-  const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
     }
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
     }
     setIsRecording(false);
-    setStream(null);
-    onOpenChange(false);
-  }, [stream, onOpenChange]);
+    setCountdown(12);
+  }, []);
 
-  // Efeito para o countdown
-  useEffect(() => {
-    if (!isRecording) return;
+  const startRecording = useCallback(async () => {
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        toast.error("Erro", { description: "Seu navegador não suporta gravação de vídeo." });
+        return;
+      }
 
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
-      return () => clearTimeout(timer);
-    } else {
-      stopRecording();
-    }
-  }, [isRecording, countdown, stopRecording]);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 360 } },
+        audio: false,
+      });
 
-  // Efeito para iniciar a câmera quando o modal abre
-  useEffect(() => {
-    // A condição `!stream` previne um loop de re-renderização que causa o pisca-pisca.
-    if (open && !stream) {
-      const startCamera = async () => {
-        try {
-          const mediaStream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              width: { ideal: 640 },
-              height: { ideal: 360 },
-              facingMode: 'environment',
-            },
-            audio: false,
-          });
-          setStream(mediaStream);
-          if (videoRef.current) {
-            videoRef.current.srcObject = mediaStream;
-            videoRef.current.onloadedmetadata = () => {
-              if (videoRef.current) {
-                const { videoWidth, videoHeight } = videoRef.current;
-                setOrientation(videoWidth > videoHeight ? 'landscape' : 'portrait');
-              }
-            };
-          }
-        } catch (err) {
-          console.error("Erro ao acessar a câmera:", err);
-          onOpenChange(false);
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+
+      const recordedChunks: Blob[] = [];
+      const recorder = new MediaRecorder(stream, {
+        mimeType: 'video/webm; codecs=vp9',
+        videoBitsPerSecond: 500000, // 500 kbps para compressão
+      });
+
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunks.push(event.data);
         }
       };
-      startCamera();
-    } else {
-      // Limpa o stream quando o modal fecha, se ele existir
-      if (stream && !open) {
-        stream.getTracks().forEach(track => track.stop());
-        setStream(null);
-      }
+
+      recorder.onstop = () => {
+        const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
+        onRecordingComplete(videoBlob);
+        stopRecording();
+      };
+
+      recorder.start();
+      setIsRecording(true);
+
+    } catch (err) {
+      console.error("Erro ao iniciar câmera:", err);
+      toast.error("Erro de Câmera", { description: "Não foi possível acessar a câmera. Verifique as permissões." });
+      onOpenChange(false);
     }
-  }, [open, onOpenChange, stream]);
+  }, [toast, onRecordingComplete, onOpenChange, stopRecording]);
 
-  const handleStartRecording = () => {
-    if (!stream) return;
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isRecording) {
+      timer = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            stopRecording();
+            return 12;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [isRecording, stopRecording]);
 
-    recordedChunksRef.current = [];
-    const options = {
-      mimeType: 'video/webm; codecs=vp9',
-      videoBitsPerSecond: 500000, // 500 kbps
-    };
-
-    mediaRecorderRef.current = new MediaRecorder(stream, options);
-
-    mediaRecorderRef.current.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        recordedChunksRef.current.push(event.data);
-      }
-    };
-
-    mediaRecorderRef.current.onstop = () => {
-      const videoBlob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
-      onRecordingComplete(videoBlob);
-      // A limpeza do stream já é feita no stopRecording
-    };
-
-    mediaRecorderRef.current.start();
-    setIsRecording(true);
-    setCountdown(12);
-  };
+  // Limpeza ao fechar o drawer
+  useEffect(() => {
+    if (!open) {
+      stopRecording();
+    }
+  }, [open, stopRecording]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[640px] p-0">
-        <DialogHeader className="p-4 border-b">
-          <DialogTitle>Gravar Vídeo</DialogTitle>
-          <DialogDescription>
-            O vídeo terá no máximo 12 segundos e será gravado sem áudio.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="relative">
-          <video ref={videoRef} autoPlay playsInline muted className="w-full h-auto" />
-          {isRecording && (
-            <div className={`absolute bg-red-600 text-white text-2xl font-bold rounded-full h-16 w-16 flex items-center justify-center
-              ${orientation === 'portrait' 
-                ? 'top-4 left-4' 
-                : 'top-1/2 left-4 -translate-y-1/2'
-              }`}>
-              {countdown}
-            </div>
-          )}
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent className="h-full flex flex-col bg-black">
+        <DrawerHeader className="text-left text-white relative">
+          <DrawerTitle>Gravador de Vídeo</DrawerTitle>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onOpenChange(false)}
+            className="absolute right-2 top-2 h-8 w-8 rounded-full text-white hover:bg-white/20"
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Fechar</span>
+          </Button>
+        </DrawerHeader>
+        
+        {/* Container principal com aspect ratio fixo e posicionamento relativo */}
+        <div className="flex-1 relative flex items-center justify-center aspect-video bg-black">
+          {/* O vídeo preenche o container sem afetar o layout */}
+          <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-contain" />
+
+          {/* Overlay para controles, posicionado sobre o vídeo */}
+          <div className="absolute inset-0 flex flex-col justify-between items-center p-4">
+            {/* Timer no topo */}
+            {isRecording && (
+              <div className="bg-black/50 text-white text-2xl font-mono rounded-full px-4 py-2">
+                00:{countdown.toString().padStart(2, '0')}
+              </div>
+            )}
+            
+            {/* Espaçador para empurrar o botão para baixo */}
+            <div className="flex-1"></div>
+
+            {/* Botão na parte inferior */}
+            {!isRecording ? (
+              <Button onClick={startRecording} size="lg" className="rounded-full bg-red-600 hover:bg-red-700 text-white">
+                <Camera className="h-6 w-6 mr-2" />
+                Iniciar Gravação
+              </Button>
+            ) : (
+              <Button onClick={stopRecording} size="lg" variant="outline" className="rounded-full bg-white/20 text-white border-white">
+                <Circle className="h-6 w-6 mr-2 fill-red-600 text-red-600" />
+                Parar Gravação
+              </Button>
+            )}
+          </div>
         </div>
-        <div className="p-4 flex justify-center">
-          {!isRecording ? (
-            <Button onClick={handleStartRecording} size="lg" className="flex items-center gap-2">
-              <Video className="h-5 w-5" />
-              Iniciar Gravação
-            </Button>
-          ) : (
-            <Button onClick={stopRecording} variant="destructive" size="lg">
-              Parar Gravação
-            </Button>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+      </DrawerContent>
+    </Drawer>
   );
-};
+}

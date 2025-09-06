@@ -33,7 +33,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Save, Copy, Upload, Trash2, Eye, ExternalLink, Camera, Video } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from "@/hooks/useAuth";
 import { VideoRecorder } from '@/components/media/VideoRecorder'; // Importar o novo componente
@@ -44,12 +44,13 @@ type Exercicio = Tables<"exercicios">;
 const CopiaExercicio = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const toast = sonnerToast;
   const isMobile = useIsMobile();
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [exercicioOriginal, setExercicioOriginal] = useState<Exercicio | null>(null);
+  const [showVideoInfoModal, setShowVideoInfoModal] = useState(false);
   const [showVideoRecorder, setShowVideoRecorder] = useState(false);
   const [showDeleteMediaDialog, setShowDeleteMediaDialog] = useState<string | null>(null);
   
@@ -176,6 +177,51 @@ const CopiaExercicio = () => {
               onClick={onConfirm}
               variant="destructive"
             >Excluir</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
+  };
+
+  const VideoInfoModal = () => {
+    const handleConfirm = () => {
+      setShowVideoInfoModal(false);
+      setShowVideoRecorder(true);
+    };
+
+    if (isMobile) {
+      return (
+        <Drawer open={showVideoInfoModal} onOpenChange={setShowVideoInfoModal}>
+          <DrawerContent>
+            <DrawerHeader className="text-left">
+              <DrawerTitle>Gravar Vídeo do Exercício</DrawerTitle>
+            </DrawerHeader>
+            <div className="p-4 space-y-4">
+              <p className="text-sm text-muted-foreground">
+                O vídeo terá duração máxima de <strong>12 segundos</strong> e será salvo <strong>sem áudio</strong> para otimização.
+              </p>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setShowVideoInfoModal(false)}>Cancelar</Button>
+                <Button onClick={handleConfirm}>Iniciar Gravação</Button>
+              </div>
+            </div>
+          </DrawerContent>
+        </Drawer>
+      );
+    }
+
+    return (
+      <AlertDialog open={showVideoInfoModal} onOpenChange={setShowVideoInfoModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Gravar Vídeo do Exercício</AlertDialogTitle>
+            <AlertDialogDescription>
+              O vídeo terá duração máxima de <strong>12 segundos</strong> e será salvo <strong>sem áudio</strong> para otimização.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={() => setShowVideoInfoModal(false)}>Cancelar</Button>
+            <Button onClick={handleConfirm}>Iniciar Gravação</Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -320,10 +366,8 @@ const CopiaExercicio = () => {
     // Se a intenção é capturar, primeiro validamos a presença de uma câmera.
     if (capture) {
       if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-        toast({
-          title: "Navegador incompatível",
+        toast.error("Navegador incompatível", {
           description: "Seu navegador não parece suportar a captura de mídia.",
-          variant: "destructive",
         });
         return;
       }
@@ -332,10 +376,8 @@ const CopiaExercicio = () => {
       const hasCamera = devices.some(device => device.kind === 'videoinput');
 
       if (!hasCamera) {
-        toast({
-          title: "Câmera não encontrada",
+        toast.error("Câmera não encontrada", {
           description: "Esta função requer uma câmera. Por favor, acesse de um dispositivo móvel com câmera.",
-          variant: "destructive",
         });
         return; // Impede a continuação e a abertura do seletor de arquivos.
       }
@@ -353,10 +395,8 @@ const CopiaExercicio = () => {
 
       const maxSize = type === 'video' ? 20 * 1024 * 1024 : 5 * 1024 * 1024;
       if (file.size > maxSize) {
-        toast({
-          title: "Erro",
+        toast.error("Arquivo muito grande", {
           description: `Arquivo muito grande. Máximo: ${type === 'video' ? '20MB' : '5MB'}`,
-          variant: "destructive",
         });
         return;
       }
@@ -386,19 +426,16 @@ const CopiaExercicio = () => {
     try {
       const key = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'video_url';
       setMidias(prev => ({ ...prev, [key]: null }));
-
-      toast({
-        title: "Sucesso",
+      
+      toast.success("Mídia removida", {
         description: "Mídia removida da cópia!",
       });
 
       setShowDeleteMediaDialog(null);
     } catch (error) {
       console.error('Erro ao deletar mídia:', error);
-      toast({
-        title: "Erro",
+      toast.error("Erro ao excluir", {
         description: "Erro ao excluir mídia.",
-        variant: "destructive",
       });
     }
   };
@@ -454,10 +491,8 @@ const CopiaExercicio = () => {
         console.log('✅ Exercício original carregado:', exercicio);
       } catch (error) {
         console.error('❌ Erro ao carregar exercício:', error);
-        toast({
-          title: "Erro",
+        toast.error("Erro ao carregar", {
           description: "Não foi possível carregar o exercício. Verifique se o ID está correto.",
-          variant: "destructive",
         });
         navigate('/exercicios-pt');
       } finally {
@@ -573,10 +608,8 @@ const CopiaExercicio = () => {
     const currentFormData = { ...formData, instrucoes: instrucoesFinal };
 
     if (!user || !user.id || !validateForm()) {
-      toast({
-        title: "Erro",
-        description: "Usuário não autenticado ou formulário inválido.",
-        variant: "destructive",
+      toast.error("Erro de Validação", {
+        description: "Por favor, preencha todos os campos obrigatórios antes de salvar.",
       });
       return;
     }
@@ -584,7 +617,7 @@ const CopiaExercicio = () => {
     setSaving(true);
 
     try {
-      toast({ title: "Processando", description: "Salvando e otimizando mídias..." });
+      toast.info("Processando", { description: "Salvando e otimizando mídias..." });
 
       // MODIFICAÇÃO: Processa e faz upload de cada mídia apenas agora
       const [imagem_1_url_final, imagem_2_url_final, video_url_final] = await Promise.all([
@@ -618,8 +651,7 @@ const CopiaExercicio = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Sucesso",
+      toast.success("Sucesso", {
         description: "Cópia do exercício criada com imagens otimizadas!",
       });
 
@@ -628,10 +660,8 @@ const CopiaExercicio = () => {
       
     } catch (error) {
       console.error('❌ Erro ao criar cópia:', error);
-      toast({
-        title: "Erro",
+      toast.error("Erro ao criar cópia", {
         description: "Não foi possível criar a cópia do exercício. Tente novamente.",
-        variant: "destructive",
       });
     } finally {
       setSaving(false);
@@ -1106,7 +1136,7 @@ const CopiaExercicio = () => {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => { if (isMobile) setShowVideoRecorder(true); else toast({ title: "Funcionalidade móvel", description: "A gravação de vídeo está disponível apenas no celular." }); }}
+                        onClick={() => { if (isMobile) setShowVideoInfoModal(true); else toast.info("Funcionalidade móvel", { description: "A gravação de vídeo está disponível apenas no celular." }); }}
                         className="flex items-center gap-2"
                         disabled={saving || !isMobile}
                       >
@@ -1132,10 +1162,7 @@ const CopiaExercicio = () => {
                       <Button
                         type="button"
                         variant="default"
-                        onClick={() => {
-                          if (isMobile) setShowVideoRecorder(true);
-                          else toast({ title: "Funcionalidade móvel", description: "A gravação de vídeo está disponível apenas no celular." });
-                        }}
+                        onClick={() => { if (isMobile) setShowVideoInfoModal(true); else toast.info("Funcionalidade móvel", { description: "A gravação de vídeo está disponível apenas no celular." }); }}
                         className="flex items-center gap-2"
                         disabled={saving || !isMobile}
                       >
@@ -1232,8 +1259,10 @@ const CopiaExercicio = () => {
         onRecordingComplete={handleRecordingComplete}
       />
 
+      <VideoInfoModal />
+
       {/* Botão Salvar Flutuante */}
-      <div className="fixed bottom-20 md:bottom-6 left-4 md:left-6 z-50">
+      <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
         {/* Mobile: Round floating button */}
         <Button
           onClick={handleSave}
@@ -1241,9 +1270,9 @@ const CopiaExercicio = () => {
           className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center"
         >
           {saving ? (
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-foreground"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-foreground"></div>
           ) : (
-            <Save className="h-6 w-6" />
+            <Save className="h-8 w-8" />
           )}
           <span className="sr-only">Salvar Cópia</span>
         </Button>
