@@ -13,10 +13,16 @@ const PwaUpdateNotification = () => {
   } = useRegisterSW({
     onRegisteredSW(swUrl, registration) {
       // Check for new PWA version periodically.
+      // Use a short interval for development and local preview, and a longer one for production.
+      const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+      const intervalMS = (import.meta.env.DEV || isLocalhost)
+        ? 10 * 1000 // 10 seconds
+        : 60 * 60 * 1000; // 1 hour
+
       if (registration) {
         setInterval(() => {
           registration.update();
-        }, 60 * 60 * 1000); // 3600000ms = 1 hour
+        }, intervalMS);
       }
       console.log(`PWA Service Worker registered: ${swUrl}`);
     },

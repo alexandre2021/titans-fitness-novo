@@ -13,10 +13,14 @@ const PwaUpdateNotification = () => {
   } = useRegisterSW({
     onRegisteredSW(swUrl, registration) {
       // Check for new PWA version periodically.
+      const intervalMS = import.meta.env.DEV
+        ? 10 * 1000 // 10 seconds in development
+        : 60 * 60 * 1000; // 1 hour in production
+
       if (registration) {
         setInterval(() => {
           registration.update();
-        }, 60 * 60 * 1000); // 3600000ms = 1 hour
+        }, intervalMS);
       }
       console.log(`PWA Service Worker registered: ${swUrl}`);
     },
