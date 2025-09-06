@@ -317,16 +317,35 @@ const CopiaExercicio = () => {
 
   // FUNÇÃO MODIFICADA: Agora redimensiona antes de guardar
   const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'video', capture: boolean = false) => {
+    // Se a intenção é capturar, primeiro validamos a presença de uma câmera.
+    if (capture) {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+        toast({
+          title: "Navegador incompatível",
+          description: "Seu navegador não parece suportar a captura de mídia.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const hasCamera = devices.some(device => device.kind === 'videoinput');
+
+      if (!hasCamera) {
+        toast({
+          title: "Câmera não encontrada",
+          description: "Esta função requer uma câmera. Por favor, acesse de um dispositivo móvel com câmera.",
+          variant: "destructive",
+        });
+        return; // Impede a continuação e a abertura do seletor de arquivos.
+      }
+    }
+
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = type === 'video' ? 'video/*' : 'image/*';
 
-    // Ponto chave: se for para capturar e for mobile, abre a câmera
-    if (capture && isMobile) {
-      input.capture = type === 'video' ? 'user' : 'environment'; // 'user' para selfie, 'environment' para traseira
-    } else if (capture && !isMobile) {
-      toast({ title: "Funcionalidade móvel", description: "Tirar fotos ou gravar vídeos está disponível apenas no celular." });
-    }
+    if (capture) input.capture = type === 'video' ? 'user' : 'environment';
 
     input.onchange = async (event) => {
       const file = (event.target as HTMLInputElement).files?.[0];
