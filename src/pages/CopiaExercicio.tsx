@@ -1103,15 +1103,15 @@ const CopiaExercicio = () => {
               <div className="mt-2 space-y-4">
                 {midias.video_url ? (
                   <div className="space-y-3">
-                    <div className="relative inline-block">
+                    <div className="relative inline-block w-48 aspect-video bg-black rounded-lg border shadow-sm">
                       {loadingImages ? (
-                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
+                        <div className="w-full h-full flex items-center justify-center">
                           <span className="text-sm text-muted-foreground">Carregando...</span>
                         </div>
                       ) : signedUrls.video ? (
                         <video 
                           src={signedUrls.video} 
-                          className="w-40 h-40 object-cover rounded-lg border shadow-sm"
+                          className="w-full h-full object-contain rounded-lg"
                           controls
                         />
                       ) : (

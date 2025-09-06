@@ -80,3 +80,20 @@ A complexidade do backend é drasticamente reduzida.
 -   **Redução de Custos:** Menos tempo de CPU em funções serverless, menos tráfego de dados e menos armazenamento.
 -   **Padronização:** Todas as mídias são padronizadas em formato e tamanho no cliente, garantindo consistência visual no app.
 -   **Concessão Principal:** A criação de exercícios com novas mídias (fotos/vídeos) se torna uma funcionalidade primariamente para dispositivos móveis, o que está alinhado com o caso de uso de um PT em campo.
+-   **Segurança Aprimorada:** A validação de hardware (câmera) impede que usuários em desktop burlem o fluxo de captura de mídia, garantindo que a funcionalidade seja usada como projetado.
+
+---
+
+## 6. Validação Robusta de Dispositivo e UX
+
+Para garantir que a experiência "mobile-first" seja segura e funcional, implementamos validações adicionais.
+
+### 6.1. Detecção de Câmera (Anti-Fraude)
+-   **O Problema:** Um usuário em um desktop poderia usar as ferramentas de desenvolvedor (F12) para emular um dispositivo móvel e, ao clicar em "Tirar Foto", o sistema abriria o seletor de arquivos do computador, quebrando a regra de negócio.
+-   **A Solução:** Antes de acionar o `<input>`, a aplicação agora verifica ativamente se o dispositivo possui uma câmera de vídeo disponível através de `navigator.mediaDevices.enumerateDevices()`.
+-   **Resultado:** Se nenhuma câmera for detectada, a ação é bloqueada e uma mensagem de erro é exibida. Isso fecha a brecha e garante que apenas dispositivos com câmera possam usar a funcionalidade de captura.
+
+### 6.2. Experiência de Gravação de Vídeo
+-   **O Problema:** Na interface de gravação de vídeo, o botão "Iniciar Gravação" era empurrado para fora da tela assim que o stream da câmera era ativado.
+-   **A Solução:** Foi criado um novo componente dedicado, `VideoRecorder.tsx`, com um layout robusto que utiliza posicionamento absoluto para os controles (botão e cronômetro).
+-   **Resultado:** A interface de gravação agora é estável, e os controles permanecem visíveis e acessíveis durante todo o processo, corrigindo o bug de layout.
