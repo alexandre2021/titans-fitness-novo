@@ -660,21 +660,10 @@ const CopiaExercicio = () => {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/exercicios-pt')} className="h-10 w-10 p-0">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Criar Cópia Personalizada</h1>
-            <p className="text-muted-foreground">Carregando exercício...</p>
-          </div>
-        </div>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-lg text-muted-foreground">Carregando...</p>
-          </div>
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>Carregando exercício...</p>
         </div>
       </div>
     );
@@ -697,52 +686,34 @@ const CopiaExercicio = () => {
   }
 
   return (
-    <>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Cabeçalho Responsivo */}
-        <div className="space-y-4">
+        {!isMobile && (
+          <div className="space-y-4">
           {/* Layout Desktop */}
-          <div className="hidden md:flex md:items-center md:justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" onClick={() => navigate('/exercicios-pt')} className="h-10 w-10 p-0">
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <div className="flex-1">
-                <div className="mb-1">
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                    <Copy className="h-3 w-3 mr-1" />
-                    Baseado em exercício padrão
-                  </Badge>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button variant="ghost" onClick={() => navigate('/exercicios-pt')} className="h-10 w-10 p-0">
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <div className="flex-1">
+                  <div className="mb-1">
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                      <Copy className="h-3 w-3 mr-1" />
+                      Baseado em exercício padrão
+                    </Badge>
+                  </div>
+                  <h1 className="text-3xl font-bold flex items-center gap-2">
+                    Criar Cópia Personalizada
+                  </h1>
+                  <p className="text-muted-foreground">
+                    Criando cópia de: <span className="font-medium">{exercicioOriginal.nome}</span>
+                  </p>
                 </div>
-                <h1 className="text-3xl font-bold flex items-center gap-2">
-                  Criar Cópia Personalizada
-                </h1>
-                <p className="text-muted-foreground">
-                  Criando cópia de: <span className="font-medium">{exercicioOriginal.nome}</span>
-                </p>
               </div>
             </div>
           </div>
-
-          {/* Layout Mobile */}
-          <div className="md:hidden flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4 overflow-hidden">
-              <Button variant="ghost" onClick={() => navigate('/exercicios-pt')} className="h-10 w-10 p-0 flex-shrink-0">
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <div className="flex-1 space-y-1 overflow-hidden">
-                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
-                  <Copy className="h-3 w-3 mr-1" />
-                  Baseado em exercício padrão
-                </Badge>
-                <h1 className="text-2xl font-bold leading-tight">Criar Cópia Personalizada</h1>
-                <p className="text-sm text-muted-foreground">
-                  Criando cópia de: {exercicioOriginal.nome}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+        )}
 
         {/* Layout em coluna única */}
         <div className="space-y-6">
@@ -890,9 +861,15 @@ const CopiaExercicio = () => {
                       placeholder={`Etapa ${idx + 1}`}
                       className="flex-1"
                     />
-                    <Button type="button" size="sm" onClick={() => {
-                      setInstrucoesList(list => list.filter((_, i) => i !== idx));
-                    }}>Remover</Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setInstrucoesList(list => list.filter((_, i) => i !== idx))}
+                    >
+                      <Trash2 className="h-4 w-4 text-muted-foreground" />
+                      <span className="sr-only">Remover</span>
+                    </Button>
                   </div>
                 ))}
                 <Button type="button" variant="outline" size="sm" onClick={() => setInstrucoesList(list => [...list, ""])}>Adicionar etapa</Button>
@@ -1146,42 +1123,6 @@ const CopiaExercicio = () => {
                 </div>
               </div>
 
-              {/* YouTube */}
-              <div>
-                <Label className="text-sm font-medium">URL do YouTube</Label>
-                <div className="mt-2 space-y-3">
-                  {exercicioOriginal.youtube_url && (
-                    <div className="border rounded-lg p-3 bg-muted/30">
-                      <p className="text-sm font-medium text-muted-foreground mb-1">YouTube Original:</p>
-                      <p className="text-sm text-blue-600 break-all">{exercicioOriginal.youtube_url}</p>
-                    </div>
-                  )}
-                  
-                  <Input
-                    value={midias.youtube_url as string || ''}
-                    onChange={(e) => setMidias(prev => ({ ...prev, youtube_url: e.target.value }))}
-                    placeholder="https://youtube.com/watch?v=... (cole aqui sua URL do YouTube)"
-                  />
-                  {midias.youtube_url && (
-                    <div className="flex items-center gap-2">
-                      <div className="text-sm text-green-600 flex items-center gap-1">
-                        ✅ URL do YouTube configurada
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => midias.youtube_url && window.open(midias.youtube_url as string, '_blank')}
-                        className="flex items-center gap-2"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                        Ver no YouTube
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
               {/* Mensagem quando exercício não tem mídias */}
               {!exercicioOriginal.imagem_1_url && !exercicioOriginal.imagem_2_url && !exercicioOriginal.video_url && !exercicioOriginal.youtube_url && (
                 <div className="text-center py-8">
@@ -1214,6 +1155,44 @@ const CopiaExercicio = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* 4. YouTube */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">Link do YouTube</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Adicione um vídeo do YouTube como referência.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div>
+                {exercicioOriginal.youtube_url && (
+                  <div className="border rounded-lg p-3 bg-muted/30 mb-4">
+                    <p className="text-sm font-medium text-muted-foreground mb-1">YouTube Original:</p>
+                    <p className="text-sm text-blue-600 break-all">{exercicioOriginal.youtube_url}</p>
+                  </div>
+                )}
+                <Input
+                  value={midias.youtube_url as string || ''}
+                  onChange={(e) => setMidias(prev => ({ ...prev, youtube_url: e.target.value }))}
+                  placeholder="https://youtube.com/watch?v=... (cole aqui sua URL do YouTube)"
+                />
+                {midias.youtube_url && (
+                  <div className="flex items-center gap-2 mt-3">
+                    <div className="text-sm text-green-600 flex items-center gap-1">
+                      ✅ URL do YouTube configurada
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={() => midias.youtube_url && window.open(midias.youtube_url as string, '_blank')} className="flex items-center gap-2">
+                      <ExternalLink className="h-4 w-4" /> Ver no YouTube
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Espaçador para o botão flutuante */}
+          <div className="pb-24 md:pb-12" />
         </div>
 
         <ResponsiveDeleteMediaConfirmation
@@ -1238,12 +1217,12 @@ const CopiaExercicio = () => {
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center"
+            className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
           >
             {saving ? (
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-foreground"></div>
             ) : (
-              <Save className="h-8 w-8" />
+              <Save />
             )}
             <span className="sr-only">Salvar Cópia</span>
           </Button>
@@ -1252,15 +1231,14 @@ const CopiaExercicio = () => {
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="hidden md:flex items-center gap-2 shadow-lg"
+            className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6"
             size="lg"
           >
-            <Save className="h-4 w-4" />
+            <Save />
             {saving ? "Salvando..." : "Salvar Cópia"}
           </Button>
         </div>
       </div>
-    </>
   );
 };
 

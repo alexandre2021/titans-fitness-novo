@@ -10,6 +10,7 @@ import { ArrowLeft, Eye, Copy, Edit, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Tables } from "@/integrations/supabase/types";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type Exercicio = Tables<"exercicios">;
 
@@ -18,6 +19,7 @@ const DetalhesExercicio = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   
   const [loading, setLoading] = useState(true);
   const [exercicio, setExercicio] = useState<Exercicio | null>(null);
@@ -250,25 +252,10 @@ const DetalhesExercicio = () => {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/exercicios-pt')}
-            className="h-10 w-10 p-0"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Detalhes do Exercício</h1>
-            <p className="text-muted-foreground">Carregando exercício...</p>
-          </div>
-        </div>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-lg text-muted-foreground">Carregando...</p>
-          </div>
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>Carregando exercício...</p>
         </div>
       </div>
     );
@@ -297,38 +284,40 @@ const DetalhesExercicio = () => {
   return (
     <div className="space-y-6">
       {/* Cabeçalho */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/exercicios-pt')}
-            className="h-10 w-10 p-0"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-1">
-            {/* Badge acima do título para personalizado ou padrão */}
-            {exercicio.tipo === 'personalizado' && (
-              <span className="mb-1 inline-block text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">
-                Personalizado
-              </span>
-            )}
-            {exercicio.tipo === 'padrao' && (
-              <span className="mb-1 inline-block text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">
-                Padrão
-              </span>
-            )}
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              {exercicio.nome}
-            </h1>
-            <p className="text-muted-foreground">
-              Detalhes completos do exercício
-            </p>
+      {!isMobile && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/exercicios-pt')}
+              className="h-10 w-10 p-0"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex-1">
+              {/* Badge acima do título para personalizado ou padrão */}
+              {exercicio.tipo === 'personalizado' && (
+                <span className="mb-1 inline-block text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">
+                  Personalizado
+                </span>
+              )}
+              {exercicio.tipo === 'padrao' && (
+                <span className="mb-1 inline-block text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">
+                  Padrão
+                </span>
+              )}
+              <h1 className="text-3xl font-bold flex items-center gap-2">
+                {exercicio.nome}
+              </h1>
+              <p className="text-muted-foreground">
+                Detalhes completos do exercício
+              </p>
+            </div>
           </div>
-        </div>
 
-        {/* Nenhuma ação no topo, visualização apenas */}
-      </div>
+          {/* Nenhuma ação no topo, visualização apenas */}
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Informações principais */}

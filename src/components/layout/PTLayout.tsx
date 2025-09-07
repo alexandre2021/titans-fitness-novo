@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import React, { useEffect, useState } from "react";
 import PTSidebar from "./PTSidebar";
 import PTBottomNav from "./PTBottomNav";
@@ -22,7 +22,7 @@ const PTLayout = () => {
     return (
       <div className="min-h-screen bg-background">
         <PTMobileHeader />
-        <main className="pb-16 p-4">
+        <main className="pt-24 pb-16 p-4">
           <Outlet />
         </main>
         <PTBottomNav />

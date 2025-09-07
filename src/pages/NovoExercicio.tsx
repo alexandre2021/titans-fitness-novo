@@ -1,5 +1,5 @@
 // pages/NovoExercicio.tsx
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,15 +14,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Save, Plus, Upload, Trash2, Eye, ExternalLink } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, Eye, ExternalLink, Camera, Video } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from "@/hooks/useAuth";
+import { VideoRecorder } from '@/components/media/VideoRecorder';
 
 const NovoExercicio = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const toast = sonnerToast;
+  const isMobile = useIsMobile();
   
   const [saving, setSaving] = useState(false);
   
@@ -43,22 +60,24 @@ const NovoExercicio = () => {
   // Campo dinâmico para instruções
   const [instrucoesList, setInstrucoesList] = useState<string[]>([""]);
 
-  const [midias, setMidias] = useState({
-    imagem_1_url: "",
-    imagem_2_url: "",
-    video_url: "",
-    youtube_url: "",
+  const [midias, setMidias] = useState<{
+    [key: string]: string | File | null;
+  }>({
+    imagem_1_url: null,
+    imagem_2_url: null,
+    video_url: null,
+    youtube_url: null,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  // Estados para URLs assinadas das mídias
   const [signedUrls, setSignedUrls] = useState<{
     imagem1?: string;
     imagem2?: string;
     video?: string;
   }>({});
-  const [loadingImages, setLoadingImages] = useState(false);
-  const [uploadingMedia, setUploadingMedia] = useState<string | null>(null);
+  const [showVideoInfoModal, setShowVideoInfoModal] = useState(false);
+  const [showVideoRecorder, setShowVideoRecorder] = useState(false);
+  const [showDeleteMediaDialog, setShowDeleteMediaDialog] = useState<string | null>(null);
 
   const gruposMusculares = [
     'Peito',
@@ -89,224 +108,193 @@ const NovoExercicio = () => {
 
   const dificuldades = ['Baixa', 'Média', 'Alta'];
 
-  // Função para obter URL assinada do Cloudflare
-  const getSignedImageUrl = useCallback(async (filename: string): Promise<string> => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token;
-      if (!accessToken) {
-        throw new Error("Usuário não autenticado");
-      }
-      
-      const response = await fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/get-image-url', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        },
-        body: JSON.stringify({
-          filename,
-          bucket_type: 'exercicios'
-        })
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Erro ao obter URL da imagem: ${response.status} - ${errorText}`);
-      }
-      
-      const result = await response.json();
-      
-      if (!result.success || !result.url) {
-        throw new Error('URL não retornada pelo servidor');
-      }
-      
-      return result.url;
-    } catch (error) {
-      console.error('Erro ao obter URL assinada:', error);
-      throw error;
+  const ResponsiveDeleteMediaConfirmation = ({ 
+    open, onOpenChange, onConfirm, title, description
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onConfirm: () => void;
+    title: string;
+    description: React.ReactNode;
+  }) => {
+    if (isMobile) {
+      return (
+        <Drawer open={open} onOpenChange={onOpenChange}>
+          <DrawerContent>
+            <DrawerHeader className="text-left">
+              <DrawerTitle>{title}</DrawerTitle>
+            </DrawerHeader>
+            <div className="p-4 space-y-4">
+              <div className="text-sm text-muted-foreground">{description}</div>
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={onConfirm} variant="destructive">Excluir</Button>
+              </div>
+            </div>
+          </DrawerContent>
+        </Drawer>
+      );
     }
-  }, []);
 
-  // Função para carregar URLs assinadas das mídias
-  const loadSignedUrls = useCallback(async () => {
-    if (!midias.imagem_1_url && !midias.imagem_2_url && !midias.video_url) {
-      return;
-    }
-    setLoadingImages(true);
-    setSignedUrls({});
-    try {
-      const urls: { imagem1?: string; imagem2?: string; video?: string } = {};
-      // Para imagem 1
-      if (midias.imagem_1_url) {
-        const filename = midias.imagem_1_url.split('/').pop()?.split('?')[0] || midias.imagem_1_url;
-        urls.imagem1 = await getSignedImageUrl(filename);
-      }
-      // Para imagem 2
-      if (midias.imagem_2_url) {
-        const filename = midias.imagem_2_url.split('/').pop()?.split('?')[0] || midias.imagem_2_url;
-        urls.imagem2 = await getSignedImageUrl(filename);
-      }
-      // Para vídeo
-      if (midias.video_url) {
-        const filename = midias.video_url.split('/').pop()?.split('?')[0] || midias.video_url;
-        urls.video = await getSignedImageUrl(filename);
-      }
-      setSignedUrls(urls);
-    } catch (error) {
-      console.error('Erro:', error);
-    } finally {
-      setLoadingImages(false);
-    }
-  }, [midias, getSignedImageUrl]);
+    return (
+      <AlertDialog open={open} onOpenChange={onOpenChange}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{title}</AlertDialogTitle>
+            <AlertDialogDescription>{description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={onConfirm} variant="destructive">Excluir</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
+  };
 
-  // Função para converter arquivo para base64
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        const result = reader.result as string;
-        const base64 = result.split(',')[1];
-        resolve(base64);
+  const VideoInfoModal = () => {
+    const handleConfirm = () => {
+      setShowVideoInfoModal(false);
+      setShowVideoRecorder(true);
+    };
+
+    if (isMobile) {
+      return (
+        <Drawer open={showVideoInfoModal} onOpenChange={setShowVideoInfoModal}>
+          <DrawerContent>
+            <DrawerHeader className="text-left">
+              <DrawerTitle>Gravar Vídeo do Exercício</DrawerTitle>
+            </DrawerHeader>
+            <div className="p-4 space-y-4">
+              <p className="text-sm text-muted-foreground">
+                O vídeo terá duração máxima de <strong>12 segundos</strong> e será salvo <strong>sem áudio</strong> para otimização.
+              </p>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setShowVideoInfoModal(false)}>Cancelar</Button>
+                <Button onClick={handleConfirm}>Iniciar Gravação</Button>
+              </div>
+            </div>
+          </DrawerContent>
+        </Drawer>
+      );
+    }
+
+    return (
+      <AlertDialog open={showVideoInfoModal} onOpenChange={setShowVideoInfoModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Gravar Vídeo do Exercício</AlertDialogTitle>
+            <AlertDialogDescription>
+              O vídeo terá duração máxima de <strong>12 segundos</strong> e será salvo <strong>sem áudio</strong> para otimização.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={() => setShowVideoInfoModal(false)}>Cancelar</Button>
+            <Button onClick={handleConfirm}>Iniciar Gravação</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
+  };
+
+  const resizeImageFile = (file: File, maxWidth = 640): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+      const img = new Image();
+      
+      img.onload = () => {
+        const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+        canvas.width = img.width * ratio;
+        canvas.height = img.height * ratio;
+        
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        canvas.toBlob((blob) => {
+          const resizedFile = new File([blob!], file.name, {
+            type: 'image/jpeg',
+            lastModified: Date.now()
+          });
+          resolve(resizedFile);
+        }, 'image/jpeg', 0.85);
       };
-      reader.onerror = (error) => reject(error);
+      
+      img.src = URL.createObjectURL(file);
     });
   };
 
-  // Função para upload de nova mídia
-  const handleUploadMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
-    try {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = type === 'video' ? 'video/*' : 'image/*';
-
-      input.onchange = async (event) => {
-        const file = (event.target as HTMLInputElement).files?.[0];
-        if (!file) return;
-
-        // Validações
-        const maxSize = type === 'video' ? 20 * 1024 * 1024 : 5 * 1024 * 1024;
-        if (file.size > maxSize) {
-          toast({
-            title: "Erro",
-            description: `Arquivo muito grande. Máximo: ${type === 'video' ? '20MB' : '5MB'}`,
-            variant: "destructive",
-          });
-          return;
-        }
-
-        setUploadingMedia(type);
-
-        try {
-          // Upload nova mídia
-          const base64 = await fileToBase64(file);
-          const timestamp = Date.now();
-          const extension = file.name.split('.').pop();
-          const filename = `exercicio_${timestamp}_${Math.random().toString(36).substring(7)}.${extension}`;
-
-          console.log('📤 Fazendo upload:', { filename, type, size: file.size });
-
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session?.access_token) {
-            throw new Error("Usuário não autenticado");
-          }
-
-          const response = await fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/upload-imagem', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`
-            },
-            body: JSON.stringify({
-              filename,
-              image_base64: base64,
-              bucket_type: 'exercicios'
-            })
-          });
-
-          if (!response.ok) {
-            throw new Error(`Erro no upload: ${response.status}`);
-          }
-
-          const result = await response.json();
-          if (!result.success) {
-            throw new Error(result.error || 'Erro no upload');
-          }
-
-          // Atualizar estado local
-          switch (type) {
-            case 'imagem1':
-              setMidias(prev => ({ ...prev, imagem_1_url: result.url }));
-              break;
-            case 'imagem2':
-              setMidias(prev => ({ ...prev, imagem_2_url: result.url }));
-              break;
-            case 'video':
-              setMidias(prev => ({ ...prev, video_url: result.url }));
-              break;
-          }
-
-          toast({
-            title: "Sucesso",
-            description: "Mídia enviada com sucesso!",
-          });
-
-        } catch (error) {
-          console.error('Upload falhou:', error);
-          toast({
-            title: "Erro",
-            description: "Falha no upload. Tente novamente.",
-            variant: "destructive",
-          });
-        } finally {
-          setUploadingMedia(null);
-        }
-      };
-
-      input.click();
-
-    } catch (error) {
-      console.error('Erro ao abrir seletor:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao abrir seletor de arquivo.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Função para deletar mídia
-  const handleDeleteMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
-    if (!window.confirm('Tem certeza que deseja deletar esta mídia?')) {
-      return;
-    }
-
-    try {
-      switch (type) {
-        case 'imagem1':
-          setMidias(prev => ({ ...prev, imagem_1_url: '' }));
-          break;
-        case 'imagem2':
-          setMidias(prev => ({ ...prev, imagem_2_url: '' }));
-          break;
-        case 'video':
-          setMidias(prev => ({ ...prev, video_url: '' }));
-          break;
+  const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'video', capture: boolean = false) => {
+    if (capture) {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+        toast.error("Navegador incompatível", {
+          description: "Seu navegador não parece suportar a captura de mídia.",
+        });
+        return;
       }
 
-      toast({
-        title: "Sucesso",
-        description: "Mídia removida com sucesso!",
-      });
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const hasCamera = devices.some(device => device.kind === 'videoinput');
 
+      if (!hasCamera) {
+        toast.error("Câmera não encontrada", {
+          description: "Esta função requer uma câmera. Por favor, acesse de um dispositivo móvel com câmera.",
+        });
+        return;
+      }
+    }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = type === 'video' ? 'video/*' : 'image/*';
+
+    if (capture) input.capture = type === 'video' ? 'user' : 'environment';
+
+    input.onchange = async (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      const maxSize = type === 'video' ? 20 * 1024 * 1024 : 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        toast.error("Arquivo muito grande", {
+          description: `Máximo: ${type === 'video' ? '20MB' : '5MB'}`,
+        });
+        return;
+      }
+
+      let finalFile = file;
+      if (type === 'imagem1' || type === 'imagem2') {
+        finalFile = await resizeImageFile(file, 640);
+      }
+
+      const key = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'video_url';
+      setMidias(prev => ({ ...prev, [key]: finalFile }));
+      setSignedUrls(prev => ({ ...prev, [type === 'video' ? 'video' : type]: URL.createObjectURL(finalFile) }));
+    };
+
+    input.click();
+  };
+
+  const handleRecordingComplete = (videoBlob: Blob) => {
+    const videoFile = new File([videoBlob], `gravacao_${Date.now()}.webm`, { type: 'video/webm' });
+    setMidias(prev => ({ ...prev, video_url: videoFile }));
+    setSignedUrls(prev => ({ ...prev, video: URL.createObjectURL(videoFile) }));
+    setShowVideoRecorder(false);
+  };
+
+  const handleDeleteMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
+    try {
+      const key = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'video_url';
+      setMidias(prev => ({ ...prev, [key]: null }));
+      setSignedUrls(prev => ({ ...prev, [type === 'video' ? 'video' : type]: undefined }));
+      toast.success("Mídia removida com sucesso!");
+      setShowDeleteMediaDialog(null);
     } catch (error) {
       console.error('Erro ao deletar mídia:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao remover mídia.",
-        variant: "destructive",
-      });
+      toast.error("Erro ao excluir mídia.");
     }
   };
 
@@ -338,155 +326,146 @@ const NovoExercicio = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = async () => {
-    // Monta instruções do campo dinâmico
-    const instrucoesFinal = instrucoesList.filter(i => i.trim()).join('#');
-    const currentFormData = { ...formData, instrucoes: instrucoesFinal };
+  const uploadFile = async (file: File | string | null): Promise<string | null> => {
+    if (!file || !(file instanceof File)) return null;
 
-    if (!user || !user.id || !validateForm()) {
-      toast({
-        title: "Erro",
-        description: "Usuário não autenticado ou formulário inválido.",
-        variant: "destructive",
+    try {
+      const uniqueFilename = `pt_${user?.id}_${Date.now()}_${file.name.replace(/\s/g, '_')}`;
+
+      const { data: presignedData, error: presignedError } = await supabase.functions.invoke('upload-media', {
+        body: {
+          action: 'generate_upload_url',
+          filename: uniqueFilename,
+          contentType: file.type,
+          bucket_type: 'exercicios'
+        }
       });
+
+      if (presignedError || !presignedData.signedUrl) {
+        throw new Error(presignedError?.message || 'Não foi possível obter a URL de upload.');
+      }
+
+      const uploadResponse = await fetch(presignedData.signedUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Falha no upload direto para o R2.');
+      }
+
+      return presignedData.path;
+    } catch (error) {
+      console.error("Erro no upload:", error);
+      toast.error("Falha no Upload", { description: `Erro ao enviar o arquivo: ${error.message}` });
+      throw error;
+    }
+  };
+
+  const handleSave = async () => {
+    const instrucoesFinal = instrucoesList.filter(i => i.trim()).join('#');
+
+    if (!validateForm()) {
+      toast.error("Erro de Validação", { description: "Por favor, preencha todos os campos obrigatórios." });
+      return;
+    }
+
+    if (!user?.id) {
+      toast.error("Erro de Autenticação", { description: "Usuário não autenticado." });
       return;
     }
 
     setSaving(true);
 
     try {
+      toast.info("Processando", { description: "Salvando e otimizando mídias..." });
+
+      const [imagem_1_url_final, imagem_2_url_final, video_url_final] = await Promise.all([
+        uploadFile(midias.imagem_1_url),
+        uploadFile(midias.imagem_2_url),
+        uploadFile(midias.video_url),
+      ]);
+
+      const gruposSecundariosArray = formData.grupos_musculares_secundarios
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+
       // Criar exercício personalizado no banco
       const { data: exercicio, error } = await supabase
         .from('exercicios')
         .insert({
-          nome: currentFormData.nome.trim(),
-          descricao: currentFormData.descricao.trim(),
-          grupo_muscular: currentFormData.grupo_muscular,
-          equipamento: currentFormData.equipamento,
-          dificuldade: currentFormData.dificuldade,
-          instrucoes: currentFormData.instrucoes.trim(),
-          grupo_muscular_primario: currentFormData.grupo_muscular_primario.trim() || null,
-          grupos_musculares_secundarios: currentFormData.grupos_musculares_secundarios.split(',').map(s => s.trim()).filter(s => s) || null,
-          imagem_1_url: midias.imagem_1_url || null,
-          imagem_2_url: midias.imagem_2_url || null,
-          video_url: midias.video_url || null,
-          youtube_url: midias.youtube_url || null,
+          nome: formData.nome.trim(),
+          descricao: formData.descricao.trim(),
+          grupo_muscular: formData.grupo_muscular,
+          equipamento: formData.equipamento,
+          dificuldade: formData.dificuldade,
+          instrucoes: instrucoesFinal.trim(),
+          grupo_muscular_primario: formData.grupo_muscular_primario.trim() || null,
+          grupos_musculares_secundarios: gruposSecundariosArray.length > 0 ? gruposSecundariosArray : null,
+          imagem_1_url: imagem_1_url_final,
+          imagem_2_url: imagem_2_url_final,
+          video_url: video_url_final,
+          youtube_url: midias.youtube_url as string || null,
           tipo: 'personalizado',
           pt_id: user.id,
-          is_ativo: true
+          is_ativo: true,
+          status_midia: 'concluido'
         })
         .select()
         .single();
 
       if (error) throw error;
 
-      toast({
-        title: "Sucesso",
-        description: "Exercício criado com sucesso!",
-      });
+      toast.success("Sucesso", { description: "Exercício criado com sucesso!" });
 
       console.log('✅ Exercício criado:', exercicio);
       navigate('/exercicios-pt');
       
     } catch (error) {
       console.error('❌ Erro ao criar exercício:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível criar o exercício. Tente novamente.",
-        variant: "destructive",
-      });
+      toast.error("Erro ao criar exercício", { description: "Não foi possível criar o exercício. Tente novamente." });
     } finally {
       setSaving(false);
     }
   };
 
-  // Recarregar URLs assinadas quando mídias mudarem
-  useEffect(() => {
-    if (midias.imagem_1_url || midias.imagem_2_url || midias.video_url) {
-      console.log('🔄 Recarregando URLs assinadas...');
-      loadSignedUrls();
-    }
-  }, [midias.imagem_1_url, midias.imagem_2_url, midias.video_url, loadSignedUrls]);
-
   return (
     <div className="space-y-6">
       {/* Cabeçalho Responsivo */}
-      <div className="space-y-4">
+      {!isMobile && (
+        <div className="space-y-4">
         {/* Layout Desktop */}
-        <div className="hidden md:flex md:items-center md:justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              onClick={() => navigate('/exercicios-pt')}
-              className="h-10 w-10 p-0"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div className="flex-1">
-              <div className="mb-1">
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                  <Plus className="h-3 w-3 mr-1" />
-                  Exercício personalizado
-                </Badge>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/exercicios-pt')}
+                className="h-10 w-10 p-0"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div className="flex-1">
+                <div className="mb-1">
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                    <Plus className="h-3 w-3 mr-1" />
+                    Exercício personalizado
+                  </Badge>
+                </div>
+                <h1 className="text-3xl font-bold flex items-center gap-2">
+                  Novo Exercício
+                </h1>
+                <p className="text-muted-foreground">
+                  Crie um exercício personalizado do zero
+                </p>
               </div>
-              <h1 className="text-3xl font-bold flex items-center gap-2">
-                Novo Exercício
-              </h1>
-              <p className="text-muted-foreground">
-                Crie um exercício personalizado do zero
-              </p>
             </div>
           </div>
-
-          {/* Ações no cabeçalho - Desktop */}
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex items-center gap-2"
-            >
-              <Save className="h-4 w-4" />
-              {saving ? "Salvando..." : "Salvar Exercício"}
-            </Button>
-          </div>
         </div>
+      )}
 
-        {/* Layout Mobile - Padrão da aplicação */}
-        <div className="md:hidden flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4 overflow-hidden">
-            <Button
-              variant="ghost"
-              onClick={() => navigate('/exercicios-pt')}
-              className="h-10 w-10 p-0 flex-shrink-0"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div className="flex-1 space-y-1 overflow-hidden">
-              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
-                <Plus className="h-3 w-3 mr-1" />
-                Exercício personalizado
-              </Badge>
-              <h1 className="text-2xl font-bold leading-tight">Novo Exercício</h1>
-              <p className="text-sm text-muted-foreground">
-                Crie um exercício personalizado do zero
-              </p>
-            </div>
-          </div>
-          
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 w-10 flex-shrink-0"
-          >
-            <Save className="h-6 w-6" />
-            <span className="sr-only">Salvar Exercício</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Layout em coluna única */}
       <div className="space-y-6">
-          
         {/* 1. Informações Básicas - Igual estrutura do CopiaExercicio */}
         <Card>
           <CardHeader>
@@ -630,16 +609,15 @@ const NovoExercicio = () => {
                     placeholder={`Etapa ${idx + 1}`}
                     className="flex-1"
                   />
-                  <Button 
-                    type="button" 
-                    variant="outline"
-                    size="sm" 
-                    onClick={() => {
-                      setInstrucoesList(list => list.filter((_, i) => i !== idx));
-                    }}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setInstrucoesList(list => list.filter((_, i) => i !== idx))}
                     disabled={instrucoesList.length === 1}
                   >
-                    Remover
+                    <Trash2 className="h-4 w-4 text-muted-foreground" />
+                    <span className="sr-only">Remover</span>
                   </Button>
                 </div>
               ))}
@@ -662,9 +640,7 @@ const NovoExercicio = () => {
         <Card>
           <CardHeader>
             <CardTitle>Mídias</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Adicione imagens, vídeos e links do YouTube para demonstrar o exercício
-            </p>
+            <p className="text-sm text-muted-foreground">Upload direto para Cloudflare com otimização automática</p>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Primeira Imagem */}
@@ -674,11 +650,7 @@ const NovoExercicio = () => {
                 {midias.imagem_1_url ? (
                   <div className="space-y-3">
                     <div className="relative inline-block">
-                      {loadingImages ? (
-                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
-                          <span className="text-sm text-muted-foreground">Carregando...</span>
-                        </div>
-                      ) : signedUrls.imagem1 ? (
+                      {signedUrls.imagem1 ? (
                         <img 
                           src={signedUrls.imagem1} 
                           alt="Primeira imagem" 
@@ -691,53 +663,25 @@ const NovoExercicio = () => {
                       )}
                     </div>
                     <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(signedUrls.imagem1 || midias.imagem_1_url, '_blank')}
-                        className="flex items-center gap-2"
-                        disabled={!signedUrls.imagem1}
-                      >
-                        <Eye className="h-4 w-4" />
-                        Visualizar
+                      <Button type="button" variant="outline" size="sm" onClick={() => signedUrls.imagem1 && window.open(signedUrls.imagem1, '_blank')} className="flex items-center gap-2" disabled={!signedUrls.imagem1}>
+                        <Eye className="h-4 w-4" /> Ver
                       </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleUploadMedia('imagem1')}
-                        className="flex items-center gap-2"
-                        disabled={uploadingMedia === 'imagem1'}
-                      >
-                        <Upload className="h-4 w-4" />
-                        {uploadingMedia === 'imagem1' ? 'Enviando...' : 'Trocar'}
+                      <Button type="button" variant="outline" size="sm" onClick={() => handleSelectMedia('imagem1', true)} className="flex items-center gap-2" disabled={saving || !isMobile}>
+                        <Camera className="h-4 w-4" /> Nova Foto
                       </Button>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeleteMedia('imagem1')}
-                        className="flex items-center gap-2"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Remover
+                      <Button type="button" variant="outline" size="sm" onClick={() => setShowDeleteMediaDialog('imagem1')} className="flex items-center gap-2">
+                        <Trash2 className="h-4 w-4" /> Excluir
                       </Button>
                     </div>
                   </div>
                 ) : (
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    <p className="text-sm text-muted-foreground mb-3">Faça upload da primeira imagem</p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => handleUploadMedia('imagem1')}
-                      className="flex items-center gap-2"
-                      disabled={uploadingMedia === 'imagem1'}
-                    >
-                      <Upload className="h-4 w-4" />
-                      {uploadingMedia === 'imagem1' ? 'Enviando...' : 'Fazer Upload da Primeira Imagem'}
-                    </Button>
+                    <p className="text-sm text-muted-foreground mb-3">Adicione uma imagem para o exercício.</p>
+                    <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                      <Button type="button" variant="default" onClick={() => handleSelectMedia('imagem1', true)} className="flex items-center gap-2" disabled={saving || !isMobile}>
+                        <Camera className="h-4 w-4" /> Tirar Foto
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -750,11 +694,7 @@ const NovoExercicio = () => {
                 {midias.imagem_2_url ? (
                   <div className="space-y-3">
                     <div className="relative inline-block">
-                      {loadingImages ? (
-                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
-                          <span className="text-sm text-muted-foreground">Carregando...</span>
-                        </div>
-                      ) : signedUrls.imagem2 ? (
+                      {signedUrls.imagem2 ? (
                         <img 
                           src={signedUrls.imagem2} 
                           alt="Segunda imagem" 
@@ -767,53 +707,25 @@ const NovoExercicio = () => {
                       )}
                     </div>
                     <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(signedUrls.imagem2 || midias.imagem_2_url, '_blank')}
-                        className="flex items-center gap-2"
-                        disabled={!signedUrls.imagem2}
-                      >
-                        <Eye className="h-4 w-4" />
-                        Visualizar
+                      <Button type="button" variant="outline" size="sm" onClick={() => signedUrls.imagem2 && window.open(signedUrls.imagem2, '_blank')} className="flex items-center gap-2" disabled={!signedUrls.imagem2}>
+                        <Eye className="h-4 w-4" /> Ver
                       </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleUploadMedia('imagem2')}
-                        className="flex items-center gap-2"
-                        disabled={uploadingMedia === 'imagem2'}
-                      >
-                        <Upload className="h-4 w-4" />
-                        {uploadingMedia === 'imagem2' ? 'Enviando...' : 'Trocar'}
+                      <Button type="button" variant="outline" size="sm" onClick={() => handleSelectMedia('imagem2', true)} className="flex items-center gap-2" disabled={saving || !isMobile}>
+                        <Camera className="h-4 w-4" /> Nova Foto
                       </Button>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeleteMedia('imagem2')}
-                        className="flex items-center gap-2"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Remover
+                      <Button type="button" variant="outline" size="sm" onClick={() => setShowDeleteMediaDialog('imagem2')} className="flex items-center gap-2">
+                        <Trash2 className="h-4 w-4" /> Excluir
                       </Button>
                     </div>
                   </div>
                 ) : (
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    <p className="text-sm text-muted-foreground mb-3">Faça upload da segunda imagem</p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => handleUploadMedia('imagem2')}
-                      className="flex items-center gap-2"
-                      disabled={uploadingMedia === 'imagem2'}
-                    >
-                      <Upload className="h-4 w-4" />
-                      {uploadingMedia === 'imagem2' ? 'Enviando...' : 'Fazer Upload da Segunda Imagem'}
-                    </Button>
+                    <p className="text-sm text-muted-foreground mb-3">Adicione uma segunda imagem (opcional).</p>
+                    <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                      <Button type="button" variant="default" onClick={() => handleSelectMedia('imagem2', true)} className="flex items-center gap-2" disabled={saving || !isMobile}>
+                        <Camera className="h-4 w-4" /> Tirar Foto
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -825,12 +737,8 @@ const NovoExercicio = () => {
               <div className="mt-2 space-y-4">
                 {midias.video_url ? (
                   <div className="space-y-3">
-                    <div className="relative inline-block">
-                      {loadingImages ? (
-                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
-                          <span className="text-sm text-muted-foreground">Carregando...</span>
-                        </div>
-                      ) : signedUrls.video ? (
+                    <div className="relative inline-block w-48 aspect-video bg-black rounded-lg border shadow-sm">
+                      {signedUrls.video ? (
                         <video 
                           src={signedUrls.video} 
                           className="max-w-40 max-h-40 object-contain rounded-lg border shadow-sm bg-muted"
@@ -843,88 +751,113 @@ const NovoExercicio = () => {
                       )}
                     </div>
                     <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(signedUrls.video || midias.video_url, '_blank')}
-                        className="flex items-center gap-2"
-                        disabled={!signedUrls.video}
-                      >
-                        <Eye className="h-4 w-4" />
-                        Assistir
+                      <Button type="button" variant="outline" size="sm" onClick={() => signedUrls.video && window.open(signedUrls.video, '_blank')} className="flex items-center gap-2" disabled={!signedUrls.video}>
+                        <Eye className="h-4 w-4" /> Assistir
                       </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleUploadMedia('video')}
-                        className="flex items-center gap-2"
-                        disabled={uploadingMedia === 'video'}
-                      >
-                        <Upload className="h-4 w-4" />
-                        {uploadingMedia === 'video' ? 'Enviando...' : 'Trocar'}
+                      <Button type="button" variant="outline" size="sm" onClick={() => { if (isMobile) setShowVideoInfoModal(true); else toast.info("Funcionalidade móvel", { description: "A gravação de vídeo está disponível apenas no celular." }); }} className="flex items-center gap-2" disabled={saving || !isMobile}>
+                        <Video className="h-4 w-4" /> Novo Vídeo
                       </Button>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeleteMedia('video')}
-                        className="flex items-center gap-2"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Remover
+                      <Button type="button" variant="outline" size="sm" onClick={() => setShowDeleteMediaDialog('video')} className="flex items-center gap-2">
+                        <Trash2 className="h-4 w-4" /> Excluir
                       </Button>
                     </div>
                   </div>
                 ) : (
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    <p className="text-sm text-muted-foreground mb-3">Faça upload do seu vídeo (máx. 20MB)</p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => handleUploadMedia('video')}
-                      className="flex items-center gap-2"
-                      disabled={uploadingMedia === 'video'}
-                    >
-                      <Upload className="h-4 w-4" />
-                      {uploadingMedia === 'video' ? 'Enviando...' : 'Fazer Upload do Vídeo'}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* YouTube - Apenas URL */}
-            <div>
-              <Label className="text-sm font-medium">URL do YouTube</Label>
-              <div className="mt-2 space-y-3">
-                <Input
-                  value={midias.youtube_url}
-                  onChange={(e) => setMidias(prev => ({ ...prev, youtube_url: e.target.value }))}
-                  placeholder="https://youtube.com/watch?v=... (cole aqui sua URL do YouTube)"
-                />
-                {midias.youtube_url && (
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm text-green-600 flex items-center gap-1">
-                      ✅ URL do YouTube configurada
+                    <p className="text-sm text-muted-foreground mb-3">Adicione um vídeo para o exercício.</p>
+                    <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                      <Button
+                        type="button"
+                        variant="default"
+                        onClick={() => { if (isMobile) setShowVideoInfoModal(true); else toast.info("Funcionalidade móvel", { description: "A gravação de vídeo está disponível apenas no celular." }); }}
+                        className="flex items-center gap-2"
+                        disabled={saving || !isMobile}
+                      >
+                        <Video className="h-4 w-4" /> Gravar Vídeo
+                      </Button>
                     </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(midias.youtube_url, '_blank')}
-                      className="flex items-center gap-2"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      Ver no YouTube
-                    </Button>
                   </div>
                 )}
               </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* 4. YouTube */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Link do YouTube</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Adicione um vídeo do YouTube como referência.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div>
+              <Input
+                value={midias.youtube_url as string || ''}
+                onChange={(e) => setMidias(prev => ({ ...prev, youtube_url: e.target.value }))}
+                placeholder="https://youtube.com/watch?v=... (cole aqui sua URL do YouTube)"
+              />
+              {midias.youtube_url && (
+                <div className="flex items-center gap-2 mt-3">
+                  <div className="text-sm text-green-600 flex items-center gap-1">
+                    ✅ URL do YouTube configurada
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={() => midias.youtube_url && window.open(midias.youtube_url as string, '_blank')} className="flex items-center gap-2">
+                    <ExternalLink className="h-4 w-4" /> Ver no YouTube
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Espaçador para o botão flutuante */}
+        <div className="pb-24 md:pb-12" />
+      </div>
+
+      <ResponsiveDeleteMediaConfirmation
+        open={showDeleteMediaDialog !== null}
+        onOpenChange={(open) => !open && setShowDeleteMediaDialog(null)}
+        onConfirm={() => showDeleteMediaDialog && handleDeleteMedia(showDeleteMediaDialog as 'imagem1' | 'imagem2' | 'video')}
+        title="Excluir mídia"
+        description="Tem certeza que deseja excluir esta mídia? Esta ação não pode ser desfeita."
+      />
+
+      <VideoRecorder 
+        open={showVideoRecorder}
+        onOpenChange={setShowVideoRecorder}
+        onRecordingComplete={handleRecordingComplete}
+      />
+
+      <VideoInfoModal />
+
+      {/* Botão Salvar Flutuante */}
+      <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
+        {/* Mobile: Round floating button */}
+        <Button
+          onClick={handleSave}
+          disabled={saving}
+          className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
+        >
+          {saving ? (
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-foreground"></div>
+          ) : (
+            <Save />
+          )}
+          <span className="sr-only">Salvar Exercício</span>
+        </Button>
+
+        {/* Desktop: Standard floating button */}
+        <Button
+          onClick={handleSave}
+          disabled={saving}
+          className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6"
+          size="lg"
+        >
+          <Save />
+          {saving ? "Salvando..." : "Salvar Exercício"}
+        </Button>
       </div>
     </div>
   );

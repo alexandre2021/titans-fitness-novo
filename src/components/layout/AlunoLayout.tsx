@@ -22,7 +22,7 @@ const AlunoLayout = () => {
     return (
       <div className="min-h-screen bg-background">
         <AlunoMobileHeader />
-        <main className="pb-16 p-4">
+        <main className="pt-24 pb-16 p-4">
           <Outlet />
         </main>
         <AlunoBottomNav />

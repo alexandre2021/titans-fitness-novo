@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, Settings } from "lucide-react";
+import { LogOut, User, Settings, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -36,31 +36,48 @@ const PTMobileHeader = () => {
     if (user) fetchProfile();
   }, [user]);
 
-  const getPageTitle = (): React.ReactNode => {
-    switch (location.pathname) {
-      case "/index-pt":
-        return "Inicial";
-      case "/alunos-pt":
-        return "Alunos";
-      case "/exercicios-pt":
-        return "Exercícios";
-      case "/agenda-pt":
-        return "Agenda";
-      case "/mensagens-pt":
-        return "Mensagens";
-      case "/perfil-pt":
-        return "Meu Perfil";
-      case "/configuracoes-pt":
-        return "Configurações";
-      default:
-        return (
-          <img 
-            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-logo-mobile.png" 
-            alt="Titans Fitness"
-            className="h-12"
-          />
-        );
+  const getPageConfig = (): { title: React.ReactNode; showBackButton: boolean } => {
+    const path = location.pathname;
+
+    // Páginas de Ação (com botão de voltar)
+    if (path.startsWith('/exercicios-pt/novo')) return { title: 'Novo Exercício', showBackButton: true };
+    if (path.startsWith('/exercicios-pt/editar')) return { title: 'Editar Exercício', showBackButton: true };
+    if (path.startsWith('/exercicios-pt/copia')) return { title: 'Copiar Exercício', showBackButton: true };
+    if (path.startsWith('/exercicios-pt/detalhes')) return { title: 'Detalhes do Exercício', showBackButton: true };
+    if (path.startsWith('/alunos-rotinas/')) return { title: 'Rotinas do Aluno', showBackButton: true };
+    if (path.startsWith('/alunos-avaliacoes/')) return { title: 'Avaliações do Aluno', showBackButton: true };
+    if (path.startsWith('/alunos-par-q/')) return { title: 'PAR-Q do Aluno', showBackButton: true };
+    if (path.startsWith('/detalhes-aluno/')) return { title: 'Detalhes do Aluno', showBackButton: true };
+    if (path.startsWith('/convite-aluno')) return { title: 'Convidar Aluno', showBackButton: true };
+    if (path.startsWith('/rotinas-criar/')) return { title: 'Criar Rotina', showBackButton: true };
+    if (path.startsWith('/execucao-rotina/')) return { title: 'Execução de Treino', showBackButton: true };
+
+    // Páginas Principais (sem botão de voltar)
+    const mainPages: { [key: string]: string } = {
+      "/index-pt": "Inicial",
+      "/alunos": "Alunos",
+      "/exercicios-pt": "Exercícios",
+      "/agenda-pt": "Agenda",
+      "/mensagens-pt": "Mensagens",
+      "/perfil-pt": "Meu Perfil",
+      "/configuracoes-pt": "Configurações",
+    };
+
+    if (mainPages[path]) {
+      return { title: mainPages[path], showBackButton: false };
     }
+
+    // Default: Logo (para páginas não mapeadas ou a raiz do PT)
+    return {
+      title: (
+        <img 
+          src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-logo-mobile.png" 
+          alt="Titans Fitness"
+          className="h-12"
+        />
+      ),
+      showBackButton: false
+    };
   };
 
   const handleLogout = async () => {
@@ -83,9 +100,18 @@ const PTMobileHeader = () => {
     );
   };
 
+  const { title, showBackButton } = getPageConfig();
+
   return (
-    <header className="flex items-center justify-between p-4 border-b bg-background md:hidden">
-      <div className="text-lg font-semibold">{getPageTitle()}</div>
+    <header className="fixed top-0 left-0 right-0 z-20 flex items-center justify-between p-4 border-b bg-background md:hidden">
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        {showBackButton && (
+          <Button variant="ghost" size="icon" className="h-10 w-10 flex-shrink-0" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        )}
+        <div className="text-lg font-semibold truncate">{title}</div>
+      </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="sm" className="h-12 w-12 rounded-full">

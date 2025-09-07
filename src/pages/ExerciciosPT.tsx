@@ -164,21 +164,6 @@ const ExerciciosPT = () => {
               Gerencie seus exercícios
             </p>
           </div>
-          {activeTab === "personalizados" && (canAddMore ? (
-              <Button
-                onClick={handleNovoExercicio}
-                size="icon"
-                className="rounded-full"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            ) : (
-              <Button variant="outline" size="sm" onClick={() => setIsLimitInfoOpen(true)}>
-                <Info className="h-4 w-4 mr-1" />
-                Limite
-              </Button>
-            )
-          )}
         </div>
 
         {/* Desktop: Header tradicional */}
@@ -189,21 +174,6 @@ const ExerciciosPT = () => {
               Gerencie seus exercícios padrão e personalizados
             </p>
           </div>
-          {activeTab === "personalizados" && (canAddMore ? (
-              <Button 
-                onClick={handleNovoExercicio} 
-                className="flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Exercício
-              </Button>
-            ) : (
-                <Button variant="outline" onClick={() => setIsLimitInfoOpen(true)} className="flex items-center gap-2">
-                  <ShieldAlert className="h-4 w-4" />
-                  Limite Atingido
-                </Button>
-            )
-          )}
         </div>
       </div>
 
@@ -507,6 +477,31 @@ const ExerciciosPT = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      )}
+
+      {/* Botão Flutuante para Novo Exercício */}
+      {activeTab === "personalizados" && (
+        <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
+          {/* Mobile: Round floating button */}
+          <Button
+            onClick={canAddMore ? handleNovoExercicio : () => setIsLimitInfoOpen(true)}
+            className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
+            aria-label={canAddMore ? "Novo Exercício" : "Limite de exercícios atingido"}
+          >
+            {canAddMore ? <Plus /> : <ShieldAlert />}
+          </Button>
+
+          {/* Desktop: Standard floating button */}
+          <Button
+            onClick={canAddMore ? handleNovoExercicio : () => setIsLimitInfoOpen(true)}
+            className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6"
+            size="lg"
+            variant={canAddMore ? "default" : "outline"}
+          >
+            {canAddMore ? <Plus /> : <ShieldAlert />}
+            {canAddMore ? "Novo Exercício" : "Limite Atingido"}
+          </Button>
+        </div>
       )}
     </div>
   );
