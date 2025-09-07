@@ -2,9 +2,6 @@
 
 Centralização de todos os padrões, valores e configurações do sistema.
 
-Cor principal #AA1808
-
----
 
 ## 🏋️ **GRUPOS MUSCULARES**
 

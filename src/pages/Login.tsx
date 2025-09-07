@@ -78,7 +78,7 @@ const Login = () => {
         <div className="flex items-center justify-center relative px-6">
           <Button
             variant="ghost"
-            onClick={() => navigate(-1)}
+            onClick={() => navigate("/")}
             className="h-10 w-10 p-0 absolute left-6"
           >
             <ArrowLeft className="h-4 w-4" />

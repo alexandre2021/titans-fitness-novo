@@ -5,25 +5,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Search, Filter, Dumbbell, ShieldAlert, Info, X } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useExercicios } from "@/hooks/useExercicios";
-import { ExercicioCard } from "@/components/exercicios/ExercicioCard";
-import { FiltrosExercicios } from "@/components/exercicios/FiltrosExercicios";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
   Drawer,
   DrawerContent,
-  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { useToast } from "@/hooks/use-toast";
+import { useExercicios } from "@/hooks/useExercicios";
+import { ExercicioCard } from "@/components/exercicios/ExercicioCard";
+import { FiltrosExercicios } from "@/components/exercicios/FiltrosExercicios";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const ExerciciosPT = () => {
@@ -48,7 +46,6 @@ const ExerciciosPT = () => {
   const isMobile = useIsMobile();
   const [isLimitInfoOpen, setIsLimitInfoOpen] = useState(false);
   const [busca, setBusca] = useState("");
-  const [showDesktopCopyWarning, setShowDesktopCopyWarning] = useState(false);
 
   const handleNovoExercicio = () => {
     if (totalPersonalizados >= LIMITE_EXERCICIOS_PERSONALIZADOS) {
@@ -73,11 +70,7 @@ const ExerciciosPT = () => {
       return;
     }
 
-    if (isMobile) {
-      navigate(`/exercicios-pt/copia/${exercicioId}`);
-    } else {
-      setShowDesktopCopyWarning(true);
-    }
+    navigate(`/exercicios-pt/copia/${exercicioId}`);
   };
 
   const handleExcluirExercicio = async (exercicioId: string) => {
@@ -352,12 +345,6 @@ const ExerciciosPT = () => {
                 <p className="text-muted-foreground text-center mb-6 max-w-md">
                   Crie exercícios personalizados a partir dos exercícios padrão ou do zero
                 </p>
-                {canAddMore && (
-                  <Button onClick={handleNovoExercicio} size="lg" className="flex items-center gap-2">
-                    <Plus className="h-5 w-5" />
-                    Exercício personalizado
-                  </Button>
-                )}
               </CardContent>
             </Card>
           ) : (
@@ -440,41 +427,6 @@ const ExerciciosPT = () => {
                 Para criar novos exercícios, você pode revisar e excluir exercícios antigos que não estão mais em uso.
               </DialogDescription>
             </DialogHeader>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* Modal de aviso para copiar no desktop */}
-      {isMobile ? (
-        <Drawer open={showDesktopCopyWarning} onOpenChange={setShowDesktopCopyWarning}>
-          <DrawerContent>
-            <DrawerHeader className="text-left">
-              <DrawerTitle>Funcionalidade Otimizada para Celular</DrawerTitle>
-            </DrawerHeader>
-            <div className="p-4 space-y-4">
-              <div className="text-sm text-muted-foreground space-y-3">
-                <p>Para uma melhor experiência, recomendamos copiar e personalizar exercícios usando seu celular.</p>
-                <p>Isso permite que você use a câmera para tirar fotos e gravar vídeos da execução do exercício diretamente no app.</p>
-              </div>
-              <DrawerFooter className="pt-4 px-0">
-                <Button onClick={() => setShowDesktopCopyWarning(false)}>Entendi</Button>
-              </DrawerFooter>
-            </div>
-          </DrawerContent>
-        </Drawer>
-      ) : (
-        <Dialog open={showDesktopCopyWarning} onOpenChange={setShowDesktopCopyWarning}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Funcionalidade Otimizada para Celular</DialogTitle>
-              <DialogDescription className="pt-4 space-y-3">
-                <p>Para uma melhor experiência, recomendamos copiar e personalizar exercícios usando seu celular.</p>
-                <p>Isso permite que você use a câmera para tirar fotos e gravar vídeos da execução do exercício diretamente no app.</p>
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter className="sm:justify-end mt-4">
-              <Button type="button" onClick={() => setShowDesktopCopyWarning(false)}>Entendi</Button>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
       )}

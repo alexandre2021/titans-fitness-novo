@@ -372,7 +372,7 @@ export type Database = {
           exercicio_padrao_id: string | null
           grupo_muscular: string | null
           grupo_muscular_primario: string | null
-          grupos_musculares_secundarios: string[] | null
+          grupos_musculares_secundarios: string | null
           id: string
           imagem_1_url: string | null
           imagem_2_url: string | null
@@ -393,7 +393,7 @@ export type Database = {
           exercicio_padrao_id?: string | null
           grupo_muscular?: string | null
           grupo_muscular_primario?: string | null
-          grupos_musculares_secundarios?: string[] | null
+          grupos_musculares_secundarios?: string | null
           id?: string
           imagem_1_url?: string | null
           imagem_2_url?: string | null
@@ -414,7 +414,7 @@ export type Database = {
           exercicio_padrao_id?: string | null
           grupo_muscular?: string | null
           grupo_muscular_primario?: string | null
-          grupos_musculares_secundarios?: string[] | null
+          grupos_musculares_secundarios?: string | null
           id?: string
           imagem_1_url?: string | null
           imagem_2_url?: string | null

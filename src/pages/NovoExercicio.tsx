@@ -28,8 +28,8 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Save, Plus, Trash2, Eye, ExternalLink, Camera, Video } from "lucide-react";
+import { Badge } from "@/components/ui/badge"; // This import is fine, but I need to add Upload
+import { ArrowLeft, Save, Plus, Trash2, Eye, ExternalLink, Camera, Video, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast as sonnerToast } from "sonner";
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -227,31 +227,15 @@ const NovoExercicio = () => {
     });
   };
 
-  const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'video', capture: boolean = false) => {
-    if (capture) {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-        toast.error("Navegador incompatível", {
-          description: "Seu navegador não parece suportar a captura de mídia.",
-        });
-        return;
-      }
-
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const hasCamera = devices.some(device => device.kind === 'videoinput');
-
-      if (!hasCamera) {
-        toast.error("Câmera não encontrada", {
-          description: "Esta função requer uma câmera. Por favor, acesse de um dispositivo móvel com câmera.",
-        });
-        return;
-      }
-    }
-
+  const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = type === 'video' ? 'video/*' : 'image/*';
 
-    if (capture) input.capture = type === 'video' ? 'user' : 'environment';
+    // No celular, prioriza a câmera. No desktop, abre o seletor de arquivos.
+    if (isMobile) {
+      input.capture = type === 'video' ? 'user' : 'environment';
+    }
 
     input.onchange = async (event) => {
       const file = (event.target as HTMLInputElement).files?.[0];
@@ -403,7 +387,7 @@ const NovoExercicio = () => {
           dificuldade: formData.dificuldade,
           instrucoes: instrucoesFinal.trim(),
           grupo_muscular_primario: formData.grupo_muscular_primario.trim() || null,
-          grupos_musculares_secundarios: gruposSecundariosArray.length > 0 ? gruposSecundariosArray : null,
+          grupos_musculares_secundarios: formData.grupos_musculares_secundarios.trim() || null,
           imagem_1_url: imagem_1_url_final,
           imagem_2_url: imagem_2_url_final,
           video_url: video_url_final,
@@ -663,13 +647,14 @@ const NovoExercicio = () => {
                       )}
                     </div>
                     <div className="flex gap-2">
-                      <Button type="button" variant="outline" size="sm" onClick={() => signedUrls.imagem1 && window.open(signedUrls.imagem1, '_blank')} className="flex items-center gap-2" disabled={!signedUrls.imagem1}>
+                      <Button type="button" variant="outline" size="sm" onClick={() => signedUrls.imagem1 && window.open(signedUrls.imagem1, '_blank')} className="flex items-center gap-2" disabled={!signedUrls.imagem1 || saving}>
                         <Eye className="h-4 w-4" /> Ver
                       </Button>
-                      <Button type="button" variant="outline" size="sm" onClick={() => handleSelectMedia('imagem1', true)} className="flex items-center gap-2" disabled={saving || !isMobile}>
-                        <Camera className="h-4 w-4" /> Nova Foto
+                      <Button type="button" variant="outline" size="sm" onClick={() => handleSelectMedia('imagem1')} className="flex items-center gap-2" disabled={saving}>
+                        {isMobile ? <Camera className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
+                        {isMobile ? 'Nova Foto' : 'Alterar'}
                       </Button>
-                      <Button type="button" variant="outline" size="sm" onClick={() => setShowDeleteMediaDialog('imagem1')} className="flex items-center gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={() => setShowDeleteMediaDialog('imagem1')} className="flex items-center gap-2" disabled={saving}>
                         <Trash2 className="h-4 w-4" /> Excluir
                       </Button>
                     </div>
@@ -677,9 +662,16 @@ const NovoExercicio = () => {
                 ) : (
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                     <p className="text-sm text-muted-foreground mb-3">Adicione uma imagem para o exercício.</p>
-                    <div className="flex flex-col sm:flex-row gap-2 justify-center">
-                      <Button type="button" variant="default" onClick={() => handleSelectMedia('imagem1', true)} className="flex items-center gap-2" disabled={saving || !isMobile}>
-                        <Camera className="h-4 w-4" /> Tirar Foto
+                    <div className="flex justify-center">
+                      <Button
+                        type="button"
+                        variant="default"
+                        onClick={() => handleSelectMedia('imagem1')}
+                        className="flex items-center gap-2"
+                        disabled={saving}
+                      >
+                        {isMobile ? <Camera className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
+                        {isMobile ? 'Tirar Foto' : 'Selecionar Imagem'}
                       </Button>
                     </div>
                   </div>
@@ -707,13 +699,14 @@ const NovoExercicio = () => {
                       )}
                     </div>
                     <div className="flex gap-2">
-                      <Button type="button" variant="outline" size="sm" onClick={() => signedUrls.imagem2 && window.open(signedUrls.imagem2, '_blank')} className="flex items-center gap-2" disabled={!signedUrls.imagem2}>
+                      <Button type="button" variant="outline" size="sm" onClick={() => signedUrls.imagem2 && window.open(signedUrls.imagem2, '_blank')} className="flex items-center gap-2" disabled={!signedUrls.imagem2 || saving}>
                         <Eye className="h-4 w-4" /> Ver
                       </Button>
-                      <Button type="button" variant="outline" size="sm" onClick={() => handleSelectMedia('imagem2', true)} className="flex items-center gap-2" disabled={saving || !isMobile}>
-                        <Camera className="h-4 w-4" /> Nova Foto
+                      <Button type="button" variant="outline" size="sm" onClick={() => handleSelectMedia('imagem2')} className="flex items-center gap-2" disabled={saving}>
+                        {isMobile ? <Camera className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
+                        {isMobile ? 'Nova Foto' : 'Alterar'}
                       </Button>
-                      <Button type="button" variant="outline" size="sm" onClick={() => setShowDeleteMediaDialog('imagem2')} className="flex items-center gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={() => setShowDeleteMediaDialog('imagem2')} className="flex items-center gap-2" disabled={saving}>
                         <Trash2 className="h-4 w-4" /> Excluir
                       </Button>
                     </div>
@@ -721,9 +714,16 @@ const NovoExercicio = () => {
                 ) : (
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                     <p className="text-sm text-muted-foreground mb-3">Adicione uma segunda imagem (opcional).</p>
-                    <div className="flex flex-col sm:flex-row gap-2 justify-center">
-                      <Button type="button" variant="default" onClick={() => handleSelectMedia('imagem2', true)} className="flex items-center gap-2" disabled={saving || !isMobile}>
-                        <Camera className="h-4 w-4" /> Tirar Foto
+                    <div className="flex justify-center">
+                      <Button
+                        type="button"
+                        variant="default"
+                        onClick={() => handleSelectMedia('imagem2')}
+                        className="flex items-center gap-2"
+                        disabled={saving}
+                      >
+                        {isMobile ? <Camera className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
+                        {isMobile ? 'Tirar Foto' : 'Selecionar Imagem'}
                       </Button>
                     </div>
                   </div>
@@ -751,13 +751,13 @@ const NovoExercicio = () => {
                       )}
                     </div>
                     <div className="flex gap-2">
-                      <Button type="button" variant="outline" size="sm" onClick={() => signedUrls.video && window.open(signedUrls.video, '_blank')} className="flex items-center gap-2" disabled={!signedUrls.video}>
+                      <Button type="button" variant="outline" size="sm" onClick={() => signedUrls.video && window.open(signedUrls.video, '_blank')} className="flex items-center gap-2" disabled={!signedUrls.video || saving}>
                         <Eye className="h-4 w-4" /> Assistir
                       </Button>
-                      <Button type="button" variant="outline" size="sm" onClick={() => { if (isMobile) setShowVideoInfoModal(true); else toast.info("Funcionalidade móvel", { description: "A gravação de vídeo está disponível apenas no celular." }); }} className="flex items-center gap-2" disabled={saving || !isMobile}>
+                      <Button type="button" variant="outline" size="sm" onClick={() => { if (isMobile) { setShowVideoInfoModal(true); } else { handleSelectMedia('video'); } }} className="flex items-center gap-2" disabled={saving}>
                         <Video className="h-4 w-4" /> Novo Vídeo
                       </Button>
-                      <Button type="button" variant="outline" size="sm" onClick={() => setShowDeleteMediaDialog('video')} className="flex items-center gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={() => setShowDeleteMediaDialog('video')} className="flex items-center gap-2" disabled={saving}>
                         <Trash2 className="h-4 w-4" /> Excluir
                       </Button>
                     </div>
@@ -765,15 +765,23 @@ const NovoExercicio = () => {
                 ) : (
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                     <p className="text-sm text-muted-foreground mb-3">Adicione um vídeo para o exercício.</p>
-                    <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                    <div className="flex flex-col sm:flex-row gap-2 justify-center items-center">
                       <Button
                         type="button"
                         variant="default"
-                        onClick={() => { if (isMobile) setShowVideoInfoModal(true); else toast.info("Funcionalidade móvel", { description: "A gravação de vídeo está disponível apenas no celular." }); }}
+                        onClick={() => setShowVideoInfoModal(true)}
                         className="flex items-center gap-2"
-                        disabled={saving || !isMobile}
+                        disabled={saving}
                       >
-                        <Video className="h-4 w-4" /> Gravar Vídeo
+                        {isMobile ? (
+                          <>
+                            <Video className="h-4 w-4" /> Gravar Vídeo
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-4 w-4" /> Selecionar Vídeo
+                          </>
+                        )}
                       </Button>
                     </div>
                   </div>

@@ -302,32 +302,16 @@ const CopiaExercicio = () => {
     });
   };
 
-  // Função para seleção de mídia (mantida igual)
-  const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'video', capture: boolean = false) => {
-    if (capture) {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-        toast.error("Navegador incompatível", {
-          description: "Seu navegador não parece suportar a captura de mídia.",
-        });
-        return;
-      }
-
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const hasCamera = devices.some(device => device.kind === 'videoinput');
-
-      if (!hasCamera) {
-        toast.error("Câmera não encontrada", {
-          description: "Esta função requer uma câmera. Por favor, acesse de um dispositivo móvel com câmera.",
-        });
-        return;
-      }
-    }
-
+  // Função para seleção de mídia (adaptada para desktop)
+  const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = type === 'video' ? 'video/*' : 'image/*';
 
-    if (capture) input.capture = type === 'video' ? 'user' : 'environment';
+    // No celular, prioriza a câmera. No desktop, abre o seletor de arquivos.
+    if (isMobile) {
+      input.capture = type === 'video' ? 'user' : 'environment';
+    }
 
     input.onchange = async (event) => {
       const file = (event.target as HTMLInputElement).files?.[0];
@@ -406,8 +390,19 @@ const CopiaExercicio = () => {
           equipamento: exercicio.equipamento || "",
           dificuldade: (exercicio.dificuldade as "Baixa" | "Média" | "Alta") || "Baixa",
           instrucoes: exercicio.instrucoes || "",
-          grupo_muscular_primario: Array.isArray(exercicio.grupo_muscular_primario) ? exercicio.grupo_muscular_primario.join(', ') : (exercicio.grupo_muscular_primario || ""),
-          grupos_musculares_secundarios: Array.isArray(exercicio.grupos_musculares_secundarios) ? exercicio.grupos_musculares_secundarios.join(', ') : (exercicio.grupos_musculares_secundarios || ""),
+          grupo_muscular_primario: Array.isArray(exercicio.grupo_muscular_primario) 
+            ? exercicio.grupo_muscular_primario.join(', ') 
+            : (exercicio.grupo_muscular_primario || ""),
+          grupos_musculares_secundarios: (() => {
+            const value = exercicio.grupos_musculares_secundarios as unknown;
+            if (typeof value === 'string') {
+              return value.replace(/[[\]"]/g, '');
+            }
+            if (Array.isArray(value)) {
+              return value.join(', ');
+            }
+            return "";
+          })(),
         });
 
         if (exercicio.instrucoes) {
@@ -625,7 +620,7 @@ const CopiaExercicio = () => {
           dificuldade: formData.dificuldade,
           instrucoes: instrucoesFinal.trim(),
           grupo_muscular_primario: formData.grupo_muscular_primario.trim() || null,
-          grupos_musculares_secundarios: gruposSecundariosArray.length > 0 ? gruposSecundariosArray : null,
+          grupos_musculares_secundarios: formData.grupos_musculares_secundarios.trim() || null,
           imagem_1_url: imagem_1_url_final,
           imagem_2_url: imagem_2_url_final,
           video_url: video_url_final,
@@ -928,9 +923,9 @@ const CopiaExercicio = () => {
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => handleSelectMedia('imagem1', true)}
+                          onClick={() => handleSelectMedia('imagem1')}
                           className="flex items-center gap-2"
-                          disabled={saving || !isMobile}
+                          disabled={saving}
                         >
                           <Camera className="h-4 w-4" />
                           Nova Foto
@@ -950,16 +945,20 @@ const CopiaExercicio = () => {
                   ) : (
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                       <p className="text-sm text-muted-foreground mb-3">Adicione uma imagem para o exercício.</p>
-                      <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                      <div className="flex justify-center">
                         <Button
                           type="button"
                           variant="default"
-                          onClick={() => handleSelectMedia('imagem1', true)}
+                          onClick={() => handleSelectMedia('imagem1')}
                           className="flex items-center gap-2"
-                          disabled={saving || !isMobile}
+                          disabled={saving}
                         >
-                          <Camera className="h-4 w-4" />
-                          Tirar Foto
+                          {isMobile ? (
+                            <Camera className="h-4 w-4" />
+                          ) : (
+                            <Upload className="h-4 w-4" />
+                          )}
+                          {isMobile ? 'Tirar Foto' : 'Selecionar Imagem'}
                         </Button>
                       </div>
                     </div>
@@ -1006,9 +1005,9 @@ const CopiaExercicio = () => {
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => handleSelectMedia('imagem2', true)}
+                          onClick={() => handleSelectMedia('imagem2')}
                           className="flex items-center gap-2"
-                          disabled={saving || !isMobile}
+                          disabled={saving}
                         >
                           <Camera className="h-4 w-4" />
                           Nova Foto
@@ -1028,16 +1027,20 @@ const CopiaExercicio = () => {
                   ) : (
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                       <p className="text-sm text-muted-foreground mb-3">Adicione uma segunda imagem (opcional).</p>
-                      <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                      <div className="flex justify-center">
                         <Button
                           type="button"
                           variant="default"
-                          onClick={() => handleSelectMedia('imagem2', true)}
+                          onClick={() => handleSelectMedia('imagem2')}
                           className="flex items-center gap-2"
-                          disabled={saving || !isMobile}
+                          disabled={saving}
                         >
-                          <Camera className="h-4 w-4" />
-                          Tirar Foto
+                          {isMobile ? (
+                            <Camera className="h-4 w-4" />
+                          ) : (
+                            <Upload className="h-4 w-4" />
+                          )}
+                          {isMobile ? 'Tirar Foto' : 'Selecionar Imagem'}
                         </Button>
                       </div>
                     </div>
@@ -1084,9 +1087,9 @@ const CopiaExercicio = () => {
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => { if (isMobile) setShowVideoInfoModal(true); else toast.info("Funcionalidade móvel", { description: "A gravação de vídeo está disponível apenas no celular." }); }}
+                          onClick={() => { if (isMobile) { setShowVideoInfoModal(true); } else { handleSelectMedia('video'); } }}
                           className="flex items-center gap-2"
-                          disabled={saving || !isMobile}
+                          disabled={saving}
                         >
                           <Video className="h-4 w-4" />
                           Novo Vídeo
@@ -1106,16 +1109,26 @@ const CopiaExercicio = () => {
                   ) : (
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                       <p className="text-sm text-muted-foreground mb-3">Adicione um vídeo para o exercício.</p>
-                      <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                      <div className="flex flex-col sm:flex-row gap-2 justify-center items-center">
                         <Button
                           type="button"
                           variant="default"
                           onClick={() => { if (isMobile) setShowVideoInfoModal(true); else toast.info("Funcionalidade móvel", { description: "A gravação de vídeo está disponível apenas no celular." }); }}
-                          className="flex items-center gap-2"
+                          className="flex items-center gap-2 md:hidden"
                           disabled={saving || !isMobile}
                         >
                           <Video className="h-4 w-4" />
                           Gravar Vídeo
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="default"
+                          onClick={() => handleSelectMedia('video')}
+                          className="hidden md:flex items-center gap-2"
+                          disabled={saving}
+                        >
+                          <Upload className="h-4 w-4" />
+                          Selecionar Vídeo
                         </Button>
                       </div>
                     </div>
@@ -1215,6 +1228,7 @@ const CopiaExercicio = () => {
         <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
           {/* Mobile: Round floating button */}
           <Button
+            variant="default"
             onClick={handleSave}
             disabled={saving}
             className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"

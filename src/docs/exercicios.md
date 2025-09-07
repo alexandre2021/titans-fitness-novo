@@ -3,97 +3,69 @@
 ## ✅ O que foi implementado:
 
 ### **1. Página Principal** (`ExerciciosPT`)
-- ✅ **Abas responsivas** Padrão/Personalizados com contadores dinâmicos
-- ✅ **Sistema de busca** em tempo real por nome, descrição e grupo muscular
-- ✅ **Filtros avançados** por grupo muscular, equipamento e dificuldade
-- ✅ **Estados vazios** contextuais para cada aba
-- ✅ **Controle de limite** baseado no plano do PT
-- ✅ **Grid responsivo** de cards (1 col mobile, 2 col tablet, 3 col desktop)
-- ✅ **Loading states** e tratamento de erros
+- ✅ **Abas responsivas** Padrão/Personalizados com contadores dinâmicos.
+- ✅ **Sistema de busca** em tempo real por nome, descrição e grupo muscular.
+- ✅ **Filtros avançados** e colapsáveis por grupo muscular, equipamento e dificuldade.
+- ✅ **Estados vazios** contextuais para cada aba (sem exercícios, sem resultados de busca).
+- ✅ **Controle de limite** de exercícios personalizados, com feedback visual e bloqueio de criação.
+- ✅ **Grid responsivo** de cards (1 col mobile, 2 col tablet, 3 col desktop).
+- ✅ **Loading states** e tratamento de erros durante o carregamento.
+- ✅ **Aviso para Desktop**: Incentiva o uso no celular para criar cópias, visando a utilização da câmera.
 
 ### **2. Hook Personalizado** (`useExercicios`)
-- ✅ **Busca exercícios padrão** do banco (todos os ativos)
-- ✅ **Busca exercícios personalizados** do PT logado
-- ✅ **Sistema de filtros** reativo com estado
-- ✅ **Exclusão completa** com limpeza de mídias do Cloudflare
-- ✅ **Contadores dinâmicos** para controle de limite
-- ✅ **Função refetch** para recarregar dados
+- ✅ **Busca exercícios padrão** do banco (todos os ativos).
+- ✅ **Busca exercícios personalizados** do PT logado.
+- ✅ **Sistema de filtros** reativo com estado gerenciado.
+- ✅ **Exclusão completa** de exercícios personalizados, com limpeza de mídias associadas no Cloudflare R2.
+- ✅ **Contadores dinâmicos** para o total de exercícios personalizados.
+- ✅ **Função `refetch`** para recarregar dados sob demanda.
 
 ### **3. Componentes Reutilizáveis**
 
 #### **ExercicioCard**
-- ✅ **Dropdown menu** com ações contextuais
-- ✅ **Badges coloridos** para dificuldade, tipo e categoria
-- ✅ **Modal de confirmação** para exclusão
-- ✅ **Ações condicionais** baseadas no tipo (padrão vs personalizado)
+- ✅ **Dropdown menu** com ações contextuais (Copiar, Editar, Excluir, Detalhes).
+- ✅ **Badges coloridos** para dificuldade, tipo e categoria.
+- ✅ **Modal de confirmação** para exclusão, garantindo segurança.
+- ✅ **Ações condicionais** baseadas no tipo do exercício (padrão vs. personalizado).
 
 #### **FiltrosExercicios** 
-- ✅ **3 selects** para filtrar por categoria
-- ✅ **Botão limpar filtros** quando há filtros ativos
-- ✅ **Interface colapsável** para economizar espaço
+- ✅ **3 selects** para filtrar por categoria.
+- ✅ **Botão limpar filtros** que aparece apenas quando há filtros ativos.
+- ✅ **Interface colapsável** para economizar espaço na tela.
 
-#### **MediaUploadSection**
-- ✅ **Upload de 2 imagens** com otimização automática para webp
-- ✅ **Upload de vídeo** com validação (20MB/30s máximo)
-- ✅ **Campo YouTube** com validação de URL
-- ✅ **Preview e remoção** de mídias carregadas
-- ✅ **Integração com Edge Functions** do Cloudflare
+### **4. Lógica de Upload de Mídia (Páginas de Criação/Edição)**
+- ✅ **Upload de 2 imagens** com otimização automática (redimensionamento e conversão para JPEG) no lado do cliente.
+- ✅ **Upload de vídeo** com validação de tamanho.
+- ✅ **Gravação de vídeo** diretamente pelo navegador em dispositivos móveis.
+- ✅ **Campo para URL do YouTube**.
+- ✅ **Preview e remoção** de mídias antes de salvar.
+- ✅ **Upload direto para Cloudflare R2**: Utiliza URLs pré-assinadas geradas por uma Edge Function, evitando que o arquivo passe pelo servidor da função.
 
 ### **4. Páginas Especializadas**
 
 #### **NovoExercicio** 
-- ✅ **Formulário completo** com validação
-- ✅ **Campos obrigatórios** marcados e validados
-- ✅ **Upload de mídias** integrado
-- ✅ **Navegação breadcrumb** para voltar
+- ✅ **Formulário completo** com validação de campos obrigatórios.
+- ✅ **Criação de exercício do zero**, com todos os campos editáveis.
+- ✅ **Upload de mídias** integrado.
 
 #### **CopiaExercicio**
-- ✅ **Carregamento do exercício original** por ID
-- ✅ **Pré-preenchimento** do formulário com dados base
-- ✅ **Indicação visual** do exercício sendo copiado
-- ✅ **Referência ao exercício padrão** no banco
+- ✅ **Carregamento do exercício padrão** original por ID.
+- ✅ **Pré-preenchimento** do formulário com dados do exercício base.
+- ✅ **Cópia de mídias**: Se o exercício padrão tem mídias, elas são copiadas para o armazenamento do PT no Cloudflare R2.
+- ✅ **Indicação visual** do exercício sendo copiado.
 
 #### **EditarExercicio**
-- ✅ **Edição completa** de exercícios personalizados
-- ✅ **Validação de propriedade** (só edita próprios exercícios)
-- ✅ **Botão de exclusão** com confirmação
-- ✅ **Histórico e metadata** do exercício
+- ✅ **Edição completa** de exercícios personalizados.
+- ✅ **Validação de propriedade** (só o PT dono do exercício pode editar).
+- ✅ **Limpeza de mídias antigas**: Ao substituir uma imagem/vídeo, o arquivo antigo é removido do Cloudflare R2.
 
 #### **DetalhesExercicio**
-- ✅ **Visualização completa** do exercício
-- ✅ **Sidebar com classificação** e metadata
-- ✅ **Acesso às mídias** com links externos
-- ✅ **Ações contextuais** (copiar, editar) baseadas no tipo
+- ✅ **Visualização completa** do exercício com todas as informações.
+- ✅ **Sidebar com classificação** e metadados.
+- ✅ **Carregamento de mídias seguro**: Utiliza URLs assinadas e temporárias para mídias de exercícios personalizados (privados).
+- ✅ **Ações contextuais** (copiar, editar) baseadas no tipo do exercício.
 
-### **5. Componentes UI Adicionais**
-- ✅ **Tabs** - Navegação entre abas
-- ✅ **Badge** - Marcadores coloridos
-- ✅ **Separator** - Divisórias visuais
-
-### **Fluxo de Navegação entre Arquivos:**
-
-```
-ExerciciosPT.tsx (Página Principal)
-├── useExercicios.ts (Hook principal)
-├── ExercicioCard.tsx (Cards individuais)
-├── FiltrosExercicios.tsx (Sistema de filtros)
-│
-├── → NovoExercicio.tsx (Criar do zero)
-│   └── MediaUploadSection.tsx (Upload de mídias)
-│
-├── → CopiaExercicio.tsx (Criar cópia)
-│   ├── MediaUploadSection.tsx (Upload de mídias)
-│   └── Carrega exercício original por ID
-│
-├── → EditarExercicio.tsx (Editar personalizado)
-│   ├── MediaUploadSection.tsx (Upload de mídias)
-│   └── Validação de propriedade
-│
-└── → DetalhesExercicio.tsx (Visualizar)
-    └── Links para ações (copiar/editar)
-```
-
-### **Integração com Sistema Existente:**
+### **5. Integração com Sistema Existente:**
 
 ```
 Database (Supabase)
@@ -133,7 +105,6 @@ src/
 │   ├── exercicios/
 │   │   ├── ExercicioCard.tsx         # Card individual do exercício
 │   │   ├── FiltrosExercicios.tsx     # Componente de filtros
-│   │   └── MediaUploadSection.tsx    # Upload de mídias
 │   │
 │   └── ui/ (se não existir)
 │       ├── tabs.tsx                  # Componente de abas

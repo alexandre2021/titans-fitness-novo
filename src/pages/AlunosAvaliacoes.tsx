@@ -370,8 +370,7 @@ const AlunosAvaliacoes = () => {
           <Button
             onClick={handleNovaAvaliacao}
             size="icon"
-            className="rounded-full"
-            style={{ backgroundColor: '#AA1808', color: 'white' }} // Preserve original background color
+            className="rounded-full" // A cor agora virá do tema (bg-primary)
           >
             <Plus className="h-4 w-4" />
           </Button>

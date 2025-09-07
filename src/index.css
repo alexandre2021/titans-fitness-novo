@@ -18,10 +18,10 @@ All colors MUST be HSL.
     --popover-foreground: 214 15% 29%;
 
     /* Titans.fitness brand colors */
-    --primary: 6 91% 35%; /* #A11E0A - vermelho escuro */
+    --primary: 14 89% 45%; /* #ba3c15 - laranja logo */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 178 62% 24%; /* #0F766E - verde escuro */
+    --secondary: 210 85% 28%; /* #004B87 - verde escuro */
     --secondary-foreground: 0 0% 100%;
 
     /* Neutral text hierarchy */
@@ -72,7 +72,7 @@ All colors MUST be HSL.
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
+    --primary:  6 91% 45%;
     --primary-foreground: 222.2 47.4% 11.2%;
 
     --secondary: 217.2 32.6% 17.5%;
@@ -108,5 +108,14 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Reset de botões apenas se NÃO tiverem bg- */
+@layer base {
+  :where(button, [type='button'], [type='reset'], [type='submit']):not([class*="bg-"]) {
+    -webkit-appearance: button;
+    background-color: transparent;
+    background-image: none;
   }
 }
