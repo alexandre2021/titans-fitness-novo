@@ -192,6 +192,17 @@ const CopiaExercicio = () => {
     );
   };
 
+  // ✅ NOVA FUNÇÃO: Para exercícios PADRÃO, constrói a URL pública do Cloudflare R2
+  const getPublicImageUrlPadrao = useCallback((imagePath: string): string => {
+    const r2PublicUrl = import.meta.env.VITE_R2_PUBLIC_URL_EXERCICIOS_PADRAO;
+    if (!r2PublicUrl) {
+      console.error("VITE_R2_PUBLIC_URL_EXERCICIOS_PADRAO não está configurada no .env");
+      return '';
+    }
+    // Constrói a URL final, por exemplo: https://pub-xxx.r2.dev/peito/supino.jpg
+    return `${r2PublicUrl}/${imagePath}`;
+  }, []);
+
   // Função para obter URL assinada (mantida igual)
   const getSignedImageUrl = useCallback(async (filename: string): Promise<string> => {
     try {
@@ -231,41 +242,35 @@ const CopiaExercicio = () => {
     }
   }, []);
 
-  // MANTENDO função loadSignedUrls original (sem mudanças nas dependências)
+  // ✅ FUNÇÃO ATUALIZADA: Carrega as URLs das mídias corretamente
   const loadSignedUrls = useCallback(async () => {
     const temMidiaParaProcessar = Object.values(midias).some(v => v);
     if (!temMidiaParaProcessar) {
       setSignedUrls({});
       return;
     }
+
     setLoadingImages(true);
     setSignedUrls({});
+
     try {
       const urls: { imagem1?: string; imagem2?: string; video?: string } = {};
 
-      const processarUrl = async (urlValue: string | File | null) => {
-        if (typeof urlValue !== 'string' || !urlValue) return undefined;
-        if (urlValue.includes('/storage/v1/object/public/exercicios-padrao/')) {
-          return urlValue;
+      const processarUrl = (urlValue: string | File | null): string | undefined => {
+        // Se for um novo arquivo selecionado pelo usuário, cria uma URL local para preview
+        if (urlValue instanceof File) {
+          return URL.createObjectURL(urlValue);
         }
-        const filename = urlValue.split('/').pop()?.split('?')[0] || urlValue;
-        return getSignedImageUrl(filename);
+        // Se for um caminho de string (do exercício padrão), constrói a URL pública do R2
+        if (typeof urlValue === 'string' && urlValue) {
+          return getPublicImageUrlPadrao(urlValue);
+        }
+        return undefined;
       };
 
-      const [url1, url2, urlVideo] = await Promise.all([
-        processarUrl(midias.imagem_1_url),
-        processarUrl(midias.imagem_2_url),
-        processarUrl(midias.video_url),
-      ]);
-
-      if (url1) urls.imagem1 = url1;
-      if (url2) urls.imagem2 = url2;
-      if (urlVideo) urls.video = urlVideo;
-
-      // URLs locais para preview de novos arquivos
-      if (midias.imagem_1_url instanceof File) urls.imagem1 = URL.createObjectURL(midias.imagem_1_url);
-      if (midias.imagem_2_url instanceof File) urls.imagem2 = URL.createObjectURL(midias.imagem_2_url);
-      if (midias.video_url instanceof File) urls.video = URL.createObjectURL(midias.video_url);
+      urls.imagem1 = processarUrl(midias.imagem_1_url);
+      urls.imagem2 = processarUrl(midias.imagem_2_url);
+      urls.video = processarUrl(midias.video_url);
 
       setSignedUrls(urls);
     } catch (error) {
@@ -273,7 +278,7 @@ const CopiaExercicio = () => {
     } finally {
       setLoadingImages(false);
     }
-  }, [midias, getSignedImageUrl]);
+  }, [midias, getPublicImageUrlPadrao]);
 
   // Função para redimensionar imagem (mantida igual)
   const resizeImageFile = (file: File, maxWidth = 640): Promise<File> => {
@@ -501,62 +506,25 @@ const CopiaExercicio = () => {
 
     // Se é uma string (URL do exercício padrão)
     if (typeof file === 'string') {
-      const isExercicioPadrao = file.includes('/storage/v1/object/public/exercicios-padrao/') || 
-                                file.includes('exercicios-padrao');
-
-      if (isExercicioPadrao) {
+      if (exercicioOriginal?.tipo === 'padrao') {
         try {
-          console.log('🔄 Copiando mídia do exercício padrão:', file);
+          // ✅ NOVA LÓGICA: Chamar a Edge Function de cópia server-to-server
+          console.log('🔄 Solicitando cópia de mídia do exercício padrão:', file);
           toast.info("Copiando mídia", { description: "Criando cópia da mídia para seu exercício..." });
 
-          // 1. Baixar arquivo original
-          const downloadResponse = await fetch(file);
-          if (!downloadResponse.ok) {
-            throw new Error(`Falha ao baixar mídia: ${downloadResponse.statusText}`);
-          }
-          
-          const blob = await downloadResponse.blob();
-          
-          // 2. Preparar dados para upload
-          const contentType = blob.type || 'image/jpeg';
-          const originalFilename = file.split('/').pop()?.split('?')[0] || 'media.jpg';
-          const uniqueFilename = `pt_${user?.id}_${Date.now()}_copia_${originalFilename}`;
-
-          console.log('📋 Preparando cópia:', {
-            original: originalFilename,
-            novo: uniqueFilename,
-            tipo: contentType,
-            tamanho: `${(blob.size / 1024).toFixed(2)}KB`
-          });
-
-          // 3. Obter URL pré-assinada para a cópia
-          const { data: presignedData, error: presignedError } = await supabase.functions.invoke('upload-media', {
+          const { data: copyResult, error: copyError } = await supabase.functions.invoke('copy-media', {
             body: {
-              action: 'generate_upload_url',
-              filename: uniqueFilename,
-              contentType: contentType,
-              bucket_type: 'exercicios'
+              sourcePath: file,
             }
           });
 
-          if (presignedError || !presignedData.signedUrl) {
-            throw new Error(presignedError?.message || 'Não foi possível obter URL para cópia.');
+          if (copyError || !copyResult.success) {
+            throw new Error(copyError?.message || copyResult.error || 'Não foi possível copiar a mídia.');
           }
 
-          // 4. Upload da cópia para Cloudflare R2
-          const uploadResponse = await fetch(presignedData.signedUrl, {
-            method: 'PUT',
-            headers: { 'Content-Type': contentType },
-            body: blob
-          });
-
-          if (!uploadResponse.ok) {
-            throw new Error('Falha no upload da cópia para o R2.');
-          }
-
-          console.log('✅ Cópia criada com sucesso:', presignedData.path);
+          console.log('✅ Cópia criada com sucesso via Edge Function:', copyResult.path);
           toast.success("Cópia criada", { description: "Mídia copiada com sucesso!" });
-          return presignedData.path;
+          return copyResult.path;
           
         } catch (error) {
           console.error('❌ Erro ao copiar mídia:', error);
@@ -567,7 +535,6 @@ const CopiaExercicio = () => {
         }
       }
       
-      // Se é uma URL já processada (do Cloudflare), retorna como está
       console.log('📎 Mantendo URL existente:', file);
       return file;
     }

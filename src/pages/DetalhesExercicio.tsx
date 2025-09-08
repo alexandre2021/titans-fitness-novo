@@ -74,26 +74,15 @@ const DetalhesExercicio = () => {
 
   // ✅ FUNÇÃO SIMPLIFICADA: Para exercícios PADRÃO (URLs já são públicas!)
   const getPublicImageUrlPadrao = useCallback((imagePath: string): string => {
-    try {
-      console.log('🔍 Processando imagem padrão:', { imagePath });
-      
-      // Se a URL já é completa e válida, usar diretamente
-      if (imagePath.startsWith('https://')) {
-        console.log('✅ URL já completa:', imagePath);
-        return imagePath;
-      }
-      
-      // Se não, construir a URL pública
-      const publicUrl = supabase.storage
-        .from('exercicios-padrao')
-        .getPublicUrl(imagePath);
-      
-      console.log('✅ URL pública construída:', publicUrl.data.publicUrl);
-      return publicUrl.data.publicUrl;
-    } catch (error) {
-      console.error('Erro ao obter URL pública (padrão):', error);
-      throw error;
+    // ✅ MODIFICADO: Aponta para o domínio público do Cloudflare R2
+    const r2PublicUrl = import.meta.env.VITE_R2_PUBLIC_URL_EXERCICIOS_PADRAO;
+    if (!r2PublicUrl) {
+      console.error("VITE_R2_PUBLIC_URL_EXERCICIOS_PADRAO não está configurada no .env");
+      // Retorna uma string vazia ou uma URL de placeholder para evitar quebras
+      return '';
     }
+    // Constrói a URL final, por exemplo: https://pub-xxx.r2.dev/peito/supino.jpg
+    return `${r2PublicUrl}/${imagePath}`;
   }, []);
 
   // ✅ FUNÇÃO PRINCIPAL: Escolhe o método correto baseado no tipo
@@ -550,6 +539,11 @@ const DetalhesExercicio = () => {
               <CardTitle>Classificação</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              <div>
+                <Label className="text-sm font-medium text-muted-foreground">Grupo muscular</Label>
+                <p className="text-sm font-medium">{exercicio.grupo_muscular || 'Não especificado'}</p>
+              </div>
+
               <div>
                 <Label className="text-sm font-medium text-muted-foreground">Músculo primário</Label>
                 <p className="text-sm font-medium">{exercicio.grupo_muscular_primario}</p>
