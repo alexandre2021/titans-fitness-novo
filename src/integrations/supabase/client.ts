@@ -2,9 +2,6 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
 // É uma boa prática carregar essas variáveis de um arquivo .env para não expor as chaves no código.
-// Crie um arquivo .env na raiz do projeto com as seguintes variáveis:
-// VITE_SUPABASE_URL=https://prvfvlyzfyprjliqniki.supabase.co
-// VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
