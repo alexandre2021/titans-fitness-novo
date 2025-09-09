@@ -192,26 +192,19 @@ const CopiaExercicio = () => {
     );
   };
 
-  // ✅ NOVA FUNÇÃO: Para exercícios PADRÃO, constrói a URL pública do Cloudflare R2
-  const getPublicImageUrlPadrao = useCallback((imagePath: string): string => {
-    const r2PublicUrl = import.meta.env.VITE_R2_PUBLIC_URL_EXERCICIOS_PADRAO;
-    if (!r2PublicUrl) {
-      console.error("VITE_R2_PUBLIC_URL_EXERCICIOS_PADRAO não está configurada no .env");
-      return '';
-    }
-    // Constrói a URL final, por exemplo: https://pub-xxx.r2.dev/peito/supino.jpg
-    return `${r2PublicUrl}/${imagePath}`;
-  }, []);
-
-  // Função para obter URL assinada (mantida igual)
-  const getSignedImageUrl = useCallback(async (filename: string): Promise<string> => {
+  // ✅ FUNÇÃO UNIFICADA: Busca a URL da mídia (padrão ou personalizada) via Edge Function.
+  // Isso elimina a dependência de variáveis de ambiente no frontend, resolvendo o problema em produção.
+  const getMediaUrl = useCallback(async (path: string, tipo: 'personalizado' | 'padrao'): Promise<string> => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const accessToken = session?.access_token;
       if (!accessToken) {
         throw new Error("Usuário não autenticado");
       }
-      
+
+      // Determina o tipo de bucket a ser usado na Edge Function
+      const bucket_type = tipo === 'personalizado' ? 'exercicios' : 'exercicios-padrao';
+
       const response = await fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/get-image-url', {
         method: 'POST',
         headers: {
@@ -219,66 +212,67 @@ const CopiaExercicio = () => {
           'Authorization': `Bearer ${accessToken}`
         },
         body: JSON.stringify({
-          filename,
-          bucket_type: 'exercicios'
+          filename: path,
+          bucket_type: bucket_type
         })
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Erro ao obter URL da imagem: ${response.status} - ${errorText}`);
       }
-      
+
       const result = await response.json();
-      
+
       if (!result.success || !result.url) {
         throw new Error('URL não retornada pelo servidor');
       }
-      
+
       return result.url;
     } catch (error) {
-      console.error('Erro ao obter URL assinada:', error);
+      console.error(`Erro ao obter URL para ${tipo} (${path}):`, error);
       throw error;
     }
   }, []);
 
-  // ✅ FUNÇÃO ATUALIZADA: Carrega as URLs das mídias corretamente
+  // ✅ FUNÇÃO ATUALIZADA: Carrega as URLs das mídias para preview de forma robusta
   const loadSignedUrls = useCallback(async () => {
     const temMidiaParaProcessar = Object.values(midias).some(v => v);
     if (!temMidiaParaProcessar) {
       setSignedUrls({});
       return;
     }
-
     setLoadingImages(true);
     setSignedUrls({});
 
     try {
       const urls: { imagem1?: string; imagem2?: string; video?: string } = {};
 
-      const processarUrl = (urlValue: string | File | null): string | undefined => {
-        // Se for um novo arquivo selecionado pelo usuário, cria uma URL local para preview
+      const processUrl = async (key: 'imagem_1_url' | 'imagem_2_url' | 'video_url'): Promise<string | undefined> => {
+        const urlValue = midias[key];
         if (urlValue instanceof File) {
           return URL.createObjectURL(urlValue);
         }
-        // Se for um caminho de string (do exercício padrão), constrói a URL pública do R2
         if (typeof urlValue === 'string' && urlValue) {
-          return getPublicImageUrlPadrao(urlValue);
+          // Para mídias do exercício padrão, busca a URL via Edge Function
+          return await getMediaUrl(urlValue, 'padrao');
         }
         return undefined;
       };
 
-      urls.imagem1 = processarUrl(midias.imagem_1_url);
-      urls.imagem2 = processarUrl(midias.imagem_2_url);
-      urls.video = processarUrl(midias.video_url);
+      const [img1, img2, vid] = await Promise.all([
+        processUrl('imagem_1_url'),
+        processUrl('imagem_2_url'),
+        processUrl('video_url')
+      ]);
 
-      setSignedUrls(urls);
+      setSignedUrls({ imagem1: img1, imagem2: img2, video: vid });
     } catch (error) {
-      console.error('Erro:', error);
+      console.error('Erro ao carregar previews de mídia:', error);
     } finally {
       setLoadingImages(false);
     }
-  }, [midias, getPublicImageUrlPadrao]);
+  }, [midias, getMediaUrl]);
 
   // Função para redimensionar imagem (mantida igual)
   const resizeImageFile = (file: File, maxWidth = 640): Promise<File> => {
