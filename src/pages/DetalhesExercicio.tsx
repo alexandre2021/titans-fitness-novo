@@ -33,15 +33,19 @@ const DetalhesExercicio = () => {
   }>({});
   const [loadingImages, setLoadingImages] = useState(false);
 
-  // ✅ NOVA FUNÇÃO: Obter URL para exercícios PERSONALIZADOS (Cloudflare)
-  const getSignedImageUrlPersonalizado = useCallback(async (filename: string): Promise<string> => {
+  // ✅ FUNÇÃO UNIFICADA: Busca a URL da mídia (padrão ou personalizada) via Edge Function.
+  // Isso elimina a dependência de variáveis de ambiente no frontend, resolvendo o problema em produção.
+  const getMediaUrl = useCallback(async (path: string, tipo: 'personalizado' | 'padrao'): Promise<string> => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const accessToken = session?.access_token;
       if (!accessToken) {
         throw new Error("Usuário não autenticado");
       }
-      
+
+      // Determina o tipo de bucket a ser usado na Edge Function
+      const bucket_type = tipo === 'personalizado' ? 'exercicios' : 'exercicios-padrao';
+
       const response = await fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/get-image-url', {
         method: 'POST',
         headers: {
@@ -49,56 +53,28 @@ const DetalhesExercicio = () => {
           'Authorization': `Bearer ${accessToken}`
         },
         body: JSON.stringify({
-          filename,
-          bucket_type: 'exercicios' // Cloudflare para personalizados
+          filename: path,
+          bucket_type: bucket_type
         })
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Erro ao obter URL da imagem: ${response.status} - ${errorText}`);
       }
-      
+
       const result = await response.json();
-      
+
       if (!result.success || !result.url) {
         throw new Error('URL não retornada pelo servidor');
       }
-      
+
       return result.url;
     } catch (error) {
-      console.error('Erro ao obter URL assinada (personalizado):', error);
+      console.error(`Erro ao obter URL para ${tipo} (${path}):`, error);
       throw error;
     }
   }, []);
-
-  // ✅ FUNÇÃO SIMPLIFICADA: Para exercícios PADRÃO (URLs já são públicas!)
-  const getPublicImageUrlPadrao = useCallback((imagePath: string): string => {
-    // ✅ MODIFICADO: Aponta para o domínio público do Cloudflare R2
-    const r2PublicUrl = import.meta.env.VITE_R2_PUBLIC_URL_EXERCICIOS_PADRAO;
-    if (!r2PublicUrl) {
-      console.error("VITE_R2_PUBLIC_URL_EXERCICIOS_PADRAO não está configurada no .env");
-      // Retorna uma string vazia ou uma URL de placeholder para evitar quebras
-      return '';
-    }
-    // Constrói a URL final, por exemplo: https://pub-xxx.r2.dev/peito/supino.jpg
-    return `${r2PublicUrl}/${imagePath}`;
-  }, []);
-
-  // ✅ FUNÇÃO PRINCIPAL: Escolhe o método correto baseado no tipo
-  const getImageUrl = useCallback(async (imagePath: string, exercicio: Exercicio): Promise<string> => {
-    if (exercicio.tipo === 'personalizado') {
-      // Para exercícios personalizados: usar Cloudflare
-      let filename = imagePath;
-      if (filename.includes('/')) {
-        filename = filename.split('/').pop()?.split('?')[0] || filename;
-      }
-      return await getSignedImageUrlPersonalizado(filename);
-    } else {
-      // Para exercícios padrão: URLs já são públicas, não precisam de assinatura!
-      return getPublicImageUrlPadrao(imagePath);
-    }
-  }, [getSignedImageUrlPersonalizado, getPublicImageUrlPadrao]);
 
   // ✅ FUNÇÃO ATUALIZADA: Carregar URLs com lógica condicional
   const loadSignedUrls = useCallback(async (exercicio: Exercicio) => {
@@ -119,8 +95,8 @@ const DetalhesExercicio = () => {
       // Carregar imagem 1 se existir
       if (exercicio.imagem_1_url) {
         try {
-          console.log('📸 Carregando imagem 1...');
-          const signedUrl = await getImageUrl(exercicio.imagem_1_url, exercicio);
+          console.log(`📸 Carregando imagem 1 (${exercicio.tipo})...`);
+          const signedUrl = await getMediaUrl(exercicio.imagem_1_url, exercicio.tipo as 'personalizado' | 'padrao');
           urls.imagem1 = signedUrl;
           console.log('✅ Imagem 1 carregada');
         } catch (error) {
@@ -131,8 +107,8 @@ const DetalhesExercicio = () => {
       // Carregar imagem 2 se existir
       if (exercicio.imagem_2_url) {
         try {
-          console.log('📸 Carregando imagem 2...');
-          const signedUrl = await getImageUrl(exercicio.imagem_2_url, exercicio);
+          console.log(`📸 Carregando imagem 2 (${exercicio.tipo})...`);
+          const signedUrl = await getMediaUrl(exercicio.imagem_2_url, exercicio.tipo as 'personalizado' | 'padrao');
           urls.imagem2 = signedUrl;
           console.log('✅ Imagem 2 carregada');
         } catch (error) {
@@ -143,8 +119,8 @@ const DetalhesExercicio = () => {
       // Carregar vídeo se existir
       if (exercicio.video_url) {
         try {
-          console.log('🎥 Carregando vídeo...');
-          const signedUrl = await getImageUrl(exercicio.video_url, exercicio);
+          console.log(`🎥 Carregando vídeo (${exercicio.tipo})...`);
+          const signedUrl = await getMediaUrl(exercicio.video_url, exercicio.tipo as 'personalizado' | 'padrao');
           urls.video = signedUrl;
           console.log('✅ Vídeo carregado');
         } catch (error) {
@@ -159,7 +135,7 @@ const DetalhesExercicio = () => {
     } finally {
       setLoadingImages(false);
     }
-  }, [getImageUrl]);
+  }, [getMediaUrl]);
 
   // Carregar exercício
   useEffect(() => {
