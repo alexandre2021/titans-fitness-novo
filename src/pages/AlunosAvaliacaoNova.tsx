@@ -10,12 +10,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Camera, X, Save, ChevronLeft } from 'lucide-react';
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { ArrowLeft, Camera, X, Save, Upload, Eye, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { formatters } from '@/utils/formatters';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface AlunoInfo {
   id: string;
@@ -68,9 +69,6 @@ interface NovaAvaliacaoForm {
 }
 
 const AlunosAvaliacaoNova = () => {
-  const UPLOAD_IMAGE_ENDPOINT = 'https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/upload-imagem';
-  const DELETE_IMAGE_ENDPOINT = 'https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/delete-media';
-
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -80,6 +78,7 @@ const AlunosAvaliacaoNova = () => {
   const [aluno, setAluno] = useState<AlunoInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const isMobile = useIsMobile();
 
   // Limpeza de storage ao sair da página (voltar do navegador ou fechar aba)
   useEffect(() => {
@@ -109,42 +108,6 @@ const AlunosAvaliacaoNova = () => {
 
   const form = useForm<NovaAvaliacaoForm>();
 
-  // Função de upload de imagem
-  async function uploadImage(filename: string, imageBase64: string, alunoId: string, tipo: 'frente' | 'lado' | 'costas'): Promise<string> {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token;
-      if (!accessToken) {
-        throw new Error("Usuário não autenticado");
-      }
-      
-      const response = await fetch(UPLOAD_IMAGE_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        },
-        body: JSON.stringify({
-          filename,
-          image_base64: imageBase64,
-          aluno_id: alunoId,
-          tipo,
-          bucket_type: 'avaliacoes'
-        })
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Erro ao enviar imagem: ${errorText}`);
-      }
-      
-      return filename;
-    } catch (error) {
-      console.error('Erro ao enviar imagem:', error);
-      throw error;
-    }
-  }
-
   // Função para deletar imagens de uma avaliação
   const deletarImagensDaAvaliacao = async (avaliacao: AvaliacaoFisica) => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -167,7 +130,7 @@ const AlunosAvaliacaoNova = () => {
       if (!filename) return Promise.resolve();
 
       // ✅ CORREÇÃO: A chave no body foi alterada de 'file_url' para 'filename'.
-      return fetch(DELETE_IMAGE_ENDPOINT, {
+      return fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/delete-media', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -258,8 +221,81 @@ const AlunosAvaliacaoNova = () => {
     return peso / (alturaM * alturaM);
   };
 
+  // ✅ NOVA FUNÇÃO: Redimensiona e otimiza a imagem no cliente
+  const resizeImageFile = (file: File, maxWidth = 640): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+      const img = new Image();
+      
+      img.onload = () => {
+        const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+        canvas.width = img.width * ratio;
+        canvas.height = img.height * ratio;
+        
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        canvas.toBlob((blob) => {
+          const resizedFile = new File([blob!], file.name, {
+            type: 'image/jpeg',
+            lastModified: Date.now()
+          });
+          resolve(resizedFile);
+        }, 'image/jpeg', 0.85);
+      };
+      
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  // ✅ NOVA FUNÇÃO: Faz o upload direto para o R2 usando URL pré-assinada
+  const uploadFile = async (file: File | null): Promise<string | null> => {
+    if (!file) return null;
+    if (!user) throw new Error("Usuário não autenticado");
+
+    try {
+      const uniqueFilename = `av_${user.id}_${Date.now()}_${file.name.replace(/\s/g, '_')}`;
+
+      const { data: presignedData, error: presignedError } = await supabase.functions.invoke('upload-media', {
+        body: {
+          action: 'generate_upload_url',
+          filename: uniqueFilename,
+          contentType: file.type,
+          bucket_type: 'avaliacoes'
+        }
+      });
+
+      if (presignedError || !presignedData.signedUrl) {
+        throw new Error(presignedError?.message || 'Não foi possível obter a URL de upload.');
+      }
+
+      const uploadResponse = await fetch(presignedData.signedUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Falha no upload direto para o R2.');
+      }
+
+      return presignedData.path;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      console.error("Erro no upload:", error);
+      toast({
+        title: "Falha no Upload",
+        description: `Erro ao enviar o arquivo: ${errorMessage}`,
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
   const salvarAvaliacao = async (data: NovaAvaliacaoForm) => {
     setSaving(true);
+    toast({ title: "Processando", description: "Salvando avaliação e otimizando imagens..." });
+
     try {
       const imc = calcularIMC(data.peso, data.altura);
       const hoje = new Date().toISOString().split('T')[0];
@@ -298,22 +334,12 @@ const AlunosAvaliacaoNova = () => {
         }
       }
 
-      // Upload das imagens (se existirem)
-      const imageUrls: { frente?: string; lado?: string; costas?: string } = {};
-      for (const tipo of ['frente', 'lado', 'costas'] as const) {
-        const file = imageFiles[tipo];
-        if (file) {
-          const toBase64 = (file: File) => new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve((reader.result as string).split(',')[1]);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          });
-          const base64 = await toBase64(file);
-          const filename = `${id}_${tipo}_${Date.now()}.${file.name.split('.').pop()}`;
-          imageUrls[tipo] = await uploadImage(filename, base64, id!, tipo);
-        }
-      }
+      // ✅ NOVO: Upload das imagens otimizadas
+      const [foto_frente_url, foto_lado_url, foto_costas_url] = await Promise.all([
+        uploadFile(imageFiles.frente ?? null),
+        uploadFile(imageFiles.lado ?? null),
+        uploadFile(imageFiles.costas ?? null),
+      ]);
 
       // Salvar nova avaliação
       const { error } = await supabase
@@ -336,9 +362,9 @@ const AlunosAvaliacaoNova = () => {
           panturrilha_direita: data.panturrilha_direita || null,
           panturrilha_esquerda: data.panturrilha_esquerda || null,
           observacoes: data.observacoes || null,
-          foto_frente_url: imageUrls.frente || null,
-          foto_lado_url: imageUrls.lado || null,
-          foto_costas_url: imageUrls.costas || null,
+          foto_frente_url: foto_frente_url,
+          foto_lado_url: foto_lado_url,
+          foto_costas_url: foto_costas_url,
         }]);
 
       if (error) throw error;
@@ -363,11 +389,33 @@ const AlunosAvaliacaoNova = () => {
     }
   };
 
-  const handleImageChange = (tipo: 'frente' | 'lado' | 'costas', file: File | null) => {
-    setImageFiles(prev => ({
-      ...prev,
-      [tipo]: file || undefined
-    }));
+  // ✅ ATUALIZADO: Otimiza a imagem antes de salvar no estado
+  const handleImageChange = async (tipo: 'frente' | 'lado' | 'costas', file: File | null) => {
+    if (!file) {
+      setImageFiles(prev => ({ ...prev, [tipo]: undefined }));
+      return;
+    }
+    const resizedFile = await resizeImageFile(file);
+    setImageFiles(prev => ({ ...prev, [tipo]: resizedFile }));
+  };
+
+  // ✅ NOVA FUNÇÃO: Abstrai a seleção de mídia
+  const handleSelectMedia = async (tipo: 'frente' | 'lado' | 'costas') => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+
+    if (isMobile) {
+      input.capture = 'environment';
+    }
+
+    input.onchange = async (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (file) {
+        await handleImageChange(tipo, file);
+      }
+    };
+    input.click();
   };
 
   if (loading) {
@@ -402,11 +450,11 @@ const AlunosAvaliacaoNova = () => {
 
   return (
     <div className="space-y-6">
-      {/* Cabeçalho */}
-      <div className="flex items-center gap-4">
+      {/* Cabeçalho da Página (Apenas para Desktop) */}
+      <div className="hidden md:flex items-center gap-4">
         <Button
           variant="ghost"
-          onClick={() => navigate(`/alunos-avaliacoes/${id}`)}
+          onClick={handleCancelar}
           className="h-10 w-10 p-0"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -469,51 +517,72 @@ const AlunosAvaliacaoNova = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {['frente', 'lado', 'costas'].map((tipo) => (
-                <div key={tipo} className="flex flex-col items-center space-y-2">
-                  <Label className="capitalize font-medium">Foto {tipo}</Label>
-                  <input
-                    id={`foto_${tipo}`}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={e => {
-                      const file = e.target.files?.[0] || null;
-                      handleImageChange(tipo as 'frente' | 'lado' | 'costas', file);
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => document.getElementById(`foto_${tipo}`)?.click()}
-                    className="w-40 h-40 flex flex-col items-center justify-center relative overflow-hidden"
-                  >
-                    {imageFiles[tipo as 'frente' | 'lado' | 'costas'] ? (
-                      <img
-                        src={URL.createObjectURL(imageFiles[tipo as 'frente' | 'lado' | 'costas'] as File)}
-                        alt={`Preview ${tipo}`}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <>
-                        <Camera className="w-8 h-8 mb-2 text-muted-foreground" />
-                        <span className="text-sm">Selecionar</span>
-                      </>
-                    )}
-                  </Button>
-                  {imageFiles[tipo as 'frente' | 'lado' | 'costas'] && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleImageChange(tipo as 'frente' | 'lado' | 'costas', null)}
-                      className="text-destructive"
-                    >
-                      <X className="w-3 h-3 mr-1" /> Remover
-                    </Button>
-                  )}
-                </div>
-              ))}
+              {(['frente', 'lado', 'costas'] as const).map((tipo) => {
+                const file = imageFiles[tipo];
+                const previewUrl = file ? URL.createObjectURL(file) : null;
+
+                return (
+                  <div key={tipo}>
+                    <Label className="text-sm font-medium capitalize">Foto {tipo}</Label>
+                    <div className="mt-2 space-y-4">
+                      {file && previewUrl ? (
+                        <div className="space-y-3">
+                          <div className="relative inline-block">
+                            <img 
+                              src={previewUrl} 
+                              alt={`Preview ${tipo}`}
+                              className="w-full h-48 object-contain rounded-lg border shadow-sm bg-muted"
+                            />
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => window.open(previewUrl, '_blank')}
+                              className="flex items-center gap-2"
+                            >
+                              <Eye className="h-4 w-4" />
+                              Ver
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleSelectMedia(tipo)}
+                              className="flex items-center gap-2"
+                              disabled={saving}
+                            >
+                              <Camera className="h-4 w-4" />
+                              Alterar
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleImageChange(tipo, null)}
+                              className="flex items-center gap-2 text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Excluir
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center h-full flex flex-col justify-center">
+                          <p className="text-sm text-muted-foreground mb-3">Adicione uma foto de {tipo}.</p>
+                          <div className="flex justify-center">
+                            <Button type="button" variant="default" onClick={() => handleSelectMedia(tipo)} className="flex items-center gap-2" disabled={saving}>
+                              {isMobile ? <Camera className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
+                              {isMobile ? 'Tirar Foto' : 'Selecionar Imagem'}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -660,30 +729,37 @@ const AlunosAvaliacaoNova = () => {
           </CardContent>
         </Card>
 
-      {/* Botões de Ação */}
-      <div className="flex justify-end gap-2 pt-6">
+        {/* Espaçador para o botão flutuante */}
+        <div className="pb-24 md:pb-6" />
+      </form>
+
+      {/* Botão Salvar Flutuante */}
+      <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
+        {/* Mobile: Round floating button */}
         <Button
-          type="button"
-          variant="outline"
-          onClick={handleCancelar}
+          onClick={form.handleSubmit(salvarAvaliacao)}
           disabled={saving}
-          className="flex items-center"
+          className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
         >
-          <X className="h-4 w-4 mr-2" />
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={saving} className="bg-green-600 hover:bg-green-700 text-white px-8 flex items-center">
           {saving ? (
-            <>Salvando...</>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-foreground"></div>
           ) : (
-            <>
-              <Save className="h-4 w-4 mr-2" />
-              Salvar
-            </>
+            <Save />
           )}
+          <span className="sr-only">Salvar Avaliação</span>
+        </Button>
+
+        {/* Desktop: Standard floating button */}
+        <Button
+          onClick={form.handleSubmit(salvarAvaliacao)}
+          disabled={saving}
+          className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6"
+          size="lg"
+        >
+          <Save />
+          {saving ? "Salvando..." : "Salvar Avaliação"}
         </Button>
       </div>
-      </form>
     </div>
   );
 };

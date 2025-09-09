@@ -51,7 +51,7 @@
 #### **CopiaExercicio**
 - ✅ **Carregamento do exercício padrão** original por ID.
 - ✅ **Pré-preenchimento** do formulário com dados do exercício base.
-- ✅ **Cópia de mídias**: Se o exercício padrão tem mídias, elas são copiadas para o armazenamento do PT no Cloudflare R2.
+- ✅ **Cópia de mídias server-to-server**: Ao salvar, a nova Edge Function `copy-media` é acionada para copiar as mídias do bucket privado de exercícios padrão para o bucket privado do PT, de forma segura e eficiente.
 - ✅ **Indicação visual** do exercício sendo copiado.
 
 #### **EditarExercicio**
@@ -62,7 +62,7 @@
 #### **DetalhesExercicio**
 - ✅ **Visualização completa** do exercício com todas as informações.
 - ✅ **Sidebar com classificação** e metadados.
-- ✅ **Carregamento de mídias seguro**: Utiliza URLs assinadas e temporárias para mídias de exercícios personalizados (privados).
+- ✅ **Carregamento de mídias seguro**: Utiliza URLs assinadas e temporárias para **TODAS** as mídias (padrão e personalizadas), pois ambos os buckets de armazenamento são privados.
 - ✅ **Ações contextuais** (copiar, editar) baseadas no tipo do exercício.
 
 ### **5. Integração com Sistema Existente:**
@@ -73,9 +73,10 @@ Database (Supabase)
 ├── personal_trainers (controle de limite)
 │
 Edge Functions (Cloudflare)
-├── upload-imagem (bucket: exerciciospt)
+├── upload-media (gera URL pré-assinada para upload)
 ├── delete-media (limpeza de mídias)
-├── get-image-url (URLs assinadas)
+├── get-image-url (gera URL pré-assinada para visualização de qualquer mídia)
+├── copy-media (copia mídias de um bucket privado para outro)
 │
 Hooks Existentes
 ├── useAuth (autenticação)
@@ -119,8 +120,8 @@ src/
 │   └── types.ts                      # Tipos do banco (existente)
 │
 └── supabase/functions/ (Edge Functions)
-    ├── upload-imagem/
-    │   └── index.ts                  # Upload para Cloudflare
+    ├── upload-media/
+    │   └── index.ts                  # Gera URL pré-assinada para upload
     ├── delete-media/
     │   └── index.ts                  # Deleção do Cloudflare
     └── get-image-url/

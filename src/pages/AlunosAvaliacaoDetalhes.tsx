@@ -323,8 +323,8 @@ const AlunosAvaliacaoDetalhes = () => {
 
   return (
     <div className="space-y-6">
-      {/* Cabeçalho */}
-      <div className="flex items-center gap-4">
+      {/* Cabeçalho da Página (Apenas para Desktop) */}
+      <div className="hidden md:flex items-center gap-4">
         <Button 
           variant="ghost" 
           onClick={() => navigate(`/alunos-avaliacoes/${id}`)}
@@ -333,27 +333,25 @@ const AlunosAvaliacaoDetalhes = () => {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold md:text-3xl">Avaliação de {avaliacao.data_avaliacao.split('-').reverse().join('/')}</h1>
-          <p className="text-muted-foreground">Detalhes completos da avaliação física</p>
+          <h1 className="text-3xl font-bold">Detalhes da Avaliação</h1>
+          <p className="text-muted-foreground">Avaliação de {avaliacao.data_avaliacao.split('-').reverse().join('/')}</p>
         </div>
       </div>
 
       {/* Informações do Aluno */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-12 w-12">
-                {renderAvatar()}
-              </Avatar>
-              <div>
-                <h3 className="text-xl font-semibold">{aluno.nome_completo}</h3>
-                <p className="text-sm text-muted-foreground">{aluno.email}</p>
+          <div className="flex items-center gap-4">
+            <Avatar className="h-12 w-12">
+              {renderAvatar()}
+            </Avatar>
+            <div>
+              <h3 className="text-xl font-semibold">{aluno.nome_completo}</h3>
+              <p className="text-sm text-muted-foreground">{aluno.email}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">{avaliacao.data_avaliacao.split('-').reverse().join('/')}</span>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">{avaliacao.data_avaliacao.split('-').reverse().join('/')}</span>
             </div>
           </div>
         </CardHeader>

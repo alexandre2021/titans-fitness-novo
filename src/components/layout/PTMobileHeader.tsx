@@ -36,7 +36,7 @@ const PTMobileHeader = () => {
     if (user) fetchProfile();
   }, [user]);
 
-  const getPageConfig = (): { title: React.ReactNode; showBackButton: boolean } => {
+  const getPageConfig = (): { title: React.ReactNode; showBackButton: boolean; backPath?: string } => {
     const path = location.pathname;
 
     // Páginas de Ação (com botão de voltar)
@@ -45,8 +45,24 @@ const PTMobileHeader = () => {
     if (path.startsWith('/exercicios-pt/copia')) return { title: 'Copiar Exercício', showBackButton: true };
     if (path.startsWith('/exercicios-pt/detalhes')) return { title: 'Detalhes do Exercício', showBackButton: true };
     if (path.startsWith('/alunos-rotinas/')) return { title: 'Rotinas do Aluno', showBackButton: true };
-    if (path.startsWith('/alunos-avaliacoes/')) return { title: 'Avaliações do Aluno', showBackButton: true };
-    if (path.startsWith('/alunos-par-q/')) return { title: 'PAR-Q do Aluno', showBackButton: true };
+
+    // ✅ Lógica específica para Avaliações (mais específicas primeiro)
+    if (path.includes('/nova') && path.startsWith('/alunos-avaliacoes/')) {
+      return { title: 'Nova Avaliação', showBackButton: true };
+    }
+    // Regex para /alunos-avaliacoes/{uuid}/{uuid} (página de detalhes)
+    if (/^\/alunos-avaliacoes\/[a-zA-Z0-9-]+\/[a-zA-Z0-9-]+\/?$/.test(path)) {
+      return { title: 'Detalhes da Avaliação', showBackButton: true };
+    }
+    if (path.startsWith('/alunos-avaliacoes/')) {
+      return { title: 'Avaliações do Aluno', showBackButton: true, backPath: '/alunos' };
+    }
+
+    // ✅ Lógica mais específica para a página do PAR-Q
+    if (/^\/alunos-par-q\/[a-zA-Z0-9-]+\/?$/.test(path)) {
+      return { title: 'PAR-Q do Aluno', showBackButton: true, backPath: '/alunos' };
+    }
+    
     if (path.startsWith('/detalhes-aluno/')) return { title: 'Detalhes do Aluno', showBackButton: true };
     if (path.startsWith('/convite-aluno')) return { title: 'Convidar Aluno', showBackButton: true };
     if (path.startsWith('/rotinas-criar/')) return { title: 'Criar Rotina', showBackButton: true };
@@ -100,13 +116,13 @@ const PTMobileHeader = () => {
     );
   };
 
-  const { title, showBackButton } = getPageConfig();
+  const { title, showBackButton, backPath } = getPageConfig();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-20 flex items-center justify-between p-4 border-b bg-background md:hidden">
       <div className="flex items-center gap-2 flex-1 min-w-0">
         {showBackButton && (
-          <Button variant="ghost" size="icon" className="h-10 w-10 flex-shrink-0" onClick={() => navigate(-1)}>
+          <Button variant="ghost" size="icon" className="h-10 w-10 flex-shrink-0" onClick={() => (backPath ? navigate(backPath) : navigate(-1))}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}

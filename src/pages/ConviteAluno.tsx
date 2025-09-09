@@ -260,8 +260,8 @@ const ConviteAluno = () => {
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
-      {/* Cabeçalho */}
-      <div className="flex items-center gap-4">
+      {/* Cabeçalho da Página (Apenas para Desktop) */}
+      <div className="hidden md:flex items-center gap-4">
         <Button
           variant="ghost"
           onClick={() => navigate("/alunos")}
@@ -276,7 +276,6 @@ const ConviteAluno = () => {
           </p>
         </div>
       </div>
-
 
       {/* Validação de Token */}
       {tokenValidation && (
@@ -442,4 +441,3 @@ const ConviteAluno = () => {
 
 
 export default ConviteAluno;
-

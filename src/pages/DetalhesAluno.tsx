@@ -138,8 +138,8 @@ const DetalhesAluno = () => {
 
   return (
     <div className="space-y-6">
-      {/* Cabeçalho */}
-      <div className="flex items-center gap-4">
+      {/* Cabeçalho da Página (Apenas para Desktop) */}
+      <div className="hidden md:flex items-center gap-4">
         <Button 
           variant="ghost" 
           onClick={() => navigate('/alunos')}

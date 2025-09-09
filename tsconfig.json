@@ -16,5 +16,8 @@
     "noUnusedLocals": false,
     "strictNullChecks": false
   },
+  "ts-node": {
+    "esm": true
+  },
   "exclude": ["api", "node_modules"]
 }

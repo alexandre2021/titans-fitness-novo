@@ -196,6 +196,19 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   const [navegandoNovaRotina, setNavegandoNovaRotina] = useState(false);
   const [showDetalhesModal, setShowDetalhesModal] = useState(false);
 
+  const handleNovaRotina = () => {
+    if (rotinas.length > 0) {
+      toast({
+        title: "Já existe uma rotina atual",
+        description: "Conclua ou exclua a rotina atual antes de criar uma nova.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setNavegandoNovaRotina(true);
+    navigate(`/rotinas-criar/${alunoId}/configuracao`);
+  };
+
   useEffect(() => {
     const fetchDados = async () => {
       if (!alunoId || !user) return;
@@ -688,6 +701,22 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
       </Button>
     )}
   </div>
+        {/* Cabeçalho da Página (Apenas para Desktop) */}
+        <div className="hidden md:flex md:items-center md:justify-between">
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="ghost" 
+              onClick={() => navigate(modo === 'personal' ? '/alunos' : '/index-aluno')}
+              className="h-10 w-10 p-0"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold">Rotinas</h1>
+              <p className="text-muted-foreground">{modo === 'personal' ? `Gerencie as rotinas de ${aluno.nome_completo}` : 'Suas rotinas de treino'}</p>
+            </div>
+          </div>
+        </div>
 
   {/* Layout Mobile: Igual à página de Alunos */}
   <div className="flex items-center justify-between md:hidden">
@@ -1013,7 +1042,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
       <div>
         <p className="font-medium text-green-800 mb-1">Ativa</p>
         <p className="text-sm text-muted-foreground">
-          Pagamento confirmado, aluno pode acessar e executar os treinos normalmente.
+          Aluno pode acessar e executar os treinos normalmente.
         </p>
       </div>
     </div>
@@ -1023,7 +1052,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
       <div>
         <p className="font-medium text-red-800 mb-1">Bloqueada</p>
         <p className="text-sm text-muted-foreground">
-          Aluno atrasou mensalidade, acesso aos treinos foi suspenso temporariamente.
+          Acesso aos treinos foi suspenso temporariamente pelo personal trainer.
         </p>
       </div>
     </div>

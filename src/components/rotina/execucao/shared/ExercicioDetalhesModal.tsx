@@ -93,41 +93,40 @@ const ExercicioDetalhesContent: React.FC<{
     return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
   };
 
-  // --- LÓGICA DE MÍDIA CORRIGIDA (COPIADA DE DetalhesExercicio.tsx) ---
+  // --- LÓGICA DE MÍDIA UNIFICADA PARA BUCKETS PRIVADOS ---
 
-  const getSignedImageUrlPersonalizado = useCallback(async (filename: string): Promise<string> => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const accessToken = session?.access_token;
-    if (!accessToken) throw new Error("Usuário não autenticado para obter URL assinada.");
+  const getMediaUrl = useCallback(async (path: string, tipo: 'personalizado' | 'padrao'): Promise<string> => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      if (!accessToken) {
+        throw new Error("Usuário não autenticado");
+      }
 
-    const response = await fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/get-image-url', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
-      body: JSON.stringify({ filename, bucket_type: 'exercicios' })
-    });
+      // Determina o tipo de bucket a ser usado na Edge Function
+      const bucket_type = tipo === 'personalizado' ? 'exercicios' : 'exercicios-padrao';
 
-    if (!response.ok) throw new Error(`Erro da Edge Function: ${await response.text()}`);
-    const result = await response.json();
-    if (!result.success || !result.url) throw new Error('URL assinada não retornada pelo servidor.');
-    return result.url;
-  }, []);
+      const response = await fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/get-image-url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+          filename: path,
+          bucket_type: bucket_type
+        })
+      });
 
-  const getPublicImageUrlPadrao = useCallback((imagePath: string): string => {
-    if (imagePath.includes('/storage/v1/object/public/exercicios-padrao/')) {
-      return imagePath;
+      if (!response.ok) throw new Error(`Erro da Edge Function: ${await response.text()}`);
+      const result = await response.json();
+      if (!result.success || !result.url) throw new Error('URL assinada não retornada pelo servidor.');
+      return result.url;
+    } catch (error) {
+      console.error(`Erro ao obter URL para ${tipo} (${path}):`, error);
+      throw error;
     }
-    const { data: { publicUrl } } = supabase.storage.from('exercicios-padrao').getPublicUrl(imagePath);
-    return publicUrl;
   }, []);
-
-  const getImageUrl = useCallback(async (imagePath: string, tipo: 'padrao' | 'personalizado'): Promise<string> => {
-    if (tipo === 'personalizado') {
-      const filename = imagePath.split('/').pop()?.split('?')[0] || imagePath;
-      return getSignedImageUrlPersonalizado(filename);
-    } else {
-      return getPublicImageUrlPadrao(imagePath);
-    }
-  }, [getSignedImageUrlPersonalizado, getPublicImageUrlPadrao]);
 
   useEffect(() => {
     const loadMedia = async () => {
@@ -144,13 +143,13 @@ const ExercicioDetalhesContent: React.FC<{
         const tipoExercicio = exercicio.tipo as 'padrao' | 'personalizado';
 
         if (exercicio.imagem_1_url) {
-          urls.imagem1 = await getImageUrl(exercicio.imagem_1_url, tipoExercicio);
+          urls.imagem1 = await getMediaUrl(exercicio.imagem_1_url, tipoExercicio);
         }
         if (exercicio.imagem_2_url) {
-          urls.imagem2 = await getImageUrl(exercicio.imagem_2_url, tipoExercicio);
+          urls.imagem2 = await getMediaUrl(exercicio.imagem_2_url, tipoExercicio);
         }
         if (exercicio.video_url) {
-          urls.video = await getImageUrl(exercicio.video_url, tipoExercicio);
+          urls.video = await getMediaUrl(exercicio.video_url, tipoExercicio);
         }
         
         setMediaUrls(urls);
@@ -164,7 +163,7 @@ const ExercicioDetalhesContent: React.FC<{
     if (exercicio) {
       void loadMedia();
     }
-  }, [exercicio, getImageUrl]);
+  }, [exercicio, getMediaUrl]);
 
   // --- FIM DA LÓGICA DE MÍDIA ---
 
@@ -438,7 +437,17 @@ export const ExercicioDetalhesModal = ({ visible, exercicioId, onClose }: Props)
         equipamento: exercicioData.equipamento || '',
         grupo_muscular: exercicioData.grupo_muscular || '',
         grupo_muscular_primario: exercicioData.grupo_muscular_primario || exercicioData.grupo_muscular || '',
-        grupos_musculares_secundarios: exercicioData.grupos_musculares_secundarios || [],
+        grupos_musculares_secundarios: (() => {
+          const value = exercicioData.grupos_musculares_secundarios as unknown;
+          if (Array.isArray(value)) {
+            return value.filter((item): item is string => typeof item === 'string');
+          }
+          if (typeof value === 'string') {
+            // Remove colchetes e aspas, depois divide por vírgula
+            return value.replace(/[[\]"]/g, '').split(',').map(s => s.trim()).filter(Boolean);
+          }
+          return [];
+        })(),
         descricao: exercicioData.descricao || undefined,
         instrucoes: exercicioData.instrucoes || undefined,
         tipo: exercicioData.tipo || 'padrao',

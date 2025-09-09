@@ -177,7 +177,7 @@ O processo de salvar o progresso, pausar e finalizar permanece o mesmo e é gere
    - **Lógica FIFO:** Verifica rotinas arquivadas do aluno (limite 4)
    - **Limpeza:** Remove rotinas antigas (PDFs do Cloudflare + registros do banco)
    - **Geração PDF:** Chama edge function `gerar-pdf-conclusao`
-   - **Upload:** Envia PDF para Cloudflare R2 via `upload-imagem`
+   - **Upload:** Envia PDF para Cloudflare R2 via `upload-media`
    - **Arquivamento:** Salva metadados em `rotinas_arquivadas`
    - **Exclusão:** Remove rotina e dados relacionados da base ativa (CASCADE)
 

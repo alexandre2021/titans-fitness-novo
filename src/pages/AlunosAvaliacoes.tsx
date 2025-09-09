@@ -282,21 +282,6 @@ const AlunosAvaliacoes = () => {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost" 
-              onClick={() => navigate('/alunos')}
-              className="h-10 w-10 p-0"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold">Avaliações</h1>
-              <p className="text-muted-foreground">Histórico de avaliações físicas e evolução</p>
-            </div>
-          </div>
-        </div>
         <div className="flex items-center justify-center min-h-[400px]">
           <p className="text-lg text-muted-foreground">Carregando...</p>
         </div>
@@ -307,16 +292,6 @@ const AlunosAvaliacoes = () => {
   if (!aluno) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate('/alunos')}
-            className="h-10 w-10 p-0"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-3xl font-bold">Avaliações</h1>
-        </div>
         <Card>
           <CardContent className="flex items-center justify-center py-12">
             <p className="text-lg text-muted-foreground">Aluno não encontrado.</p>
@@ -328,55 +303,22 @@ const AlunosAvaliacoes = () => {
 
   return (
     <div className="space-y-6">
-      {/* Cabeçalho */}
-      <div className="space-y-4">
-        {/* Layout Desktop: Título e botão na mesma linha */}
-        <div className="hidden md:flex md:items-center md:justify-between">
-          <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost" 
-              onClick={() => navigate('/alunos')}
-              className="h-10 w-10 p-0"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold">Avaliações</h1>
-              <p className="text-muted-foreground">Histórico de avaliações físicas e evolução</p>
-            </div>
-          </div>
-          <Button onClick={handleNovaAvaliacao}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Avaliação
-          </Button>
-        </div>
-
-        {/* Layout Mobile: Igual à página de Alunos */}
-        <div className="flex items-center justify-between md:hidden">
-          <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost" 
-              onClick={() => navigate('/alunos')}
-              className="h-10 w-10 p-0"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold">Avaliações</h1>
-              <p className="text-sm text-muted-foreground">Histórico de avaliações físicas e evolução</p>
-            </div>
-          </div>
-          {/* Botão só com ícone + igual ao de Alunos */}
-          <Button
-            onClick={handleNovaAvaliacao}
-            size="icon"
-            className="rounded-full" // A cor agora virá do tema (bg-primary)
+      {/* Cabeçalho da Página (Apenas para Desktop) */}
+      <div className="hidden md:flex md:items-center md:justify-between">
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate('/alunos')}
+            className="h-10 w-10 p-0"
           >
-            <Plus className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4" />
           </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Avaliações do Aluno</h1>
+            <p className="text-muted-foreground">Histórico de avaliações físicas e evolução</p>
+          </div>
         </div>
       </div>
-
       {/* Informações do Aluno */}
       <Card>
         <CardHeader>
@@ -436,10 +378,6 @@ const AlunosAvaliacoes = () => {
               <p className="text-muted-foreground mb-4">
                 As avaliações físicas realizadas aparecerão aqui. Recomendamos um intervalo mínimo de 30 dias entre avaliações para resultados mais precisos.
               </p>
-              <Button onClick={handleNovaAvaliacao}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Avaliação
-              </Button>
             </div>
           ) : (
             <div className="space-y-4">
@@ -550,6 +488,28 @@ const AlunosAvaliacoes = () => {
           Criar mesmo assim
         </Button>
       </ResponsiveAlertDialog>
+
+      {/* Botão Flutuante para Nova Avaliação */}
+      <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
+        {/* Mobile: Round floating button */}
+        <Button
+          onClick={handleNovaAvaliacao}
+          className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
+          aria-label="Nova Avaliação"
+        >
+          <Plus />
+        </Button>
+
+        {/* Desktop: Standard floating button */}
+        <Button
+          onClick={handleNovaAvaliacao}
+          className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6"
+          size="lg"
+        >
+          <Plus />
+          Nova Avaliação
+        </Button>
+      </div>
     </div>
   );
 };

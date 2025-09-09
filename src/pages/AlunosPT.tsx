@@ -141,14 +141,6 @@ const AlunosPT = () => {
               Gerencie seus alunos
             </p>
           </div>
-          {/* Botão compacto mobile */}
-          <Button 
-            onClick={handleConvidarAluno} 
-            size="icon"
-            className="rounded-full"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
         </div>
 
         {/* Desktop: Header tradicional */}
@@ -159,10 +151,6 @@ const AlunosPT = () => {
               Gerencie seus alunos e acompanhe seu progresso
             </p>
           </div>
-          <Button onClick={handleConvidarAluno} className="flex items-center gap-2">
-            <UserPlus className="h-4 w-4" />
-            Convidar Aluno
-          </Button>
         </div>
       </div>
 
@@ -302,6 +290,28 @@ const AlunosPT = () => {
           )}
         </>
       )}
+
+      {/* Botão Flutuante para Convidar Aluno */}
+      <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
+        {/* Mobile: Round floating button */}
+        <Button
+          onClick={handleConvidarAluno}
+          className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
+          aria-label="Convidar Aluno"
+        >
+          <UserPlus />
+        </Button>
+
+        {/* Desktop: Standard floating button */}
+        <Button
+          onClick={handleConvidarAluno}
+          className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6"
+          size="lg"
+        >
+          <UserPlus />
+          Convidar Aluno
+        </Button>
+      </div>
     </div>
   );
 };

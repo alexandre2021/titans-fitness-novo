@@ -509,7 +509,9 @@ export const useExercicioExecucao = (
             *,
             exercicios_rotina (
               *,
-              series (*)
+              series (*),
+              exercicio_1:exercicios!exercicio_1_id(id, nome, equipamento),
+              exercicio_2:exercicios!exercicio_2_id(id, nome, equipamento)
             )
           )
         `)
@@ -606,7 +608,7 @@ export const useExercicioExecucao = (
       // 2. Buscar execuções da rotina
       const { data: execucoes, error: execucoesError } = await supabase
         .from('execucoes_sessao')
-        .select('*')
+        .select('*, execucoes_series(*)')
         .eq('rotina_id', rotinaId)
         .order('created_at');
 
@@ -648,31 +650,41 @@ export const useExercicioExecucao = (
       const { pdf_base64 } = (await pdfResponse.json()) as PdfResponse;
       console.log('✅ PDF gerado com sucesso!');
 
-      // 4. Upload do PDF para Cloudflare R2
+      // 4. ✅ CORREÇÃO: Upload do PDF para Cloudflare R2 usando a função 'upload-media'
       console.log('☁️ Fazendo upload do PDF para Cloudflare...');
       const filename = `rotina_${rotinaId}_${Date.now()}.pdf`;
       
-      const uploadResponse = await fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/upload-imagem', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        },
-        body: JSON.stringify({
-          filename,
-          image_base64: pdf_base64,
-          aluno_id: rotinaCompleta.aluno_id,
-          tipo: 'pdf_conclusao',
+      // Converter base64 para Blob
+      const pdfBlob = await (await fetch(`data:application/pdf;base64,${pdf_base64}`)).blob();
+
+      // Obter URL pré-assinada da função 'upload-media'
+      const { data: presignedData, error: presignedError } = await supabase.functions.invoke('upload-media', {
+        body: {
+          action: 'generate_upload_url',
+          filename: filename,
+          contentType: 'application/pdf',
           bucket_type: 'rotinas'
-        })
+        }
+      });
+
+      if (presignedError || !presignedData.signedUrl) {
+        throw new Error(presignedError?.message || 'Não foi possível obter URL de upload para o PDF.');
+      }
+
+      // Upload direto para Cloudflare R2
+      const uploadResponse = await fetch(presignedData.signedUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/pdf' },
+        body: pdfBlob
       });
 
       if (!uploadResponse.ok) {
-        console.error('❌ Erro ao fazer upload do PDF:', await uploadResponse.text());
-        return false;
+        const errorBody = await uploadResponse.text();
+        console.error('Erro no corpo da resposta do upload do PDF:', errorBody);
+        throw new Error(`Erro no upload do PDF: ${uploadResponse.status}`);
       }
 
-      const { url: pdfUrl } = await uploadResponse.json();
+      const pdfUrl = presignedData.path; // Usar o caminho retornado pela função
       console.log('✅ PDF uploaded com sucesso:', pdfUrl);
 
       // 5. Calcular estatísticas para arquivamento
