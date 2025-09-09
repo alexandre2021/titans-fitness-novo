@@ -493,7 +493,6 @@ const CopiaExercicio = () => {
         return presignedData.path;
       } catch (error) {
         console.error("Erro no upload:", error);
-        toast.error("Falha no Upload", { description: `Erro ao enviar o arquivo: ${error.message}` });
         throw error;
       }
     }
@@ -504,7 +503,6 @@ const CopiaExercicio = () => {
         try {
           // ✅ NOVA LÓGICA: Chamar a Edge Function de cópia server-to-server
           console.log('🔄 Solicitando cópia de mídia do exercício padrão:', file);
-          toast.info("Copiando mídia", { description: "Criando cópia da mídia para seu exercício..." });
 
           const { data: copyResult, error: copyError } = await supabase.functions.invoke('copy-media', {
             body: {
@@ -517,14 +515,10 @@ const CopiaExercicio = () => {
           }
 
           console.log('✅ Cópia criada com sucesso via Edge Function:', copyResult.path);
-          toast.success("Cópia criada", { description: "Mídia copiada com sucesso!" });
           return copyResult.path;
           
         } catch (error) {
           console.error('❌ Erro ao copiar mídia:', error);
-          toast.error("Erro na cópia", { 
-            description: `Falha ao copiar mídia: ${error.message}` 
-          });
           throw error;
         }
       }
@@ -554,64 +548,58 @@ const CopiaExercicio = () => {
 
     setSaving(true);
 
-    try {
-      toast.info("Processando", { description: "Salvando e otimizando mídias..." });
-
-      // Upload direto das mídias para Cloudflare
-      const [imagem_1_url_final, imagem_2_url_final, video_url_final] = await Promise.all([
-        uploadFile(midias.imagem_1_url),
-        uploadFile(midias.imagem_2_url),
-        uploadFile(midias.video_url),
-      ]);
-
-      const instrucoesFinal = instrucoesList.filter(i => i.trim()).join('#');
-      const gruposSecundariosArray = formData.grupos_musculares_secundarios
-        .split(',')
-        .map(s => s.trim())
-        .filter(Boolean);
-
-      // Criar cópia personalizada no banco
-      const { data: exercicio, error } = await supabase
-        .from('exercicios')
-        .insert({
-          nome: formData.nome.trim(),
-          descricao: formData.descricao.trim(),
-          grupo_muscular: formData.grupo_muscular,
-          equipamento: formData.equipamento,
-          dificuldade: formData.dificuldade,
-          instrucoes: instrucoesFinal.trim(),
-          grupo_muscular_primario: formData.grupo_muscular_primario.trim() || null,
-          grupos_musculares_secundarios: formData.grupos_musculares_secundarios.trim() || null,
-          imagem_1_url: imagem_1_url_final,
-          imagem_2_url: imagem_2_url_final,
-          video_url: video_url_final,
-          youtube_url: midias.youtube_url as string || null,
-          tipo: 'personalizado',
-          pt_id: user.id,
-          exercicio_padrao_id: exercicioOriginal?.id,
-          is_ativo: true,
-          status_midia: 'concluido'
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      toast.success("Sucesso", {
-        description: "Cópia do exercício criada com imagens otimizadas!",
+    const promise = async () => {
+        // 1. Processar e fazer upload/cópia de todas as mídias
+        const [imagem_1_url_final, imagem_2_url_final, video_url_final] = await Promise.all([
+          uploadFile(midias.imagem_1_url),
+          uploadFile(midias.imagem_2_url),
+          uploadFile(midias.video_url),
+        ]);
+  
+        const instrucoesFinal = instrucoesList.filter(i => i.trim()).join('#');
+  
+        // 2. Inserir o novo exercício no banco de dados
+        const { data: exercicio, error } = await supabase
+          .from('exercicios')
+          .insert({
+            nome: formData.nome.trim(),
+            descricao: formData.descricao.trim(),
+            grupo_muscular: formData.grupo_muscular,
+            equipamento: formData.equipamento,
+            dificuldade: formData.dificuldade,
+            instrucoes: instrucoesFinal.trim(),
+            grupo_muscular_primario: formData.grupo_muscular_primario.trim() || null,
+            grupos_musculares_secundarios: formData.grupos_musculares_secundarios.trim() || null,
+            imagem_1_url: imagem_1_url_final,
+            imagem_2_url: imagem_2_url_final,
+            video_url: video_url_final,
+            youtube_url: midias.youtube_url as string || null,
+            tipo: 'personalizado',
+            pt_id: user.id,
+            exercicio_padrao_id: exercicioOriginal?.id,
+            is_ativo: true,
+            status_midia: 'concluido'
+          })
+          .select()
+          .single();
+  
+        if (error) throw error;
+        return exercicio;
+      };
+  
+      toast.promise(promise(), {
+        loading: 'Salvando cópia do exercício...',
+        success: (exercicio) => {
+          setSaving(false);
+          navigate('/exercicios-pt');
+          return `Exercício "${exercicio.nome}" copiado com sucesso!`;
+        },
+        error: (err) => {
+          setSaving(false);
+          console.error('❌ Erro ao criar cópia:', err);
+          return `Erro ao criar cópia: ${err.message}`;
+        },
       });
-
-      console.log('✅ Cópia do exercício criada:', exercicio);
-      navigate('/exercicios-pt');
-      
-    } catch (error) {
-      console.error('❌ Erro ao criar cópia:', error);
-      toast.error("Erro ao criar cópia", {
-        description: "Não foi possível criar a cópia do exercício. Tente novamente.",
-      });
-    } finally {
-      setSaving(false);
-    }
   };
 
   if (loading) {
