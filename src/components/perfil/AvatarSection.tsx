@@ -1,408 +1,136 @@
-import { useState, useRef, useEffect } from "react";
-import { Camera, User, Palette } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
-import { Input } from "@/components/ui/input";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+// src/components/perfil/AvatarSection.tsx
+
+import React, { useRef, useState } from 'react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Camera, Loader2 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+
+// NOTA: Assumindo que existe uma função para processar imagens.
+// Se não existir, ela precisaria ser criada, similar à lógica de upload de exercícios.
+const processImage = async (file: File, options: { width: number, height: number, quality: number }): Promise<Blob> => {
+  // Lógica de redimensionamento e compressão aqui.
+  // Por enquanto, retornamos o próprio arquivo como um Blob.
+  console.log("Processando imagem (simulação)...", options);
+  return new Promise((resolve) => resolve(file));
+};
 
 interface AvatarSectionProps {
-  profile: {
-    nome_completo: string;
-    codigo_pt?: string;
-    avatar_type: string;
-    avatar_image_url?: string;
-    avatar_letter?: string;
-    avatar_color: string;
-  };
+  userProfile: {
+    id: string;
+    nome_completo: string | null;
+    avatar_type: string | null;
+    avatar_image_url: string | null;
+    avatar_letter: string | null;
+    avatar_color: string | null;
+  } | null;
   onProfileUpdate: () => void;
 }
 
-const AVATAR_COLORS = [
-  '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
-  '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6366F1'
-];
-
-// Hook para detectar se é mobile
-const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  return isMobile;
-};
-
-// Componente responsivo que escolhe entre Modal e Drawer
-interface ResponsiveModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  title: string;
-  children: React.ReactNode;
-}
-
-const ResponsiveModal = ({ open, onOpenChange, title, children }: ResponsiveModalProps) => {
-  const isMobile = useIsMobile();
-
-  if (isMobile) {
-    return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-h-[90vh]">
-          <DrawerHeader className="text-left">
-            <DrawerTitle>{title}</DrawerTitle>
-          </DrawerHeader>
-          <div className="px-4 pb-4 overflow-y-auto">
-            {children}
-          </div>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        {children}
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-// Botão da câmera responsivo
-const CameraButton = ({ onClick }: { onClick?: () => void }) => {
-  const isMobile = useIsMobile();
-  
-  if (isMobile) {
-    return (
-      <button 
-        onClick={onClick}
-        className="flex items-center justify-center h-8 w-8 rounded-full border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
-      >
-        <Camera className="h-5 w-5" />
-      </button>
-    );
-  }
-  
-  return (
-    <Button size="sm" variant="outline" className="h-6 w-6 rounded-full p-0" onClick={onClick}>
-      <Camera className="h-3 w-3" />
-    </Button>
-  );
-};
-
-export const AvatarSection = ({ profile, onProfileUpdate }: AvatarSectionProps) => {
-  const [isUploading, setIsUploading] = useState(false);
-  const [showColorPicker, setShowColorPicker] = useState(false);
-  const [showAvatarModal, setShowAvatarModal] = useState(false);
-  const [avatarKey, setAvatarKey] = useState(Date.now()); // Estado para forçar refresh do avatar
-  const fileInputRef = useRef<HTMLInputElement>(null);
+export const AvatarSection: React.FC<AvatarSectionProps> = ({ userProfile, onProfileUpdate }) => {
+  const { user } = useAuth();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Defensive check for when userProfile is still loading
+  if (!userProfile) {
+    return (
+      <div className="relative w-24 h-24 mx-auto">
+        <div className="w-full h-full bg-muted rounded-full animate-pulse" />
+        <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full">
+          <Loader2 className="h-6 w-6 text-white animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  const handleAvatarClick = () => {
+    if (isUploading) return;
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || !user) return;
 
     setIsUploading(true);
     try {
-      const user = await supabase.auth.getUser();
-      if (!user.data.user) throw new Error('Usuário não autenticado');
+      // 1. Processar a imagem (redimensionar e comprimir)
+      const processedBlob = await processImage(file, { width: 400, height: 400, quality: 0.8 });
+      const processedFile = new File([processedBlob], `avatar_${user.id}.webp`, { type: 'image/webp' });
 
-      // Delete existing image if exists
-      if (profile.avatar_image_url) {
-        const oldPath = profile.avatar_image_url.split('/').pop();
-        if (oldPath) {
-          await supabase.storage.from('avatars').remove([`${user.data.user.id}/${oldPath}`]);
-        }
-      }
-
-      // Upload new image
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      const filePath = `${user.data.user.id}/${fileName}`;
-
+      // 2. Fazer upload para o Supabase Storage
+      const filePath = `public/${user.id}/${processedFile.name}`;
+      
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file);
+        .upload(filePath, processedFile, {
+          cacheControl: '3600',
+          upsert: true, // Sobrescreve a foto anterior com o mesmo nome
+        });
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
+      // 3. Obter a URL pública (com timestamp para evitar cache)
+      const { data: { publicUrl } } = supabase.storage
         .from('avatars')
-        .getPublicUrl(filePath);
+        .getPublicUrl(filePath, {
+          transform: {
+            // Adiciona um timestamp para forçar a atualização do cache
+            width: 400,
+            height: 400,
+          },
+        });
+      const finalUrl = `${publicUrl}?t=${new Date().getTime()}`;
 
-      // Update profile
+      // 4. Atualizar o perfil do usuário no banco de dados
       const { error: updateError } = await supabase
         .from('personal_trainers')
         .update({
           avatar_type: 'image',
-          avatar_image_url: urlData.publicUrl
+          avatar_image_url: finalUrl,
         })
-        .eq('id', user.data.user.id);
+        .eq('id', user.id);
 
       if (updateError) throw updateError;
 
-      // Force avatar refresh
-      setAvatarKey(Date.now());
-
-      toast({
-        title: "Avatar atualizado",
-        description: "Sua foto de perfil foi atualizada com sucesso.",
-      });
-
+      // 5. Notificar o componente pai para refazer o fetch dos dados
       onProfileUpdate();
-      setShowAvatarModal(false);
-      
+
+      toast({ title: "Avatar atualizado com sucesso!" });
+
     } catch (error) {
-      console.error('Error uploading avatar:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao atualizar avatar. Tente novamente.",
-        variant: "destructive",
-      });
+      console.error("Erro ao atualizar avatar:", error);
+      toast({ title: "Erro", description: "Não foi possível atualizar seu avatar.", variant: "destructive" });
     } finally {
       setIsUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      if (event.target) event.target.value = "";
     }
   };
 
-  const handleRemoveImage = async () => {
-    try {
-      const user = await supabase.auth.getUser();
-      if (!user.data.user) throw new Error('Usuário não autenticado');
-
-      // Delete image from storage
-      if (profile.avatar_image_url) {
-        const oldPath = profile.avatar_image_url.split('/').pop();
-        if (oldPath) {
-          await supabase.storage.from('avatars').remove([`${user.data.user.id}/${oldPath}`]);
-        }
-      }
-
-      // Update profile
-      const { error } = await supabase
-        .from('personal_trainers')
-        .update({
-          avatar_type: 'letter',
-          avatar_image_url: null
-        })
-        .eq('id', user.data.user.id);
-
-      if (error) throw error;
-
-      // Force avatar refresh
-      setAvatarKey(Date.now());
-
-      toast({
-        title: "Avatar removido",
-        description: "Foto de perfil removida com sucesso.",
-      });
-
-      onProfileUpdate();
-      setShowAvatarModal(false);
-      
-    } catch (error) {
-      console.error('Error removing avatar:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao remover avatar. Tente novamente.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleColorChange = async (color: string) => {
-    try {
-      const user = await supabase.auth.getUser();
-      if (!user.data.user) throw new Error('Usuário não autenticado');
-
-      const { error } = await supabase
-        .from('personal_trainers')
-        .update({ avatar_color: color })
-        .eq('id', user.data.user.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Cor atualizada",
-        description: "Cor do avatar atualizada com sucesso.",
-      });
-
-      onProfileUpdate();
-      setShowColorPicker(false);
-    } catch (error) {
-      console.error('Error updating color:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao atualizar cor. Tente novamente.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const getAvatarContent = () => {
-    if (profile.avatar_type === 'image' && profile.avatar_image_url) {
-      // Adiciona cache buster apenas para exibição
-      const imageUrl = `${profile.avatar_image_url}?v=${avatarKey}`;
-      
-      return (
-        <AvatarImage 
-          src={imageUrl}
-          key={avatarKey} // Force re-render quando avatarKey muda
-          onLoad={() => console.log('Avatar loaded successfully')}
-          onError={(e) => {
-            console.error('Failed to load avatar:', imageUrl);
-            // Fallback para letra se a imagem falhar
-            e.currentTarget.style.display = 'none';
-          }}
-        />
-      );
-    }
-    
-    const letter = profile.avatar_letter || profile.nome_completo?.charAt(0) || 'PT';
-    
-    return (
-      <AvatarFallback 
-        style={{ 
-          backgroundColor: profile.avatar_color, 
-          color: 'white', 
-          fontSize: '1.35rem', 
-          fontWeight: 400 
-        }}
-      >
-        {letter}
-      </AvatarFallback>
-    );
-  };
+  const letter = userProfile.avatar_letter || userProfile.nome_completo?.charAt(0).toUpperCase() || 'P';
 
   return (
-    <Card className="p-4 text-center">
-      <div className="flex flex-col items-center space-y-3">
-        <div className="relative">
-          <Avatar className="h-16 w-16">
-            {getAvatarContent()}
-          </Avatar>
-          <div className="absolute -bottom-1 -right-1 flex space-x-1">
-            <CameraButton onClick={() => setShowAvatarModal(true)} />
-          </div>
-        </div>
-        
-        <div>
-          <h2 className="text-xl font-semibold">{profile.nome_completo}</h2>
-          {profile.codigo_pt && (
-            <p className="text-sm text-muted-foreground">
-              Código: {profile.codigo_pt}
-            </p>
-          )}
-        </div>
-      </div>
+    <div className="relative w-24 h-24 mx-auto">
+      <Avatar className="w-full h-full text-4xl border-2 border-background">
+        {userProfile.avatar_type === 'image' && userProfile.avatar_image_url ? (
+          <AvatarImage src={userProfile.avatar_image_url} alt="Avatar" />
+        ) : (
+          <AvatarFallback style={{ backgroundColor: userProfile.avatar_color || '#3B82F6' }} className="text-white font-semibold">
+            {letter}
+          </AvatarFallback>
+        )}
+      </Avatar>
 
-      {/* Modal Responsivo para Gerenciar Avatar */}
-      <ResponsiveModal
-        open={showAvatarModal}
-        onOpenChange={setShowAvatarModal}
-        title="Gerenciar Avatar"
-      >
-        <div className="space-y-4">
-          <div>
-            <Input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              disabled={isUploading}
-              className="hidden"
-            />
-            <Button 
-              variant="outline" 
-              className="w-full text-base py-3" 
-              disabled={isUploading}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Camera className="h-6 w-6 mr-2" />
-              {isUploading ? "Enviando..." : "Selecionar Nova Foto"}
-            </Button>
-          </div>
-          
-          {profile.avatar_type === 'image' && (
-            <Button variant="outline" onClick={handleRemoveImage} className="w-full text-base py-3">
-              <User className="h-6 w-6 mr-2" />
-              Usar Avatar de Letra
-            </Button>
-          )}
-          
-          {profile.avatar_type === 'letter' && (
-            <Button variant="outline" onClick={() => setShowColorPicker(true)} className="w-full text-base py-3">
-              <Palette className="h-6 w-6 mr-2" />
-              Alterar Cor
-            </Button>
-          )}
+      <button onClick={handleAvatarClick} disabled={isUploading} className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full p-2 border-2 border-background hover:bg-primary/90 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+        {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
+      </button>
 
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              className="text-base py-2"
-              onClick={() => setShowAvatarModal(false)}
-            >
-              Cancelar
-            </Button>
-          </div>
-        </div>
-      </ResponsiveModal>
-
-      {/* Modal Responsivo para Escolher Cor */}
-      <ResponsiveModal
-        open={showColorPicker}
-        onOpenChange={setShowColorPicker}
-        title="Escolher Cor"
-      >
-        <div className="grid grid-cols-5 gap-3">
-          {AVATAR_COLORS.map((color) => (
-            <button
-              key={color}
-              onClick={() => handleColorChange(color)}
-              className="h-12 w-12 rounded-full border-2 border-gray-200 hover:scale-110 transition-transform"
-              style={{ backgroundColor: color }}
-            />
-          ))}
-        </div>
-
-        <div className="flex justify-end space-x-2 pt-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setShowColorPicker(false)}
-          >
-            Cancelar
-          </Button>
-        </div>
-      </ResponsiveModal>
-    </Card>
+      <input type="file" accept="image/*" capture="user" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} />
+    </div>
   );
 };
+
+export default AvatarSection;

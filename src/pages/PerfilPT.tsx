@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -15,35 +15,34 @@ const PerfilPT = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<PTProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchTrigger, setFetchTrigger] = useState(0);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user) return;
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('personal_trainers')
-          .select('*')
-          .eq('id', user.id)
-          .single();
+  const fetchProfile = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('personal_trainers')
+        .select('*')
+        .eq('id', user.id)
+        .single();
 
-        if (error) throw error;
-        setProfile(data);
-      } catch (error) {
-        console.error("Erro ao buscar perfil do PT:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (user) {
-      fetchProfile();
+      if (error) throw error;
+      setProfile(data);
+    } catch (error) {
+      console.error("Erro ao buscar perfil do PT:", error);
+    } finally {
+      setLoading(false);
     }
   }, [user]);
 
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile, fetchTrigger]);
+
   const handleProfileUpdate = () => {
-    // Force re-fetch of profile data by reloading the hook
-    window.location.reload();
+    // Trigger a re-fetch by updating the state
+    setFetchTrigger(c => c + 1);
   };
 
   if (loading) {
@@ -90,7 +89,7 @@ const PerfilPT = () => {
   <h1 className="text-2xl font-normal">Perfil de treinador</h1>
       </div>
 
-      <AvatarSection profile={profile} onProfileUpdate={handleProfileUpdate} />
+      <AvatarSection userProfile={profile} onProfileUpdate={handleProfileUpdate} />
       
       <PerfilTabs profile={profile} onProfileUpdate={handleProfileUpdate} />
     </div>
