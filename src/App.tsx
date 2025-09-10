@@ -57,6 +57,7 @@ import ExecucaoExecutarTreino from "./pages/ExecucaoExecutarTreino";
 
 // ✅ IMPORTAÇÃO PARA PWA
 import PwaInstallPrompt from "@/components/pwa/PwaInstallPrompt";
+import PwaUpdateNotification from "@/components/pwa/PwaUpdateNotification";
 
 const queryClient = new QueryClient();
 
@@ -68,6 +69,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <PwaInstallPrompt />
+          <PwaUpdateNotification />
           <Routes>
             {/* ✅ ROTAS PÚBLICAS - SEM AUTHGUARD */}
             <Route path="/" element={<Index />} />

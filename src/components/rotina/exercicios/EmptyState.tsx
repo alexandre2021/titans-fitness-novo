@@ -34,7 +34,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         className="bg-red-600 hover:bg-red-700 text-white"
       >
         <Plus className="h-4 w-4 mr-2" />
-        Adicionar Primeiro Exercício
+        Adicionar
       </Button>
     </div>
   );
