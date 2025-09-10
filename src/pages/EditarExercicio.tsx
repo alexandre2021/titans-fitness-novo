@@ -293,7 +293,7 @@ const EditarExercicio = () => {
   const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = type === 'video' ? 'video/*' : 'image/*';
+    input.accept = type === 'video' ? 'video/*' : 'image/jpeg, image/png, image/webp';
 
     // No celular, prioriza a câmera. No desktop, abre o seletor de arquivos.
     if (isMobile) {

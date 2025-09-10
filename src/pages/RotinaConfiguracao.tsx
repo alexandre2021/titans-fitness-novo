@@ -3,6 +3,18 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, User, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle 
+} from '@/components/ui/dialog';
+import { 
+  Drawer, 
+  DrawerContent, 
+  DrawerHeader, 
+  DrawerTitle 
+} from '@/components/ui/drawer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +37,59 @@ import {
   FormaPagamento   
 } from '@/types/rotina.types';
 
+// Hook para detectar se é mobile
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  return isMobile;
+};
+
+// Componente responsivo que escolhe entre Modal e Drawer
+interface ResponsiveModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  children: React.ReactNode;
+}
+
+const ResponsiveCancelModal = ({ open, onOpenChange, title, children }: ResponsiveModalProps) => {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent>
+          <DrawerHeader className="text-left">
+            <DrawerTitle>{title}</DrawerTitle>
+          </DrawerHeader>
+          <div className="p-4">{children}</div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        {children}
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const RotinaConfiguracao = () => {
   const { alunoId } = useParams<{ alunoId: string }>();
   const navigate = useNavigate();
@@ -35,6 +100,9 @@ const RotinaConfiguracao = () => {
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [pagamentoExpandido, setPagamentoExpandido] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const initialFormState = React.useRef<string | null>(null);
   
   const [form, setForm] = useState<ConfiguracaoRotina>({
     nome: '',
@@ -81,23 +149,27 @@ const RotinaConfiguracao = () => {
       if (!alunoId) return;
 
       try {
-        // Verificar se aluno já possui rotina ativa
-        const { data: rotinaAtiva } = await supabase
-          .from('rotinas')
-          .select('id, status')
-          .eq('aluno_id', alunoId)
-          .in('status', ['Ativa', 'Pausada'])
-          .limit(1);
+        // ✅ CORREÇÃO: Verificar se já existe rotina ativa APENAS se não estiver editando um rascunho.
+        const isEditingDraft = !!rotinaStorage.storage.draftId;
 
-        if (rotinaAtiva && rotinaAtiva.length > 0 && !jaRedirecionou) {
-          jaRedirecionou = true;
-          toast({
-            title: "Rotina já existe",
-            description: "Este aluno já possui uma rotina ativa. Finalize ou cancele a rotina atual antes de criar uma nova.",
-            variant: "destructive"
-          });
-          navigate(`/alunos-rotinas/${alunoId}`);
-          return;
+        if (!isEditingDraft) {
+          const { data: rotinaAtiva } = await supabase
+            .from('rotinas')
+            .select('id, status')
+            .eq('aluno_id', alunoId)
+            .in('status', ['Ativa', 'Bloqueada']) // Usando status corretos
+            .limit(1);
+
+          if (rotinaAtiva && rotinaAtiva.length > 0 && !jaRedirecionou) {
+            jaRedirecionou = true;
+            toast({
+              title: "Rotina já existe",
+              description: "Este aluno já possui uma rotina ativa. Finalize ou cancele a rotina atual antes de criar uma nova.",
+              variant: "destructive"
+            });
+            navigate(`/alunos-rotinas/${alunoId}`);
+            return;
+          }
         }
 
         // Buscar dados do aluno
@@ -121,17 +193,31 @@ const RotinaConfiguracao = () => {
 
         // Carregar configuração salva ou pré-preencher
         const configuracaoSalva = rotinaStorage.storage.configuracao;
+        let dataToSet;
         if (configuracaoSalva) {
-          setForm(configuracaoSalva);
+          dataToSet = configuracaoSalva;
         } else {
           // Pré-preencher com dados do aluno
           const objetivo = alunoData.ultimo_objetivo_rotina || 'Ganho de massa';
-          setForm(prev => ({
-            ...prev,
+          dataToSet = {
+            // Manter os padrões iniciais para evitar dependência do estado 'form'
+            dificuldade: 'Média',
+            duracao_semanas: 12,
+            treinos_por_semana: 3,
+            valor_total: 0,
+            forma_pagamento: 'PIX',
+            data_inicio: new Date().toISOString().split('T')[0],
+            observacoes_pagamento: '',
+            descricao: '',
+            // Sobrescrever com dados pré-preenchidos
             nome: `Rotina ${alunoData.nome_completo}`,
             objetivo: (OBJETIVOS as readonly string[]).includes(objetivo) ? objetivo as Objetivo : 'Ganho de massa',
             permite_execucao_aluno: true
-          }));
+          };
+        }
+        setForm(dataToSet);
+        if (initialFormState.current === null) {
+          initialFormState.current = JSON.stringify(dataToSet);
         }
 
       } catch (error) {
@@ -147,7 +233,13 @@ const RotinaConfiguracao = () => {
     };
 
     carregarDados();
-  }, [alunoId, navigate, toast, rotinaStorage.storage.configuracao]);
+  }, [alunoId, navigate, toast, rotinaStorage.storage.configuracao, rotinaStorage.storage.draftId]);
+
+  useEffect(() => {
+    if (initialFormState.current) {
+      setIsDirty(JSON.stringify(form) !== initialFormState.current);
+    }
+  }, [form]);
 
   // Validar formulário
   const validarForm = (): boolean => {
@@ -203,9 +295,38 @@ const RotinaConfiguracao = () => {
   };
 
   // Voltar para lista de rotinas
-  const handleVoltar = () => {
+  const handleDescartar = () => {
     rotinaStorage.limparStorage();
     navigate(`/alunos-rotinas/${alunoId}`);
+  };
+
+  const handleCancelClick = () => {
+    if (isDirty) {
+      setShowCancelDialog(true);
+    } else {
+      handleDescartar();
+    }
+  };
+
+  const handleSalvarRascunho = async () => {
+    setSalvando(true);
+    try {
+      // Passa o formulário atual para garantir que os dados mais recentes sejam salvos
+      const { success } = await rotinaStorage.salvarComoRascunho({ configuracao: form });
+
+      if (success) {
+        rotinaStorage.limparStorage();
+        toast({ title: "Rascunho salvo!", description: "Você pode continuar de onde parou mais tarde." });
+        navigate(`/alunos-rotinas/${alunoId}`);
+      } else {
+        throw new Error("Falha ao salvar rascunho.");
+      }
+    } catch (error) {
+      toast({ title: "Erro", description: "Não foi possível salvar o rascunho.", variant: "destructive" });
+    } finally {
+      setSalvando(false);
+      setShowCancelDialog(false);
+    }
   };
 
   // Limpar storage ao sair da página (voltar do navegador)
@@ -396,20 +517,6 @@ const RotinaConfiguracao = () => {
             />
           </div>
 
-          {/* Checkbox para execução pelo aluno */}
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="permite_execucao_aluno"
-              checked={form.permite_execucao_aluno || false}
-              onChange={(e) => setForm(prev => ({ ...prev, permite_execucao_aluno: e.target.checked }))}
-              className="rounded border-gray-300"
-            />
-            <Label htmlFor="permite_execucao_aluno" className="text-sm">
-              Permitir que o aluno execute seus treinos
-            </Label>
-          </div>
-
           {/* Seção Pagamento - Colapsável */}
           <div className="border rounded-lg overflow-hidden">
             {/* Header da seção - sempre visível */}
@@ -495,7 +602,7 @@ const RotinaConfiguracao = () => {
       {/* Botões de navegação - Desktop */}
       <div className="hidden md:flex justify-end pt-6">
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleVoltar} disabled={salvando}>
+          <Button variant="outline" onClick={handleCancelClick} disabled={salvando}>
             <X className="h-4 w-4 mr-2" />
             Cancelar
           </Button>
@@ -520,7 +627,7 @@ const RotinaConfiguracao = () => {
         <div className="flex justify-end gap-2 max-w-md mx-auto">
           <Button 
             variant="outline" 
-            onClick={handleVoltar} 
+            onClick={handleCancelClick}
             disabled={salvando}
             size="sm"
             className="px-3"
@@ -548,6 +655,26 @@ const RotinaConfiguracao = () => {
           </Button>
         </div>
       </div>
+
+      <ResponsiveCancelModal
+        open={showCancelDialog}
+        onOpenChange={setShowCancelDialog}
+        title="Sair da criação de rotina?"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Suas alterações não salvas serão perdidas. Você também pode salvar seu progresso como um rascunho.
+          </p>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2 pt-2">
+            <Button variant="outline" onClick={handleDescartar} disabled={salvando}>
+              Descartar Alterações
+            </Button>
+            <Button onClick={handleSalvarRascunho} disabled={salvando}>
+              {salvando ? 'Salvando...' : 'Salvar como Rascunho'}
+            </Button>
+          </div>
+        </div>
+      </ResponsiveCancelModal>
     </div>
   );
 };

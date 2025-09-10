@@ -403,7 +403,7 @@ const AlunosAvaliacaoNova = () => {
   const handleSelectMedia = async (tipo: 'frente' | 'lado' | 'costas') => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'image/*';
+    input.accept = 'image/jpeg, image/png, image/webp';
 
     if (isMobile) {
       input.capture = 'environment';

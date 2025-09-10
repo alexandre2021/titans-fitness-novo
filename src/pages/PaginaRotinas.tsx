@@ -61,6 +61,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useExercicioLookup } from '@/hooks/useExercicioLookup';
 import { useToast } from '@/hooks/use-toast';
 import RotinaDetalhesModal from '@/components/rotina/RotinaDetalhesModal';
+import { ExercicioRotina, Serie } from '@/types/rotina.types';
 
 // Hook para detectar se é mobile
 const useIsMobile = () => {
@@ -183,10 +184,11 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
 
   // Estados permanecem os mesmos
   const [aluno, setAluno] = useState<AlunoInfo | null>(null);
-  const [rotinas, setRotinas] = useState<Rotina[]>([]);
+  const [rotinasAtivas, setRotinasAtivas] = useState<Rotina[]>([]);
   const [rotinasArquivadas, setRotinasArquivadas] = useState<RotinaArquivada[]>([]);
+  const [rotinasRascunho, setRotinasRascunho] = useState<Rotina[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"atual" | "concluidas">("atual");
+  const [activeTab, setActiveTab] = useState<"atual" | "rascunho" | "encerradas">("atual");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showConcluidaDialog, setShowConcluidaDialog] = useState(false);
   const [showStatusInfoDialog, setShowStatusInfoDialog] = useState(false);
@@ -196,11 +198,11 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   const [navegandoNovaRotina, setNavegandoNovaRotina] = useState(false);
   const [showDetalhesModal, setShowDetalhesModal] = useState(false);
 
-  const handleNovaRotina = () => {
-    if (rotinas.length > 0) {
+  const handleNovaRotina = () => { // ✅ REGRA ATUALIZADA
+    if (rotinasRascunho.length > 0) {
       toast({
-        title: "Já existe uma rotina atual",
-        description: "Conclua ou exclua a rotina atual antes de criar uma nova.",
+        title: "Já existe um rascunho",
+        description: "Finalize ou descarte o rascunho atual antes de criar uma nova rotina.",
         variant: "destructive",
       });
       return;
@@ -209,21 +211,68 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
     navigate(`/rotinas-criar/${alunoId}/configuracao`);
   };
 
+  // ✅ NOVA FUNÇÃO: Carrega um rascunho para o sessionStorage e navega para edição
+  const handleContinuarRascunho = async (rotinaId: string) => {
+    setNavegandoNovaRotina(true);
+    try {
+      // 1. Buscar todos os dados do rascunho
+      const { data: rotina, error: rotinaError } = await supabase.from('rotinas').select('*').eq('id', rotinaId).single();
+      if (rotinaError) throw rotinaError;
+
+      const { data: treinos, error: treinosError } = await supabase.from('treinos').select('*').eq('rotina_id', rotinaId).order('ordem');
+      if (treinosError) throw treinosError;
+
+      const exerciciosPorTreino: { [treinoId: string]: (ExercicioRotina & { series: Serie[] })[] } = {};
+      for (const treino of treinos) {
+        const { data: exercicios, error: exerciciosError } = await supabase.from('exercicios_rotina').select('*, series(*)').eq('treino_id', treino.id).order('ordem');
+        if (exerciciosError) throw exerciciosError;
+        exerciciosPorTreino[treino.id] = exercicios;
+      }
+
+      // 2. Montar o objeto para o sessionStorage
+      const rotinaStorageData = {
+        alunoId: alunoId!,
+        draftId: rotina.id,
+        configuracao: { ...rotina, valor_total: rotina.valor_total ?? 0 },
+        treinos: treinos.map(t => ({ ...t, grupos_musculares: t.grupos_musculares.split(',') })),
+        exercicios: exerciciosPorTreino,
+        etapaAtual: 'revisao', // Leva para a última etapa para continuar
+      };
+
+      // 3. Salvar no sessionStorage e navegar
+      sessionStorage.setItem('rotina_em_criacao', JSON.stringify(rotinaStorageData));
+      
+      toast({
+        title: "Rascunho carregado",
+        description: "Continue de onde parou.",
+      });
+      navigate(`/rotinas-criar/${alunoId}/configuracao`);
+
+    } catch (error) {
+      console.error("Erro ao carregar rascunho:", error);
+      toast({
+        title: "Erro ao carregar rascunho",
+        variant: "destructive",
+      });
+      setNavegandoNovaRotina(false);
+    }
+  };
+
   useEffect(() => {
     const fetchDados = async () => {
       if (!alunoId || !user) return;
 
       try {
-        // Buscar informações do aluno
-        const { data: alunoData, error: alunoError } = await supabase
-          .from('alunos')
-          .select('id, nome_completo, email, avatar_type, avatar_image_url, avatar_letter, avatar_color')
-          .eq('id', alunoId)
-          // A segurança de acesso (se o PT pode ver o aluno, ou se o aluno é ele mesmo) é garantida pela RLS (Row Level Security) do Supabase.
-          .single();
+        // Otimização: Buscar todos os dados em paralelo
+        const [alunoResult, rotinasResult, arquivadasResult] = await Promise.all([
+          supabase.from('alunos').select('id, nome_completo, email, avatar_type, avatar_image_url, avatar_letter, avatar_color').eq('id', alunoId).single(),
+          supabase.from('rotinas').select('*').eq('aluno_id', alunoId).order('created_at', { ascending: false }),
+          supabase.from('rotinas_arquivadas').select('*').eq('aluno_id', alunoId).order('created_at', { ascending: false })
+        ]);
 
-        if (alunoError) {
-          console.error('Erro ao buscar aluno:', alunoError);
+        // Checar erros e tratar
+        if (alunoResult.error) {
+          console.error('Erro ao buscar aluno:', alunoResult.error);
           toast({
             title: "Erro",
             description: "Aluno não encontrado.",
@@ -233,33 +282,12 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
           return;
         }
 
-        setAluno(alunoData);
-
-        // Buscar rotinas atuais (não concluídas)
-        const { data: rotinasData, error: rotinasError } = await supabase
-          .from('rotinas')
-          .select('*')
-          .eq('aluno_id', alunoId)
-          // A RLS garante que o PT só veja rotinas de seus alunos e o aluno só veja as suas.
-          .neq('status', 'Concluída')
-          .order('created_at', { ascending: false });
-
-        if (rotinasError) {
-          console.error('Erro ao buscar rotinas:', rotinasError);
-        } else {
-          setRotinas(rotinasData || []);
-        }
-
-        // Buscar rotinas arquivadas
-        const { data: arquivadasData, error: arquivadasError } = await supabase
-          .from('rotinas_arquivadas')
-          .select('*')
-          .eq('aluno_id', alunoId)
-          .order('created_at', { ascending: false });
-
-        if (!arquivadasError && arquivadasData) {
-          setRotinasArquivadas(arquivadasData as RotinaArquivada[]);
-        }
+        setAluno(alunoResult.data);
+        
+        // ✅ Separar rotinas por status
+        setRotinasAtivas((rotinasResult.data || []).filter(r => r.status === 'Ativa' || r.status === 'Bloqueada' || r.status === 'Cancelada'));
+        setRotinasRascunho((rotinasResult.data || []).filter(r => r.status === 'Rascunho'));
+        setRotinasArquivadas((arquivadasResult.data as RotinaArquivada[]) || []);
 
       } catch (error) {
         console.error('Erro ao buscar dados:', error);
@@ -296,6 +324,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   const getStatusBadge = (status: string) => {
     const statusColors = {
       'Ativa': 'bg-green-100 text-green-800',
+      'Rascunho': 'bg-blue-100 text-blue-800',
       'Bloqueada': 'bg-red-100 text-red-800',      
       'Concluída': 'bg-gray-100 text-gray-800',
       'Cancelada': 'bg-orange-100 text-orange-800'
@@ -344,7 +373,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   };
 
   const handleVerDetalhes = (rotinaId: string) => {
-    const rotinaSelecionada = rotinas.find(r => r.id === rotinaId);
+    const rotinaSelecionada = rotinasAtivas.find(r => r.id === rotinaId);
     setSelectedRotina(rotinaSelecionada || null);
     if (modo === 'personal') {
       // Para o PT, "Detalhes" leva à página de gerenciamento da rotina.
@@ -424,7 +453,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         });
       } else {
         // Atualizar lista local
-        setRotinas(prev => prev.map(r => 
+        setRotinasAtivas(prev => prev.map(r => 
           r.id === rotina.id ? { ...r, status: novoStatus } : r
         ));
         
@@ -475,8 +504,12 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
           variant: "destructive",
         });
       } else {
-        // Remover da lista local
-        setRotinas(prev => prev.filter(r => r.id !== selectedRotina.id));
+        // ✅ CORREÇÃO: Remover da lista local correta (Ativas ou Rascunhos)
+        if (selectedRotina.status === 'Rascunho') {
+          setRotinasRascunho(prev => prev.filter(r => r.id !== selectedRotina.id));
+        } else {
+          setRotinasAtivas(prev => prev.filter(r => r.id !== selectedRotina.id));
+        }
         
         toast({
           title: "Rotina excluída",
@@ -662,46 +695,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   return (
     <>
       <div className="space-y-6">
-        {/* Cabeçalho */}
-<div className="space-y-4">
-  {/* Layout Desktop: Título e botão na mesma linha */}
-  <div className="hidden md:flex md:items-center md:justify-between">
-    <div className="flex items-center gap-4">
-      <Button 
-        variant="ghost" 
-        onClick={() => navigate(modo === 'personal' ? '/alunos' : '/index-aluno')}
-        className="h-10 w-10 p-0"
-      >
-        <ArrowLeft className="h-4 w-4" />
-      </Button>
-      <div>
-        <h1 className="text-3xl font-bold">Rotinas</h1>
-        <p className="text-muted-foreground">{modo === 'personal' ? `Gerencie as rotinas de ${aluno.nome_completo}` : 'Suas rotinas de treino'}</p>
-      </div>
-    </div>
-    {activeTab === "atual" && modo === 'personal' && (
-      <Button
-        onClick={() => {
-          if (rotinas.length > 0) {
-            toast({
-              title: "Já existe uma rotina atual",
-              description: "Conclua ou exclua a rotina atual antes de criar uma nova.",
-              variant: "destructive",
-            });
-            return;
-          }
-          setNavegandoNovaRotina(true);
-          navigate(`/rotinas-criar/${alunoId}/configuracao`);
-        }}
-        variant="default"
-        disabled={navegandoNovaRotina}
-      >
-        <Plus className="h-4 w-4 mr-2" />
-        Nova Rotina
-      </Button>
-    )}
-  </div>
-        {/* Cabeçalho da Página (Apenas para Desktop) */}
+        {/* Cabeçalho da Página (Apenas para Desktop) - CORRIGIDO */}
         <div className="hidden md:flex md:items-center md:justify-between">
           <div className="flex items-center gap-4">
             <Button 
@@ -717,46 +711,6 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
             </div>
           </div>
         </div>
-
-  {/* Layout Mobile: Igual à página de Alunos */}
-  <div className="flex items-center justify-between md:hidden">
-    <div className="flex items-center gap-4">
-      <Button 
-        variant="ghost" 
-        onClick={() => navigate(modo === 'personal' ? '/alunos' : '/index-aluno')}
-        className="h-10 w-10 p-0"
-      >
-        <ArrowLeft className="h-4 w-4" />
-      </Button>
-      <div>
-        <h1 className="text-3xl font-bold">Rotinas</h1>
-        <p className="text-sm text-muted-foreground">{modo === 'personal' ? 'Gerencie as rotinas' : 'Suas rotinas de treino'}</p>
-      </div>
-    </div>
-    {/* Botão só com ícone + igual ao de Alunos */}
-    {activeTab === "atual" && modo === 'personal' && (
-      <Button
-        onClick={() => {
-          if (rotinas.length > 0) {
-            toast({
-              title: "Já existe uma rotina atual",
-              description: "Conclua ou exclua a rotina atual antes de criar uma nova.",
-              variant: "destructive",
-            });
-            return;
-          }
-          setNavegandoNovaRotina(true);
-          navigate(`/rotinas-criar/${alunoId}/configuracao`);
-        }}
-        disabled={navegandoNovaRotina}
-        size="icon"
-        className="rounded-full"
-      >
-        <Plus className="h-4 w-4" />
-      </Button>
-    )}
-  </div>
-</div>
 
         {/* Informações do Aluno */}
         {modo === 'personal' && <Card>
@@ -774,13 +728,16 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         </Card>}
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "atual" | "concluidas")}>
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "atual" | "rascunho" | "encerradas")}>
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="atual">
-              Atual ({rotinas.length})
+              Atual ({rotinasAtivas.length})
             </TabsTrigger>
-            <TabsTrigger value="concluidas">
-              Concluídas ({rotinasArquivadas.length})
+            <TabsTrigger value="rascunho">
+              Rascunho ({rotinasRascunho.length})
+            </TabsTrigger>
+            <TabsTrigger value="encerradas">
+              Encerradas ({rotinasArquivadas.length})
             </TabsTrigger>
           </TabsList>
 
@@ -803,29 +760,17 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {rotinas.length === 0 ? (
+                {rotinasAtivas.length === 0 ? (
                   <div className="text-center py-12">
                     <Dumbbell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                     <h3 className="text-lg font-semibold mb-2">Nenhuma rotina</h3>
                     <p className="text-muted-foreground mb-6">
                       {modo === 'personal' ? 'Este aluno não possui nenhuma rotina no momento. Crie uma nova rotina personalizada.' : 'Você ainda não tem uma rotina. Fale com seu Personal Trainer.'}
                     </p>
-                    {modo === 'personal' && <Button
-                      onClick={() => {
-                        setNavegandoNovaRotina(true);
-                        navigate(`/rotinas-criar/${alunoId}/configuracao`);
-                      }}
-                      disabled={navegandoNovaRotina}
-                      variant="default"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Nova Rotina
-                    </Button>
-                    }
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {rotinas.map((rotina) => (
+                    {rotinasAtivas.map((rotina) => (
                       <div key={rotina.id} className="border rounded-lg p-6 hover:bg-muted/50 transition-colors">
                         {/* Header da rotina */}
                         <div className="flex items-start justify-between mb-4">
@@ -891,20 +836,70 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
             </Card>
           </TabsContent>
 
+          {/* ✅ NOVA ABA: Rascunho */}
+          <TabsContent value="rascunho" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                  <FileText className="h-5 w-5" />
+                  Rotinas em Rascunho
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {rotinasRascunho.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Nenhum rascunho</h3>
+                    <p className="text-muted-foreground mb-6">
+                      As rotinas que você começar a criar e salvar como rascunho aparecerão aqui.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {rotinasRascunho.map((rotina) => (
+                      <Card key={rotina.id}>
+                        <CardContent className="p-4 flex items-center justify-between">
+                          <div className="flex-1">
+                            <h4 className="font-semibold">{rotina.nome}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              Criado em: {new Date(rotina.created_at).toLocaleDateString('pt-BR')}
+                            </p>
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Abrir menu</span>
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleContinuarRascunho(rotina.id)}><Play className="mr-2 h-4 w-4" /><span>Continuar</span></DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleExcluirRotina(rotina)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Excluir</span></DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Tab Concluídas - Layout responsivo melhorado */}
-          <TabsContent value="concluidas" className="space-y-4">
+          <TabsContent value="encerradas" className="space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-3">
                   <Dumbbell className="h-5 w-5" />
-                  Rotinas Concluídas
+                  Rotinas Encerradas
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {rotinasArquivadas.length === 0 ? (
                   <div className="text-center py-12">
                     <Dumbbell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Nenhuma rotina concluída</h3>
+                    <h3 className="text-lg font-semibold mb-2">Nenhuma rotina encerrada</h3>
                     <p className="text-muted-foreground mb-6">
                       As rotinas concluídas aparecerão aqui com relatórios em PDF disponíveis para download.
                     </p>
@@ -1036,6 +1031,16 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
     </p>
   </div>
   
+  <div className="flex items-start gap-3">
+      <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+      <div>
+        <p className="font-medium text-blue-800 mb-1">Rascunho</p>
+        <p className="text-sm text-muted-foreground">
+          Rotina em processo de criação pelo personal trainer, ainda não finalizada.
+        </p>
+      </div>
+    </div>
+
   <div className="space-y-4">
     <div className="flex items-start gap-3">
       <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
@@ -1057,6 +1062,16 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
       </div>
     </div>
     
+    <div className="flex items-start gap-3">
+      <div className="w-2 h-2 rounded-full bg-orange-500 mt-2 flex-shrink-0"></div>
+      <div>
+        <p className="font-medium text-orange-800 mb-1">Cancelada</p>
+        <p className="text-sm text-muted-foreground">
+          Rotina interrompida por uma ação administrativa, como a exclusão da conta do PT.
+        </p>
+      </div>
+    </div>
+
     <div className="flex items-start gap-3">
       <div className="w-2 h-2 rounded-full bg-gray-500 mt-2 flex-shrink-0"></div>
       <div>
@@ -1081,6 +1096,32 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         onOpenChange={setShowDetalhesModal}
         ResponsiveModal={ResponsiveModal}
       />
+
+      {/* Botão Flutuante para Nova Rotina (Apenas para Personal) */}
+      {modo === 'personal' && activeTab === 'atual' && (
+        <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
+          {/* Mobile: Round floating button */}
+          <Button
+            onClick={handleNovaRotina}
+            disabled={navegandoNovaRotina}
+            className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
+            aria-label="Nova Rotina"
+          >
+            <Plus />
+          </Button>
+
+          {/* Desktop: Standard floating button */}
+          <Button
+            onClick={handleNovaRotina}
+            disabled={navegandoNovaRotina}
+            className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6"
+            size="lg"
+          >
+            <Plus />
+            {navegandoNovaRotina ? "Navegando..." : "Nova Rotina"}
+          </Button>
+        </div>
+      )}
     </>
   );
 };

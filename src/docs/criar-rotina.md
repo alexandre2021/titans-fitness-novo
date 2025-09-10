@@ -109,7 +109,7 @@ src/
 - ✅ Preview completo de toda a rotina
 - ✅ Resumo estatístico (exercícios, séries, tempo)
 - ✅ Campo de observações finais
-- ✅ Rotina nasce com status 'Ativa'
+- ✅ Rotina nasce com status 'Ativa' (após finalização, antes é 'Rascunho')
 - ✅ Geração automática de todas as sessões (`execucoes_sessao`)
 - ✅ Salvamento em 5 tabelas do Supabase
 - ✅ Limpeza automática do sessionStorage

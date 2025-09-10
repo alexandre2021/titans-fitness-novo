@@ -19,6 +19,18 @@ interface UserProfile {
   nome_completo?: string | null; // Opcional, pois só existe para PTs
 }
 
+// Interface simplificada para a rotina, contendo os campos necessários para o arquivamento
+interface Rotina {
+  id: string;
+  aluno_id: string;
+  nome: string;
+  objetivo: string;
+  treinos_por_semana: number;
+  duracao_semanas: number;
+  data_inicio: string;
+  // Adicione outros campos se forem necessários para o PDF ou arquivamento
+}
+
 interface DeleteImageResponse {
   success: boolean;
   message?: string;
@@ -320,18 +332,69 @@ async function processPTDeletion(user: UserProfile): Promise<number> {
     }
   }
 
-  // 2. Marcar Rotinas Ativas/Bloqueadas como Canceladas
-  const { error: rotinaError } = await supabase
-        .from('rotinas')
-        .update({
-          status: 'Cancelada',
-          observacoes_rotina: `Rotina interrompida e cancelada automaticamente em ${hoje} devido à exclusão da conta do Personal Trainer por inatividade (90+ dias).`
-        })
-        .eq('personal_trainer_id', user.id)
-        .in('status', ['Ativa', 'Bloqueada']); // Aplica a ambos os status relevantes
+  // 2. Arquivar Rotinas Ativas/Bloqueadas em vez de apenas cancelar
+  const { data: rotinasParaArquivar, error: fetchRotinasError } = await supabase
+    .from('rotinas')
+    .select('*') // Seleciona todos os dados necessários para o arquivamento
+    .eq('personal_trainer_id', user.id)
+    .in('status', ['Ativa', 'Bloqueada']);
 
-  if (rotinaError) {
-    console.error(`Error updating paused routines for PT ${user.id}:`, rotinaError);
+  if (fetchRotinasError) {
+    console.error(`[PT Deletion] Erro ao buscar rotinas para arquivar do PT ${user.id}:`, fetchRotinasError);
+  } else if (rotinasParaArquivar && rotinasParaArquivar.length > 0) {
+    console.log(`[PT Deletion] Encontradas ${rotinasParaArquivar.length} rotinas para arquivar do PT ${user.id}`);
+    const motivo = `Rotina encerrada automaticamente em ${hoje} devido à exclusão da conta do Personal Trainer por inatividade.`;
+
+    for (const rotina of rotinasParaArquivar as Rotina[]) {
+      try {
+        // Lógica FIFO: Manter no máximo 4 rotinas arquivadas por aluno
+        const { data: archived, error: fetchArchivedError } = await supabase
+          .from('rotinas_arquivadas')
+          .select('id, pdf_url')
+          .eq('aluno_id', rotina.aluno_id)
+          .order('created_at', { ascending: true });
+
+        if (fetchArchivedError) {
+          console.error(`[Archiving] Falha ao buscar rotinas arquivadas para o aluno ${rotina.aluno_id}`, fetchArchivedError);
+        }
+
+        if (archived && archived.length >= 4) {
+          const oldest = archived[0];
+          console.log(`[Archiving] Aluno ${rotina.aluno_id} tem ${archived.length} rotinas arquivadas. Removendo a mais antiga: ${oldest.id}`);
+          if (oldest.pdf_url) {
+            await deleteCloudflareFile(oldest.pdf_url.split('/').pop()!, 'rotinas');
+          }
+          await supabase.from('rotinas_arquivadas').delete().eq('id', oldest.id);
+        }
+
+        // Gerar PDF (assumindo que a edge function existe)
+        const { data: pdfData } = await supabase.functions.invoke<{ pdf_base64: string }>('gerar-pdf-conclusao', {
+          body: { rotinaId: rotina.id, tipo: 'cancelamento', motivo }
+        });
+
+        // Salvar na tabela de arquivadas
+        await supabase.from('rotinas_arquivadas').insert({
+          aluno_id: rotina.aluno_id,
+          nome_rotina: rotina.nome,
+          objetivo: rotina.objetivo,
+          treinos_por_semana: rotina.treinos_por_semana,
+          duracao_semanas: rotina.duracao_semanas,
+          data_inicio: rotina.data_inicio,
+          data_conclusao: hoje,
+          pdf_url: pdfData?.pdf_base64, // Usando a base64 como placeholder, idealmente seria a URL do R2
+        });
+
+        // Deletar rotina original (o cascade cuidará do resto)
+        const { error: deleteError } = await supabase.from('rotinas').delete().eq('id', rotina.id);
+        if (deleteError) {
+          console.error(`[Archiving] Falha ao deletar rotina original ${rotina.id}:`, deleteError);
+        } else {
+          console.log(`[Archiving] Rotina ${rotina.id} arquivada e removida com sucesso.`);
+        }
+      } catch (archiveError) {
+        console.error(`[Archiving] Erro completo no processo de arquivamento para a rotina ${rotina.id}:`, archiveError);
+      }
+    }
   }
 
   // 3. Remover Avatar do PT (Supabase Storage)

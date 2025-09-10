@@ -1,12 +1,16 @@
 // src/hooks/useRotinaStorage.ts - CORREÇÃO USANDO IDs + Limpeza Inteligente
 
 import { useState, useEffect, useCallback } from 'react';
-import { RotinaStorage, ConfiguracaoRotina, TreinoTemp, ExercicioTemp } from '@/types/rotina.types';
+import { RotinaStorage as OriginalRotinaStorage, ConfiguracaoRotina, TreinoTemp, ExercicioTemp } from '@/types/rotina.types';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+
+type RotinaStorage = OriginalRotinaStorage & { draftId?: string };
 
 const STORAGE_KEY = 'rotina_em_criacao';
 
 export const useRotinaStorage = (alunoId: string) => {
+  const { user } = useAuth();
   const [storage, setStorage] = useState<RotinaStorage>({
     alunoId,
     etapaAtual: 'configuracao'
@@ -443,6 +447,141 @@ export const useRotinaStorage = (alunoId: string) => {
     };
   }, [storage]);
 
+  const salvarComoRascunho = useCallback(async (
+    data?: Partial<Pick<RotinaStorage, 'configuracao' | 'treinos' | 'exercicios'>> & { observacoesRotina?: string }
+  ): Promise<{ success: boolean }> => {
+    if (!user) {
+      console.error("Usuário não autenticado. Não é possível salvar o rascunho.");
+      return { success: false };
+    }
+
+    const currentStorage = { ...storage, ...data };
+    const { configuracao, treinos, exercicios = {} } = currentStorage;
+    const observacoesRotina = data?.observacoesRotina;
+
+    if (!configuracao || !treinos || treinos.length === 0) {
+      console.error("Dados insuficientes para salvar rascunho.");
+      return { success: false };
+    }
+
+    console.log("📝 Iniciando salvamento de rascunho...");
+
+    try {
+      // 1. Verificar se já existe um rascunho para este aluno
+      const { data: rascunhoExistente, error: findError } = await supabase
+        .from('rotinas')
+        .select('id')
+        .eq('aluno_id', alunoId)
+        .eq('status', 'Rascunho')
+        .maybeSingle();
+
+      if (findError) throw findError;
+
+      const rotinaData = {
+        aluno_id: alunoId,
+        personal_trainer_id: user.id,
+        status: 'Rascunho' as const,
+        nome: configuracao.nome || 'Rascunho de Rotina',
+        objetivo: configuracao.objetivo,
+        descricao: configuracao.descricao,
+        treinos_por_semana: configuracao.treinos_por_semana,
+        dificuldade: configuracao.dificuldade,
+        duracao_semanas: configuracao.duracao_semanas,
+        valor_total: configuracao.valor_total,
+        forma_pagamento: configuracao.forma_pagamento,
+        data_inicio: configuracao.data_inicio,
+        permite_execucao_aluno: configuracao.permite_execucao_aluno,
+        observacoes_pagamento: configuracao.observacoes_pagamento,
+        observacoes_rotina: observacoesRotina,
+      };
+
+      let rotinaId: string;
+
+      if (rascunhoExistente) {
+        // 2a. ATUALIZAR rascunho existente
+        console.log(`🔄 Atualizando rascunho existente: ${rascunhoExistente.id}`);
+        rotinaId = rascunhoExistente.id;
+
+        const { error: updateError } = await supabase
+          .from('rotinas')
+          .update(rotinaData)
+          .eq('id', rotinaId);
+        if (updateError) throw updateError;
+
+        // Limpar treinos antigos (cascade deve cuidar do resto)
+        const { error: deleteTreinosError } = await supabase
+          .from('treinos')
+          .delete()
+          .eq('rotina_id', rotinaId);
+        if (deleteTreinosError) throw deleteTreinosError;
+        
+      } else {
+        // 2b. CRIAR novo rascunho
+        console.log("✨ Criando novo rascunho...");
+        const { data: novaRotina, error: insertError } = await supabase
+          .from('rotinas')
+          .insert(rotinaData)
+          .select('id')
+          .single();
+        if (insertError || !novaRotina) throw insertError || new Error("Falha ao criar o registro da rotina.");
+        rotinaId = novaRotina.id;
+      }
+
+      console.log(`✅ Rotina (rascunho) salva com ID: ${rotinaId}`);
+
+      // 3. Inserir Treinos e seus filhos (Exercícios e Séries)
+      // Esta operação é complexa e idealmente seria uma transação (RPC).
+      // Como estamos no client-side, faremos em sequência.
+      for (const treinoTemp of treinos) {
+        const { data: treinoCriado, error: treinoError } = await supabase.from('treinos').insert({ rotina_id: rotinaId, nome: treinoTemp.nome, grupos_musculares: treinoTemp.grupos_musculares.join(','), ordem: treinoTemp.ordem, tempo_estimado_minutos: treinoTemp.tempo_estimado_minutos, observacoes: treinoTemp.observacoes }).select('id').single();
+        if (treinoError || !treinoCriado) throw treinoError || new Error('Falha ao salvar treino.');
+
+        const exerciciosDoTreino = exercicios[treinoTemp.id!] || [];
+        for (const exercicioTemp of exerciciosDoTreino) {
+          const { series } = exercicioTemp;
+
+          // ✅ CORREÇÃO: Construir o objeto explicitamente com as colunas que existem na tabela.
+          const exercicioParaInserir = {
+            treino_id: treinoCriado.id,
+            exercicio_1_id: exercicioTemp.exercicio_1_id,
+            exercicio_2_id: exercicioTemp.exercicio_2_id || null,
+            ordem: exercicioTemp.ordem,
+            intervalo_apos_exercicio: exercicioTemp.intervalo_apos_exercicio || null,
+            observacoes: exercicioTemp.observacoes || null,
+          };
+          const { data: exercicioCriado, error: exercicioError } = await supabase.from('exercicios_rotina').insert(exercicioParaInserir).select('id').single();
+          if (exercicioError || !exercicioCriado) throw exercicioError || new Error(`Falha ao salvar exercício: ${exercicioError?.message}`);
+
+          if (series && series.length > 0) {
+            const seriesParaInserir = series.map(s => ({
+              exercicio_id: exercicioCriado.id,
+              numero_serie: s.numero_serie,
+              repeticoes: s.repeticoes ?? 0,
+              carga: s.carga ?? null,
+              tem_dropset: s.tem_dropset ?? false,
+              carga_dropset: s.carga_dropset ?? null,
+              intervalo_apos_serie: s.intervalo_apos_serie ?? null,
+              observacoes: s.observacoes ?? null,
+              repeticoes_1: s.repeticoes_1 ?? null,
+              carga_1: s.carga_1 ?? null,
+              repeticoes_2: s.repeticoes_2 ?? null,
+              carga_2: s.carga_2 ?? null,
+            }));
+            const { error: seriesError } = await supabase.from('series').insert(seriesParaInserir);
+            if (seriesError) throw seriesError;
+          }
+        }
+      }
+      
+      console.log("✅ Todos os exercícios e séries salvos.");
+      return { success: true };
+
+    } catch (error) {
+      console.error("❌ Erro completo ao salvar rascunho:", error);
+      return { success: false };
+    }
+  }, [storage, user, alunoId]);
+
   return {
     storage,
     isLoaded,
@@ -457,7 +596,8 @@ export const useRotinaStorage = (alunoId: string) => {
     temTreinos,
     temExercicios,
     podeAvancar,
-    obterResumo
+    obterResumo,
+    salvarComoRascunho,
   };
 };
 

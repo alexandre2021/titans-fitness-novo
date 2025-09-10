@@ -39,8 +39,10 @@ export const DIFICULDADES = [
 
 export const STATUS_ROTINA = [
   'Ativa',
+  'Rascunho',
   'Bloqueada',
-  'Concluída'
+  'Concluída',
+  'Cancelada'
 ] as const;
 
 export const FORMAS_PAGAMENTO = [

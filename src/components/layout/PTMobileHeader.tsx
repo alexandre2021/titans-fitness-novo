@@ -59,7 +59,7 @@ const PTMobileHeader = () => {
     }
 
     // ✅ Lógica mais específica para a página do PAR-Q
-    if (/^\/alunos-par-q\/[a-zA-Z0-9-]+\/?$/.test(path)) {
+    if (path.startsWith('/alunos-parq/')) {
       return { title: 'PAR-Q do Aluno', showBackButton: true, backPath: '/alunos' };
     }
     

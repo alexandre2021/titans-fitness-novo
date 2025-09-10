@@ -5,6 +5,18 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Check, User, Calendar, Target, DollarSign, Clock, Dumbbell, Info, AlertCircle, CheckCircle2, BicepsFlexed, ClipboardType } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle 
+} from '@/components/ui/dialog';
+import { 
+  Drawer, 
+  DrawerContent, 
+  DrawerHeader, 
+  DrawerTitle 
+} from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,6 +53,58 @@ const CORES_DIFICULDADES: {[key: string]: string} = {
 
 type Aluno = Tables<'alunos'>;
 
+// Hook para detectar se é mobile
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  return isMobile;
+};
+
+// Componente responsivo que escolhe entre Modal e Drawer
+interface ResponsiveModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  children: React.ReactNode;
+}
+
+const ResponsiveCancelModal = ({ open, onOpenChange, title, children }: ResponsiveModalProps) => {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent>
+          <DrawerHeader className="text-left">
+            <DrawerTitle>{title}</DrawerTitle>
+          </DrawerHeader>
+          <div className="p-4">{children}</div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        {children}
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 
 const RotinaRevisao: React.FC = () => {
@@ -55,6 +119,17 @@ const RotinaRevisao: React.FC = () => {
   const [observacoes, setObservacoes] = useState('');
   const [finalizando, setFinalizando] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+
+  const isDirty = observacoes.trim() !== '';
+
+  const handleCancelClick = () => {
+    if (isDirty) {
+      setShowCancelDialog(true);
+    } else {
+      handleDescartar();
+    }
+  };
 
   // All useEffect hooks moved to the top, deduplicated and not after any return
   // Limpeza de storage ao sair da página (hook deve ser chamado sempre, no topo)
@@ -97,6 +172,26 @@ const RotinaRevisao: React.FC = () => {
     };
     carregarAluno();
   }, [alunoId, navigate, toast]);
+
+  const handleSalvarRascunho = async () => {
+    setFinalizando(true);
+    try {
+      const { success } = await rotinaStorage.salvarComoRascunho({ observacoesRotina: observacoes });
+
+      if (success) {
+        rotinaStorage.limparStorage();
+        toast({ title: "Rascunho salvo!", description: "Você pode continuar de onde parou mais tarde." });
+        navigate(`/alunos-rotinas/${alunoId}`);
+      } else {
+        throw new Error("Falha ao salvar rascunho.");
+      }
+    } catch (error) {
+      toast({ title: "Erro", description: "Não foi possível salvar o rascunho.", variant: "destructive" });
+    } finally {
+      setFinalizando(false);
+      setShowCancelDialog(false);
+    }
+  };
 
   // Verificar se tem dados completos aguardando isLoaded (sempre no topo)
   useEffect(() => {
@@ -161,6 +256,17 @@ const RotinaRevisao: React.FC = () => {
 
       if (erroRotina || !rotinaCriada) {
         throw new Error('Erro ao criar rotina: ' + erroRotina?.message);
+      }
+
+      // ✅ CORREÇÃO: Se a rotina foi criada a partir de um rascunho, deletar o rascunho original.
+      const draftId = rotinaStorage.storage.draftId;
+      if (draftId) {
+        console.log(`🗑️ Deletando rascunho original com ID: ${draftId}`);
+        const { error: deleteDraftError } = await supabase.from('rotinas').delete().eq('id', draftId);
+        if (deleteDraftError) {
+          // Logar o erro mas não interromper o fluxo, pois a rotina principal já foi criada.
+          console.error('Falha ao deletar rascunho antigo:', deleteDraftError);
+        }
       }
 
       // 2. Criar treinos
@@ -308,7 +414,7 @@ const RotinaRevisao: React.FC = () => {
   };
 
   // Voltar para lista de rotinas e limpar storage
-  const handleVoltar = () => {
+  const handleDescartar = () => {
     rotinaStorage.limparStorage();
     navigate(`/alunos-rotinas/${alunoId}`);
   };
@@ -563,13 +669,13 @@ const RotinaRevisao: React.FC = () => {
       {/* Botões de navegação - Desktop */}
       <div className="hidden md:flex justify-between pt-6 gap-2">
         <div>
-          <Button variant="ghost" onClick={() => navigate(`/rotinas-criar/${alunoId}/exercicios`)} disabled={finalizando} className="flex items-center">
+          <Button variant="ghost" onClick={() => navigate(`/rotinas-criar/${alunoId}/exercicios`)} disabled={finalizando || showCancelDialog} className="flex items-center">
             <ChevronLeft className="h-4 w-4 mr-2" />
             Voltar
           </Button>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleVoltar} disabled={finalizando} className="flex items-center">
+          <Button variant="outline" onClick={handleCancelClick} disabled={finalizando} className="flex items-center">
             <X className="h-4 w-4 mr-2" />
             Cancelar
           </Button>
@@ -597,9 +703,9 @@ const RotinaRevisao: React.FC = () => {
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 md:hidden z-50">
         <div className="flex justify-between items-center max-w-md mx-auto">
           {/* Esquerda: Voltar */}
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate(`/rotinas-criar/${alunoId}/exercicios`)} 
+          <Button
+            variant="ghost"
+            onClick={() => navigate(`/rotinas-criar/${alunoId}/exercicios`)}
             disabled={finalizando}
             size="sm"
             className="px-3"
@@ -611,8 +717,8 @@ const RotinaRevisao: React.FC = () => {
           {/* Direita: Cancelar + Próximo */}
           <div className="flex gap-2">
             <Button 
-              variant="outline" 
-              onClick={handleVoltar} 
+              variant="outline"
+              onClick={handleCancelClick}
               disabled={finalizando}
               size="sm"
               className="px-3"
@@ -620,8 +726,8 @@ const RotinaRevisao: React.FC = () => {
               <X className="h-4 w-4 mr-1" />
               Cancelar
             </Button>
-            <Button 
-              onClick={handleFinalizar} 
+            <Button
+              onClick={handleFinalizar}
               disabled={finalizando}
               size="sm"
               className="px-3 bg-green-600 hover:bg-green-700 text-white"
@@ -641,6 +747,26 @@ const RotinaRevisao: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <ResponsiveCancelModal
+        open={showCancelDialog}
+        onOpenChange={setShowCancelDialog}
+        title="Sair da criação de rotina?"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Suas alterações não salvas serão perdidas. Você também pode salvar seu progresso como um rascunho.
+          </p>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2 pt-2">
+            <Button variant="outline" onClick={handleDescartar} disabled={finalizando}>
+              Descartar Alterações
+            </Button>
+            <Button onClick={handleSalvarRascunho} disabled={finalizando}>
+              {finalizando ? 'Salvando...' : 'Salvar como Rascunho'}
+            </Button>
+          </div>
+        </div>
+      </ResponsiveCancelModal>
     </div>
   );
 };

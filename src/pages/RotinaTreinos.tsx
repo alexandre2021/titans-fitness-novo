@@ -3,6 +3,18 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus, Trash2, GripVertical, X, Check } from 'lucide-react';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle 
+} from '@/components/ui/dialog';
+import { 
+  Drawer, 
+  DrawerContent, 
+  DrawerHeader, 
+  DrawerTitle 
+} from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,7 +23,60 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useRotinaStorage } from '@/hooks/useRotinaStorage';
-import { TreinoTemp, LIMITES } from '@/types/rotina.types';
+import { TreinoTemp } from '@/types/rotina.types';
+
+// Hook para detectar se é mobile
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  return isMobile;
+};
+
+// Componente responsivo que escolhe entre Modal e Drawer
+interface ResponsiveModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  children: React.ReactNode;
+}
+
+const ResponsiveCancelModal = ({ open, onOpenChange, title, children }: ResponsiveModalProps) => {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent>
+          <DrawerHeader className="text-left">
+            <DrawerTitle>{title}</DrawerTitle>
+          </DrawerHeader>
+          <div className="p-4">{children}</div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        {children}
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 // Grupos musculares disponíveis (do padrão existente)
 const GRUPOS_MUSCULARES = [
@@ -47,15 +112,8 @@ const RotinaTreinos = () => {
 
   const [treinos, setTreinos] = useState<TreinoTemp[]>([]);
   const [salvando, setSalvando] = useState(false);
-
-  // Limpar storage ao sair da página (hook sempre no topo)
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      rotinaStorage.limparStorage();
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [rotinaStorage]);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [isDirty, setIsDirty] = useState(false); // ✅ Lógica de dirty simplificada
 
   // 🔧 CORRIGIDO: Sempre usar treinos do storage (criados na configuração)
   useEffect(() => {
@@ -102,6 +160,7 @@ const RotinaTreinos = () => {
 
   // Adicionar grupo muscular a um treino
   const adicionarGrupoMuscular = (treinoIndex: number, grupo: string) => {
+    setIsDirty(true);
     setTreinos(prev => prev.map((treino, index) => {
       if (index === treinoIndex && !treino.grupos_musculares.includes(grupo)) {
         return {
@@ -115,6 +174,7 @@ const RotinaTreinos = () => {
 
   // Remover grupo muscular de um treino
   const removerGrupoMuscular = (treinoIndex: number, grupo: string) => {
+    setIsDirty(true);
     setTreinos(prev => prev.map((treino, index) => {
       if (index === treinoIndex) {
         return {
@@ -128,6 +188,7 @@ const RotinaTreinos = () => {
 
   // Atualizar campo de treino
   const atualizarTreino = (treinoIndex: number, campo: keyof TreinoTemp, valor: string | number | boolean) => {
+    setIsDirty(true);
     setTreinos(prev => prev.map((treino, index) => {
       if (index === treinoIndex) {
         return { ...treino, [campo]: valor };
@@ -179,9 +240,37 @@ const RotinaTreinos = () => {
   };
 
   // Cancelar: limpa storage e volta para lista de rotinas do aluno
-  const handleCancelar = () => {
+  const handleDescartar = () => {
     rotinaStorage.limparStorage();
     navigate(`/alunos-rotinas/${alunoId}`);
+  };
+
+  const handleCancelClick = () => {
+    if (isDirty) {
+      setShowCancelDialog(true);
+    } else {
+      handleDescartar();
+    }
+  };
+
+  const handleSalvarRascunho = async () => {
+    setSalvando(true);
+    try {
+      const { success } = await rotinaStorage.salvarComoRascunho({ treinos });
+
+      if (success) {
+        rotinaStorage.limparStorage();
+        toast({ title: "Rascunho salvo!", description: "Você pode continuar de onde parou mais tarde." });
+        navigate(`/alunos-rotinas/${alunoId}`);
+      } else {
+        throw new Error("Falha ao salvar rascunho.");
+      }
+    } catch (error) {
+      toast({ title: "Erro", description: "Não foi possível salvar o rascunho.", variant: "destructive" });
+    } finally {
+      setSalvando(false);
+      setShowCancelDialog(false);
+    }
   };
 
   // Voltar: retorna para etapa de configuração (sem limpar storage)
@@ -354,7 +443,7 @@ const RotinaTreinos = () => {
           </Button>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleCancelar} disabled={salvando}>
+          <Button variant="outline" onClick={handleCancelClick} disabled={salvando}>
             <X className="h-4 w-4 mr-2" />
             Cancelar
           </Button>
@@ -397,8 +486,8 @@ const RotinaTreinos = () => {
           {/* Direita: Cancelar + Próximo */}
           <div className="flex gap-2">
             <Button 
-              variant="outline" 
-              onClick={handleCancelar} 
+              variant="outline"
+              onClick={handleCancelClick}
               disabled={salvando}
               size="sm"
               className="px-3"
@@ -428,6 +517,26 @@ const RotinaTreinos = () => {
           </div>
         </div>
       </div>
+
+      <ResponsiveCancelModal
+        open={showCancelDialog}
+        onOpenChange={setShowCancelDialog}
+        title="Sair da criação de rotina?"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Suas alterações não salvas serão perdidas. Você também pode salvar seu progresso como um rascunho.
+          </p>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2 pt-2">
+            <Button variant="outline" onClick={handleDescartar} disabled={salvando}>
+              Descartar Alterações
+            </Button>
+            <Button onClick={handleSalvarRascunho} disabled={salvando}>
+              {salvando ? 'Salvando...' : 'Salvar como Rascunho'}
+            </Button>
+          </div>
+        </div>
+      </ResponsiveCancelModal>
     </div>
   );
 };

@@ -160,7 +160,7 @@ export const ExercicioCard = ({
         <CardContent className="p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0 pr-1 md:pr-4">
-              <h3 className="font-semibold text-foreground truncate mb-2">
+              <h3 className="font-semibold text-foreground line-clamp-2 mb-2 h-[3.25rem]">
                 {exercicio.nome}
               </h3>
               

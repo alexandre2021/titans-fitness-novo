@@ -35,14 +35,16 @@ const CORES_GRUPOS_MUSCULARES = {
 ### **🎯 Status de Rotina:**
 ```typescript
 const STATUS_ROTINA = [
-  'Ativa',                 // Nasce ativa e está liberada para execução
-  'Bloqueada',            // Aluno atrasou pagamento, acesso suspenso
+  'Rascunho',              // Rotina em processo de criação, não finalizada
+  'Ativa',                 // Liberada para execução
+  'Bloqueada',             // Acesso suspenso pelo PT
   'Concluída',             // Finalizada (todas as sessões executadas)
   'Cancelada'              // Cancelada devido à exclusão do PT ou outra ação administrativa
 ];
 
 const CORES_STATUS_ROTINA = {
-  'Ativa': 'bg-green-100 text-green-800',  
+  'Rascunho': 'bg-blue-100 text-blue-800',
+  'Ativa': 'bg-green-100 text-green-800',
   'Bloqueada': 'bg-red-100 text-red-800',
   'Concluída': 'bg-gray-100 text-gray-800',
   'Cancelada': 'bg-orange-100 text-orange-800'

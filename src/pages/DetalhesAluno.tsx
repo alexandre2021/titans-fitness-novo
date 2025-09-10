@@ -71,7 +71,7 @@ const DetalhesAluno = () => {
     return (
       <AvatarFallback 
         style={{ backgroundColor: aluno.avatar_color }}
-        className="text-white font-semibold text-2xl"
+        className="text-white font-semibold"
       >
         {aluno.avatar_letter || aluno.nome_completo.charAt(0).toUpperCase()}
       </AvatarFallback>
@@ -164,11 +164,11 @@ const DetalhesAluno = () => {
         <CardContent className="space-y-6">
           {/* Avatar e Nome */}
           <div className="flex items-center gap-4">
-            <Avatar className="h-20 w-20">
+            <Avatar className="h-12 w-12">
               {renderAvatar()}
             </Avatar>
             <div className="space-y-2">
-              <h3 className="text-2xl font-semibold">{aluno.nome_completo}</h3>
+              <h3 className="text-xl font-semibold">{aluno.nome_completo}</h3>
               <Badge 
                 variant={aluno.onboarding_completo ? "default" : "secondary"}
                 className={aluno.onboarding_completo ? "bg-green-600 hover:bg-green-700" : "bg-yellow-500 hover:bg-yellow-600 text-white"}

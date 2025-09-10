@@ -193,7 +193,7 @@ Este documento descreve a estrutura completa das tabelas do banco de dados, incl
 | `pdf_email_enviado` | 17 | `boolean` | True | `false` | `` | `` |  |
 | `observacoes_rotina` | 18 | `text` | True | `` | `` | `` |  |
 
-**Status Possíveis**: Ativa, Bloqueada, Concluída, Cancelada  
+**Status Possíveis**: Rascunho, Ativa, Bloqueada, Concluída, Cancelada  
 **Objetivos Comuns**: Emagrecimento, Ganho de Massa, Condicionamento, Reabilitação
 
 ---
