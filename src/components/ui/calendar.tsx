@@ -6,6 +6,13 @@ import { DayPicker, type DayPickerProps } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 export type CalendarProps = DayPickerProps
 
@@ -53,6 +60,33 @@ function Calendar({
           "aria-selected:bg-accent aria-selected:text-accent-foreground",
         day_hidden: "invisible",
         ...classNames,
+      }}
+      components={{
+        Dropdown: ({ value, onChange, options }) => {
+          const handleValueChange = (selectedValue: string) => {
+            const event = {
+              target: { value: selectedValue },
+            } as React.ChangeEvent<HTMLSelectElement>;
+            onChange?.(event);
+          };
+          return (
+            <Select value={value?.toString()} onValueChange={handleValueChange}>
+              <SelectTrigger
+                className={cn(
+                  buttonVariants({ variant: "ghost" }),
+                  "h-7 w-auto border-transparent px-2 py-1 text-sm font-medium focus:bg-accent focus:text-accent-foreground"
+                )}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="max-h-60">
+                {options.map((option) => (
+                  <SelectItem key={option.value?.toString()} value={option.value?.toString() ?? ""}>{option.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          );
+        },
       }}
       {...props}
     />
