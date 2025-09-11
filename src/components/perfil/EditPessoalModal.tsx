@@ -13,7 +13,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { PhoneInput } from "@/components/ui/phone-input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -149,7 +149,11 @@ export const EditPessoalModal = ({ open, onOpenChange, profile, onSave }: EditPe
             <FormItem>
               <FormLabel>Data de Nascimento</FormLabel>
               <FormControl>
-                <Input type="date" {...field} />
+                <DatePicker
+                  value={field.value}
+                  onChange={field.onChange}
+                  className="w-full"
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

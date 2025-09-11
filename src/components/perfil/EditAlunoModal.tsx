@@ -153,7 +153,6 @@ export const EditAlunoModal = ({ profile, onSave, onCancel }: EditAlunoModalProp
               <FormItem>
                 <FormLabel>Data de Nascimento</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} />
                   <DatePicker
                     value={field.value}
                     onChange={field.onChange}
