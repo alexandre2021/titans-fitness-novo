@@ -21,9 +21,8 @@ Este documento lista os arquivos e componentes que fazem parte da funcionalidade
 
 ## Componentes (Pasta `src/components/perfil/`)
 
-*   `src/components/perfil/AlunoAvatarSection.tsx`: Componente para a seção de avatar do perfil do Aluno.
 *   `src/components/perfil/AlunoPerfilTabs.tsx`: Componente que gerencia as abas de informações do perfil do Aluno.
-*   `src/components/perfil/AvatarSection.tsx`: Componente para a seção de avatar do perfil do Personal Trainer.
+*   `src/components/perfil/AvatarSection.tsx`: Componente genérico para a seção de avatar, utilizado tanto para o Aluno quanto para o Personal Trainer.
 *   `src/components/perfil/EditAlunoModal.tsx`: Modal de edição para informações do perfil do Aluno.
 *   `src/components/perfil/EditPessoalModal.tsx`: Modal de edição para informações pessoais do perfil do Personal Trainer.
 *   `src/components/perfil/EditProfissionalModal.tsx`: Modal de edição para informações profissionais do perfil do Personal Trainer.

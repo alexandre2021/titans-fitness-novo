@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAlunoProfile } from "@/hooks/useAlunoProfile";
-import { AlunoAvatarSection } from "@/components/perfil/AlunoAvatarSection";
+import { AvatarSection } from "@/components/perfil/AvatarSection";
 import { AlunoPerfilTabs } from "@/components/perfil/AlunoPerfilTabs";
 
 const PerfilAluno = () => {
@@ -60,7 +60,7 @@ const PerfilAluno = () => {
         <h1 className="text-2xl font-normal">Meu Perfil</h1>
       </div>
 
-      <AlunoAvatarSection profile={profile} onProfileUpdate={handleProfileUpdate} />
+      <AvatarSection profile={profile} onProfileUpdate={handleProfileUpdate} userType="aluno" />
       
       <AlunoPerfilTabs profile={profile} onProfileUpdate={handleProfileUpdate} />
     </div>

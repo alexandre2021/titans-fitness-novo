@@ -89,7 +89,7 @@ const PerfilPT = () => {
   <h1 className="text-2xl font-normal">Perfil de treinador</h1>
       </div>
 
-      <AvatarSection userProfile={profile} onProfileUpdate={handleProfileUpdate} />
+      <AvatarSection profile={profile} onProfileUpdate={handleProfileUpdate} userType="personal_trainer" />
       
       <PerfilTabs profile={profile} onProfileUpdate={handleProfileUpdate} />
     </div>
