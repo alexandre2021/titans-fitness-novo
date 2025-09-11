@@ -1,4 +1,4 @@
-// src/components/perfil/EditProfissionalModal.tsx
+// src/components/perfil/EditProfissionalForm.tsx
 
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { isEqual } from 'lodash';
 
 const formSchema = z.object({
   cref: z.string().optional(),
@@ -34,23 +35,9 @@ const formSchema = z.object({
 });
 
 const ESPECIALIZACOES_OPTIONS = [
-  "Musculação",
-  "Funcional",
-  "Crossfit",
-  "Pilates",
-  "Yoga",
-  "Natação",
-  "Corrida",
-  "Ciclismo",
-  "Boxe",
-  "Muay Thai",
-  "Fisioterapia",
-  "Reabilitação",
-  "Emagrecimento",
-  "Hipertrofia",
-  "Idosos",
-  "Gestantes",
-  "Crianças"
+  "Musculação", "Funcional", "Crossfit", "Pilates", "Yoga", "Natação",
+  "Corrida", "Ciclismo", "Boxe", "Muay Thai", "Fisioterapia", "Reabilitação",
+  "Emagrecimento", "Hipertrofia", "Idosos", "Gestantes", "Crianças"
 ];
 
 interface ProfileData {
@@ -60,14 +47,12 @@ interface ProfileData {
   especializacoes?: string[];
 }
 
-interface EditProfissionalModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+interface EditProfissionalFormProps {
   profile: ProfileData | null;
   onSave: () => void;
 }
 
-export const EditProfissionalModal = ({ open, onOpenChange, profile, onSave }: EditProfissionalModalProps) => {
+export const EditProfissionalForm = ({ profile, onSave }: EditProfissionalFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [especializacoes, setEspecializacoes] = useState<string[]>([]);
   const [novaEspecializacao, setNovaEspecializacao] = useState("");
@@ -83,7 +68,7 @@ export const EditProfissionalModal = ({ open, onOpenChange, profile, onSave }: E
   });
 
   useEffect(() => {
-    if (profile && open) {
+    if (profile) {
       form.reset({
         cref: profile.cref || "",
         anos_experiencia: profile.anos_experiencia || "",
@@ -91,7 +76,21 @@ export const EditProfissionalModal = ({ open, onOpenChange, profile, onSave }: E
       });
       setEspecializacoes(profile.especializacoes || []);
     }
-  }, [profile, open, form]);
+  }, [profile, form]);
+
+  const isEspecializacoesDirty = !isEqual([...(profile?.especializacoes || [])].sort(), [...especializacoes].sort());
+  const isFormDirty = form.formState.isDirty || isEspecializacoesDirty;
+
+  const handleReset = () => {
+    if (profile) {
+      form.reset({
+        cref: profile.cref || "",
+        anos_experiencia: profile.anos_experiencia || "",
+        bio: profile.bio || "",
+      });
+      setEspecializacoes(profile.especializacoes || []);
+    }
+  };
 
   const adicionarEspecializacao = () => {
     if (novaEspecializacao && !especializacoes.includes(novaEspecializacao)) {
@@ -107,8 +106,8 @@ export const EditProfissionalModal = ({ open, onOpenChange, profile, onSave }: E
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     try {
-      const user = await supabase.auth.getUser();
-      if (!user.data.user) throw new Error('Usuário não autenticado');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
 
       const { error } = await supabase
         .from('personal_trainers')
@@ -118,7 +117,7 @@ export const EditProfissionalModal = ({ open, onOpenChange, profile, onSave }: E
           bio: values.bio || null,
           especializacoes: especializacoes.length > 0 ? especializacoes : null,
         })
-        .eq('id', user.data.user.id);
+        .eq('id', user.id);
 
       if (error) throw error;
 
@@ -128,12 +127,12 @@ export const EditProfissionalModal = ({ open, onOpenChange, profile, onSave }: E
       });
 
       onSave();
-      onOpenChange(false);
+      form.reset(values);
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
         title: "Erro",
-        description: "Erro ao atualizar perfil. Tente novamente.",
+        description: error instanceof Error ? error.message : "Erro ao atualizar perfil. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -164,7 +163,7 @@ export const EditProfissionalModal = ({ open, onOpenChange, profile, onSave }: E
           render={({ field }) => (
             <FormItem>
               <FormLabel>Anos de Experiência</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+              <Select onValueChange={field.onChange} value={field.value || ''}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione" />
@@ -236,16 +235,17 @@ export const EditProfissionalModal = ({ open, onOpenChange, profile, onSave }: E
           )}
         />
 
-        <div className="flex justify-end space-x-2 pt-4">
+        <div className="flex justify-end space-x-2 pt-6">
           <Button
             type="button"
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={handleReset}
+            disabled={isLoading || !isFormDirty}
           >
-            Cancelar
+            Desfazer
           </Button>
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Salvando..." : "Salvar"}
+          <Button type="submit" disabled={isLoading || !isFormDirty}>
+            {isLoading ? "Salvando..." : "Salvar Alterações"}
           </Button>
         </div>
       </form>

@@ -1,4 +1,4 @@
-// src/components/perfil/EditPessoalModal.tsx
+// src/components/perfil/EditPessoalForm.tsx
 
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -40,14 +40,12 @@ interface ProfileData {
   genero?: string;
 }
 
-interface EditPessoalModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+interface EditPessoalFormProps {
   profile: ProfileData | null;
   onSave: () => void;
 }
 
-export const EditPessoalModal = ({ open, onOpenChange, profile, onSave }: EditPessoalModalProps) => {
+export const EditPessoalForm = ({ profile, onSave }: EditPessoalFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -62,7 +60,7 @@ export const EditPessoalModal = ({ open, onOpenChange, profile, onSave }: EditPe
   });
 
   useEffect(() => {
-    if (profile && open) {
+    if (profile) {
       form.reset({
         nome_completo: profile.nome_completo || "",
         telefone: profile.telefone || "",
@@ -70,13 +68,24 @@ export const EditPessoalModal = ({ open, onOpenChange, profile, onSave }: EditPe
         genero: profile.genero || "",
       });
     }
-  }, [profile, open, form]);
+  }, [profile, form]);
+
+  const handleReset = () => {
+    if (profile) {
+      form.reset({
+        nome_completo: profile.nome_completo || "",
+        telefone: profile.telefone || "",
+        data_nascimento: profile.data_nascimento || "",
+        genero: profile.genero || "",
+      });
+    }
+  };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     try {
-      const user = await supabase.auth.getUser();
-      if (!user.data.user) throw new Error('Usuário não autenticado');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
 
       const { error } = await supabase
         .from('personal_trainers')
@@ -86,7 +95,7 @@ export const EditPessoalModal = ({ open, onOpenChange, profile, onSave }: EditPe
           data_nascimento: values.data_nascimento || null,
           genero: values.genero || null,
         })
-        .eq('id', user.data.user.id);
+        .eq('id', user.id);
 
       if (error) throw error;
 
@@ -96,12 +105,12 @@ export const EditPessoalModal = ({ open, onOpenChange, profile, onSave }: EditPe
       });
 
       onSave();
-      onOpenChange(false);
+      form.reset(values); 
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
         title: "Erro",
-        description: "Erro ao atualizar perfil. Tente novamente.",
+        description: error instanceof Error ? error.message : "Erro ao atualizar perfil. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -134,7 +143,7 @@ export const EditPessoalModal = ({ open, onOpenChange, profile, onSave }: EditPe
               <FormLabel>Telefone</FormLabel>
               <FormControl>
                 <PhoneInput 
-                  value={field.value} 
+                  value={field.value || ''} 
                   onChange={field.onChange}
                 />
               </FormControl>
@@ -167,7 +176,7 @@ export const EditPessoalModal = ({ open, onOpenChange, profile, onSave }: EditPe
           render={({ field }) => (
             <FormItem>
               <FormLabel>Gênero</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+              <Select onValueChange={field.onChange} value={field.value || ''}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione" />
@@ -185,16 +194,17 @@ export const EditPessoalModal = ({ open, onOpenChange, profile, onSave }: EditPe
           )}
         />
 
-        <div className="flex justify-end space-x-2 pt-4">
+        <div className="flex justify-end space-x-2 pt-6">
           <Button
             type="button"
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={handleReset}
+            disabled={isLoading || !form.formState.isDirty}
           >
-            Cancelar
+            Desfazer
           </Button>
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Salvando..." : "Salvar"}
+          <Button type="submit" disabled={isLoading || !form.formState.isDirty}>
+            {isLoading ? "Salvando..." : "Salvar Alterações"}
           </Button>
         </div>
       </form>

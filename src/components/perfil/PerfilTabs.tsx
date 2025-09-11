@@ -18,14 +18,14 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { EditPessoalModal } from "./EditPessoalModal";
-import { EditProfissionalModal } from "./EditProfissionalModal";
-import { EditRedesSociaisModal } from "./EditRedesSociaisModal";
+import { EditPessoalForm } from "./EditPessoalForm";
+import { EditProfissionalForm } from "./EditProfissionalForm";
+import { EditRedesSociaisForm } from "./EditRedesSociaisForm";
 import { PasswordChangeSection } from "./PasswordChangeSection";
 import { AccountCancellationSection } from "./AccountCancellationSection";
 
 interface ProfileData {
-  nome_completo: string;
+  nome_completo?: string;
   telefone?: string;
   data_nascimento?: string;
   genero?: string;
@@ -127,13 +127,11 @@ const ResponsiveModal = ({ open, onOpenChange, title, children }: ResponsiveModa
 };
 
 export const PerfilTabs = ({ profile, onProfileUpdate }: PerfilTabsProps) => {
-  const [editPessoalOpen, setEditPessoalOpen] = useState(false);
-  const [editProfissionalOpen, setEditProfissionalOpen] = useState(false);
-  const [editRedesOpen, setEditRedesOpen] = useState(false);
-
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Não informado";
-    return new Date(dateString).toLocaleDateString('pt-BR');
+    // Corrigido para evitar problemas de fuso horário
+    const [year, month, day] = dateString.split('T')[0].split('-');
+    return `${day}/${month}/${year}`;
   };
 
   return (
@@ -148,97 +146,33 @@ export const PerfilTabs = ({ profile, onProfileUpdate }: PerfilTabsProps) => {
 
       <TabsContent value="pessoal">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+          <CardHeader>
             <CardTitle>Informações Pessoais</CardTitle>
-            <EditButton onClick={() => setEditPessoalOpen(true)} />
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Nome Completo</label>
-                <p className="text-sm">{profile.nome_completo || "Não informado"}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Telefone</label>
-                <p className="text-sm">{profile.telefone || "Não informado"}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Data de Nascimento</label>
-                <p className="text-sm">{formatDate(profile.data_nascimento)}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Gênero</label>
-                <p className="text-sm">{profile.genero || "Não informado"}</p>
-              </div>
-            </div>
+          <CardContent>
+            <EditPessoalForm profile={profile} onSave={onProfileUpdate} />
           </CardContent>
         </Card>
       </TabsContent>
 
       <TabsContent value="profissional">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+          <CardHeader>
             <CardTitle>Informações Profissionais</CardTitle>
-            <EditButton onClick={() => setEditProfissionalOpen(true)} />
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">CREF</label>
-                <p className="text-sm">{profile.cref || "Não informado"}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Anos de Experiência</label>
-                <p className="text-sm">{profile.anos_experiencia || "Não informado"}</p>
-              </div>
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">Especializações</label>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {profile.especializacoes?.length ? (
-                  profile.especializacoes.map((esp, index) => (
-                    <Badge key={index} className="bg-[#AA1808] text-white border-transparent">{esp}</Badge>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground">Nenhuma especialização cadastrada</p>
-                )}
-              </div>
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">Biografia</label>
-              <p className="text-sm mt-1">{profile.bio || "Nenhuma biografia cadastrada"}</p>
-            </div>
+          <CardContent>
+            <EditProfissionalForm profile={profile} onSave={onProfileUpdate} />
           </CardContent>
         </Card>
       </TabsContent>
 
       <TabsContent value="redes">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+          <CardHeader>
             <CardTitle>Redes Sociais</CardTitle>
-            <EditButton onClick={() => setEditRedesOpen(true)} />
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Instagram</label>
-                <p className="text-sm">{profile.instagram || "Não informado"}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Facebook</label>
-                <p className="text-sm">{profile.facebook || "Não informado"}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">LinkedIn</label>
-                <p className="text-sm">{profile.linkedin || "Não informado"}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Website</label>
-                <p className="text-sm">{profile.website || "Não informado"}</p>
-              </div>
-            </div>
+          <CardContent>
+            <EditRedesSociaisForm profile={profile} onSave={onProfileUpdate} />
           </CardContent>
         </Card>
       </TabsContent>
@@ -252,44 +186,6 @@ export const PerfilTabs = ({ profile, onProfileUpdate }: PerfilTabsProps) => {
       </TabsContent>
 
       {/* Modais Responsivos */}
-      <ResponsiveModal
-        open={editPessoalOpen}
-        onOpenChange={setEditPessoalOpen}
-        title="Editar Informações Pessoais"
-      >
-        <EditPessoalModal
-          open={editPessoalOpen}
-          onOpenChange={setEditPessoalOpen}
-          profile={profile}
-          onSave={onProfileUpdate}
-        />
-      </ResponsiveModal>
-
-      <ResponsiveModal
-        open={editProfissionalOpen}
-        onOpenChange={setEditProfissionalOpen}
-        title="Editar Informações Profissionais"
-      >
-        <EditProfissionalModal
-          open={editProfissionalOpen}
-          onOpenChange={setEditProfissionalOpen}
-          profile={profile}
-          onSave={onProfileUpdate}
-        />
-      </ResponsiveModal>
-
-      <ResponsiveModal
-        open={editRedesOpen}
-        onOpenChange={setEditRedesOpen}
-        title="Editar Redes Sociais"
-      >
-        <EditRedesSociaisModal
-          open={editRedesOpen}
-          onOpenChange={setEditRedesOpen}
-          profile={profile}
-          onSave={onProfileUpdate}
-        />
-      </ResponsiveModal>
     </Tabs>
   );
 };
