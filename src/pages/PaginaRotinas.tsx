@@ -1067,7 +1067,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
       <div>
         <p className="font-medium text-orange-800 mb-1">Cancelada</p>
         <p className="text-sm text-muted-foreground">
-          Rotina interrompida por uma ação administrativa, como a exclusão da conta do PT.
+          Rotina interrompida por uma ação administrativa, como a exclusão da conta do Personal Trainer.
         </p>
       </div>
     </div>

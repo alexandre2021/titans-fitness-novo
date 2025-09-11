@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/ui/date-picker";
 import { PhoneInput } from "@/components/ui/phone-input";
 import {
   Select,
@@ -153,6 +154,11 @@ export const EditAlunoModal = ({ profile, onSave, onCancel }: EditAlunoModalProp
                 <FormLabel>Data de Nascimento</FormLabel>
                 <FormControl>
                   <Input type="date" {...field} />
+                  <DatePicker
+                    value={field.value}
+                    onChange={field.onChange}
+                    className="w-full"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
