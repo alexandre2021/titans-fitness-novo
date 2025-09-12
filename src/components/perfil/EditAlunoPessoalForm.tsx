@@ -1,6 +1,6 @@
-// src/components/perfil/EditAlunoModal.tsx
+// src/components/perfil/EditAlunoPessoalForm.tsx
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -32,8 +32,6 @@ const formSchema = z.object({
   telefone: z.string().optional(),
   data_nascimento: z.string().optional(),
   genero: z.string().optional(),
-  peso: z.string().optional(),
-  altura: z.string().optional(),
   descricao_pessoal: z.string().optional(),
 });
 
@@ -42,18 +40,15 @@ interface AlunoProfileData {
   telefone?: string;
   data_nascimento?: string;
   genero?: string;
-  peso?: number;
-  altura?: number;
   descricao_pessoal?: string;
 }
 
-interface EditAlunoModalProps {
+interface EditAlunoPessoalFormProps {
   profile: AlunoProfileData;
   onSave: () => void;
-  onCancel: () => void;
 }
 
-export const EditAlunoModal = ({ profile, onSave, onCancel }: EditAlunoModalProps) => {
+export const EditAlunoPessoalForm = ({ profile, onSave }: EditAlunoPessoalFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -64,11 +59,29 @@ export const EditAlunoModal = ({ profile, onSave, onCancel }: EditAlunoModalProp
       telefone: profile.telefone || "",
       data_nascimento: profile.data_nascimento || "",
       genero: profile.genero || "",
-      peso: profile.peso?.toString() || "",
-      altura: profile.altura?.toString() || "",
       descricao_pessoal: profile.descricao_pessoal || "",
     },
   });
+
+  useEffect(() => {
+    form.reset({
+      nome_completo: profile.nome_completo || "",
+      telefone: profile.telefone || "",
+      data_nascimento: profile.data_nascimento || "",
+      genero: profile.genero || "",
+      descricao_pessoal: profile.descricao_pessoal || "",
+    });
+  }, [profile, form]);
+
+  const handleReset = () => {
+    form.reset({
+      nome_completo: profile.nome_completo || "",
+      telefone: profile.telefone || "",
+      data_nascimento: profile.data_nascimento || "",
+      genero: profile.genero || "",
+      descricao_pessoal: profile.descricao_pessoal || "",
+    });
+  };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
@@ -76,19 +89,15 @@ export const EditAlunoModal = ({ profile, onSave, onCancel }: EditAlunoModalProp
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      const updateData = {
-        nome_completo: values.nome_completo,
-        telefone: values.telefone || null,
-        data_nascimento: values.data_nascimento || null,
-        genero: values.genero || null,
-        descricao_pessoal: values.descricao_pessoal || null,
-        ...(values.peso && { peso: parseFloat(values.peso) }),
-        ...(values.altura && { altura: parseFloat(values.altura) }),
-      };
-
       const { error } = await supabase
         .from("alunos")
-        .update(updateData)
+        .update({
+          nome_completo: values.nome_completo,
+          telefone: values.telefone || null,
+          data_nascimento: values.data_nascimento || null,
+          genero: values.genero || null,
+          descricao_pessoal: values.descricao_pessoal || null,
+        })
         .eq("id", user.id);
 
       if (error) throw error;
@@ -99,11 +108,12 @@ export const EditAlunoModal = ({ profile, onSave, onCancel }: EditAlunoModalProp
       });
 
       onSave();
+      form.reset(values);
     } catch (error) {
       console.error("Error updating profile:", error);
       toast({
         title: "Erro",
-        description: "Erro ao atualizar perfil. Tente novamente.",
+        description: error instanceof Error ? error.message : "Erro ao atualizar perfil. Tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -135,10 +145,7 @@ export const EditAlunoModal = ({ profile, onSave, onCancel }: EditAlunoModalProp
             <FormItem>
               <FormLabel>Telefone</FormLabel>
               <FormControl>
-                <PhoneInput
-                  value={field.value}
-                  onChange={field.onChange}
-                />
+                <PhoneInput value={field.value || ''} onChange={field.onChange} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -153,11 +160,7 @@ export const EditAlunoModal = ({ profile, onSave, onCancel }: EditAlunoModalProp
               <FormItem>
                 <FormLabel>Data de Nascimento</FormLabel>
                 <FormControl>
-                  <DatePicker
-                    value={field.value}
-                    onChange={field.onChange}
-                    className="w-full"
-                  />
+                  <DatePicker value={field.value} onChange={field.onChange} className="w-full" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -170,7 +173,7 @@ export const EditAlunoModal = ({ profile, onSave, onCancel }: EditAlunoModalProp
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Gênero</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
+                <Select onValueChange={field.onChange} value={field.value || ''}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione" />
@@ -189,45 +192,6 @@ export const EditAlunoModal = ({ profile, onSave, onCancel }: EditAlunoModalProp
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="peso"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Peso (kg)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    placeholder="Ex: 70.5"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="altura"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Altura (cm)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    placeholder="Ex: 175"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
         <FormField
           control={form.control}
           name="descricao_pessoal"
@@ -235,27 +199,24 @@ export const EditAlunoModal = ({ profile, onSave, onCancel }: EditAlunoModalProp
             <FormItem>
               <FormLabel>Descrição Pessoal</FormLabel>
               <FormControl>
-                <Textarea
-                  placeholder="Conte um pouco sobre você, seus objetivos, experiências..."
-                  {...field}
-                />
+                <Textarea placeholder="Conte um pouco sobre você, seus objetivos, experiências..." {...field} value={field.value || ''} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <div className="flex justify-end space-x-2">
+        <div className="flex justify-end space-x-2 pt-6">
           <Button
             type="button"
             variant="outline"
-            onClick={onCancel}
-            disabled={isLoading}
+            onClick={handleReset}
+            disabled={isLoading || !form.formState.isDirty}
           >
-            Cancelar
+            Desfazer
           </Button>
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? "Salvando..." : "Salvar"}
+          <Button type="submit" disabled={isLoading || !form.formState.isDirty}>
+            {isLoading ? "Salvando..." : "Salvar Alterações"}
           </Button>
         </div>
       </form>

@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -181,12 +182,15 @@ const OnboardingPTInformacoesBasicas = () => {
               <Label htmlFor="dataNascimento" className="text-text-primary">
                 Data de Nascimento
               </Label>
-              <Input
-                id="dataNascimento"
-                type="date"
-                max={hoje}
-                {...register("dataNascimento")}
-                className="border-border focus:ring-primary"
+              <Controller
+                name="dataNascimento"
+                control={control}
+                render={({ field }) => (
+                  <DatePicker
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                )}
               />
               {errors.dataNascimento && (
                 <p className="text-sm text-destructive">{errors.dataNascimento.message}</p>

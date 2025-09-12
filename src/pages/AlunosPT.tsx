@@ -7,6 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { UserPlus, Users, Plus, Mail, MailCheck, Trash2, Send, ChevronDown, ChevronRight } from "lucide-react";
 import { useAlunos } from "@/hooks/useAlunos";
 import { useAuth } from "@/hooks/useAuth";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { AlunoCard } from "@/components/alunos/AlunoCard";
 import { FiltrosAlunos } from "@/components/alunos/FiltrosAlunos";
 import { useToast } from "@/hooks/use-toast";
@@ -26,6 +27,7 @@ const AlunosPT = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { alunos, loading, filtros, setFiltros, desvincularAluno } = useAlunos();
+  const isDesktop = useMediaQuery("(min-width: 768px)");
   const [convitesPendentes, setConvitesPendentes] = useState<ConvitePendente[]>([]);
   const [convitesCollapsed, setConvitesCollapsed] = useState(true);
 
@@ -114,12 +116,6 @@ const AlunosPT = () => {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Alunos</h1>
-          <p className="text-muted-foreground">
-            Gerencie seus alunos e acompanhe seu progresso
-          </p>
-        </div>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <p className="text-lg text-muted-foreground">Carregando...</p>
@@ -130,21 +126,10 @@ const AlunosPT = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Cabeçalho */}
-      <div className="space-y-4">
-        {/* Mobile: Header compacto */}
-        <div className="flex items-center justify-between md:hidden">
-          <div>
-            <h1 className="text-3xl font-bold">Alunos</h1>
-            <p className="text-sm text-muted-foreground">
-              Gerencie seus alunos
-            </p>
-          </div>
-        </div>
-
-        {/* Desktop: Header tradicional */}
-        <div className="hidden md:flex md:items-center justify-between">
+      {isDesktop && (
+        <div className="items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Alunos</h1>
             <p className="text-muted-foreground">
@@ -152,7 +137,7 @@ const AlunosPT = () => {
             </p>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Convites Pendentes */}
       {convitesPendentes.length > 0 && (

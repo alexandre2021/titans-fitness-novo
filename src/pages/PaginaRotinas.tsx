@@ -61,24 +61,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useExercicioLookup } from '@/hooks/useExercicioLookup';
 import { useToast } from '@/hooks/use-toast';
 import RotinaDetalhesModal from '@/components/rotina/RotinaDetalhesModal';
+import { useMediaQuery } from '@/hooks/use-media-query';
 import { ExercicioRotina, Serie } from '@/types/rotina.types';
-
-// Hook para detectar se é mobile
-const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  return isMobile;
-};
 
 // Componente responsivo que escolhe entre Modal e Drawer
 interface ResponsiveModalProps {
@@ -89,7 +73,7 @@ interface ResponsiveModalProps {
 }
 
 const ResponsiveModal = ({ open, onOpenChange, title, children }: ResponsiveModalProps) => {
-  const isMobile = useIsMobile();
+  const isMobile = !useMediaQuery("(min-width: 768px)");
 
   if (isMobile) {
     return (
@@ -177,6 +161,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   const { user } = useAuth();
   const { getExercicioInfo } = useExercicioLookup();
   const { toast } = useToast();
+  const isDesktop = useMediaQuery("(min-width: 768px)");
   
   // Deriva o alunoId do contexto de rota (para PT) ou de autenticação (para Aluno)
   // O 'id' do useParams corresponde ao :id na rota /alunos-rotinas/:id
@@ -643,21 +628,6 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost"
-              onClick={() => navigate(modo === 'personal' ? '/alunos' : '/index-aluno')}
-              className="h-10 w-10 p-0"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold">Rotinas</h1>
-              <p className="text-muted-foreground">Rotinas de treino personalizadas</p>
-            </div>
-          </div>
-        </div>
         <div className="flex items-center justify-center min-h-[400px]">
           <p className="text-lg text-muted-foreground">Carregando...</p>
         </div>
@@ -694,23 +664,25 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
 
   return (
     <>
-      <div className="space-y-6">
-        {/* Cabeçalho da Página (Apenas para Desktop) - CORRIGIDO */}
-        <div className="hidden md:flex md:items-center md:justify-between">
-          <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost" 
-              onClick={() => navigate(modo === 'personal' ? '/alunos' : '/index-aluno')}
-              className="h-10 w-10 p-0"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold">Rotinas</h1>
-              <p className="text-muted-foreground">{modo === 'personal' ? `Gerencie as rotinas de ${aluno.nome_completo}` : 'Suas rotinas de treino'}</p>
+      <div className="space-y-6 p-6">
+        {/* Cabeçalho da Página (Apenas para Desktop) */}
+        {isDesktop && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button 
+                variant="ghost" 
+                onClick={() => navigate(modo === 'personal' ? '/alunos' : '/index-aluno')}
+                className="h-10 w-10 p-0"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold">Rotinas</h1>
+                <p className="text-muted-foreground">{modo === 'personal' ? `Gerencie as rotinas de ${aluno.nome_completo}` : 'Suas rotinas de treino'}</p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Informações do Aluno */}
         {modo === 'personal' && <Card>
@@ -729,13 +701,15 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "atual" | "rascunho" | "encerradas")}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className={`grid w-full ${modo === 'personal' ? 'grid-cols-3' : 'grid-cols-2'}`}>
             <TabsTrigger value="atual">
               Atual ({rotinasAtivas.length})
             </TabsTrigger>
-            <TabsTrigger value="rascunho">
-              Rascunho ({rotinasRascunho.length})
-            </TabsTrigger>
+            {modo === 'personal' && (
+              <TabsTrigger value="rascunho">
+                Rascunho ({rotinasRascunho.length})
+              </TabsTrigger>
+            )}
             <TabsTrigger value="encerradas">
               Encerradas ({rotinasArquivadas.length})
             </TabsTrigger>
@@ -748,15 +722,17 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
                 <CardTitle className="flex items-center gap-3">
                   <Dumbbell className="h-5 w-5" />
                   Rotina Atual
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => setShowStatusInfoDialog(true)}
-                    className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                    title="Informações sobre status das rotinas"
-                  >
-                    <Info className="h-4 w-4" />
-                  </Button>
+                  {modo === 'personal' && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => setShowStatusInfoDialog(true)}
+                      className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                      title="Informações sobre status das rotinas"
+                    >
+                      <Info className="h-4 w-4" />
+                    </Button>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -837,54 +813,56 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
           </TabsContent>
 
           {/* ✅ NOVA ABA: Rascunho */}
-          <TabsContent value="rascunho" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <FileText className="h-5 w-5" />
-                  Rotinas em Rascunho
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {rotinasRascunho.length === 0 ? (
-                  <div className="text-center py-12">
-                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Nenhum rascunho</h3>
-                    <p className="text-muted-foreground mb-6">
-                      As rotinas que você começar a criar e salvar como rascunho aparecerão aqui.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {rotinasRascunho.map((rotina) => (
-                      <Card key={rotina.id}>
-                        <CardContent className="p-4 flex items-center justify-between">
-                          <div className="flex-1">
-                            <h4 className="font-semibold">{rotina.nome}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              Criado em: {new Date(rotina.created_at).toLocaleDateString('pt-BR')}
-                            </p>
-                          </div>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Abrir menu</span>
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleContinuarRascunho(rotina.id)}><Play className="mr-2 h-4 w-4" /><span>Continuar</span></DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleExcluirRotina(rotina)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Excluir</span></DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+          {modo === 'personal' && (
+            <TabsContent value="rascunho" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3">
+                    <FileText className="h-5 w-5" />
+                    Rotinas em Rascunho
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {rotinasRascunho.length === 0 ? (
+                    <div className="text-center py-12">
+                      <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">Nenhum rascunho</h3>
+                      <p className="text-muted-foreground mb-6">
+                        As rotinas que você começar a criar e salvar como rascunho aparecerão aqui.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {rotinasRascunho.map((rotina) => (
+                        <Card key={rotina.id}>
+                          <CardContent className="p-4 flex items-center justify-between">
+                            <div className="flex-1">
+                              <h4 className="font-semibold">{rotina.nome}</h4>
+                              <p className="text-sm text-muted-foreground">
+                                Criado em: {new Date(rotina.created_at).toLocaleDateString('pt-BR')}
+                              </p>
+                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <span className="sr-only">Abrir menu</span>
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleContinuarRascunho(rotina.id)}><Play className="mr-2 h-4 w-4" /><span>Continuar</span></DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleExcluirRotina(rotina)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Excluir</span></DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
           {/* Tab Concluídas - Layout responsivo melhorado */}
           <TabsContent value="encerradas" className="space-y-4">

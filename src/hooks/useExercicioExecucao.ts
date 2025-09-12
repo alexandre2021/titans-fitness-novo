@@ -83,12 +83,14 @@ export const useExercicioExecucao = (
 
   // Carregar tempo salvo da sessão pausada
   useEffect(() => {
-    if (sessaoData?.tempo_total_minutos && sessaoData.tempo_total_minutos > 0) {
-      const tempoSalvoSegundos = sessaoData.tempo_total_minutos * 60;
-      console.log(`⏰ Carregando tempo salvo: ${sessaoData.tempo_total_minutos}min = ${tempoSalvoSegundos}s`);
-      setTempoSessao(tempoSalvoSegundos);
+    if (sessaoData?.status === 'pausada' && sessaoData.tempo_decorrido) {
+      console.log(`⏰ Resumindo sessão. Tempo inicial: ${sessaoData.tempo_decorrido}s`);
+      setTempoSessao(sessaoData.tempo_decorrido);
+    } else {
+      // Inicia do zero para sessões novas ou não pausadas
+      setTempoSessao(0);
     }
-  }, [sessaoData?.tempo_total_minutos]);
+  }, [sessaoData]);
 
   // Timer da sessão (só conta se não estiver pausado)
   useEffect(() => {
@@ -379,14 +381,13 @@ export const useExercicioExecucao = (
       setLoading(true);
       console.log(`⏸️ Pausando sessão - Modo: ${modoExecucao}`);
       
-      const tempoTotalMinutos = Math.floor(tempoSessao / 60);
       const totalSeriesExecutadas = exercicioUtils.contarSeriesExecutadas(exercicios);
       
       const { error: updateError } = await supabase
         .from('execucoes_sessao')
         .update({
           status: SESSAO_STATUS.PAUSADA,
-          tempo_total_minutos: tempoTotalMinutos,
+          tempo_decorrido: tempoSessao,
           modo_execucao: modoExecucao,
           observacoes: `Pausado em modo ${modoExecucao.toUpperCase()} - ${totalSeriesExecutadas} séries realizadas até agora`
         })
@@ -411,7 +412,7 @@ export const useExercicioExecucao = (
         }
       }
 
-      console.log(`✅ Sessão pausada com sucesso! Modo: ${modoExecucao} | Séries salvas: ${execucoesSeries.length} | Tempo: ${tempoTotalMinutos}min`);
+      console.log(`✅ Sessão pausada com sucesso! Modo: ${modoExecucao} | Séries salvas: ${execucoesSeries.length} | Tempo: ${tempoSessao}s`);
       return true;
     } catch (error) {
       console.error('❌ Erro ao pausar sessão:', error);
@@ -751,6 +752,7 @@ export const useExercicioExecucao = (
         .update({
           status: SESSAO_STATUS.CONCLUIDA,
           tempo_total_minutos: tempoTotalMinutos,
+          tempo_decorrido: 0, // ✅ Zera o tempo decorrido ao concluir
           modo_execucao: modoExecucao,
           observacoes: `Concluído em modo ${modoExecucao.toUpperCase()} - ${totalSeriesExecutadas} séries realizadas`
         })

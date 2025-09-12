@@ -322,7 +322,7 @@ const AlunosAvaliacaoDetalhes = () => {
   const imcClass = getIMCClassification(avaliacao.imc);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Cabeçalho da Página (Apenas para Desktop) */}
       <div className="hidden md:flex items-center gap-4">
         <Button 

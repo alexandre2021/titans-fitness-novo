@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +33,7 @@ const DetalhesAluno = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [aluno, setAluno] = useState<AlunoDetalhes | null>(null);
+  const isDesktop = useMediaQuery("(min-width: 768px)");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -97,16 +99,6 @@ const DetalhesAluno = () => {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate('/alunos')}
-            className="h-10 w-10 p-0"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-3xl font-bold">Detalhes do Aluno</h1>
-        </div>
         <div className="flex items-center justify-center min-h-[400px]">
           <p className="text-lg text-muted-foreground">Carregando...</p>
         </div>
@@ -137,9 +129,10 @@ const DetalhesAluno = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Cabeçalho da Página (Apenas para Desktop) */}
-      <div className="hidden md:flex items-center gap-4">
+      {isDesktop && (
+        <div className="flex items-center gap-4">
         <Button 
           variant="ghost" 
           onClick={() => navigate('/alunos')}
@@ -152,6 +145,7 @@ const DetalhesAluno = () => {
           <p className="text-muted-foreground">Informações pessoais completas</p>
         </div>
       </div>
+      )}
 
       {/* Card de Informações do Aluno */}
       <Card>

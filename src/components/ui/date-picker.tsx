@@ -13,6 +13,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkScreenSize();
+    window.addEventListener("resize", checkScreenSize);
+
+    return () => window.removeEventListener("resize", checkScreenSize);
+  }, []);
+
+  return isMobile;
+};
+
 export function DatePicker({
   value,
   onChange,
@@ -22,6 +41,7 @@ export function DatePicker({
   onChange: (date?: string) => void;
   className?: string;
 }) {
+  const isMobile = useIsMobile();
   const [day, setDay] = React.useState<string>("");
   const [month, setMonth] = React.useState<string>("");
   const [year, setYear] = React.useState<string>("");
@@ -75,10 +95,14 @@ export function DatePicker({
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 100 }, (_, i) => String(currentYear - i));
-  const months = Array.from({ length: 12 }, (_, i) => ({
-    value: String(i + 1).padStart(2, "0"),
-    label: format(new Date(2000, i, 1), "MMMM", { locale: ptBR }),
-  }));
+  const months = Array.from({ length: 12 }, (_, i) => {
+    const date = new Date(2000, i, 1);
+    const monthFormat = isMobile ? "MMM" : "MMMM";
+    let label = format(date, monthFormat, { locale: ptBR });
+    // Remove o ponto final da abreviação (ex: "jan.") e capitaliza a primeira letra
+    label = label.replace('.', '');
+    return { value: String(i + 1).padStart(2, "0"), label: label.charAt(0).toUpperCase() + label.slice(1) };
+  });
 
   const daysInSelectedMonth = (year && month) ? getDaysInMonth(new Date(parseInt(year, 10), parseInt(month, 10) - 1)) : 31;
   const days = Array.from({ length: daysInSelectedMonth }, (_, i) => String(i + 1).padStart(2, "0"));

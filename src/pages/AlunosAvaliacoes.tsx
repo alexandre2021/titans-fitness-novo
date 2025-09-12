@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { ArrowLeft, BarChart3, TrendingUp, Calendar, Plus, Eye, MoreVertical, Trash2, Info } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ResponsiveAlertDialog } from '@/components/ui/responsive-alert-dialog';
@@ -145,6 +146,7 @@ const AlunosAvaliacoes = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isDesktop = useMediaQuery("(min-width: 768px)");
   const { toast } = useToast();
   
   // Estados principais
@@ -302,10 +304,10 @@ const AlunosAvaliacoes = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Cabeçalho da Página (Apenas para Desktop) */}
-      <div className="hidden md:flex md:items-center md:justify-between">
-        <div className="flex items-center gap-4">
+      {isDesktop && (
+        <div className="items-center justify-between">
           <Button 
             variant="ghost" 
             onClick={() => navigate('/alunos')}
@@ -318,7 +320,7 @@ const AlunosAvaliacoes = () => {
             <p className="text-muted-foreground">Histórico de avaliações físicas e evolução</p>
           </div>
         </div>
-      </div>
+      )}
       {/* Informações do Aluno */}
       <Card>
         <CardHeader>

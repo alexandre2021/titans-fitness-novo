@@ -19,6 +19,7 @@ interface SessaoSupabase {
   status: string;
   data_execucao: string;
   tempo_total_minutos: number | null;
+  tempo_decorrido: number | null;
   rotinas: {
     nome: string;
     permite_execucao_aluno: boolean;
@@ -54,6 +55,7 @@ export default function ExecucaoExecutarTreino() {
       a.status === b.status &&
       a.data_execucao === b.data_execucao &&
       a.rotinas?.nome === b.rotinas?.nome &&
+      a.tempo_decorrido === b.tempo_decorrido &&
       a.rotinas?.permite_execucao_aluno === b.rotinas?.permite_execucao_aluno &&
       a.treinos?.nome === b.treinos?.nome &&
       a.alunos?.nome_completo === b.alunos?.nome_completo
@@ -73,6 +75,7 @@ export default function ExecucaoExecutarTreino() {
       status: sessaoData.status,
       data_execucao: sessaoData.data_execucao,
       tempo_total_minutos: sessaoData.tempo_total_minutos,
+      tempo_decorrido: sessaoData.tempo_decorrido,
       // Passe apenas nomes dos objetos aninhados para evitar referência instável
       rotinas: sessaoData.rotinas ? { 
         nome: sessaoData.rotinas.nome, 
@@ -202,6 +205,7 @@ export default function ExecucaoExecutarTreino() {
           status,
           data_execucao,
           tempo_total_minutos,
+          tempo_decorrido,
           rotinas!inner (
             nome,
             permite_execucao_aluno
@@ -256,6 +260,7 @@ export default function ExecucaoExecutarTreino() {
         status: sessao.status,
         data_execucao: sessao.data_execucao,
         tempo_total_minutos: sessao.tempo_total_minutos,
+        tempo_decorrido: sessao.tempo_decorrido,
         rotinas: sessao.rotinas ? {
           nome: sessao.rotinas.nome,
           permite_execucao_aluno: sessao.rotinas.permite_execucao_aluno
@@ -330,6 +335,16 @@ export default function ExecucaoExecutarTreino() {
     }
   }, [userProfile, sessaoData, navigate]);
 
+  // ✅ NOVO CALLBACK DE PAUSA
+  const handleSessaoPausada = useCallback(() => {
+    // Navega para a tela de seleção de treino da rotina atual
+    if (sessaoData?.rotina_id) {
+      navigate(`/execucao-rotina/selecionar-treino/${sessaoData.rotina_id}`);
+    } else {
+      handleSessaoFinalizada(); // Fallback para a navegação padrão
+    }
+  }, [sessaoData, navigate, handleSessaoFinalizada]);
+
   // ✅ LOADING
   if (loading) {
     return (
@@ -379,6 +394,7 @@ export default function ExecucaoExecutarTreino() {
         userProfile={userProfile}
         modoExecucao={modoExecucao}
         onSessaoFinalizada={handleSessaoFinalizada}
+        onSessaoPausada={handleSessaoPausada}
       />
     </div>
   );

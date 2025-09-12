@@ -1,53 +1,108 @@
-# Arquivos Envolvidos no Processo de Perfil do Usuário
+# 👤 Sistema de Perfil de Usuário
 
-Este documento lista os arquivos e componentes que fazem parte da funcionalidade de perfil de usuário, abrangendo tanto o perfil do Aluno quanto o do Personal Trainer.
+Este documento descreve a arquitetura e as principais funcionalidades do sistema de perfil de usuário, que é compartilhado entre Alunos e Personal Trainers.
 
-## Páginas Principais de Perfil
+---
 
-*   `src/pages/PerfilAluno.tsx`: Página principal do perfil do Aluno.
-*   `src/pages/PerfilPT.tsx`: Página principal do perfil do Personal Trainer.
+## 📂 Arquitetura de Arquivos
 
-## Páginas de Onboarding e Cadastro
+A funcionalidade de perfil é modular e reutiliza componentes para garantir consistência.
 
-*   `src/pages/UserTypeSelection.tsx`: Página para seleção do tipo de usuário (Aluno/Personal Trainer).
-*   `src/pages/CadastroAluno.tsx`: Página de cadastro para Alunos.
-*   `src/pages/CadastroPersonalTrainer.tsx`: Página de cadastro para Personal Trainers.
-*   `src/pages/Login.tsx`: Página de login, que autentica usuários para acesso aos perfis.
-*   `src/pages/OnboardingAlunoDadosBasicos.tsx`: Etapa de onboarding para Alunos - dados básicos.
-*   `src/pages/OnboardingAlunoQuestionarioSaude.tsx`: Etapa de onboarding para Alunos - questionário de saúde.
-*   `src/pages/OnboardingPTInformacoesBasicas.tsx`: Etapa de onboarding para Personal Trainers - informações básicas.
-*   `src/pages/OnboardingPTExperienciaProfissional.tsx`: Etapa de onboarding para Personal Trainers - experiência profissional.
-*   `src/pages/OnboardingPTRedesSociais.tsx`: Etapa de onboarding para Personal Trainers - redes sociais.
+```
+src/
+├── pages/
+│   ├── PerfilAluno.tsx                # Página principal do perfil do Aluno
+│   └── PerfilPT.tsx                   # Página principal do perfil do PT
+│
+├── components/
+│   └── perfil/
+│       ├── AvatarSection.tsx          # 🖼️ Componente da foto e nome (reutilizado)
+│       ├── PerfilTabs.tsx             # 📑 Abas de informações do PT
+│       ├── AlunoPerfilTabs.tsx        # 📑 Abas de informações do Aluno
+│       ├── EditPessoalModal.tsx       # ✏️ Modal de edição (pessoal)
+│       ├── EditProfissionalModal.tsx  # ✏️ Modal de edição (profissional)
+│       ├── EditRedesSociaisModal.tsx  # ✏️ Modal de edição (redes sociais)
+│       ├── EditAlunoModal.tsx         # ✏️ Modal de edição (aluno)
+│       └── PasswordChangeSection.tsx  # 🔑 Seção para troca de senha
+│
+├── hooks/
+│   ├── useAlunoProfile.ts             # 🎣 Hook para dados do perfil do Aluno
+│   └── usePTProfile.ts                # 🎣 Hook para dados do perfil do PT
+│
+└── types/
+    └── ...                            # Tipos de dados (Aluno, PersonalTrainer)
+```
 
-## Componentes (Pasta `src/components/perfil/`)
+---
 
-*   `src/components/perfil/AlunoPerfilTabs.tsx`: Componente que gerencia as abas de informações do perfil do Aluno.
-*   `src/components/perfil/AvatarSection.tsx`: Componente genérico para a seção de avatar, utilizado tanto para o Aluno quanto para o Personal Trainer.
-*   `src/components/perfil/EditAlunoModal.tsx`: Modal de edição para informações do perfil do Aluno.
-*   `src/components/perfil/EditPessoalModal.tsx`: Modal de edição para informações pessoais do perfil do Personal Trainer.
-*   `src/components/perfil/EditProfissionalModal.tsx`: Modal de edição para informações profissionais do perfil do Personal Trainer.
-*   `src/components/perfil/EditRedesSociaisModal.tsx`: Modal de edição para redes sociais do perfil do Personal Trainer.
-*   `src/components/perfil/PasswordChangeSection.tsx`: Seção para alteração de senha, utilizada em ambos os perfis.
-*   `src/components/perfil/PerfilTabs.tsx`: Componente que gerencia as abas de informações do perfil do Personal Trainer.
+## ✨ Funcionalidade Principal: Edição de Perfil com Modais Responsivos
 
-## Hooks
+A edição de perfil foi projetada para oferecer a melhor experiência em qualquer dispositivo, utilizando um padrão de modal responsivo.
 
-*   `src/hooks/useAlunoProfile.tsx`: Hook para buscar e gerenciar os dados do perfil do Aluno.
-*   `src/hooks/usePTProfile.tsx`: Hook para buscar e gerenciar os dados do perfil do Personal Trainer.
-*   `src/hooks/useAuth.tsx`: Hook de autenticação, fundamental para o acesso e gerenciamento de perfis.
-*   `src/hooks/useAlunos.tsx`: Hook para gerenciar a lista de alunos de um Personal Trainer.
+**Onde é implementado:**
+-   `src/components/perfil/AvatarSection.tsx` (aciona o modal)
+-   `src/components/perfil/PerfilTabs.tsx` (aciona os modais)
+-   `src/components/perfil/Edit...Modal.tsx` (todos os modais de edição)
 
-## Integrações
+### Como Funciona:
 
-*   `src/integrations/supabase/client.ts`: Cliente Supabase, utilizado por componentes de perfil para interação com o banco de dados.
-*   `src/integrations/supabase/types.ts`: Definições de tipos para as tabelas do Supabase (`alunos`, `personal_trainers`, `user_profiles`), essenciais para a estrutura dos dados de perfil.
+O sistema detecta o tamanho da tela e adapta a interface de edição:
 
-## Layouts
+📱 **Mobile (< 768px):**
+-   Ao clicar em "Editar", um **Drawer** desliza da parte inferior da tela.
+-   Ocupa a maior parte do espaço vertical (`max-h-[90vh]`), ideal para uso com o polegar.
+-   A navegação é intuitiva e otimizada para telas de toque.
 
-*   `src/components/layout/AlunoLayout.tsx`: Layout principal para as páginas do Aluno, incluindo o perfil.
-*   `src/components/layout/PTLayout.tsx`: Layout principal para as páginas do Personal Trainer, incluindo o perfil.
+💻 **Desktop (≥ 768px):**
+-   Ao clicar em "Editar", um **Dialog** (modal) tradicional aparece no centro da tela.
+-   Um overlay escuro foca a atenção do usuário no formulário de edição.
+-   A experiência é familiar e produtiva para usuários de mouse e teclado.
 
-## Tipos
+### Implementação:
 
-*   `src/types/exercicio.types.ts`: Contém interfaces como `UserProfile` e `AlunoData` que podem ser usadas em contextos de perfil.
-*   `src/types/rotina.types.ts`: Contém tipos como `Aluno` e `PersonalTrainer` que definem a estrutura de dados relacionada a perfis em rotinas.
+O padrão é implementado através de um componente `ResponsiveModal` que encapsula a lógica de renderização condicional.
+
+```typescriptreact
+// Exemplo de uso em um componente de edição
+const EditPessoalModal = ({ open, onOpenChange, ... }) => {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        {/* Conteúdo do formulário para mobile */}
+      </Drawer>
+    );
+  }
+  
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {/* Conteúdo do formulário para desktop */}
+    </Dialog>
+  );
+};
+```
+
+### 🚀 Vantagens:
+
+-   **UX Otimizada:** A interface se adapta perfeitamente ao dispositivo do usuário.
+-   **Código Reutilizável:** A mesma lógica de formulário e validação é usada em ambas as versões.
+-   **Consistência Visual:** Mantém a identidade visual da plataforma em todos os cenários.
+
+---
+
+## 🧠 Gerenciamento de Estado com Hooks
+
+A busca e atualização dos dados de perfil são centralizadas em hooks customizados para cada tipo de usuário.
+
+-   **`usePTProfile.ts`**:
+    -   Busca os dados do Personal Trainer logado na tabela `personal_trainers`.
+    -   Fornece funções para atualizar as informações (pessoais, profissionais, redes sociais).
+    -   Gerencia os estados de `loading` e `error`.
+
+-   **`useAlunoProfile.ts`**:
+    -   Busca os dados do Aluno logado na tabela `alunos`.
+    -   Fornece funções para atualizar as informações básicas.
+    -   Gerencia os estados de `loading` e `error`.
+
+Este desacoplamento da lógica de dados da UI torna os componentes mais limpos e focados em sua responsabilidade de renderização.

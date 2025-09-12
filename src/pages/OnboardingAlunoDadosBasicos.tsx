@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { useAlunoProfile } from "@/hooks/useAlunoProfile";
 import { formatarTelefone } from "@/utils/formatters";
@@ -229,12 +230,11 @@ const OnboardingAlunoDadosBasicos = () => {
               {/* Data de Nascimento */}
               <div className="space-y-2">
                 <Label htmlFor="data_nascimento">Data de Nascimento</Label>
-                <Input
-                  id="data_nascimento"
-                  type="date"
+                <DatePicker
                   value={formData.data_nascimento}
-                  max={hoje}
-                  onChange={(e) => handleInputChange('data_nascimento', e.target.value)}
+                  onChange={(date) =>
+                    handleInputChange("data_nascimento", date || "")
+                  }
                 />
               </div>
               

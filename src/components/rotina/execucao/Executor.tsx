@@ -33,6 +33,7 @@ interface Props {
   userProfile: UserProfile;
   modoExecucao: 'pt' | 'aluno';
   onSessaoFinalizada: () => void;
+  onSessaoPausada: () => void;
 }
 
 export const Executor = ({ 
@@ -40,7 +41,8 @@ export const Executor = ({
   sessaoData, // ✅ Usa a prop
   userProfile, 
   modoExecucao,
-  onSessaoFinalizada 
+  onSessaoFinalizada,
+  onSessaoPausada
 }: Props) => {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
@@ -61,9 +63,26 @@ export const Executor = ({
   const [sessaoPausada, setSessaoPausada] = useState(false);
   const [cronometroPausado, setCronometroPausado] = useState(false);
 
-  // ✅ Reset local instantâneo ao entrar na execução
+  // ✅ Efeito para interceptar a saída do navegador (fechar aba, recarregar)
   useEffect(() => {
-    console.log('🚀 Entrando na execução - Resetando estados locais');
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      // Condição para ativar o bloqueio: treino em andamento
+      const isExecuting = !sessaoPausada && !cronometroPausado && !finalizando && !pausando;
+      
+      if (isExecuting) {
+        // Padrão para navegadores modernos
+        event.preventDefault();
+        // Necessário para alguns navegadores mais antigos (embora a mensagem não seja mais exibida)
+        event.returnValue = 'Você tem certeza que quer sair? Seu progresso no treino será perdido.';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [sessaoPausada, cronometroPausado, finalizando, pausando]);
+
+  useEffect(() => {
+    console.log('� Entrando na execução - Resetando estados locais');
     setSessaoPausada(false);
     setCronometroPausado(false);
   }, [sessaoId]);
@@ -115,14 +134,20 @@ export const Executor = ({
 
   // ✅ Pausar e sair
   const pausarESair = useCallback(async () => {
-    setModalPausarVisible(false);
     setPausando(true);
-    const sucesso = await pausarSessao();
-    if (sucesso) {
-      onSessaoFinalizada();
+    try {
+      const sucesso = await pausarSessao();
+      // A modal é fechada ANTES da navegação para garantir que a UI atualize.
+      setModalPausarVisible(false);
+      if (sucesso) {
+        onSessaoPausada();
+      }
+    } finally {
+      // Garante que o estado de 'pausando' seja resetado mesmo se ocorrer um erro.
+      setPausando(false);
     }
-    setPausando(false);
-  }, [pausarSessao, onSessaoFinalizada]);
+  }, [pausarSessao, onSessaoPausada]);
+
 
   // ✅ Botão principal (pausar/continuar)
   const handleBotaoPrincipal = useCallback(() => {
@@ -559,17 +584,8 @@ export const Executor = ({
           // 📱 MOBILE: Drawer
           return (
             <Drawer open={modalPausarVisible} onOpenChange={setModalPausarVisible}>
-              <DrawerContent className="px-4 pb-4">
-                <DrawerHeader className="text-center pb-4 relative">
-                  {/* Botão X para fechar */}
-                  <button
-                    onClick={() => setModalPausarVisible(false)}
-                    className="absolute right-4 top-4 p-1 hover:bg-gray-100 rounded-full transition-colors"
-                    aria-label="Fechar"
-                  >
-                    <X className="h-5 w-5 text-gray-500" />
-                  </button>
-                  
+              <DrawerContent>
+                <DrawerHeader className="text-center">
                   <DrawerTitle className="text-lg font-semibold">
                     Pausar Sessão
                   </DrawerTitle>
@@ -578,7 +594,7 @@ export const Executor = ({
                   </DrawerDescription>
                 </DrawerHeader>
                 
-                <div className="px-2">
+                <div className="p-4 pt-0">
                   <PausarContent />
                 </div>
               </DrawerContent>
@@ -589,17 +605,8 @@ export const Executor = ({
         // 💻 DESKTOP: Dialog
         return (
           <Dialog open={modalPausarVisible} onOpenChange={setModalPausarVisible}>
-            <DialogContent>
-              <DialogHeader className="relative">
-                {/* Botão X para fechar */}
-                <button
-                  onClick={() => setModalPausarVisible(false)}
-                  className="absolute right-6 top-4 p-1 hover:bg-gray-100 rounded-full transition-colors"
-                  aria-label="Fechar"
-                >
-                  <X className="h-5 w-5 text-gray-500" />
-                </button>
-                
+            <DialogContent className="[&>button]:hidden">
+              <DialogHeader>
                 <DialogTitle>Pausar Sessão</DialogTitle>
                 <DialogDescription>
                   O progresso atual será salvo. O que deseja fazer?

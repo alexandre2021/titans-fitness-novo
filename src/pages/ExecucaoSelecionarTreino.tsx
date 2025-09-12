@@ -3,49 +3,27 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Play, CheckCircle, Clock, Target, Calendar } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Play, CheckCircle, Clock, Target, Calendar, ListChecks, User, Shield } from 'lucide-react';
+import { useMediaQuery } from '@/hooks/use-media-query';
 import { supabase } from '@/integrations/supabase/client';
-import { MENSAGENS, SESSAO_STATUS } from '@/constants/exercicio.constants';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Rotina, 
-  Treino, 
   UltimaSessao, 
-  AlunoData, 
-  SessaoEmAndamento 
+  AlunoData
 } from '@/types/exercicio.types';
 
-// Tipagem para dados vindos do Supabase
-interface SessaoSupabase {
+// Nova tipagem para a lista de sessões
+interface SessaoParaLista {
   id: string;
-  treino_id: string;
   data_execucao: string;
   sessao_numero: number;
   status: string;
+  modo_execucao: 'pt' | 'aluno' | null;
   treinos: {
     nome: string;
   };
-}
-
-// Tipagem estendida para treinos com contadores
-interface TreinoComContadores extends Treino {
-  sessoes_disponiveis: number;
-  sessoes_concluidas: number;
-  tem_em_andamento: boolean;
-  tem_pausada: boolean;
-  sessoes_pausadas_count: number; // ← NOVO
-  sessoes_em_andamento_count: number; // ← NOVO
-  sessao_em_andamento_id?: string;
-}
-
-// Interface para dados das sessões expandidas
-interface SessaoDetalhada {
-  id: string;
-  sessao_numero: number;
-  status: string;
-  data_execucao?: string;
 }
 
 export default function ExecucaoSelecionarTreino() {
@@ -53,23 +31,14 @@ export default function ExecucaoSelecionarTreino() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const isDesktop = useMediaQuery("(min-width: 768px)");
 
-  // ✅ ESTADOS MIGRADOS DO RN
+  // Estados
   const [loading, setLoading] = useState(true);
   const [rotina, setRotina] = useState<Rotina | null>(null);
   const [aluno, setAluno] = useState<AlunoData | null>(null);
-  const [treinos, setTreinos] = useState<TreinoComContadores[]>([]);
   const [ultimaSessao, setUltimaSessao] = useState<UltimaSessao | null>(null);
-  const [treinoSugerido, setTreinoSugerido] = useState<string>('');
-  const [treinoExpandido, setTreinoExpandido] = useState<string | null>(null);
-  const [sessoesDetalhadas, setSessoesDetalhadas] = useState<{[treinoId: string]: SessaoDetalhada[]}>({});
-
-  // ✅ ESTADOS PARA MODAIS
-  const [modalVisible, setModalVisible] = useState(false);
-  const [sessoesEmAndamento, setSessoesEmAndamento] = useState<SessaoEmAndamento[]>([]);
-  const [treinoSelecionado, setTreinoSelecionado] = useState<TreinoComContadores | null>(null);
-  const [modalLoading, setModalLoading] = useState(false);
-  const [tipoModal, setTipoModal] = useState<'continuar_ou_nova' | 'escolher_sessao'>('continuar_ou_nova');
+  const [sessoes, setSessoes] = useState<SessaoParaLista[]>([]);
 
   // ✅ MODO DE EXECUÇÃO (aluno ou pt)
   const modo = location.state?.modo || 'aluno';
@@ -80,189 +49,20 @@ export default function ExecucaoSelecionarTreino() {
     const hoje = new Date();
     return Math.floor((hoje.getTime() - data.getTime()) / (1000 * 60 * 60 * 24));
   }, []);
-  // ...
-  // Buscar sessões detalhadas para o treino expandido
-  const buscarSessoesDetalhadas = useCallback(async (treinoId: string) => {
-    console.log('📡 Buscando sessões detalhadas:', { rotinaId, treinoId });
-    const { data: sessoes, error } = await supabase
-      .from('execucoes_sessao')
-      .select('id, sessao_numero, status, data_execucao')
-      .eq('rotina_id', rotinaId)
-      .eq('treino_id', treinoId)
-      .order('sessao_numero', { ascending: true });
-    console.log('📊 Resultado busca sessões:', { sessoes, error });
-    if (error || !sessoes) return [];
-    return sessoes.map((sessao: SessaoDetalhada) => ({
-      id: sessao.id,
-      sessao_numero: sessao.sessao_numero,
-      status: sessao.status,
-      data_execucao: sessao.data_execucao
-    }));
-  }, [rotinaId]);
-
-  // ✅ TOGGLE EXPANSÃO DO TREINO (corrigido para evitar closure e garantir fetch)
-  const toggleExpansaoTreino = useCallback((treinoId: string) => {
-    setTreinoExpandido(prev => {
-      if (prev === treinoId) {
-        console.log('⬆️ Recolhendo treino', { treinoId });
-        return null;
-      } else {
-        console.log('⬇️ Expandindo treino', { treinoId });
-        // Buscar sessões detalhadas se ainda não existem
-        if (!sessoesDetalhadas[treinoId]) {
-          buscarSessoesDetalhadas(treinoId).then(sessoes => {
-            setSessoesDetalhadas(prevDetalhadas => ({
-              ...prevDetalhadas,
-              [treinoId]: sessoes
-            }));
-          });
-        }
-        return treinoId;
-      }
-    });
-  }, [sessoesDetalhadas, buscarSessoesDetalhadas]);
-
-  // ✅ FORMATAR STATUS DAS SESSÕES
-  const formatarStatusSessao = useCallback((status: string): { texto: string; cor: string } => {
-    switch (status) {
-      case SESSAO_STATUS.NAO_INICIADA:
-        return { texto: 'Em aberto', cor: 'bg-blue-100 text-blue-800' };
-      case SESSAO_STATUS.EM_ANDAMENTO:
-        return { texto: 'Em andamento', cor: 'bg-green-100 text-green-800' };
-      case SESSAO_STATUS.PAUSADA:
-        return { texto: 'Pausada', cor: 'bg-orange-100 text-orange-800' };
-      case SESSAO_STATUS.CONCLUIDA:
-        return { texto: 'Concluída', cor: 'bg-gray-100 text-gray-800' };
-      default:
-        return { texto: status, cor: 'bg-gray-100 text-gray-800' };
-    }
-  }, []);
-
-  // ✅ BUSCAR SESSÕES EM ANDAMENTO
-  const buscarSessoesEmAndamento = useCallback(async (treinoId: string): Promise<SessaoEmAndamento[]> => {
-    try {
-      const { data: sessoesRaw, error } = await supabase
-        .from('execucoes_sessao')
-        .select(`
-          id,
-          treino_id,
-          data_execucao,
-          sessao_numero,
-          status,
-          treinos!inner(nome)
-        `)
-        .eq('rotina_id', rotinaId)
-        .eq('treino_id', treinoId)
-        .in('status', [SESSAO_STATUS.EM_ANDAMENTO, SESSAO_STATUS.PAUSADA])
-        .order('sessao_numero', { ascending: true });
-
-      if (error || !sessoesRaw) {
-        console.error('Erro ao buscar sessões em andamento:', error);
-        return [];
-      }
-
-      // Casting com tipagem correta
-      const sessoes = sessoesRaw as SessaoSupabase[];
-
-      return sessoes.map(sessao => ({
-        id: sessao.id,
-        treino_id: sessao.treino_id,
-        treino_nome: sessao.treinos?.nome || `Treino ${sessao.treino_id}`,
-        data_execucao: sessao.data_execucao,
-        sessao_numero: sessao.sessao_numero,
-        status: sessao.status
-      }));
-    } catch (error) {
-      console.error('Erro ao buscar sessões em andamento:', error);
-      return [];
-    }
-  }, [rotinaId]);
-
-  // ✅ BUSCAR PRÓXIMA SESSÃO DISPONÍVEL
-  const buscarProximaSessaoDisponivel = useCallback(async (treinoId: string) => {
-    try {
-      const { data: sessao, error } = await supabase
-        .from('execucoes_sessao')
-        .select('id, sessao_numero')
-        .eq('rotina_id', rotinaId)
-        .eq('treino_id', treinoId)
-        .eq('status', SESSAO_STATUS.NAO_INICIADA)
-        .order('sessao_numero', { ascending: true })
-        .limit(1)
-        .single();
-
-      if (error || !sessao) {
-        return null;
-      }
-
-      return sessao;
-    } catch (error) {
-      console.error('Erro ao buscar sessão disponível:', error);
-      return null;
-    }
-  }, [rotinaId]);
-
-  // ✅ CONTAR SESSÕES POR TREINO - ATUALIZADA COM CONTADORES
-  const contarSessoesPorTreino = useCallback(async (treinoId: string) => {
-    try {
-      console.log('🔍 Contando sessões para:', { rotinaId, treinoId });
-      
-      const { data: sessoes, error } = await supabase
-        .from('execucoes_sessao')
-        .select('status')
-        .eq('rotina_id', rotinaId)
-        .eq('treino_id', treinoId);
-
-      console.log('📊 Resultado query:', { sessoes, error });
-
-      if (error || !sessoes) {
-        return { 
-          disponiveis: 0, 
-          concluidas: 0, 
-          emAndamento: false, 
-          pausadas: false,
-          pausadasCount: 0,
-          emAndamentoCount: 0
-        };
-      }
-
-      console.log('📊 Status das sessões:', sessoes.map(s => s.status));
-
-      const concluidas = sessoes.filter(s => s.status === SESSAO_STATUS.CONCLUIDA).length;
-      const naoIniciadas = sessoes.filter(s => s.status === SESSAO_STATUS.NAO_INICIADA).length;
-      const emAndamento = sessoes.filter(s => s.status === SESSAO_STATUS.EM_ANDAMENTO).length;
-      const pausadas = sessoes.filter(s => s.status === SESSAO_STATUS.PAUSADA).length;
-
-      return {
-        disponiveis: naoIniciadas,
-        concluidas: concluidas,
-        emAndamento: emAndamento > 0,
-        pausadas: pausadas > 0,
-        pausadasCount: pausadas,     // ← NOVO: Contador de pausadas
-        emAndamentoCount: emAndamento // ← NOVO: Contador em andamento
-      };
-    } catch (error) {
-      console.error('Erro ao contar sessões:', error);
-      return { 
-        disponiveis: 0, 
-        concluidas: 0, 
-        emAndamento: false, 
-        pausadas: false,
-        pausadasCount: 0,
-        emAndamentoCount: 0
-      };
-    }
-  }, [rotinaId]);
 
   // ✅ BUSCAR ÚLTIMA SESSÃO
-  const buscarUltimaSessao = useCallback(async (alunoId: string): Promise<string | null> => {
+  const buscarUltimaSessao = useCallback(async (alunoId: string, currentRotinaId: string): Promise<string | null> => {
     try {
-      const { data: ultimaExecucao, error } = await supabase
+      const { data: ultimaExecucao, error } = await supabase // ✅ Busca a última sessão com data
         .from('execucoes_sessao')
-        .select('data_execucao, treino_id')
+        .select('data_execucao, treino_id, sessao_numero, status, modo_execucao')
         .eq('aluno_id', alunoId)
-        .eq('status', SESSAO_STATUS.CONCLUIDA)
+        .eq('rotina_id', currentRotinaId)
+        .in('status', ['concluida', 'pausada', 'em_andamento'])
+        .not('data_execucao', 'is', null)
         .order('data_execucao', { ascending: false })
+        // Adiciona ordenação secundária para garantir consistência se houver múltiplas sessões no mesmo dia
+        .order('sessao_numero', { ascending: false })
         .limit(1)
         .maybeSingle();
 
@@ -280,7 +80,10 @@ export default function ExecucaoSelecionarTreino() {
       const ultimaSessaoData: UltimaSessao = {
         treino_nome: treino?.nome || `Treino ${ultimaExecucao.treino_id}`,
         data_execucao: ultimaExecucao.data_execucao,
-        dias_desde_execucao: calcularDiasDesde(ultimaExecucao.data_execucao)
+        dias_desde_execucao: calcularDiasDesde(ultimaExecucao.data_execucao),
+        sessao_numero: ultimaExecucao.sessao_numero,
+        status: ultimaExecucao.status,
+        modo_execucao: ultimaExecucao.modo_execucao as 'pt' | 'aluno' | null,
       };
       setUltimaSessao(ultimaSessaoData);
       return ultimaSessaoData.treino_nome;
@@ -290,33 +93,6 @@ export default function ExecucaoSelecionarTreino() {
       return null;
     }
   }, [calcularDiasDesde]);
-
-  // ✅ CALCULAR TREINO SUGERIDO
-  const calcularTreinoSugerido = useCallback((ultimoTreino: string | null, treinosLista: TreinoComContadores[]): string => {
-    if (!treinosLista.length) return '';
-
-    // Considera treinos com sessões disponíveis OU pausadas
-    const treinosDisponiveis = [...treinosLista]
-      .filter(t => t.sessoes_disponiveis > 0 || t.sessoes_pausadas_count > 0)
-      .sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
-
-    if (!treinosDisponiveis.length) return '';
-
-    if (!ultimoTreino) {
-      // Se não há último treino, sugere o primeiro disponível
-      return treinosDisponiveis[0]?.nome || '';
-    }
-
-    const treinoAtualIndex = treinosDisponiveis.findIndex(t => t.nome === ultimoTreino);
-
-    if (treinoAtualIndex === -1) {
-      // Se não encontrou, sugere o primeiro disponível
-      return treinosDisponiveis[0]?.nome || '';
-    }
-
-    const proximoIndex = (treinoAtualIndex + 1) % treinosDisponiveis.length;
-    return treinosDisponiveis[proximoIndex]?.nome || '';
-  }, []);
 
   // ✅ CARREGAR DADOS
   const loadData = useCallback(async (currentRotinaId: string) => {
@@ -353,42 +129,19 @@ export default function ExecucaoSelecionarTreino() {
       }
       setAluno(alunoData);
 
-      // Buscar treinos
-      const { data: treinosData, error: treinosError } = await supabase
-        .from('treinos')
-        .select('id, nome, grupos_musculares, ordem')
+      // Buscar todas as sessões da rotina com o nome do treino
+      const { data: sessoesData, error: sessoesError } = await supabase
+        .from('execucoes_sessao')
+        .select('id, sessao_numero, status, data_execucao, modo_execucao, treinos(nome)')
         .eq('rotina_id', currentRotinaId)
-        .order('ordem');
+        .order('sessao_numero', { ascending: true });
 
-      if (treinosError) {
-        throw new Error("Erro ao buscar treinos");
-      }
+      if (sessoesError) throw sessoesError;
 
-      // Enriquecer treinos com contagem de sessões
-      const treinosEnriquecidos = await Promise.all(
-        (treinosData || []).map(async (treino) => {
-          const contagem = await contarSessoesPorTreino(treino.id); // Esta função já usa rotinaId do hook
-          const sessoesAtivas = await buscarSessoesEmAndamento(treino.id); // Esta função já usa rotinaId do hook
-
-          return {
-            ...treino,
-            sessoes_disponiveis: contagem.disponiveis,
-            sessoes_concluidas: contagem.concluidas,
-            tem_em_andamento: contagem.emAndamento,
-            tem_pausada: contagem.pausadas,
-            sessoes_pausadas_count: contagem.pausadasCount,     // ← NOVO
-            sessoes_em_andamento_count: contagem.emAndamentoCount, // ← NOVO
-            sessao_em_andamento_id: sessoesAtivas[0]?.id
-          };
-        })
-      );
-
-      setTreinos(treinosEnriquecidos);
+      setSessoes(sessoesData as SessaoParaLista[] || []);
 
       // Buscar última sessão e calcular sugestão
-      const ultimoTreino = await buscarUltimaSessao(rotinaData.aluno_id);
-      const sugerido = calcularTreinoSugerido(ultimoTreino, treinosEnriquecidos);
-      setTreinoSugerido(sugerido);
+      await buscarUltimaSessao(rotinaData.aluno_id, currentRotinaId);
 
     } catch (error: unknown) {
       console.error('Erro ao carregar dados:', error);
@@ -405,135 +158,41 @@ export default function ExecucaoSelecionarTreino() {
     } finally {
       setLoading(false);
     }
-  }, [navigate, toast, contarSessoesPorTreino, buscarSessoesEmAndamento, buscarUltimaSessao, calcularTreinoSugerido]);
+  }, [navigate, toast, buscarUltimaSessao]);
 
-  // ✅ INICIAR TREINO
-  const iniciarTreino = async (treino: TreinoComContadores) => {
+  // ✅ INICIAR SESSÃO
+  const handleIniciarSessao = async (sessao: SessaoParaLista) => {
     try {
-      if (treino.sessoes_disponiveis === 0 && !treino.tem_em_andamento && !treino.tem_pausada) {
+      if (sessao.status === 'concluida') {
         toast({
           variant: "destructive",
-          title: "Treino Completo",
-          description: `Todas as sessões do ${treino.nome} foram concluídas`,
+          title: "Sessão Concluída",
+          description: "Esta sessão já foi finalizada e não pode ser executada novamente.",
         });
         return;
       }
 
-      const sessoesAtivas = await buscarSessoesEmAndamento(treino.id);
-      
-      if (sessoesAtivas.length > 0) {
-        if (treino.sessoes_disponiveis > 0) {
-          setTreinoSelecionado(treino);
-          setSessoesEmAndamento(sessoesAtivas);
-          setTipoModal('continuar_ou_nova');
-          setModalVisible(true);
-          return;
-        }
+      // Se a sessão está 'em_aberto', atualiza o status para 'em_andamento'
+      if (sessao.status === 'em_aberto') {
+        const hoje = new Date().toISOString().split('T')[0];
+        const { error } = await supabase
+          .from('execucoes_sessao')
+          .update({ status: 'em_andamento', data_execucao: hoje })
+          .eq('id', sessao.id);
         
-        if (sessoesAtivas.length === 1) {
-          navigate(`/execucao-rotina/executar-treino/${sessoesAtivas[0].id}`);
-          return;
-        }
-        
-        setTreinoSelecionado(treino);
-        setSessoesEmAndamento(sessoesAtivas);
-        setTipoModal('escolher_sessao');
-        setModalVisible(true);
-        return;
+        if (error) throw error;
       }
 
-      await iniciarNovaSessao(treino);
-
+      // Navega para a tela de execução
+      navigate(`/execucao-rotina/executar-treino/${sessao.id}`);
     } catch (error) {
-      console.error('Erro ao iniciar treino:', error);
+      console.error('Erro ao iniciar sessão:', error);
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Erro inesperado ao iniciar treino",
+        description: "Não foi possível iniciar a sessão de treino.",
       });
     }
-  };
-
-  // ✅ INICIAR NOVA SESSÃO
-  const iniciarNovaSessao = async (treino: TreinoComContadores) => {
-    try {
-      if (!rotina) return;
-
-      const sessaoDisponivel = await buscarProximaSessaoDisponivel(treino.id);
-      
-      if (!sessaoDisponivel) {
-        toast({
-          variant: "destructive",
-          title: "Erro",
-          description: "Nenhuma sessão disponível para este treino",
-        });
-        return;
-      }
-
-      const hoje = new Date().toISOString().split('T')[0];
-      
-      const { data: sessaoAtualizada, error: updateError } = await supabase
-        .from('execucoes_sessao')
-        .update({
-          status: SESSAO_STATUS.EM_ANDAMENTO,
-          data_execucao: hoje
-        })
-        .eq('id', sessaoDisponivel.id)
-        .select('id')
-        .single();
-
-      if (updateError || !sessaoAtualizada) {
-        console.error('Erro ao atualizar sessão:', updateError);
-        toast({
-          variant: "destructive",
-          title: "Erro",
-          description: "Não foi possível iniciar a sessão de treino",
-        });
-        return;
-      }
-
-      console.log('Sessão iniciada com sucesso:', sessaoAtualizada.id);
-      navigate(`/execucao-rotina/executar-treino/${sessaoAtualizada.id}`, {
-        state: { modo: modo }
-      });
-
-    } catch (error) {
-      console.error('Erro ao iniciar nova sessão:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Erro inesperado ao iniciar nova sessão.",
-      });
-    }
-  };
-
-  // ✅ CONTINUAR SESSÃO EXISTENTE
-  const continuarSessao = () => {
-    if (sessoesEmAndamento.length === 0) return;
-    
-    const sessaoParaContinuar = sessoesEmAndamento[0];
-    setModalVisible(false);
-    navigate(`/execucao-rotina/executar-treino/${sessaoParaContinuar.id}`, {
-      state: { modo: modo }
-    });
-  };
-
-  // ✅ CONTINUAR SESSÃO ESPECÍFICA
-  const continuarSessaoEspecifica = (sessaoId: string) => {
-    setModalVisible(false);
-    navigate(`/execucao-rotina/executar-treino/${sessaoId}`, {
-      state: { modo: modo }
-    });
-  };
-
-  // ✅ NOVA SESSÃO
-  const criarNovaSessao = async () => {
-    if (!treinoSelecionado) return;
-
-    setModalLoading(true);
-    setModalVisible(false);
-    await iniciarNovaSessao(treinoSelecionado);
-    setModalLoading(false);
   };
 
   // ✅ FORMATAÇÃO DE DATA
@@ -549,6 +208,53 @@ export default function ExecucaoSelecionarTreino() {
 
     return `${diaSemana}, ${diaStr}/${mesStr} (${dias} ${dias === 1 ? 'dia' : 'dias'})`;
   }, []);
+
+  const formatDateForBadge = (dateString: string | null): string => {
+    if (!dateString) return '';
+    try {
+      // Adiciona T00:00:00 para evitar problemas de fuso horário que podem mudar o dia
+      const date = new Date(dateString + 'T00:00:00');
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      return ` em ${day}/${month}`;
+    } catch (error) {
+      console.error("Erro ao formatar data para badge:", error);
+      return '';
+    }
+  };
+
+  // ✅ FORMATAR STATUS DAS SESSÕES
+  const getStatusBadge = (status: string, dataExecucao: string | null) => {
+    const dateSuffix = formatDateForBadge(dataExecucao);
+    switch (status) {
+      case 'em_aberto':
+        return { texto: 'Em Aberto', cor: 'bg-red-100 text-red-800' };
+      case 'em_andamento':
+        return { texto: 'Em Andamento', cor: 'bg-yellow-100 text-yellow-800' };
+      case 'pausada':
+        return { texto: `Pausada${dateSuffix}`, cor: 'bg-orange-100 text-orange-800' };
+      case 'concluida':
+        return { texto: `Concluída${dateSuffix}`, cor: 'bg-green-100 text-green-800' };
+      default:
+        return { texto: status, cor: 'bg-gray-100 text-gray-800' };
+    }
+  };
+
+  const ModoExecucaoBadge = ({ modo }: { modo: 'pt' | 'aluno' | null }) => {
+    if (!modo) return null;
+  
+    const isAssistido = modo === 'pt';
+    const Icon = isAssistido ? Shield : User;
+    const text = isAssistido ? 'Modo Assistido' : 'Modo Aluno';
+    const colorClasses = 'bg-slate-200 text-slate-800 border-slate-300';
+  
+    return (
+      <Badge variant="outline" className={`text-xs ${colorClasses} flex items-center w-fit`}>
+        <Icon className="h-3 w-3 mr-1" />
+        <span>{text}</span>
+      </Badge>
+    );
+  };
 
   // ✅ CARREGAR DADOS
   useEffect(() => {
@@ -586,23 +292,25 @@ export default function ExecucaoSelecionarTreino() {
   return (
     <div className="container max-w-4xl mx-auto p-6 space-y-6">
       {/* HEADER */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => navigate(`/alunos-rotinas/${rotina.aluno_id}`)}
-            className="text-primary hover:text-primary/80"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Execução de Treino</h1>
-            <p className="text-muted-foreground">{aluno.nome_completo}</p>
+      {isDesktop && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => navigate(modo === 'personal' ? `/alunos-rotinas/${rotina.aluno_id}` : '/minhas-rotinas')}
+              className="text-primary hover:text-primary/80"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Voltar
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Execução de Treino</h1>
+              <p className="text-muted-foreground">{aluno.nome_completo}</p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* SEÇÃO DE CONTEXTO */}
       <Card>
@@ -615,13 +323,17 @@ export default function ExecucaoSelecionarTreino() {
         <CardContent className="space-y-4">
           {ultimaSessao ? (
             <div>
-              <div className="flex items-center space-x-2 mb-2">
+              <div className="flex items-center space-x-2 mb-1">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium text-muted-foreground">ÚLTIMA SESSÃO</span>
+                <span className="text-sm font-medium text-muted-foreground">ÚLTIMA ATIVIDADE</span>
               </div>
-              <p className="text-foreground font-medium">
-                {ultimaSessao.treino_nome} - {formatarDataUltimaSessao(ultimaSessao.data_execucao, ultimaSessao.dias_desde_execucao)}
-              </p>
+              <div className="flex flex-col items-start gap-1.5">
+                <p className="text-foreground font-medium">
+                  Sessão {ultimaSessao.sessao_numero}/{sessoes.length} - {ultimaSessao.treino_nome}                  
+                </p>
+                {(ultimaSessao.status === 'concluida' || ultimaSessao.status === 'pausada') && <ModoExecucaoBadge modo={ultimaSessao.modo_execucao} />}
+                <Badge className={getStatusBadge(ultimaSessao.status, ultimaSessao.data_execucao).cor}>{getStatusBadge(ultimaSessao.status, ultimaSessao.data_execucao).texto}</Badge>
+              </div>
             </div>
           ) : (
             <div>
@@ -633,15 +345,6 @@ export default function ExecucaoSelecionarTreino() {
             </div>
           )}
 
-          <div>
-            <div className="flex items-center space-x-2 mb-2">
-              <Target className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-muted-foreground">
-                {ultimaSessao ? 'PRÓXIMA SESSÃO (SUGERIDO)' : 'TREINO SUGERIDO'}
-              </span>
-            </div>
-            <p className="text-primary font-semibold text-lg">{treinoSugerido}</p>
-          </div>
         </CardContent>
       </Card>
 
@@ -649,267 +352,69 @@ export default function ExecucaoSelecionarTreino() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Play className="h-5 w-5 text-primary" />
-            <span>Selecionar Treino</span>
+            <ListChecks className="h-5 w-5 text-primary" />
+            <span>Sessões de Treino</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {treinos.map((treino) => {
-            const isSugerido = treino.nome === treinoSugerido;
-            const isCompleto = treino.sessoes_disponiveis === 0 && !treino.tem_em_andamento && !treino.tem_pausada;
-            const emAndamentoBadge = treino.tem_em_andamento;
-            const pausadaBadge = treino.tem_pausada;
-            const grupos = treino.grupos_musculares ? treino.grupos_musculares.split(', ') : [];
-
-            // Log de diagnóstico ANTES do return JSX
-            if (typeof window !== 'undefined') {
-              console.log('🔍 Condição renderização:', {
-                treinoId: treino.id,
-                treinoExpandido,
-                idsIguais: treinoExpandido === treino.id,
-                temSessoes: !!sessoesDetalhadas[treino.id],
-                sessoes: sessoesDetalhadas[treino.id]
-              });
-            }
-
+          {sessoes.map((sessao) => {
+            const statusInfo = getStatusBadge(sessao.status, sessao.data_execucao);
+            const isConcluida = sessao.status === 'concluida';
+            const isPausada = sessao.status === 'pausada';
             return (
               <Card
-                key={treino.id}
-                className={`cursor-pointer transition-all duration-200 ${
-                  isSugerido 
-                    ? 'border-primary bg-primary/5 hover:bg-primary/10' 
-                    : isCompleto 
-                      ? 'opacity-60 cursor-not-allowed bg-muted' 
-                      : 'hover:bg-accent'
-                }`}
-                onClick={() => !isCompleto && iniciarTreino(treino)}
+                key={sessao.id}
+                className={`transition-all duration-200 ${isConcluida ? 'bg-muted/50' : 'hover:bg-accent'}`}
               >
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className={`text-lg font-semibold ${
-                          isSugerido ? 'text-primary' : isCompleto ? 'text-muted-foreground' : 'text-foreground'
-                        }`}>
-                          {treino.nome}
-                        </h3>
-                        
-                        <div className="flex items-center space-x-2">
-                          {isSugerido && !isCompleto && (
-                            <Badge variant="secondary" className="bg-primary text-primary-foreground">
-                              SUGERIDO
-                            </Badge>
-                          )}
-                          
-                          {emAndamentoBadge && (
-                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                              EM ANDAMENTO ({treino.sessoes_em_andamento_count})
-                            </Badge>
-                          )}
-                          
-                          {pausadaBadge && (
-                            <Badge variant="secondary" className="bg-orange-600 text-white font-medium">
-                              PAUSADA ({treino.sessoes_pausadas_count})
-                            </Badge>
-                          )}
-                          
-                          {isCompleto && (
-                            <Badge variant="secondary" className="bg-green-100 text-green-800">
-                              COMPLETO
-                            </Badge>
-                          )}
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex-1 space-y-1">
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Sessão {sessao.sessao_numero}/{sessoes.length}
+                      </p>
+                      <h3 className={`text-lg font-semibold ${isConcluida ? 'text-muted-foreground' : 'text-foreground'}`}>
+                        {sessao.treinos.nome}
+                      </h3>
+                      {isConcluida || isPausada ? (
+                        <div className="flex flex-col items-start gap-1.5 pt-1">
+                          <ModoExecucaoBadge modo={sessao.modo_execucao} />
+                          <Badge className={statusInfo.cor}>{statusInfo.texto}</Badge>
                         </div>
-                      </div>
-                      
-                      <div className="flex items-center space-x-4 mb-3">
-                        <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-                          <Clock className="h-4 w-4" />
-                          <span>{treino.sessoes_concluidas} concluídas • {treino.sessoes_disponiveis} disponíveis</span>
-                        </div>
-                      </div>
-                      
-                      {grupos.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {grupos.map((grupo, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              {grupo}
-                            </Badge>
-                          ))}
+                      ) : (
+                        <div className="pt-1">
+                          <Badge className={statusInfo.cor}>{statusInfo.texto}</Badge>
                         </div>
                       )}
-
-                      {/* Botão Ver Sessões */}
-                      <div className="flex justify-start mt-3 pt-3 border-t border-gray-100">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation(); // Evita disparar o onClick do card
-                            toggleExpansaoTreino(treino.id);
-                          }}
-                          className="text-xs text-muted-foreground hover:text-foreground p-1 h-auto bg-gray-200 hover:bg-gray-300 border border-gray-300"
-                        >
-                          {treinoExpandido === treino.id ? (
-                            <>
-                              <svg className="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                              </svg>
-                              Ocultar sessões
-                            </>
-                          ) : (
-                            <>
-                              <svg className="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
-                              Ver sessões
-                            </>
-                          )}
-                        </Button>
-                      </div>
                     </div>
 
                     <div className="ml-4">
-                      {isCompleto ? (
-                        <CheckCircle className="h-6 w-6 text-green-500" />
-                      ) : (
-                        <Play className={`h-6 w-6 ${isSugerido ? 'text-primary' : 'text-muted-foreground'}`} />
-                      )}
+                      <Button
+                        size={isDesktop ? "sm" : "icon"}
+                        onClick={() => handleIniciarSessao(sessao)}
+                        disabled={isConcluida}
+                        className={`${isConcluida ? 'bg-muted text-muted-foreground' : ''} ${!isDesktop ? 'rounded-full' : ''}`}
+                        aria-label={sessao.status === 'em_andamento' || sessao.status === 'pausada' ? 'Continuar' : 'Treinar'}
+                      >
+                        {isDesktop ? (
+                          <>
+                            {sessao.status === 'em_andamento' || sessao.status === 'pausada' ? 'Continuar' : 'Treinar'}
+                            {!isConcluida && <Play className="h-4 w-4 ml-2" />}
+                            {isConcluida && <CheckCircle className="h-4 w-4 ml-2" />}
+                          </>
+                        ) : (
+                          isConcluida 
+                            ? <CheckCircle className="h-5 w-5" /> 
+                            : <Play className="h-5 w-5" />
+                        )}
+                      </Button>
                     </div>
                   </div>
-
-                  {/* Sessões Expandidas */}
-                  {treinoExpandido === treino.id && sessoesDetalhadas[treino.id] && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      {sessoesDetalhadas[treino.id].length === 0 ? (
-                        <div className="text-center text-muted-foreground">Nenhuma sessão encontrada para este treino.</div>
-                      ) : (
-                        <div className="space-y-3">
-                          {sessoesDetalhadas[treino.id].map(sessao => {
-                            const statusInfo = formatarStatusSessao(sessao.status);
-                            return (
-                              <div key={sessao.id} className="flex items-center justify-between p-3 rounded-md bg-white border border-gray-100 shadow-sm">
-                                <div className="flex items-center gap-3">
-                                  <span className="font-semibold text-lg">Sessão {sessao.sessao_numero}</span>
-                                  <span
-                                    className={`px-2 py-1 rounded text-xs font-medium ${
-                                      statusInfo.texto === 'Concluída'
-                                        ? 'bg-green-100 text-green-800'
-                                        : statusInfo.texto === 'Pausada'
-                                          ? 'bg-orange-600 text-white font-medium'
-                                          : statusInfo.cor
-                                    }`}
-                                  >
-                                    {statusInfo.texto}
-                                  </span>
-                                </div>
-                                {sessao.data_execucao && (
-                                  <span className="text-sm text-muted-foreground">{new Date(sessao.data_execucao).toLocaleDateString('pt-BR')}</span>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             );
           })}
         </CardContent>
       </Card>
-
-      {/* MODALS */}
-      {tipoModal === 'continuar_ou_nova' ? (
-        <Dialog open={modalVisible} onOpenChange={setModalVisible}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {sessoesEmAndamento.length > 0 && sessoesEmAndamento[0].status === SESSAO_STATUS.PAUSADA
-                  ? 'Sessão Pausada'
-                  : 'Sessão em Andamento'}
-              </DialogTitle>
-              <DialogDescription>
-                {sessoesEmAndamento.length > 0
-                  ? (
-                      (sessoesEmAndamento[0].status === SESSAO_STATUS.PAUSADA
-                        ? 'Você tem uma sessão pausada. Deseja continuar de onde parou ou iniciar uma nova sessão?'
-                        : MENSAGENS.CONTINUAR_OU_NOVA)
-                      + `\n\n${sessoesEmAndamento[0].treino_nome} - Sessão ${sessoesEmAndamento[0].sessao_numero} - Iniciada em ${new Date(sessoesEmAndamento[0].data_execucao).toLocaleDateString('pt-BR')}`
-                    )
-                  : MENSAGENS.CONTINUAR_OU_NOVA
-                }
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex flex-col space-y-3 pt-4">
-              <Button 
-                onClick={continuarSessao}
-                disabled={modalLoading}
-                className="w-full"
-              >
-                Continuar
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={criarNovaSessao}
-                disabled={modalLoading}
-                className="w-full"
-              >
-                {modalLoading ? 'Criando...' : 'Nova Sessão'}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      ) : (
-        <div className={`fixed inset-0 z-50 ${modalVisible ? 'block' : 'hidden'}`}>
-          <div className="fixed inset-0 bg-black/50" onClick={() => setModalVisible(false)} />
-          <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Play className="h-5 w-5 text-primary" />
-                  <span>Escolher Sessão</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Você tem múltiplas sessões em andamento. Escolha qual continuar:
-                </p>
-                
-                <div className="space-y-2">
-                  {sessoesEmAndamento.map((sessao) => (
-                    <Card
-                      key={sessao.id}
-                      className="cursor-pointer hover:bg-accent"
-                      onClick={() => continuarSessaoEspecifica(sessao.id)}
-                    >
-                      <CardContent className="p-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">Sessão {sessao.sessao_numero}</p>
-                            <p className="text-sm text-muted-foreground">
-                              Iniciada em {new Date(sessao.data_execucao).toLocaleDateString('pt-BR')}
-                            </p>
-                          </div>
-                          <Play className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-                
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={() => setModalVisible(false)}
-                >
-                  Cancelar
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

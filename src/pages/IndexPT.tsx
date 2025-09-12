@@ -20,6 +20,7 @@ import {
   Trash2,
   Send
 } from "lucide-react";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -65,6 +66,7 @@ const IndexPT = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isDesktop = useMediaQuery("(min-width: 768px)");
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>({
     alunosAtivos: 0,
@@ -390,14 +392,16 @@ const IndexPT = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Bem-vindo, {user?.user_metadata?.full_name || 'Personal Trainer'}!
-        </p>
-      </div>
+      {isDesktop && (
+        <div>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Bem-vindo, {user?.user_metadata?.full_name || 'Personal Trainer'}!
+          </p>
+        </div>
+      )}
 
       {/* Cards de Estatísticas */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

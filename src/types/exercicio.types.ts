@@ -9,6 +9,7 @@ export interface SessaoData {
   status: string;
   data_execucao: string;
   tempo_total_minutos?: number;
+  tempo_decorrido?: number | null;
   rotinas?: {
     nome: string;
     permite_execucao_aluno: boolean;
@@ -111,6 +112,9 @@ export interface UltimaSessao {
   treino_nome: string;
   data_execucao: string;
   dias_desde_execucao: number;
+  sessao_numero: number;
+  status: string;
+  modo_execucao?: 'pt' | 'aluno' | null;
 }
 
 export interface AlunoData {

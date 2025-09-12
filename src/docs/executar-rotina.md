@@ -1,6 +1,6 @@
 # 🏋️ Sistema de Execução de Rotinas
 
-Este documento descreve a arquitetura e o fluxo de funcionamento do sistema de execução de rotinas, que é compartilhado entre Personal Trainers e Alunos.
+Este documento descreve a arquitetura e o fluxo de funcionamento do sistema de execução de rotinas, que é compartilhado entre Personal Trainers (PT) e Alunos.
 
 ## 📂 Estrutura de Arquivos Essencial
 

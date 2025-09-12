@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Activity, Calendar, Eye, Camera, X, TrendingUp } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useMediaQuery } from '@/hooks/use-media-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -37,7 +37,7 @@ interface AvaliacaoFisica {
 const AvaliacoesAluno = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const isMobile = useIsMobile();
+  const isDesktop = useMediaQuery("(min-width: 768px)");
   
   // Estados principais
   const [avaliacoes, setAvaliacoes] = useState<AvaliacaoFisica[]>([]);
@@ -351,12 +351,6 @@ const AvaliacoesAluno = () => {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Minhas Avaliações</h1>
-          <p className="text-muted-foreground">
-            Acompanhe seu progresso e evolução física
-          </p>
-        </div>
         <div className="flex items-center justify-center min-h-[400px]">
           <p className="text-lg text-muted-foreground">Carregando...</p>
         </div>
@@ -367,12 +361,14 @@ const AvaliacoesAluno = () => {
   return (
     <div className="space-y-6 md:p-6">
       {/* Cabeçalho */}
-      <div>
-        <h1 className="text-3xl font-bold">Minhas Avaliações</h1>
-        <p className="text-muted-foreground">
-          Acompanhe seu progresso e evolução física
-        </p>
-      </div>
+      {isDesktop && (
+        <div>
+          <h1 className="text-3xl font-bold">Minhas Avaliações</h1>
+          <p className="text-muted-foreground">
+            Acompanhe seu progresso e evolução física
+          </p>
+        </div>
+      )}
 
       {avaliacoes.length === 0 ? (
         /* Estado vazio */
@@ -439,7 +435,7 @@ const AvaliacoesAluno = () => {
                             {avaliacao.data_avaliacao.split('-').reverse().join('/')}
                           </span>
                         </div>
-                        {isMobile ? (
+                        {!isDesktop ? (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -506,7 +502,7 @@ const AvaliacoesAluno = () => {
       )}
 
       {/* Modal Responsivo */}
-      {isMobile ? (
+      {!isDesktop ? (
         /* Mobile: Drawer */
         <Drawer open={modalVisible} onOpenChange={setModalVisible}>
           <DrawerContent className="max-h-[90vh]">

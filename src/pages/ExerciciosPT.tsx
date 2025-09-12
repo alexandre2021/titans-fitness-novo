@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, Filter, Dumbbell, ShieldAlert, Info, X } from "lucide-react";
+import { ArrowUp, ArrowLeft, Plus, Search, Filter, Dumbbell, ShieldAlert, Info, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -22,7 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useExercicios } from "@/hooks/useExercicios";
 import { ExercicioCard } from "@/components/exercicios/ExercicioCard";
 import { FiltrosExercicios } from "@/components/exercicios/FiltrosExercicios";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 const ExerciciosPT = () => {
   const navigate = useNavigate();
@@ -43,9 +43,29 @@ const ExerciciosPT = () => {
 
   const [activeTab, setActiveTab] = useState<"padrao" | "personalizados">("padrao");
   const [showFilters, setShowFilters] = useState(false);
-  const isMobile = useIsMobile();
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const isMobile = !isDesktop;
   const [isLimitInfoOpen, setIsLimitInfoOpen] = useState(false);
   const [busca, setBusca] = useState("");
+  const [showScrollTopButton, setShowScrollTopButton] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTopButton(window.scrollY > 300);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    });
+  };
 
   const handleNovoExercicio = () => {
     if (totalPersonalizados >= LIMITE_EXERCICIOS_PERSONALIZADOS) {
@@ -129,12 +149,6 @@ const ExerciciosPT = () => {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Exercícios</h1>
-          <p className="text-muted-foreground">
-            Gerencie seus exercícios padrão e personalizados
-          </p>
-        </div>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
@@ -148,19 +162,8 @@ const ExerciciosPT = () => {
   return (
     <div className="space-y-6">
       {/* Cabeçalho */}
-      <div className="space-y-4">
-        {/* Mobile: Header compacto */}
-        <div className="flex items-center justify-between md:hidden">
-          <div>
-            <h1 className="text-3xl font-bold">Exercícios</h1>
-            <p className="text-sm text-muted-foreground">
-              Gerencie seus exercícios
-            </p>
-          </div>
-        </div>
-
-        {/* Desktop: Header tradicional */}
-        <div className="hidden md:flex md:items-center justify-between">
+      {isDesktop && (
+        <div className="items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Exercícios</h1>
             <p className="text-muted-foreground">
@@ -168,7 +171,7 @@ const ExerciciosPT = () => {
             </p>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Abas */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "padrao" | "personalizados")}>
@@ -452,6 +455,20 @@ const ExerciciosPT = () => {
           >
             {canAddMore ? <Plus /> : <ShieldAlert />}
             {canAddMore ? "Novo Exercício" : "Limite Atingido"}
+          </Button>
+        </div>
+      )}
+
+      {/* Botão Flutuante para Voltar ao Topo */}
+      {showScrollTopButton && (
+        <div className="fixed bottom-36 md:bottom-24 right-4 md:right-6 z-50">
+          <Button
+            onClick={scrollToTop}
+            className="rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center md:h-12 md:w-12"
+            aria-label="Voltar ao topo"
+            variant="secondary"
+          >
+            <ArrowUp className="h-9 w-9 md:h-6 md:w-6" />
           </Button>
         </div>
       )}
