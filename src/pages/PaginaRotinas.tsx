@@ -489,7 +489,10 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
           variant: "destructive",
         });
       } else {
-        // ✅ CORREÇÃO: Remover da lista local correta (Ativas ou Rascunhos)
+        // Verifica se estamos excluindo o último rascunho
+        const isLastDraft = selectedRotina.status === 'Rascunho' && rotinasRascunho.length === 1;
+
+        // Remove da lista local correta
         if (selectedRotina.status === 'Rascunho') {
           setRotinasRascunho(prev => prev.filter(r => r.id !== selectedRotina.id));
         } else {
@@ -500,9 +503,11 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
           title: "Rotina excluída",
           description: "A rotina foi removida com sucesso.",
         });
-        
-        setShowDeleteDialog(false);
-        setSelectedRotina(null);
+
+        // Se o último rascunho foi excluído, muda para a aba "atual"
+        if (isLastDraft) {
+          setActiveTab("atual");
+        }
       }
     } catch (error) {
       console.error('Erro ao excluir rotina:', error);
@@ -513,6 +518,9 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
       });
     } finally {
       setIsDeleting(false);
+      // ✅ CORREÇÃO: Garante que o modal sempre feche, em caso de sucesso ou falha.
+      setShowDeleteDialog(false);
+      setSelectedRotina(null);
     }
   };
 
