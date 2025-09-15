@@ -1,10 +1,8 @@
 // src/components/QuestionarioSaudeModal.tsx
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
-import { useIsMobile } from "@/hooks/use-mobile";
+import Modal from 'react-modal';
+import { X } from 'lucide-react';
 
 interface QuestionarioSaudeModalProps {
   open: boolean;
@@ -19,7 +17,7 @@ const QuestionarioSaudeModal = ({
   onResponse, 
   isLoading = false 
 }: QuestionarioSaudeModalProps) => {
-  const isMobile = useIsMobile();
+  const handleClose = () => onOpenChange(false);
 
   const modalContent = (
     <div className="space-y-6">
@@ -58,30 +56,26 @@ const QuestionarioSaudeModal = ({
     </div>
   );
 
-  if (isMobile) {
-    return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-h-[90vh]">
-          <DrawerHeader className="text-center">
-            <DrawerTitle>Questionário de Saúde</DrawerTitle>
-          </DrawerHeader>
-          <div className="px-4 pb-4">
-            {modalContent}
-          </div>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[400px]">
-        <DialogHeader>
-          <DialogTitle className="text-center">Questionário de Saúde</DialogTitle>
-        </DialogHeader>
+    <Modal
+      isOpen={open}
+      onRequestClose={handleClose}
+      shouldCloseOnOverlayClick={true}
+      shouldCloseOnEsc={true}
+      className="bg-white rounded-lg max-w-sm w-full mx-4 outline-none"
+      overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+    >
+      <div className="flex items-center justify-between p-6 border-b">
+        <div className="w-8"></div> {/* Spacer to help center the title */}
+        <h2 className="text-lg font-semibold text-center flex-1">Questionário de Saúde</h2>
+        <Button variant="ghost" size="sm" onClick={handleClose} className="h-8 w-8 p-0">
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+      <div className="p-6">
         {modalContent}
-      </DialogContent>
-    </Dialog>
+      </div>
+    </Modal>
   );
 };
 

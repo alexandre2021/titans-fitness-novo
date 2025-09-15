@@ -1,26 +1,13 @@
 // components/exercicios/ExercicioCard.tsx
 import { useState } from 'react';
+import Modal from 'react-modal';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { ExercicioOptionsModal } from './ExercicioOptionsModal';
 import { Tables } from '@/integrations/supabase/types';
+import { AlertTriangle, Trash2 } from 'lucide-react';
 
 type Exercicio = Tables<"exercicios">;
 
@@ -33,90 +20,13 @@ interface ExercicioCardProps {
 const CORES_GRUPOS_MUSCULARES: { [key: string]: string } = {
   'Peito': 'bg-red-100 text-red-800',
   'Costas': 'bg-blue-100 text-blue-800', 
-  'Pernas': 'bg-green-100 text-green-800',        // Verde (mantém)
+  'Pernas': 'bg-green-100 text-green-800',
   'Ombros': 'bg-yellow-100 text-yellow-800',
   'Bíceps': 'bg-purple-100 text-purple-800',
   'Tríceps': 'bg-pink-100 text-pink-800',
   'Abdômen': 'bg-orange-100 text-orange-800',
-  'Glúteos': 'bg-violet-100 text-violet-800',     // Roxo/violeta - bem diferente
+  'Glúteos': 'bg-violet-100 text-violet-800',
   'Panturrilha': 'bg-indigo-100 text-indigo-800'
-};
-
-// Componente responsivo para confirmação
-const ResponsiveDeleteConfirmation = ({ 
-  open, 
-  onOpenChange, 
-  onConfirm, 
-  isDeleting, 
-  title,
-  description
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onConfirm: () => void;
-  isDeleting: boolean;
-  title: string;
-  description: React.ReactNode;
-}) => {
-  const isMobile = useIsMobile();
-
-  if (isMobile) {
-    return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent>
-          <DrawerHeader className="text-left">
-            <DrawerTitle>{title}</DrawerTitle>
-          </DrawerHeader>
-          <div className="p-4 space-y-4">
-            <div className="text-sm text-muted-foreground">{description}</div>
-            <div className="flex justify-end space-x-2 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={onConfirm}
-                  disabled={isDeleting}
-                  variant="destructive"
-                >
-                  {isDeleting ? "Excluindo..." : "Excluir"}
-                </Button>
-            </div>
-          </div>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-
-  return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={onConfirm}
-            disabled={isDeleting}
-            variant="destructive"
-          >
-            {isDeleting ? "Excluindo..." : "Excluir"}
-          </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
 };
 
 export const ExercicioCard = ({ 
@@ -148,6 +58,11 @@ export const ExercicioCard = ({
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleCancelar = () => {
+    if (isDeleting) return;
+    setShowDeleteDialog(false);
   };
 
   const corGrupoMuscular = exercicio.grupo_muscular 
@@ -198,18 +113,60 @@ export const ExercicioCard = ({
         </CardContent>
       </Card>
 
-      <ResponsiveDeleteConfirmation
-        open={showDeleteDialog}
-        onOpenChange={setShowDeleteDialog}
-        onConfirm={handleExcluir}
-        isDeleting={isDeleting}
-        title="Excluir Exercício"
-        description={
-          <span>
-            Tem certeza que deseja excluir o exercício <strong>{exercicio.nome}</strong>. Esta ação não pode ser desfeita e todos os dados do exercício serão removidos.
-          </span>
-        }
-      />
+      {/* Modal de Confirmação de Exclusão - React Modal BLOQUEADA */}
+      <Modal
+        isOpen={showDeleteDialog}
+        onRequestClose={() => {}} // Não permite fechar
+        shouldCloseOnOverlayClick={false}
+        shouldCloseOnEsc={false}
+        className="bg-white rounded-lg p-6 max-w-md w-full mx-4 outline-none"
+        overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <AlertTriangle className="h-5 w-5 text-red-500" />
+          <h2 className="text-lg font-semibold">Excluir Exercício</h2>
+        </div>
+        
+        <div className="mb-6">
+          <p className="text-sm text-gray-600 leading-relaxed">
+            Tem certeza que deseja excluir o exercício{" "}
+            <span className="font-semibold text-gray-900">
+              "{exercicio.nome}"
+            </span>?
+          </p>
+          <p className="text-sm text-gray-600 mt-2">
+            Esta ação não pode ser desfeita e todos os dados do exercício serão removidos.
+          </p>
+        </div>
+        
+        <div className="flex gap-3 justify-end">
+          <Button 
+            variant="outline" 
+            onClick={handleCancelar}
+            disabled={isDeleting}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            variant="destructive" 
+            onClick={handleExcluir} 
+            disabled={isDeleting}
+            className="flex items-center gap-2"
+          >
+            {isDeleting ? (
+              <>
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                Excluindo...
+              </>
+            ) : (
+              <>
+                <Trash2 className="h-4 w-4" />
+                Excluir
+              </>
+            )}
+          </Button>
+        </div>
+      </Modal>
     </>
   );
 };

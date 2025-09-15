@@ -1,35 +1,28 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import Modal from 'react-modal';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowUp, ArrowLeft, Plus, Search, Filter, Dumbbell, ShieldAlert, Info, X } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
+import { ArrowUp, Plus, Search, Filter, Dumbbell, ShieldAlert, Info, AlertTriangle, Trash2, X } from "lucide-react";
+import { Tables } from "@/integrations/supabase/types";
 import { useToast } from "@/hooks/use-toast";
 import { useExercicios } from "@/hooks/useExercicios";
 import { ExercicioCard } from "@/components/exercicios/ExercicioCard";
 import { FiltrosExercicios } from "@/components/exercicios/FiltrosExercicios";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
+// Configurar o react-modal para acessibilidade
+if (typeof window !== 'undefined') {
+  Modal.setAppElement('#root'); // ou o ID do seu elemento raiz
+}
+
 const ExerciciosPT = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const LIMITE_EXERCICIOS_PERSONALIZADOS = 100;
   
-  // Usar o hook personalizado
   const {
     exerciciosPadrao,
     exerciciosPersonalizados,
@@ -44,8 +37,10 @@ const ExerciciosPT = () => {
   const [activeTab, setActiveTab] = useState<"padrao" | "personalizados">("padrao");
   const [showFilters, setShowFilters] = useState(false);
   const isDesktop = useMediaQuery("(min-width: 768px)");
-  const isMobile = !isDesktop;
   const [isLimitInfoOpen, setIsLimitInfoOpen] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [exercicioParaExcluir, setExercicioParaExcluir] = useState<Tables<'exercicios'> | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [busca, setBusca] = useState("");
   const [showScrollTopButton, setShowScrollTopButton] = useState(false);
 
@@ -76,7 +71,6 @@ const ExerciciosPT = () => {
       });
       return;
     }
-
     navigate("/exercicios-pt/novo");
   };
 
@@ -89,59 +83,60 @@ const ExerciciosPT = () => {
       });
       return;
     }
-
     navigate(`/exercicios-pt/copia/${exercicioId}`);
   };
 
   const handleExcluirExercicio = async (exercicioId: string) => {
-    await excluirExercicio(exercicioId);
+    const exercicio = exerciciosPersonalizados.find(e => e.id === exercicioId);
+    if (exercicio) {
+      setExercicioParaExcluir(exercicio);
+      setShowDeleteDialog(true);
+    }
   };
 
-  // Filtrar exercícios com base na busca e filtros
-  const exerciciosAtivos = activeTab === "padrao" ? exerciciosPadrao : exerciciosPersonalizados;
-  
-  const exerciciosFiltrados = exerciciosAtivos.filter((exercicio) => {
-    // Debug: log para ver os valores sendo comparados
-    console.log('🔍 Filtrando exercício:', {
-      nome: exercicio.nome,
-      grupo_db: exercicio.grupo_muscular,
-      equipamento_db: exercicio.equipamento,
-      dificuldade_db: exercicio.dificuldade,
-      filtros_aplicados: filtros
-    });
+  const handleConfirmarExclusao = async () => {
+    if (!exercicioParaExcluir) return;
+    setIsDeleting(true);
+    try {
+      await excluirExercicio(exercicioParaExcluir.id);
+      toast({
+        title: "Exercício excluído",
+        description: "O exercício foi removido com sucesso.",
+      });
+    } catch (error) {
+      console.error("Erro ao excluir exercício:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o exercício. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+      setExercicioParaExcluir(null);
+    }
+  };
 
-    // Filtro de busca
+  const handleCancelarExclusao = () => {
+    if (isDeleting) return;
+    setShowDeleteDialog(false);
+    setExercicioParaExcluir(null);
+  };
+
+  // Filtrar exercícios
+  const exerciciosAtivos = activeTab === "padrao" ? exerciciosPadrao : exerciciosPersonalizados;
+  const exerciciosFiltrados = exerciciosAtivos.filter((exercicio) => {
     const matchesBusca = !busca || 
       exercicio.nome?.toLowerCase().includes(busca.toLowerCase()) ||
       exercicio.descricao?.toLowerCase().includes(busca.toLowerCase()) ||
       exercicio.grupo_muscular?.toLowerCase().includes(busca.toLowerCase());
     
-    // Filtros de categoria
     const matchesFiltros = 
       (filtros.grupoMuscular === 'todos' || exercicio.grupo_muscular === filtros.grupoMuscular) &&
       (filtros.equipamento === 'todos' || exercicio.equipamento === filtros.equipamento) &&
       (filtros.dificuldade === 'todos' || exercicio.dificuldade === filtros.dificuldade);
 
-    const resultado = matchesBusca && matchesFiltros;
-    
-    // Debug: log do resultado
-    if (!resultado) {
-      console.log('❌ Exercício filtrado:', exercicio.nome, {
-        busca: matchesBusca,
-        filtros: matchesFiltros,
-        grupo_match: filtros.grupoMuscular === 'todos' || exercicio.grupo_muscular === filtros.grupoMuscular,
-        equipamento_match: filtros.equipamento === 'todos' || exercicio.equipamento === filtros.equipamento,
-        dificuldade_match: filtros.dificuldade === 'todos' || exercicio.dificuldade === filtros.dificuldade
-      });
-    }
-
-    return resultado;
-  });
-
-  console.log('📊 Resultado filtros:', {
-    total_exercicios: exerciciosAtivos.length,
-    exercicios_filtrados: exerciciosFiltrados.length,
-    filtros_ativos: filtros
+    return matchesBusca && matchesFiltros;
   });
 
   const canAddMore = totalPersonalizados < LIMITE_EXERCICIOS_PERSONALIZADOS;
@@ -185,9 +180,8 @@ const ExerciciosPT = () => {
         </TabsList>
 
         <TabsContent value="padrao" className="space-y-4 mt-4">
-          {/* Busca e Filtros - Mobile optimized */}
+          {/* Busca e Filtros */}
           <div className="space-y-4">
-            {/* Mobile: Busca + Filtros na mesma linha */}
             <div className="flex gap-2 md:hidden">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -209,7 +203,6 @@ const ExerciciosPT = () => {
               </Button>
             </div>
 
-            {/* Desktop: Layout tradicional */}
             <div className="hidden md:flex gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -231,7 +224,6 @@ const ExerciciosPT = () => {
             </div>
           </div>
 
-          {/* Filtros expandidos */}
           {showFilters && (
             <div className="p-4 border rounded-lg bg-muted/30">
               <FiltrosExercicios 
@@ -240,12 +232,11 @@ const ExerciciosPT = () => {
               />
             </div>
           )}
-          {/* Estatísticas */}
+
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span>{exerciciosFiltrados.length} exercício(s) encontrado(s)</span>
           </div>
 
-          {/* Lista de exercícios padrão */}
           {exerciciosFiltrados.length === 0 ? (
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-12">
@@ -260,11 +251,7 @@ const ExerciciosPT = () => {
                   }
                 </p>
                 {exerciciosPadrao.length === 0 && (
-                  <Button 
-                    onClick={refetch} 
-                    variant="outline" 
-                    className="mt-4"
-                  >
+                  <Button onClick={refetch} variant="outline" className="mt-4">
                     Tentar Novamente
                   </Button>
                 )}
@@ -284,9 +271,8 @@ const ExerciciosPT = () => {
         </TabsContent>
 
         <TabsContent value="personalizados" className="space-y-4 mt-4">
-          {/* Busca e Filtros - Mobile optimized */}
+          {/* Similar ao padrão mas com ExercicioCard para excluir */}
           <div className="space-y-4">
-            {/* Mobile: Busca + Filtros na mesma linha */}
             <div className="flex gap-2 md:hidden">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -308,7 +294,6 @@ const ExerciciosPT = () => {
               </Button>
             </div>
 
-            {/* Desktop: Layout tradicional */}
             <div className="hidden md:flex gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -330,7 +315,6 @@ const ExerciciosPT = () => {
             </div>
           </div>
 
-          {/* Filtros expandidos */}
           {showFilters && (
             <div className="p-4 border rounded-lg bg-muted/30">
               <FiltrosExercicios 
@@ -339,8 +323,8 @@ const ExerciciosPT = () => {
               />
             </div>
           )}
+
           {exerciciosPersonalizados.length === 0 && busca === '' && filtros.grupoMuscular === 'todos' ? (
-            // Estado vazio - nenhum exercício personalizado
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-16">
                 <Dumbbell className="h-16 w-16 text-muted-foreground mb-4" />
@@ -352,7 +336,6 @@ const ExerciciosPT = () => {
             </Card>
           ) : (
             <>
-              {/* Estatísticas */}
               <div className="hidden md:flex items-center gap-4 text-sm text-muted-foreground">
                 <span>{exerciciosFiltrados.length} exercício(s) encontrado(s)</span>
                 <span>•</span>
@@ -364,7 +347,6 @@ const ExerciciosPT = () => {
                 <span>{totalPersonalizados}/{LIMITE_EXERCICIOS_PERSONALIZADOS} personalizados</span>
               </div>
 
-              {/* Lista de exercícios personalizados */}
               {exerciciosFiltrados.length === 0 ? (
                 <Card className="border-dashed">
                   <CardContent className="flex flex-col items-center justify-center py-12">
@@ -391,53 +373,91 @@ const ExerciciosPT = () => {
         </TabsContent>
       </Tabs>
 
-      {isMobile ? (
-        <Drawer open={isLimitInfoOpen} onOpenChange={setIsLimitInfoOpen}>
-          <DrawerContent className="max-h-[90vh]">
-            <DrawerHeader className="relative text-left">
-              <DrawerTitle className="flex items-center gap-2">
-                <Info className="h-5 w-5 text-blue-500" />
-                Limite de Exercícios
-              </DrawerTitle>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsLimitInfoOpen(false)}
-                className="absolute right-2 top-2 h-8 w-8 rounded-full"
-              >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Fechar</span>
-              </Button>
-            </DrawerHeader>
-            <div className="p-4 text-sm text-muted-foreground overflow-y-auto">
-              Você alcançou o limite de <strong>{LIMITE_EXERCICIOS_PERSONALIZADOS} exercícios personalizados</strong>.
-              <br /><br />
-              Para criar novos, você pode revisar e excluir exercícios antigos que não estão mais em uso.
-            </div>
-          </DrawerContent>
-        </Drawer>
-      ) : (
-        <Dialog open={isLimitInfoOpen} onOpenChange={setIsLimitInfoOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Info className="h-5 w-5 text-blue-500" />
-                Limite de Exercícios Atingido
-              </DialogTitle>
-              <DialogDescription className="pt-4">
-                Você alcançou o limite de <strong>{LIMITE_EXERCICIOS_PERSONALIZADOS} exercícios personalizados</strong>.
-                <br /><br />
-                Para criar novos exercícios, você pode revisar e excluir exercícios antigos que não estão mais em uso.
-              </DialogDescription>
-            </DialogHeader>
-          </DialogContent>
-        </Dialog>
-      )}
+      {/* Modal de Informação sobre Limite - React Modal */}
+      <Modal
+        isOpen={isLimitInfoOpen}
+        onRequestClose={() => setIsLimitInfoOpen(false)}
+        shouldCloseOnOverlayClick={true}
+        shouldCloseOnEsc={true}
+        className="bg-white rounded-lg p-6 max-w-md w-full mx-4 outline-none"
+        overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <Info className="h-5 w-5 text-blue-500" />
+          <h2 className="text-lg font-semibold">Limite de Exercícios Atingido</h2>
+        </div>
+        <div className="mb-6">
+          <p className="text-sm text-gray-600">
+            Você alcançou o limite de <strong>{LIMITE_EXERCICIOS_PERSONALIZADOS} exercícios personalizados</strong>.
+            <br /><br />
+            Para criar novos exercícios, você pode revisar e excluir exercícios antigos que não estão mais em uso.
+          </p>
+        </div>
+        <div className="flex justify-end">
+          <Button onClick={() => setIsLimitInfoOpen(false)}>
+            Entendi
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Modal de Confirmação de Exclusão - React Modal BLOQUEADA */}
+      <Modal
+        isOpen={showDeleteDialog}
+        onRequestClose={() => {}} // Não permite fechar
+        shouldCloseOnOverlayClick={false}
+        shouldCloseOnEsc={false}
+        className="bg-white rounded-lg p-6 max-w-md w-full mx-4 outline-none"
+        overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <AlertTriangle className="h-5 w-5 text-red-500" />
+          <h2 className="text-lg font-semibold">Excluir Exercício</h2>
+        </div>
+        
+        <div className="mb-6">
+          <p className="text-sm text-gray-600 leading-relaxed">
+            Tem certeza que deseja excluir o exercício personalizado{" "}
+            <span className="font-semibold text-gray-900">
+              "{exercicioParaExcluir?.nome}"
+            </span>?
+          </p>
+          <p className="text-sm text-gray-600 mt-2">
+            Esta ação não pode ser desfeita.
+          </p>
+        </div>
+        
+        <div className="flex gap-3 justify-end">
+          <Button 
+            variant="outline" 
+            onClick={handleCancelarExclusao}
+            disabled={isDeleting}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            variant="destructive" 
+            onClick={handleConfirmarExclusao} 
+            disabled={isDeleting}
+            className="flex items-center gap-2"
+          >
+            {isDeleting ? (
+              <>
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                Excluindo...
+              </>
+            ) : (
+              <>
+                <Trash2 className="h-4 w-4" />
+                Excluir
+              </>
+            )}
+          </Button>
+        </div>
+      </Modal>
 
       {/* Botão Flutuante para Novo Exercício */}
       {activeTab === "personalizados" && (
         <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
-          {/* Mobile: Round floating button */}
           <Button
             onClick={canAddMore ? handleNovoExercicio : () => setIsLimitInfoOpen(true)}
             className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
@@ -446,7 +466,6 @@ const ExerciciosPT = () => {
             {canAddMore ? <Plus /> : <ShieldAlert />}
           </Button>
 
-          {/* Desktop: Standard floating button */}
           <Button
             onClick={canAddMore ? handleNovoExercicio : () => setIsLimitInfoOpen(true)}
             className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6"

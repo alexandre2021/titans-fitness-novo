@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import Modal from 'react-modal';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -23,7 +24,7 @@ import {
   Calendar,
   CalendarCheck, // ✅ Adicionado
   FileText,
-  Download,
+  AlertTriangle,
   X
 } from 'lucide-react';
 import { BicepsFlexed } from 'lucide-react';
@@ -33,29 +34,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from '@/components/ui/drawer';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useExercicioLookup } from '@/hooks/useExercicioLookup';
@@ -64,7 +42,7 @@ import RotinaDetalhesModal from '@/components/rotina/RotinaDetalhesModal';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { ExercicioRotina, Serie } from '@/types/rotina.types';
 
-// Componente responsivo que escolhe entre Modal e Drawer
+// Componente de modal genérico usando react-modal
 interface ResponsiveModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -73,41 +51,29 @@ interface ResponsiveModalProps {
 }
 
 const ResponsiveModal = ({ open, onOpenChange, title, children }: ResponsiveModalProps) => {
-  const isMobile = !useMediaQuery("(min-width: 768px)");
-
-  if (isMobile) {
-    return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-h-[90vh] flex flex-col">
-          <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
-            <DrawerTitle className="text-lg font-semibold">{title}</DrawerTitle>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => onOpenChange(false)}
-              className="h-8 w-8 rounded-full flex-shrink-0"
-            >
-              <X className="h-4 w-4" />
-              <span className="sr-only">Fechar</span>
-            </Button>
-          </div>
-          <div className="px-4 pb-4 overflow-y-auto flex-1">
-            {children}
-          </div>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
+  const handleClose = () => onOpenChange(false);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        {children}
-      </DialogContent>
-    </Dialog>
+    <Modal
+      isOpen={open}
+      onRequestClose={handleClose}
+      shouldCloseOnOverlayClick={true}
+      shouldCloseOnEsc={true}
+      className="bg-white rounded-lg max-w-md w-full mx-4 outline-none"
+      overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+    >
+      <div className="flex items-center justify-between p-6 border-b">
+        <h2 className="text-lg font-semibold">{title}</h2>
+        <Button variant="ghost" size="sm" onClick={handleClose} className="h-8 w-8 p-0">
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+      <div className="p-6">
+        <div className="space-y-4">
+          {children}
+        </div>
+      </div>
+    </Modal>
   );
 };
 
@@ -172,18 +138,19 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   const [rotinasAtivas, setRotinasAtivas] = useState<Rotina[]>([]);
   const [rotinasArquivadas, setRotinasArquivadas] = useState<RotinaArquivada[]>([]);
   const [rotinasRascunho, setRotinasRascunho] = useState<Rotina[]>([]);
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"atual" | "rascunho" | "encerradas">("atual");
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showConcluidaDialog, setShowConcluidaDialog] = useState(false);
   const [showStatusInfoDialog, setShowStatusInfoDialog] = useState(false);
   const [selectedRotina, setSelectedRotina] = useState<Rotina | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [navegandoNovaRotina, setNavegandoNovaRotina] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [showDetalhesModal, setShowDetalhesModal] = useState(false);
 
   const handleNovaRotina = () => { // ✅ REGRA ATUALIZADA
+    console.log('🆕 Clicou Nova Rotina');
     if (rotinasRascunho.length > 0) {
       toast({
         title: "Já existe um rascunho",
@@ -218,10 +185,26 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
       const rotinaStorageData = {
         alunoId: alunoId!,
         draftId: rotina.id,
-        configuracao: { ...rotina, valor_total: rotina.valor_total ?? 0 },
-        treinos: treinos.map(t => ({ ...t, grupos_musculares: t.grupos_musculares.split(',') })),
+        // ✅ CORREÇÃO: Mapear explicitamente os dados da rotina para o objeto de configuração.
+        // Isso garante que todos os campos esperados pela tela de configuração existam
+        // e que valores nulos do banco de dados sejam convertidos para valores padrão (ex: '' ou 0),
+        // evitando que os inputs recebam `null` e se comportem de forma inesperada.
+        configuracao: {
+          nome: rotina.nome || '',
+          objetivo: rotina.objetivo || '',
+          dificuldade: rotina.dificuldade || '',
+          duracao_semanas: rotina.duracao_semanas || 0,
+          treinos_por_semana: rotina.treinos_por_semana || 0,
+          valor_total: rotina.valor_total ?? 0,
+          forma_pagamento: rotina.forma_pagamento || 'PIX',
+          data_inicio: rotina.data_inicio || new Date().toISOString().split('T')[0],
+          observacoes_pagamento: rotina.observacoes_pagamento || '',
+          permite_execucao_aluno: rotina.permite_execucao_aluno ?? true,
+          descricao: rotina.descricao || ''
+        },
+        treinos: treinos.map(t => ({ ...t, grupos_musculares: t.grupos_musculares ? t.grupos_musculares.split(',') : [] })),
         exercicios: exerciciosPorTreino,
-        etapaAtual: 'revisao', // Leva para a última etapa para continuar
+        etapaAtual: 'configuracao', // Começar pela configuração para o usuário revisar
       };
 
       // 3. Salvar no sessionStorage e navegar
@@ -244,9 +227,17 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   };
 
   useEffect(() => {
+    console.log('🔄 useEffect fetchDados executado');
+    console.log('📊 Estados:', { alunoId, user: !!user });
+    
     const fetchDados = async () => {
-      if (!alunoId || !user) return;
+      if (!alunoId || !user) {
+        console.log('⚠️ Condições não atendidas:', { alunoId: !!alunoId, user: !!user });
+        return;
+      }
 
+      console.log('📡 Buscando dados...');
+      // ... resto da função
       try {
         // Otimização: Buscar todos os dados em paralelo
         const [alunoResult, rotinasResult, arquivadasResult] = await Promise.all([
@@ -459,21 +450,22 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
     }
   };
 
+  const handleCancelarExclusao = () => {
+    if (isDeleting) return;
+    setShowDeleteDialog(false);
+    setSelectedRotina(null);
+  };
+
   const handleExcluirRotina = (rotina: Rotina) => {
     setSelectedRotina(rotina);
     setShowDeleteDialog(true);
-  };
-
-  const handleConcluidaClick = (rotina: Rotina) => {
-    setSelectedRotina(rotina);
-    setShowConcluidaDialog(true);
   };
 
   const handleConfirmarExclusao = async () => {
     if (!selectedRotina) return;
 
     setIsDeleting(true);
-    
+
     try {
       const { error } = await supabase
         .from('rotinas')
@@ -482,38 +474,35 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         .eq('personal_trainer_id', user?.id);
 
       if (error) {
-        console.error('Erro ao excluir rotina:', error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível excluir a rotina. Tente novamente.",
-          variant: "destructive",
-        });
-      } else {
-        // ✅ CORREÇÃO: Remover da lista local correta (Ativas ou Rascunhos)
-        if (selectedRotina.status === 'Rascunho') {
-          setRotinasRascunho(prev => prev.filter(r => r.id !== selectedRotina.id));
-        } else {
-          setRotinasAtivas(prev => prev.filter(r => r.id !== selectedRotina.id));
-        }
-        
-        toast({
-          title: "Rotina excluída",
-          description: "A rotina foi removida com sucesso.",
-        });
-        
-        setShowDeleteDialog(false);
-        setSelectedRotina(null);
+        throw error;
       }
+
+      if (selectedRotina.status === 'Rascunho') {
+        setRotinasRascunho(prev => prev.filter(r => r.id !== selectedRotina.id));
+      } else {
+        setRotinasAtivas(prev => prev.filter(r => r.id !== selectedRotina.id));
+      }
+
+      toast({
+        title: "Rotina excluída",
+        description: "A rotina foi removida com sucesso.",
+      });
     } catch (error) {
-      console.error('Erro ao excluir rotina:', error);
+      console.error("Erro ao excluir rotina:", error);
       toast({
         title: "Erro",
-        description: "Ocorreu um erro inesperado. Tente novamente.",
+        description: "Não foi possível excluir a rotina. Tente novamente.",
         variant: "destructive",
       });
     } finally {
       setIsDeleting(false);
+      setShowDeleteDialog(false);
+      setSelectedRotina(null);
     }
+  };
+  const handleConcluidaClick = (rotina: Rotina) => {
+    setSelectedRotina(rotina);
+    setShowConcluidaDialog(true);
   };
 
   const renderMenuOpcoes = (rotina: Rotina) => {
@@ -702,15 +691,24 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "atual" | "rascunho" | "encerradas")}>
           <TabsList className={`grid w-full ${modo === 'personal' ? 'grid-cols-3' : 'grid-cols-2'}`}>
-            <TabsTrigger value="atual">
+            <TabsTrigger 
+              value="atual"
+              onClick={() => console.log('📌 Clicou tab Atual')}
+            >
               Atual ({rotinasAtivas.length})
             </TabsTrigger>
             {modo === 'personal' && (
-              <TabsTrigger value="rascunho">
+              <TabsTrigger 
+                value="rascunho"
+                onClick={() => console.log('📌 Clicou tab Rascunho')}
+              >
                 Rascunho ({rotinasRascunho.length})
               </TabsTrigger>
             )}
-            <TabsTrigger value="encerradas">
+            <TabsTrigger 
+              value="encerradas"
+              onClick={() => console.log('📌 Clicou tab Encerradas')}
+            >
               Encerradas ({rotinasArquivadas.length})
             </TabsTrigger>
           </TabsList>
@@ -850,8 +848,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleContinuarRascunho(rotina.id)}><Play className="mr-2 h-4 w-4" /><span>Continuar</span></DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleExcluirRotina(rotina)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Excluir</span></DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleContinuarRascunho(rotina.id)}><Play className="mr-2 h-4 w-4" /><span>Continuar</span></DropdownMenuItem>                                <DropdownMenuItem onClick={() => handleExcluirRotina(rotina)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Excluir</span></DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </CardContent>
@@ -942,129 +939,93 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         </Tabs>
       </div>
 
-      {/* Modal de Confirmação de Exclusão - Versão Responsiva */}
-<ResponsiveModal
-  open={showDeleteDialog}
-  onOpenChange={setShowDeleteDialog}
-  title="Excluir Rotina"
->
-  <div className="space-y-4">
-    <p className="text-sm text-muted-foreground">
-      Tem certeza que deseja excluir a rotina <strong>{selectedRotina?.nome}</strong>? 
-      Esta ação não pode ser desfeita e todos os treinos e exercícios da rotina serão removidos.
-    </p>
-    
-    <div className="flex justify-end space-x-2 pt-4">
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() => setShowDeleteDialog(false)}
+      <Modal
+        isOpen={showConcluidaDialog}
+        onRequestClose={() => setShowConcluidaDialog(false)}
+        shouldCloseOnOverlayClick={true}
+        shouldCloseOnEsc={true}
+        className="bg-white rounded-lg max-w-md w-full mx-4 outline-none"
+        overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
       >
-        Cancelar
-      </Button>
-      <Button
-        onClick={handleConfirmarExclusao}
-        disabled={isDeleting}
-        className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-      >
-        {isDeleting ? "Excluindo..." : "Excluir"}
-      </Button>
-    </div>
-  </div>
-</ResponsiveModal>
-
-      {/* Modal para Rotina Concluída */}
-      <Dialog open={showConcluidaDialog} onOpenChange={setShowConcluidaDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              Rotina Concluída
-            </DialogTitle>
-            <DialogDescription className="pt-4">
-              A rotina <strong>{selectedRotina?.nome}</strong> foi concluída com sucesso! 
-              Todos os treinos foram executados.
-              <br /><br />
-              Para visualizar o histórico completo e relatórios de progresso, 
-              consulte a aba "Concluídas" no menu principal.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end pt-4">
-            <Button onClick={() => setShowConcluidaDialog(false)}>
-              Entendi
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+        <div className="flex items-center justify-between p-6 border-b">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+            Rotina Concluída
+          </h2>
+          <Button variant="ghost" size="sm" onClick={() => setShowConcluidaDialog(false)} className="h-8 w-8 p-0">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="p-6">
+          <p className="text-sm text-muted-foreground">
+            A rotina <strong>{selectedRotina?.nome}</strong> foi concluída com sucesso! Todos os treinos foram executados.
+            <br /><br />
+            Para visualizar o histórico completo e relatórios de progresso, consulte a aba "Encerradas" no menu principal.
+          </p>
+        </div>
+      </Modal>
 
       {/* Modal de Informações sobre Status - Versão Responsiva */}
 <ResponsiveModal
   open={showStatusInfoDialog}
   onOpenChange={setShowStatusInfoDialog}
-  title="Status das Rotinas"
+  title="Situação das Rotinas"
 >
   <div className="space-y-1 mb-4">
     <p className="text-sm text-muted-foreground">
       Entenda o significado de cada status das rotinas de treino.
     </p>
-  </div>
-  
-  <div className="flex items-start gap-3">
-      <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
-      <div>
-        <p className="font-medium text-blue-800 mb-1">Rascunho</p>
-        <p className="text-sm text-muted-foreground">
-          Rotina em processo de criação pelo personal trainer, ainda não finalizada.
-        </p>
-      </div>
-    </div>
-
+  </div>  
   <div className="space-y-4">
     <div className="flex items-start gap-3">
-      <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
-      <div>
-        <p className="font-medium text-green-800 mb-1">Ativa</p>
-        <p className="text-sm text-muted-foreground">
-          Aluno pode acessar e executar os treinos normalmente.
-        </p>
+        <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+        <div>
+          <p className="font-medium text-blue-800 mb-1">Rascunho</p>
+          <p className="text-sm text-muted-foreground">
+            Rotina em processo de criação pelo personal trainer, ainda não finalizada.
+          </p>
+        </div>
       </div>
-    </div>
-    
-    <div className="flex items-start gap-3">
-      <div className="w-2 h-2 rounded-full bg-red-500 mt-2 flex-shrink-0"></div>
-      <div>
-        <p className="font-medium text-red-800 mb-1">Bloqueada</p>
-        <p className="text-sm text-muted-foreground">
-          Acesso aos treinos foi suspenso temporariamente pelo personal trainer.
-        </p>
-      </div>
-    </div>
-    
-    <div className="flex items-start gap-3">
-      <div className="w-2 h-2 rounded-full bg-orange-500 mt-2 flex-shrink-0"></div>
-      <div>
-        <p className="font-medium text-orange-800 mb-1">Cancelada</p>
-        <p className="text-sm text-muted-foreground">
-          Rotina interrompida por uma ação administrativa, como a exclusão da conta do Personal Trainer.
-        </p>
-      </div>
-    </div>
 
-    <div className="flex items-start gap-3">
-      <div className="w-2 h-2 rounded-full bg-gray-500 mt-2 flex-shrink-0"></div>
-      <div>
-        <p className="font-medium text-gray-800 mb-1">Concluída</p>
-        <p className="text-sm text-muted-foreground">
-          Todas as sessões da rotina foram executadas. Rotina finalizada automaticamente.
-        </p>
+      <div className="flex items-start gap-3">
+        <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
+        <div>
+          <p className="font-medium text-green-800 mb-1">Ativa</p>
+          <p className="text-sm text-muted-foreground">
+            Aluno pode acessar e executar os treinos normalmente.
+          </p>
+        </div>
       </div>
-    </div>
-  </div>
-  
-  <div className="flex justify-end pt-4 border-t mt-6">
-    <Button onClick={() => setShowStatusInfoDialog(false)}>
-      Entendi
-    </Button>
+      
+      <div className="flex items-start gap-3">
+        <div className="w-2 h-2 rounded-full bg-red-500 mt-2 flex-shrink-0"></div>
+        <div>
+          <p className="font-medium text-red-800 mb-1">Bloqueada</p>
+          <p className="text-sm text-muted-foreground">
+            Acesso aos treinos foi suspenso temporariamente pelo personal trainer.
+          </p>
+        </div>
+      </div>
+      
+      <div className="flex items-start gap-3">
+        <div className="w-2 h-2 rounded-full bg-orange-500 mt-2 flex-shrink-0"></div>
+        <div>
+          <p className="font-medium text-orange-800 mb-1">Cancelada</p>
+          <p className="text-sm text-muted-foreground">
+            Rotina interrompida por uma ação administrativa, como a exclusão da conta do Personal Trainer.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-start gap-3">
+        <div className="w-2 h-2 rounded-full bg-gray-500 mt-2 flex-shrink-0"></div>
+        <div>
+          <p className="font-medium text-gray-800 mb-1">Concluída</p>
+          <p className="text-sm text-muted-foreground">
+            Todas as sessões da rotina foram executadas. Rotina finalizada automaticamente.
+          </p>
+        </div>
+      </div>
   </div>
 </ResponsiveModal>
 
@@ -1074,6 +1035,61 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         onOpenChange={setShowDetalhesModal}
         ResponsiveModal={ResponsiveModal}
       />
+
+      {/* Modal de Confirmação de Exclusão - React Modal BLOQUEADA */}
+<Modal
+  isOpen={showDeleteDialog}
+  onRequestClose={() => {}} // Não permite fechar
+  shouldCloseOnOverlayClick={false}
+  shouldCloseOnEsc={false}
+  className="bg-white rounded-lg p-6 max-w-md w-full mx-4 outline-none"
+  overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+>
+  <div className="flex items-center gap-2 mb-4">
+    <AlertTriangle className="h-5 w-5 text-red-500" />
+    <h2 className="text-lg font-semibold">Excluir Rotina</h2>
+  </div>
+  
+  <div className="mb-6">
+    <p className="text-sm text-gray-600 leading-relaxed">
+      Tem certeza que deseja excluir a rotina{" "}
+      <span className="font-semibold text-gray-900">
+        "{selectedRotina?.nome}"
+      </span>?
+    </p>
+    <p className="text-sm text-gray-600 mt-2">
+      Esta ação não pode ser desfeita e todos os treinos e exercícios serão removidos.
+    </p>
+  </div>
+  
+  <div className="flex gap-3 justify-end">
+    <Button 
+      variant="outline" 
+      onClick={handleCancelarExclusao}
+      disabled={isDeleting}
+    >
+      Cancelar
+    </Button>
+    <Button 
+      variant="destructive" 
+      onClick={handleConfirmarExclusao} 
+      disabled={isDeleting}
+      className="flex items-center gap-2"
+    >
+      {isDeleting ? (
+        <>
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+          Excluindo...
+        </>
+      ) : (
+        <>
+          <Trash2 className="h-4 w-4" />
+          Excluir
+        </>
+      )}
+    </Button>
+  </div>
+</Modal>
 
       {/* Botão Flutuante para Nova Rotina (Apenas para Personal) */}
       {modo === 'personal' && activeTab === 'atual' && (
@@ -1090,11 +1106,14 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
 
           {/* Desktop: Standard floating button */}
           <Button
-            onClick={handleNovaRotina}
+            onClick={() => {
+              console.log('🔴 TESTE: Clicou Nova Rotina');
+              handleNovaRotina();
+            }}
             disabled={navegandoNovaRotina}
             className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6"
             size="lg"
-          >
+      >
             <Plus />
             {navegandoNovaRotina ? "Navegando..." : "Nova Rotina"}
           </Button>

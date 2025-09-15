@@ -74,15 +74,28 @@ export const useAlunos = () => {
 
   const desvincularAluno = async (alunoId: string) => {
     try {
-      const { error } = await supabase
-        .from('alunos')
-        .update({ personal_trainer_id: null })
-        .eq('id', alunoId);
+      const { data, error } = await supabase
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .rpc('desvincular_aluno' as any, { 
+          aluno_id: alunoId 
+        });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro na função:', error);
+        return false;
+      }
 
-      setAlunos(alunos.filter(aluno => aluno.id !== alunoId));
-      return true;
+      // Type assertion para a resposta JSON da função
+      const resultado = data as { success: boolean; message?: string; error?: string };
+
+      if (resultado.success) {
+        console.log('Sucesso:', resultado.message);
+        setAlunos(alunos.filter(aluno => aluno.id !== alunoId));
+        return true;
+      } else {
+        console.error('Erro retornado:', resultado.error);
+        return false;
+      }
     } catch (error) {
       console.error('Error unlinking aluno:', error);
       return false;

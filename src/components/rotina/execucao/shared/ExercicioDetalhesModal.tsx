@@ -1,29 +1,12 @@
 // src/components/rotina/execucao/shared/ExercicioDetalhesModal.tsx
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import Modal from 'react-modal';
 import { Badge } from '@/components/ui/badge';
 import { Dumbbell, Target, AlertCircle, Play, Video, Image as ImageIcon, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
-
-// Hook para detectar mobile
-const useIsMobile = () => {
-  const [isMobile, setIsMobile] = React.useState(false);
-
-  React.useEffect(() => {
-    const checkDevice = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkDevice();
-    window.addEventListener('resize', checkDevice);
-    return () => window.removeEventListener('resize', checkDevice);
-  }, []);
-
-  return isMobile;
-};
 
 interface Props {
   visible: boolean;
@@ -50,13 +33,9 @@ interface ExercicioDetalhes {
 // Tipagem usando os tipos do Supabase
 type ExercicioSupabase = Tables<'exercicios'>;
 
-// Componente de conteúdo compartilhado
-const ExercicioDetalhesContent: React.FC<{ 
-  isMobile: boolean; 
-  exercicio: ExercicioDetalhes | null;
-  loading: boolean;
-  onClose: () => void;
-}> = ({ isMobile, exercicio, loading, onClose }) => {
+export const ExercicioDetalhesModal = ({ visible, exercicioId, onClose }: Props) => {
+  const [exercicio, setExercicio] = useState<ExercicioDetalhes | null>(null);
+  const [loading, setLoading] = useState(false);
   const [mediaUrls, setMediaUrls] = useState<{ 
     imagem1?: string; 
     imagem2?: string; 
@@ -167,8 +146,83 @@ const ExercicioDetalhesContent: React.FC<{
 
   // --- FIM DA LÓGICA DE MÍDIA ---
 
+  const carregarDetalhes = useCallback(async () => {
+    if (!exercicioId) return;
+    
+    try {
+      setLoading(true);
+      
+      const { data: exercicioRaw, error } = await supabase
+        .from('exercicios')
+        .select('id, nome, equipamento, grupo_muscular, grupo_muscular_primario, grupos_musculares_secundarios, descricao, instrucoes, tipo, imagem_1_url, imagem_2_url, video_url, youtube_url')
+        .eq('id', exercicioId)
+        .single();
+
+      if (error) {
+        console.error('Erro ao carregar detalhes do exercício:', error);
+        setExercicio(null);
+        return;
+      }
+
+      if (!exercicioRaw) {
+        setExercicio(null);
+        return;
+      }
+
+      // Cast com tipagem correta
+      const exercicioData = exercicioRaw as ExercicioSupabase;
+
+      // Transformar para a interface esperada
+      const exercicioFormatado: ExercicioDetalhes = {
+        id: exercicioData.id,
+        nome: exercicioData.nome,
+        equipamento: exercicioData.equipamento || '',
+        grupo_muscular: exercicioData.grupo_muscular || '',
+        grupo_muscular_primario: exercicioData.grupo_muscular_primario || exercicioData.grupo_muscular || '',
+        grupos_musculares_secundarios: (() => {
+          const value = exercicioData.grupos_musculares_secundarios as unknown;
+          if (Array.isArray(value)) {
+            return value.filter((item): item is string => typeof item === 'string');
+          }
+          if (typeof value === 'string') {
+            // Remove colchetes e aspas, depois divide por vírgula
+            return value.replace(/[[\]"]/g, '').split(',').map(s => s.trim()).filter(Boolean);
+          }
+          return [];
+        })(),
+        descricao: exercicioData.descricao || undefined,
+        instrucoes: exercicioData.instrucoes || undefined,
+        tipo: exercicioData.tipo || 'padrao',
+        imagem_1_url: exercicioData.imagem_1_url || undefined,
+        imagem_2_url: exercicioData.imagem_2_url || undefined,
+        video_url: exercicioData.video_url || undefined,
+        youtube_url: exercicioData.youtube_url || undefined
+      };
+
+      setExercicio(exercicioFormatado);
+    } catch (error) {
+      console.error('Erro ao carregar detalhes:', error);
+      setExercicio(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [exercicioId]);
+
+  useEffect(() => {
+    if (visible && exercicioId) {
+      carregarDetalhes();
+    }
+  }, [visible, exercicioId, carregarDetalhes]);
+
   return (
-    <>
+    <Modal
+      isOpen={visible}
+      onRequestClose={onClose}
+      shouldCloseOnOverlayClick={true}
+      shouldCloseOnEsc={true}
+      className="bg-white rounded-lg max-w-4xl max-h-[90vh] w-full mx-4 outline-none flex flex-col"
+      overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4"
+    >
       {/* Header */}
       <div className="px-6 py-4 border-b flex-shrink-0">
         <div className="flex items-center justify-between">
@@ -176,6 +230,14 @@ const ExercicioDetalhesContent: React.FC<{
             <Dumbbell className="h-5 w-5 text-primary" />
             <span className="font-semibold">Detalhes do Exercício</span>
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="h-8 w-8 p-0"
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
@@ -236,7 +298,7 @@ const ExercicioDetalhesContent: React.FC<{
               ) : null;
             })()}
 
-            {/* Mídias do Exercício - Responsivo */}
+            {/* Mídias do Exercício */}
             {(exercicio.imagem_1_url || exercicio.imagem_2_url || exercicio.video_url || exercicio.youtube_url) && (
               <div>
                 <h4 className="font-medium text-foreground mb-4 flex items-center space-x-2">
@@ -250,7 +312,7 @@ const ExercicioDetalhesContent: React.FC<{
                     <span className="text-sm text-muted-foreground">Carregando mídias...</span>
                   </div>
                 ) : (
-                  <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
+                  <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
                     {/* Imagem 1 */}
                     {exercicio.imagem_1_url && (
                       <div className="space-y-2">
@@ -260,8 +322,8 @@ const ExercicioDetalhesContent: React.FC<{
                         </div>
                         <div className={`w-full border rounded-lg overflow-hidden flex items-center justify-center ${
                           isSquareImage('imagem1') 
-                            ? isMobile ? 'h-64' : 'h-64 w-64 mx-auto' // Mobile: largura total, Desktop: quadrado
-                            : 'h-48' // Container retangular
+                            ? 'h-64 md:h-64 md:w-64 md:mx-auto'
+                            : 'h-48'
                         }`}>
                           {mediaUrls.imagem1 ? (
                             <img
@@ -286,8 +348,8 @@ const ExercicioDetalhesContent: React.FC<{
                         </div>
                         <div className={`w-full border rounded-lg overflow-hidden flex items-center justify-center ${
                           isSquareImage('imagem2') 
-                            ? isMobile ? 'h-64' : 'h-64 w-64 mx-auto' // Mobile: largura total, Desktop: quadrado
-                            : 'h-48' // Container retangular
+                            ? 'h-64 md:h-64 md:w-64 md:mx-auto'
+                            : 'h-48'
                         }`}>
                           {mediaUrls.imagem2 ? (
                             <img
@@ -395,110 +457,6 @@ const ExercicioDetalhesContent: React.FC<{
           </div>
         )}
       </div>
-    </>
-  );
-};
-
-export const ExercicioDetalhesModal = ({ visible, exercicioId, onClose }: Props) => {
-  const isMobile = useIsMobile();
-  const [exercicio, setExercicio] = useState<ExercicioDetalhes | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const carregarDetalhes = useCallback(async () => {
-    if (!exercicioId) return;
-    
-    try {
-      setLoading(true);
-      
-      const { data: exercicioRaw, error } = await supabase
-        .from('exercicios')
-        .select('id, nome, equipamento, grupo_muscular, grupo_muscular_primario, grupos_musculares_secundarios, descricao, instrucoes, tipo, imagem_1_url, imagem_2_url, video_url, youtube_url')
-        .eq('id', exercicioId)
-        .single();
-
-      if (error) {
-        console.error('Erro ao carregar detalhes do exercício:', error);
-        setExercicio(null);
-        return;
-      }
-
-      if (!exercicioRaw) {
-        setExercicio(null);
-        return;
-      }
-
-      // Cast com tipagem correta
-      const exercicioData = exercicioRaw as ExercicioSupabase;
-
-      // Transformar para a interface esperada
-      const exercicioFormatado: ExercicioDetalhes = {
-        id: exercicioData.id,
-        nome: exercicioData.nome,
-        equipamento: exercicioData.equipamento || '',
-        grupo_muscular: exercicioData.grupo_muscular || '',
-        grupo_muscular_primario: exercicioData.grupo_muscular_primario || exercicioData.grupo_muscular || '',
-        grupos_musculares_secundarios: (() => {
-          const value = exercicioData.grupos_musculares_secundarios as unknown;
-          if (Array.isArray(value)) {
-            return value.filter((item): item is string => typeof item === 'string');
-          }
-          if (typeof value === 'string') {
-            // Remove colchetes e aspas, depois divide por vírgula
-            return value.replace(/[[\]"]/g, '').split(',').map(s => s.trim()).filter(Boolean);
-          }
-          return [];
-        })(),
-        descricao: exercicioData.descricao || undefined,
-        instrucoes: exercicioData.instrucoes || undefined,
-        tipo: exercicioData.tipo || 'padrao',
-        imagem_1_url: exercicioData.imagem_1_url || undefined,
-        imagem_2_url: exercicioData.imagem_2_url || undefined,
-        video_url: exercicioData.video_url || undefined,
-        youtube_url: exercicioData.youtube_url || undefined
-      };
-
-      setExercicio(exercicioFormatado);
-    } catch (error) {
-      console.error('Erro ao carregar detalhes:', error);
-      setExercicio(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [exercicioId]);
-
-  useEffect(() => {
-    if (visible && exercicioId) {
-      carregarDetalhes();
-    }
-  }, [visible, exercicioId, carregarDetalhes]);
-
-  // Criar conteúdo com as props necessárias
-  const content = (
-    <ExercicioDetalhesContent 
-      isMobile={isMobile}
-      exercicio={exercicio}
-      loading={loading}
-      onClose={onClose}
-    />
-  );
-
-  if (isMobile) {
-    // Mobile: Drawer
-    return (
-      <Drawer open={visible} onOpenChange={onClose}>
-        <DrawerContent className="max-h-[90vh] flex flex-col">
-          {content}
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-
-  // Desktop: Dialog
-  return (
-    <Dialog open={visible} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] p-0 flex flex-col">
-        {content}
-      </DialogContent>
-    </Dialog>
+    </Modal>
   );
 };

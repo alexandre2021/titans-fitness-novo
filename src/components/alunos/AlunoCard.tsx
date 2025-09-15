@@ -1,77 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import Modal from 'react-modal';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from '@/components/ui/drawer';
 import { useToast } from '@/hooks/use-toast';
 import { AlunoOptionsModal } from './AlunoOptionsModal';
-
-// Hook para detectar se é mobile
-const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  return isMobile;
-};
-
-// Componente responsivo que escolhe entre Modal e Drawer
-interface ResponsiveModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  title: string;
-  children: React.ReactNode;
-}
-
-const ResponsiveModal = ({ open, onOpenChange, title, children }: ResponsiveModalProps) => {
-  const isMobile = useIsMobile();
-
-  if (isMobile) {
-    return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-h-[90vh]">
-          <DrawerHeader className="text-left">
-            <DrawerTitle>{title}</DrawerTitle>
-          </DrawerHeader>
-          <div className="px-4 pb-4 overflow-y-auto">
-            {children}
-          </div>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        {children}
-      </DialogContent>
-    </Dialog>
-  );
-};
+import { AlertTriangle, Trash2 } from 'lucide-react';
 
 interface Aluno {
   id: string;
@@ -115,6 +50,11 @@ export const AlunoCard = ({ aluno, onDesvincular }: AlunoCardProps) => {
       });
     }
     setIsUnlinking(false);
+  };
+
+  const handleCancelar = () => {
+    if (isUnlinking) return;
+    setShowUnlinkDialog(false);
   };
 
   const renderAvatar = () => {
@@ -168,36 +108,59 @@ export const AlunoCard = ({ aluno, onDesvincular }: AlunoCardProps) => {
         </CardContent>
       </Card>
 
-      {/* Modal de Confirmação de Remoção de Vínculo - Versão Responsiva */}
-      <ResponsiveModal
-        open={showUnlinkDialog}
-        onOpenChange={setShowUnlinkDialog}
-        title="Remover Vínculo"
+      {/* Modal de Confirmação de Remoção de Vínculo - React Modal BLOQUEADA */}
+      <Modal
+        isOpen={showUnlinkDialog}
+        onRequestClose={() => {}} // Não permite fechar
+        shouldCloseOnOverlayClick={false}
+        shouldCloseOnEsc={false}
+        className="bg-white rounded-lg p-6 max-w-md w-full mx-4 outline-none"
+        overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
       >
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Tem certeza que deseja remover o vínculo com o aluno <strong>{aluno.nome_completo}</strong>? 
+        <div className="flex items-center gap-2 mb-4">
+          <AlertTriangle className="h-5 w-5 text-orange-500" />
+          <h2 className="text-lg font-semibold">Remover Vínculo</h2>
+        </div>
+        
+        <div className="mb-6">
+          <p className="text-sm text-gray-600 leading-relaxed">
+            Tem certeza que deseja remover o vínculo com o aluno{" "}
+            <span className="font-semibold text-gray-900">
+              "{aluno.nome_completo}"
+            </span>?
+          </p>
+          <p className="text-sm text-gray-600 mt-2">
             Você perderá o acesso aos dados dele.
           </p>
-          
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowUnlinkDialog(false)}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleDesvincular}
-              disabled={isUnlinking}
-              className="bg-orange-600 hover:bg-orange-700 text-white"
-            >
-              {isUnlinking ? "Removendo..." : "Remover"}
-            </Button>
-          </div>
         </div>
-      </ResponsiveModal>
+        
+        <div className="flex gap-3 justify-end">
+          <Button 
+            variant="outline" 
+            onClick={handleCancelar}
+            disabled={isUnlinking}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleDesvincular} 
+            disabled={isUnlinking}
+            className="bg-orange-600 hover:bg-orange-700 text-white flex items-center gap-2"
+          >
+            {isUnlinking ? (
+              <>
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                Removendo...
+              </>
+            ) : (
+              <>
+                <Trash2 className="h-4 w-4" />
+                Remover
+              </>
+            )}
+          </Button>
+        </div>
+      </Modal>
     </>
   );
 };

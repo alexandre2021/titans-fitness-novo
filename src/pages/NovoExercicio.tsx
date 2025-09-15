@@ -14,22 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
-import { Badge } from "@/components/ui/badge"; // This import is fine, but I need to add Upload
-import { ArrowLeft, Save, Plus, Trash2, Eye, ExternalLink, Camera, Video, Upload } from "lucide-react";
+import Modal from 'react-modal';
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Save, Plus, Trash2, Eye, ExternalLink, Camera, Video, Upload, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast as sonnerToast } from "sonner";
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -117,42 +104,36 @@ const NovoExercicio = () => {
     title: string;
     description: React.ReactNode;
   }) => {
-    if (isMobile) {
-      return (
-        <Drawer open={open} onOpenChange={onOpenChange}>
-          <DrawerContent>
-            <DrawerHeader className="text-left">
-              <DrawerTitle>{title}</DrawerTitle>
-            </DrawerHeader>
-            <div className="p-4 space-y-4">
-              <div className="text-sm text-muted-foreground">{description}</div>
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancelar
-                </Button>
-                <Button onClick={onConfirm} variant="destructive">Excluir</Button>
-              </div>
-            </div>
-          </DrawerContent>
-        </Drawer>
-      );
-    }
+    const handleClose = () => onOpenChange(false);
 
     return (
-      <AlertDialog open={open} onOpenChange={onOpenChange}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{title}</AlertDialogTitle>
-            <AlertDialogDescription>{description}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={onConfirm} variant="destructive">Excluir</Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Modal
+        isOpen={open}
+        onRequestClose={handleClose}
+        shouldCloseOnOverlayClick={true}
+        shouldCloseOnEsc={true}
+        className="bg-white rounded-lg max-w-md w-full mx-4 outline-none"
+        overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      >
+        {/* Header com botão X */}
+        <div className="flex items-center justify-between p-6 border-b">
+          <h2 className="text-lg font-semibold">{title}</h2>
+          <Button variant="ghost" size="sm" onClick={handleClose} className="h-8 w-8 p-0">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        
+        {/* Conteúdo */}
+        <div className="p-6">
+          <div className="text-sm text-muted-foreground">{description}</div>
+        </div>
+        
+        {/* Botões no footer */}
+        <div className="flex justify-end gap-2 p-6 border-t">
+          <Button variant="outline" onClick={handleClose}>Cancelar</Button>
+          <Button onClick={onConfirm} variant="destructive">Excluir</Button>
+        </div>
+      </Modal>
     );
   };
 
@@ -161,43 +142,33 @@ const NovoExercicio = () => {
       setShowVideoInfoModal(false);
       setShowVideoRecorder(true);
     };
-
-    if (isMobile) {
-      return (
-        <Drawer open={showVideoInfoModal} onOpenChange={setShowVideoInfoModal}>
-          <DrawerContent>
-            <DrawerHeader className="text-left">
-              <DrawerTitle>Gravar Vídeo do Exercício</DrawerTitle>
-            </DrawerHeader>
-            <div className="p-4 space-y-4">
-              <p className="text-sm text-muted-foreground">
-                O vídeo terá duração máxima de <strong>12 segundos</strong> e será salvo <strong>sem áudio</strong> para otimização.
-              </p>
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={() => setShowVideoInfoModal(false)}>Cancelar</Button>
-                <Button onClick={handleConfirm}>Iniciar Gravação</Button>
-              </div>
-            </div>
-          </DrawerContent>
-        </Drawer>
-      );
-    }
+    const handleClose = () => setShowVideoInfoModal(false);
 
     return (
-      <AlertDialog open={showVideoInfoModal} onOpenChange={setShowVideoInfoModal}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Gravar Vídeo do Exercício</AlertDialogTitle>
-            <AlertDialogDescription>
-              O vídeo terá duração máxima de <strong>12 segundos</strong> e será salvo <strong>sem áudio</strong> para otimização.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <Button variant="outline" onClick={() => setShowVideoInfoModal(false)}>Cancelar</Button>
-            <Button onClick={handleConfirm}>Iniciar Gravação</Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Modal
+        isOpen={showVideoInfoModal}
+        onRequestClose={handleClose}
+        shouldCloseOnOverlayClick={true}
+        shouldCloseOnEsc={true}
+        className="bg-white rounded-lg max-w-md w-full mx-4 outline-none"
+        overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      >
+        <div className="flex items-center justify-between p-6 border-b">
+          <h2 className="text-lg font-semibold">Gravar Vídeo do Exercício</h2>
+          <Button variant="ghost" size="sm" onClick={handleClose} className="h-8 w-8 p-0">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="p-6">
+          <p className="text-sm text-muted-foreground">
+            O vídeo terá duração máxima de <strong>12 segundos</strong> e será salvo <strong>sem áudio</strong> para otimização.
+          </p>
+        </div>
+        <div className="flex justify-end gap-2 p-6 border-t">
+          <Button variant="outline" onClick={handleClose}>Cancelar</Button>
+          <Button onClick={handleConfirm}>Iniciar Gravação</Button>
+        </div>
+      </Modal>
     );
   };
 

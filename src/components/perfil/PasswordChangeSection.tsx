@@ -2,16 +2,9 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Eye, EyeOff, Lock } from "lucide-react";
+import { Eye, EyeOff, Lock, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -23,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import Modal from 'react-modal';
 
 const formSchema = z.object({
   senhaAtual: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
@@ -126,18 +120,23 @@ export const PasswordChangeSection = () => {
             </p>
           </div>
           
-          <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <Lock className="h-4 w-4 mr-2" />
-                Alterar Senha
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>Alterar Senha</DialogTitle>
-              </DialogHeader>
+          <Button variant="outline" onClick={() => setIsOpen(true)}>
+            <Lock className="h-4 w-4 mr-2" />
+            Alterar Senha
+          </Button>
 
+          <Modal
+            isOpen={isOpen}
+            onRequestClose={() => {}} // Impede o fechamento por ações padrão
+            shouldCloseOnOverlayClick={false}
+            shouldCloseOnEsc={false}
+            className="bg-white rounded-lg max-w-md w-full mx-4 outline-none"
+            overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          >
+            <div className="flex items-center p-6 border-b">
+              <h2 className="text-lg font-semibold">Alterar Senha</h2>
+            </div>
+            <div className="p-6">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <FormField
@@ -250,8 +249,8 @@ export const PasswordChangeSection = () => {
                   </div>
                 </form>
               </Form>
-            </DialogContent>
-          </Dialog>
+            </div>
+          </Modal>
         </div>
       </CardContent>
     </Card>

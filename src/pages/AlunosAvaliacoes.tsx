@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import Modal from 'react-modal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { ArrowLeft, BarChart3, TrendingUp, Calendar, Plus, Eye, MoreVertical, Trash2, Info } from 'lucide-react';
+import { ArrowLeft, BarChart3, TrendingUp, Calendar, Plus, Eye, MoreVertical, Trash2, AlertTriangle, Info } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { ResponsiveAlertDialog } from '@/components/ui/responsive-alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -143,6 +143,17 @@ const AlunosAvaliacoes = () => {
       setIsDeleting(false);
     }
   };
+
+  const handleCancelarExclusao = () => {
+    if (isDeleting) return;
+    setShowDeleteDialog(false);
+    setAvaliacaoParaExcluir(null);
+  };
+
+  const handleCancelarIntervalo = () => {
+    setShowIntervalWarning(false);
+  };
+
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -451,45 +462,101 @@ const AlunosAvaliacoes = () => {
         </CardContent>
       </Card>
 
-      {/* Modal de Confirmação de Exclusão */}
-      <ResponsiveAlertDialog
-        open={showDeleteDialog}
-        onOpenChange={setShowDeleteDialog}
-        title="Excluir Avaliação"
-        description={
-          <>
-            Tem certeza que deseja excluir a avaliação de <strong>{avaliacaoParaExcluir ? avaliacaoParaExcluir.data_avaliacao.split('-').reverse().join('/') : ''}</strong>? 
+      {/* Modal de Confirmação de Exclusão - React Modal BLOQUEADA */}
+      <Modal
+        isOpen={showDeleteDialog}
+        onRequestClose={() => {}} // Não permite fechar
+        shouldCloseOnOverlayClick={false}
+        shouldCloseOnEsc={false}
+        className="bg-white rounded-lg p-6 max-w-md w-full mx-4 outline-none"
+        overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <AlertTriangle className="h-5 w-5 text-red-500" />
+          <h2 className="text-lg font-semibold">Excluir Avaliação</h2>
+        </div>
+        
+        <div className="mb-6">
+          <p className="text-sm text-gray-600 leading-relaxed">
+            Tem certeza que deseja excluir a avaliação de{" "}
+            <span className="font-semibold text-gray-900">
+              {avaliacaoParaExcluir ? avaliacaoParaExcluir.data_avaliacao.split('-').reverse().join('/') : ''}
+            </span>?
+          </p>
+          <p className="text-sm text-gray-600 mt-2">
             Esta ação não pode ser desfeita.
-          </>
-        }
-      >
-        <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Cancelar</Button>
-        <Button onClick={handleConfirmarExclusao} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
-          {isDeleting ? 'Excluindo...' : 'Excluir'}
-        </Button>
-      </ResponsiveAlertDialog>
+          </p>
+        </div>
+        
+        <div className="flex gap-3 justify-end">
+          <Button 
+            variant="outline" 
+            onClick={handleCancelarExclusao}
+            disabled={isDeleting}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            variant="destructive" 
+            onClick={handleConfirmarExclusao} 
+            disabled={isDeleting}
+            className="flex items-center gap-2"
+          >
+            {isDeleting ? (
+              <>
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                Excluindo...
+              </>
+            ) : (
+              <>
+                <Trash2 className="h-4 w-4" />
+                Excluir
+              </>
+            )}
+          </Button>
+        </div>
+      </Modal>
 
-      {/* Modal de Aviso de Intervalo */}
-      <ResponsiveAlertDialog
-        open={showIntervalWarning}
-        onOpenChange={setShowIntervalWarning}
-        title="Intervalo entre avaliações"
-        description={
-          <>
-            A última avaliação foi realizada há apenas {intervalDays} dia(s). O ideal é aguardar pelo menos 30 dias para obter uma comparação de resultados mais precisa.
-            <br/><br/>
-            Deseja criar uma nova avaliação mesmo assim?
-          </>
-        }
+      {/* Modal de Aviso de Intervalo - React Modal */}
+      <Modal
+        isOpen={showIntervalWarning}
+        onRequestClose={() => {}} // Bloqueada também
+        shouldCloseOnOverlayClick={false}
+        shouldCloseOnEsc={false}
+        className="bg-white rounded-lg p-6 max-w-md w-full mx-4 outline-none"
+        overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
       >
-        <Button variant="outline" onClick={() => setShowIntervalWarning(false)}>Cancelar</Button>
-        <Button onClick={() => {
-          setShowIntervalWarning(false);
-          navigate(`/alunos-avaliacoes/${id}/nova`);
-        }}>
-          Criar mesmo assim
-        </Button>
-      </ResponsiveAlertDialog>
+        <div className="flex items-center gap-2 mb-4">
+          <Info className="h-5 w-5 text-blue-500" />
+          <h2 className="text-lg font-semibold">Intervalo entre avaliações</h2>
+        </div>
+        
+        <div className="mb-6">
+          <p className="text-sm text-gray-600 leading-relaxed">
+            A última avaliação foi realizada há apenas {intervalDays} dia(s). O ideal é aguardar pelo menos 30 dias para obter uma comparação de resultados mais precisa.
+          </p>
+          <p className="text-sm text-gray-600 mt-2">
+            Deseja criar uma nova avaliação mesmo assim?
+          </p>
+        </div>
+        
+        <div className="flex gap-3 justify-end">
+          <Button 
+            variant="outline" 
+            onClick={handleCancelarIntervalo}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={() => {
+              setShowIntervalWarning(false);
+              navigate(`/alunos-avaliacoes/${id}/nova`);
+            }}
+          >
+            Criar mesmo assim
+          </Button>
+        </div>
+      </Modal>
 
       {/* Botão Flutuante para Nova Avaliação */}
       <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">

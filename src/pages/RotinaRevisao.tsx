@@ -3,22 +3,10 @@ import { SerieConfig } from '@/types/rotina.types';
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Check, User, Calendar, Target, DollarSign, Clock, Dumbbell, Info, AlertCircle, CheckCircle2, BicepsFlexed, ClipboardType } from 'lucide-react';
+import { ChevronLeft, Check, User, Calendar, Target, DollarSign, Clock, Dumbbell, Info, AlertCircle, CheckCircle2, BicepsFlexed, ClipboardType, X, AlertTriangle } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle 
-} from '@/components/ui/dialog';
-import { 
-  Drawer, 
-  DrawerContent, 
-  DrawerHeader, 
-  DrawerTitle 
-} from '@/components/ui/drawer';
+import Modal from 'react-modal';
 import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -53,60 +41,6 @@ const CORES_DIFICULDADES: {[key: string]: string} = {
 
 type Aluno = Tables<'alunos'>;
 
-// Hook para detectar se é mobile
-const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  return isMobile;
-};
-
-// Componente responsivo que escolhe entre Modal e Drawer
-interface ResponsiveModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  title: string;
-  children: React.ReactNode;
-}
-
-const ResponsiveCancelModal = ({ open, onOpenChange, title, children }: ResponsiveModalProps) => {
-  const isMobile = useIsMobile();
-
-  if (isMobile) {
-    return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent>
-          <DrawerHeader className="text-left">
-            <DrawerTitle>{title}</DrawerTitle>
-          </DrawerHeader>
-          <div className="p-4">{children}</div>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        {children}
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-
 const RotinaRevisao: React.FC = () => {
   const { alunoId } = useParams<{ alunoId: string }>();
   const navigate = useNavigate();
@@ -121,14 +55,8 @@ const RotinaRevisao: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
 
-  const isDirty = observacoes.trim() !== '';
-
   const handleCancelClick = () => {
-    if (isDirty) {
-      setShowCancelDialog(true);
-    } else {
-      handleDescartar();
-    }
+    setShowCancelDialog(true);
   };
 
   // All useEffect hooks moved to the top, deduplicated and not after any return
@@ -180,7 +108,6 @@ const RotinaRevisao: React.FC = () => {
 
       if (success) {
         rotinaStorage.limparStorage();
-        toast({ title: "Rascunho salvo!", description: "Você pode continuar de onde parou mais tarde." });
         navigate(`/alunos-rotinas/${alunoId}`);
       } else {
         throw new Error("Falha ao salvar rascunho.");
@@ -221,6 +148,7 @@ const RotinaRevisao: React.FC = () => {
       return;
     }
   }, [alunoId, navigate, toast, rotinaStorage.isLoaded, rotinaStorage.storage]);
+  
   const handleFinalizar = async () => {
     if (!user || !aluno) return;
 
@@ -394,12 +322,6 @@ const RotinaRevisao: React.FC = () => {
       // 5. Limpar storage e navegar
       rotinaStorage.limparStorage();
 
-      toast({
-        title: "Rotina criada com sucesso!",
-        description: `A rotina "${configuracao.nome}" foi criada e está ativa.`,
-        variant: "default"
-      });
-
       navigate(`/alunos-rotinas/${alunoId}`);
 
     } catch (error) {
@@ -416,8 +338,17 @@ const RotinaRevisao: React.FC = () => {
 
   // Voltar para lista de rotinas e limpar storage
   const handleDescartar = () => {
-    rotinaStorage.limparStorage();
-    navigate(`/alunos-rotinas/${alunoId}`);
+    // Verificar se está editando um rascunho existente
+    const isEditingDraft = !!rotinaStorage.storage.draftId;
+    
+    if (isEditingDraft) {
+      // Apenas navegar de volta sem limpar - preserva o rascunho
+      navigate(`/alunos-rotinas/${alunoId}`);
+    } else {
+      // Nova rotina - pode limpar tudo
+      rotinaStorage.limparStorage();
+      navigate(`/alunos-rotinas/${alunoId}`);
+    }
   };
 
   if (loading) {
@@ -442,10 +373,6 @@ const RotinaRevisao: React.FC = () => {
     acc + exs.reduce((acc2, ex) => acc2 + ex.series.length, 0), 0
   );
   const tempoEstimadoTotal = treinos.reduce((acc, t) => acc + (t.tempo_estimado_minutos || 0), 0);
-
-
-
-
 
   return (
     <div className="space-y-6 p-6">
@@ -489,7 +416,6 @@ const RotinaRevisao: React.FC = () => {
           </CardContent>
         </Card>
       )}
-
 
       {/* Configuração da rotina */}
       <Card>
@@ -749,25 +675,35 @@ const RotinaRevisao: React.FC = () => {
         </div>
       </div>
 
-      <ResponsiveCancelModal
-        open={showCancelDialog}
-        onOpenChange={setShowCancelDialog}
-        title="Sair da criação de rotina?"
+      {/* Modal de Cancelar - React Modal BLOQUEADA */}
+      <Modal
+        isOpen={showCancelDialog}
+        onRequestClose={() => {}} // Não permite fechar
+        shouldCloseOnOverlayClick={false}
+        shouldCloseOnEsc={false}
+        className="bg-white rounded-lg p-6 max-w-md w-full mx-4 outline-none"
+        overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
       >
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 mb-4">
+          <AlertTriangle className="h-5 w-5 text-orange-500" />
+          <h2 className="text-lg font-semibold">Sair da criação de rotina?</h2>
+        </div>
+        
+        <div className="mb-6">
+          <p className="text-sm text-gray-600 leading-relaxed">
             Suas alterações não salvas serão perdidas. Você também pode salvar seu progresso como um rascunho.
           </p>
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2 pt-2">
-            <Button variant="outline" onClick={handleDescartar} disabled={finalizando}>
-              Descartar Alterações
-            </Button>
-            <Button onClick={handleSalvarRascunho} disabled={finalizando}>
-              {finalizando ? 'Salvando...' : 'Salvar como Rascunho'}
-            </Button>
-          </div>
         </div>
-      </ResponsiveCancelModal>
+        
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2">
+          <Button variant="outline" onClick={handleDescartar} disabled={finalizando}>
+            Descartar Alterações
+          </Button>
+          <Button onClick={handleSalvarRascunho} disabled={finalizando}>
+            {finalizando ? 'Salvando...' : 'Salvar como Rascunho'}
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 };

@@ -1,12 +1,11 @@
 // src/components/rotina/execucao/shared/ExercicioHistoricoModal.tsx
 import React, { useCallback, useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { BarChart3, Calendar, Weight, Repeat, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useIsMobile } from '@/hooks/use-mobile';
+import Modal from 'react-modal';
+import { Button } from '@/components/ui/button';
 
 interface Props {
   visible: boolean;
@@ -59,7 +58,6 @@ export const ExercicioHistoricoModal = ({
   alunoId, 
   onClose 
 }: Props) => {
-  const isMobile = useIsMobile();
   const [historico, setHistorico] = useState<HistoricoExecucao[]>([]);
   const [loading, setLoading] = useState(false);
   const [exercicioNome, setExercicioNome] = useState('');
@@ -267,54 +265,35 @@ export const ExercicioHistoricoModal = ({
     </div>
   );
 
-  // 📱 MOBILE: Drawer que desliza de baixo
-  if (isMobile) {
-    return (
-      <Drawer open={visible} onOpenChange={onClose}>
-        <DrawerContent className="max-h-[90vh] px-4">
-          <DrawerHeader className="text-center pb-4 relative">
-            {/* ✅ Botão X para fechar - Mobile (padronizado) */}
-            <button
-              onClick={onClose}
-              className="absolute right-4 top-4 p-1 hover:bg-gray-100 rounded-full transition-colors"
-              aria-label="Fechar"
-            >
-              <X className="h-5 w-5 text-gray-500" />
-            </button>
-            
-            <DrawerTitle className="flex items-center justify-center space-x-2">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              <span>Histórico de Execuções</span>
-            </DrawerTitle>
-            {exercicioNome && (
-              <p className="text-muted-foreground text-sm mt-2">{exercicioNome}</p>
-            )}
-          </DrawerHeader>
-          
-          <div className="overflow-y-auto px-2 pb-4">
-            <HistoricoContent />
-          </div>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-
-  // 💻 DESKTOP: Modal tradicional no centro
   return (
-    <Dialog open={visible} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
+    <Modal
+      isOpen={visible}
+      onRequestClose={onClose}
+      shouldCloseOnOverlayClick={true}
+      shouldCloseOnEsc={true}
+      className="bg-white rounded-lg max-w-2xl w-full mx-4 outline-none max-h-[80vh] flex flex-col"
+      overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+    >
+      <div className="flex items-start justify-between p-6 border-b flex-shrink-0">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-primary" />
             <span>Histórico de Execuções</span>
-          </DialogTitle>
+          </h2>
           {exercicioNome && (
-            <p className="text-muted-foreground">{exercicioNome}</p>
+            <p className="text-muted-foreground text-sm">{exercicioNome}</p>
           )}
-        </DialogHeader>
+        </div>
+        <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
 
-        <HistoricoContent />
-      </DialogContent>
-    </Dialog>
+      <div className="p-6 overflow-y-auto flex-1">
+        <div className="space-y-4">
+          <HistoricoContent />
+        </div>
+      </div>
+    </Modal>
   );
 };

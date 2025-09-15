@@ -2,24 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, User, X, ChevronDown, ChevronUp } from 'lucide-react';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle 
-} from '@/components/ui/dialog';
-import { 
-  Drawer, 
-  DrawerContent, 
-  DrawerHeader, 
-  DrawerTitle 
-} from '@/components/ui/drawer';
+import { ChevronLeft, ChevronRight, User, X, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
+import Modal from 'react-modal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectScrollUpButton, SelectScrollDownButton } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -34,82 +23,30 @@ import {
   Aluno,
   Objetivo,        
   Dificuldade,     
-  FormaPagamento   
+  FormaPagamento,
+  TreinoTemp
 } from '@/types/rotina.types';
 
-// Hook para detectar se é mobile
-const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(false);
 
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  return isMobile;
-};
-
-// Componente responsivo que escolhe entre Modal e Drawer
-interface ResponsiveModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  title: string;
-  children: React.ReactNode;
-}
-
-const ResponsiveCancelModal = ({ open, onOpenChange, title, children }: ResponsiveModalProps) => {
-  const isMobile = useIsMobile();
-
-  if (isMobile) {
-    return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent>
-          <DrawerHeader className="text-left">
-            <DrawerTitle>{title}</DrawerTitle>
-          </DrawerHeader>
-          <div className="p-4">{children}</div>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        {children}
-      </DialogContent>
-    </Dialog>
-  );
-};
 
 const RotinaConfiguracao = () => {
   const { alunoId } = useParams<{ alunoId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const rotinaStorage = useRotinaStorage(alunoId!);
-
+  const { isLoaded: isStorageLoaded } = rotinaStorage;
   const [aluno, setAluno] = useState<Aluno | null>(null);
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [pagamentoExpandido, setPagamentoExpandido] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
-  const [isDirty, setIsDirty] = useState(false);
-  const initialFormState = React.useRef<string | null>(null);
   
   const [form, setForm] = useState<ConfiguracaoRotina>({
     nome: '',
-    objetivo: 'Ganho de massa',
-    dificuldade: 'Média',
-    duracao_semanas: 12,
-    treinos_por_semana: 3,
+    objetivo: '' as Objetivo,
+    dificuldade: '' as Dificuldade,
+    duracao_semanas: 1, // ✅ Valor padrão 1
+    treinos_por_semana: 1, // ✅ Valor padrão 1
     valor_total: 0,
     forma_pagamento: 'PIX',
     data_inicio: new Date().toISOString().split('T')[0],
@@ -128,7 +65,7 @@ const RotinaConfiguracao = () => {
 
   // Limpa erro de nome automaticamente ao digitar um valor válido
   useEffect(() => {
-    if (erros.nome && form.nome && form.nome.length >= LIMITES.NOME_MIN) {
+    if (erros.nome && form.nome && form.nome.trim().length > 0) {
       setErros(prev => {
         const { nome, ...rest } = prev;
         return rest;
@@ -138,6 +75,9 @@ const RotinaConfiguracao = () => {
 
   // Carregar dados do aluno e dados salvos
   useEffect(() => {
+    // Aguarda o storage ser carregado para evitar race condition na montagem
+    if (!isStorageLoaded) return;
+
     // SÓ limpa cache de exercícios se for início de nova rotina (não tem configuração salva)
     if (!rotinaStorage.storage.configuracao) {
       sessionStorage.removeItem('rotina_exercicios');
@@ -197,28 +137,22 @@ const RotinaConfiguracao = () => {
         if (configuracaoSalva) {
           dataToSet = configuracaoSalva;
         } else {
-          // Pré-preencher com dados do aluno
-          const objetivo = alunoData.ultimo_objetivo_rotina || 'Ganho de massa';
+          // Iniciar formulário em branco, sem preenchimento automático
           dataToSet = {
-            // Manter os padrões iniciais para evitar dependência do estado 'form'
-            dificuldade: 'Média',
-            duracao_semanas: 12,
-            treinos_por_semana: 3,
+            nome: '',
+            objetivo: '' as Objetivo,
+            dificuldade: '' as Dificuldade,
+            duracao_semanas: 1,
+            treinos_por_semana: 1,
             valor_total: 0,
             forma_pagamento: 'PIX',
             data_inicio: new Date().toISOString().split('T')[0],
             observacoes_pagamento: '',
             descricao: '',
-            // Sobrescrever com dados pré-preenchidos
-            nome: `Rotina ${alunoData.nome_completo}`,
-            objetivo: (OBJETIVOS as readonly string[]).includes(objetivo) ? objetivo as Objetivo : 'Ganho de massa',
             permite_execucao_aluno: true
           };
         }
         setForm(dataToSet);
-        if (initialFormState.current === null) {
-          initialFormState.current = JSON.stringify(dataToSet);
-        }
 
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
@@ -233,20 +167,22 @@ const RotinaConfiguracao = () => {
     };
 
     carregarDados();
-  }, [alunoId, navigate, toast, rotinaStorage.storage.configuracao, rotinaStorage.storage.draftId]);
-
-  useEffect(() => {
-    if (initialFormState.current) {
-      setIsDirty(JSON.stringify(form) !== initialFormState.current);
-    }
-  }, [form]);
+  }, [alunoId, navigate, toast, isStorageLoaded, rotinaStorage.storage.configuracao, rotinaStorage.storage.draftId]);
 
   // Validar formulário
   const validarForm = (): boolean => {
     const novosErros: {[key: string]: string} = {};
 
-    if (!form.nome || form.nome.length < LIMITES.NOME_MIN) {
-      novosErros.nome = `Nome deve ter pelo menos ${LIMITES.NOME_MIN} caracteres`;
+    if (!form.nome || form.nome.trim().length === 0) {
+      novosErros.nome = `Nome da rotina é obrigatório`;
+    }
+
+    if (!form.objetivo) {
+      novosErros.objetivo = "Objetivo é obrigatório";
+    }
+
+    if (!form.dificuldade) {
+      novosErros.dificuldade = "Dificuldade é obrigatória";
     }
 
     if (form.duracao_semanas < LIMITES.DURACAO_MIN || form.duracao_semanas > LIMITES.DURACAO_MAX) {
@@ -267,7 +203,13 @@ const RotinaConfiguracao = () => {
 
   // Salvar e avançar
   const handleProximo = async () => {
-    if (!validarForm()) {
+    console.log('🔍 Validando formulário...');
+    const isValid = validarForm();
+    console.log('📋 Resultado da validação:', isValid);
+    console.log('❌ Erros encontrados:', erros);
+    
+    if (!isValid) {
+      console.log('🚨 Formulário inválido - parando execução');
       toast({
         title: "Dados inválidos",
         description: "Por favor, corrija os erros antes de continuar.",
@@ -275,7 +217,8 @@ const RotinaConfiguracao = () => {
       });
       return;
     }
-
+    
+    console.log('✅ Formulário válido - prosseguindo');
     setSalvando(true);
     try {
       await rotinaStorage.salvarConfiguracao(form);
@@ -296,33 +239,62 @@ const RotinaConfiguracao = () => {
 
   // Voltar para lista de rotinas
   const handleDescartar = () => {
-    rotinaStorage.limparStorage();
-    navigate(`/alunos-rotinas/${alunoId}`);
+    // Verificar se está editando um rascunho existente
+    const isEditingDraft = !!rotinaStorage.storage.draftId;
+    
+    if (isEditingDraft) {
+      // Apenas navegar de volta sem limpar - preserva o rascunho
+      navigate(`/alunos-rotinas/${alunoId}`);
+    } else {
+      // Nova rotina - pode limpar tudo
+      rotinaStorage.limparStorage();
+      navigate(`/alunos-rotinas/${alunoId}`);
+    }
   };
 
   const handleCancelClick = () => {
-    if (isDirty) {
-      setShowCancelDialog(true);
-    } else {
-      handleDescartar();
-    }
+    setShowCancelDialog(true);
   };
 
   const handleSalvarRascunho = async () => {
     setSalvando(true);
     try {
-      // Passa o formulário atual para garantir que os dados mais recentes sejam salvos
-      const { success } = await rotinaStorage.salvarComoRascunho({ configuracao: form });
+      // A estratégia correta é salvar o formulário como está, respeitando os campos vazios.
+      // Apenas o nome da rotina recebe um padrão se estiver vazio, para exibição na lista de rascunhos.
+      const configParaSalvar = { ...form };
+      
+      if (!configParaSalvar.nome.trim()) {
+        configParaSalvar.nome = `Rascunho de Rotina (${new Date().toLocaleDateString()})`;
+      }
+
+      // A função de salvar rascunho precisa da estrutura de treinos, mesmo que vazia.
+      // Criamos os treinos iniciais baseados na frequência definida no formulário (pode ser 0).
+      const treinosIniciais: TreinoTemp[] = [];
+      const nomesTreinos = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+      const frequencia = configParaSalvar.treinos_por_semana || 0;
+      for (let i = 0; i < frequencia; i++) {
+        treinosIniciais.push({
+          id: `treino_draft_${Date.now()}_${i}`,
+          nome: `Treino ${nomesTreinos[i]}`,
+          grupos_musculares: [],
+          ordem: i + 1,
+        });
+      }
+
+      const { success } = await rotinaStorage.salvarComoRascunho({ 
+        configuracao: configParaSalvar,
+        treinos: treinosIniciais,
+        exercicios: {}
+      });
 
       if (success) {
         rotinaStorage.limparStorage();
-        toast({ title: "Rascunho salvo!", description: "Você pode continuar de onde parou mais tarde." });
         navigate(`/alunos-rotinas/${alunoId}`);
       } else {
         throw new Error("Falha ao salvar rascunho.");
       }
     } catch (error) {
-      toast({ title: "Erro", description: "Não foi possível salvar o rascunho.", variant: "destructive" });
+      toast({ title: "Erro ao salvar", description: (error as Error).message || "Não foi possível salvar o rascunho.", variant: "destructive" });
     } finally {
       setSalvando(false);
       setShowCancelDialog(false);
@@ -423,7 +395,7 @@ const RotinaConfiguracao = () => {
                 onValueChange={(value) => setForm(prev => ({ ...prev, objetivo: value as Objetivo }))}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Selecione o objetivo" />
                 </SelectTrigger>
                 <SelectContent>
                   {OBJETIVOS.map(objetivo => (
@@ -433,6 +405,7 @@ const RotinaConfiguracao = () => {
                   ))}
                 </SelectContent>
               </Select>
+              {erros.objetivo && <p className="text-sm text-red-500">{erros.objetivo}</p>}
             </div>
 
             <div className="space-y-2">
@@ -444,7 +417,7 @@ const RotinaConfiguracao = () => {
                 onValueChange={(value) => setForm(prev => ({ ...prev, dificuldade: value as Dificuldade }))}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Selecione a dificuldade" />
                 </SelectTrigger>
                 <SelectContent>
                   {DIFICULDADES.map(dificuldade => (
@@ -454,6 +427,7 @@ const RotinaConfiguracao = () => {
                   ))}
                 </SelectContent>
               </Select>
+              {erros.dificuldade && <p className="text-sm text-red-500">{erros.dificuldade}</p>}
             </div>
           </div>
 
@@ -463,15 +437,27 @@ const RotinaConfiguracao = () => {
               <Label htmlFor="duracao_semanas">
                 Duração (semanas) <span className="text-red-500">*</span>
               </Label>
-              <Input
-                id="duracao_semanas"
-                type="number"
-                min={LIMITES.DURACAO_MIN}
-                max={LIMITES.DURACAO_MAX}
-                value={form.duracao_semanas}
-                onChange={(e) => setForm(prev => ({ ...prev, duracao_semanas: normalizarNumero(e.target.value) }))}
-                className={erros.duracao_semanas ? 'border-red-500' : ''}
-              />
+              <Select
+                value={form.duracao_semanas.toString()}
+                onValueChange={(value) => setForm(prev => ({ ...prev, duracao_semanas: parseInt(value) }))}
+              >
+                <SelectTrigger id="duracao_semanas" className={erros.duracao_semanas ? 'border-red-500' : ''}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectScrollUpButton>
+                    <ChevronUp />
+                  </SelectScrollUpButton>
+                  {Array.from({ length: 52 }, (_, i) => i + 1).map(semana => (
+                    <SelectItem key={semana} value={semana.toString()}>
+                      {semana} semana{semana > 1 ? 's' : ''}
+                    </SelectItem>
+                  ))}
+                  <SelectScrollDownButton>
+                    <ChevronDown />
+                  </SelectScrollDownButton>
+                </SelectContent>
+              </Select>
               {erros.duracao_semanas && <p className="text-sm text-red-500">{erros.duracao_semanas}</p>}
             </div>
 
@@ -479,15 +465,21 @@ const RotinaConfiguracao = () => {
               <Label htmlFor="treinos_por_semana">
                 Treinos por semana <span className="text-red-500">*</span>
               </Label>
-              <Input
-                id="treinos_por_semana"
-                type="number"
-                min={LIMITES.TREINOS_MIN}
-                max={LIMITES.TREINOS_MAX}
-                value={form.treinos_por_semana}
-                onChange={(e) => setForm(prev => ({ ...prev, treinos_por_semana: normalizarNumero(e.target.value) }))}
-                className={erros.treinos_por_semana ? 'border-red-500' : ''}
-              />
+              <Select
+                value={form.treinos_por_semana.toString()}
+                onValueChange={(value) => setForm(prev => ({ ...prev, treinos_por_semana: parseInt(value) }))}
+              >
+                <SelectTrigger id="treinos_por_semana" className={erros.treinos_por_semana ? 'border-red-500' : ''}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 7 }, (_, i) => i + 1).map(treino => (
+                    <SelectItem key={treino} value={treino.toString()}>
+                      {treino} treino{treino > 1 ? 's' : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {erros.treinos_por_semana && <p className="text-sm text-red-500">{erros.treinos_por_semana}</p>}
             </div>
           </div>
@@ -542,9 +534,7 @@ const RotinaConfiguracao = () => {
                 {/* Linha Pagamentos: Valor Total e Forma de Pagamento */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="valor_total">
-                      Valor Total (R$) <span className="text-red-500">*</span>
-                    </Label>
+                    <Label htmlFor="valor_total">Valor Total (R$)</Label>
                     <Input
                       id="valor_total"
                       type="number"
@@ -558,9 +548,7 @@ const RotinaConfiguracao = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="forma_pagamento">
-                      Forma de Pagamento <span className="text-red-500">*</span>
-                    </Label>
+                    <Label htmlFor="forma_pagamento">Forma de Pagamento</Label>
                     <Select
                       value={form.forma_pagamento}
                       onValueChange={(value) => setForm(prev => ({ ...prev, forma_pagamento: value as FormaPagamento }))}
@@ -656,25 +644,35 @@ const RotinaConfiguracao = () => {
         </div>
       </div>
 
-      <ResponsiveCancelModal
-        open={showCancelDialog}
-        onOpenChange={setShowCancelDialog}
-        title="Sair da criação de rotina?"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Suas alterações não salvas serão perdidas. Você também pode salvar seu progresso como um rascunho.
-          </p>
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2 pt-2">
-            <Button variant="outline" onClick={handleDescartar} disabled={salvando}>
-              Descartar Alterações
-            </Button>
-            <Button onClick={handleSalvarRascunho} disabled={salvando}>
-              {salvando ? 'Salvando...' : 'Salvar como Rascunho'}
-            </Button>
-          </div>
-        </div>
-      </ResponsiveCancelModal>
+      {/* Modal de Cancelar - React Modal BLOQUEADA */}
+<Modal
+  isOpen={showCancelDialog}
+  onRequestClose={() => {}} // Não permite fechar
+  shouldCloseOnOverlayClick={false}
+  shouldCloseOnEsc={false}
+  className="bg-white rounded-lg p-6 max-w-md w-full mx-4 outline-none"
+  overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+>
+  <div className="flex items-center gap-2 mb-4">
+    <AlertTriangle className="h-5 w-5 text-orange-500" />
+    <h2 className="text-lg font-semibold">Sair da criação de rotina?</h2>
+  </div>
+  
+  <div className="mb-6">
+    <p className="text-sm text-gray-600 leading-relaxed">
+      Suas alterações não salvas serão perdidas. Você também pode salvar seu progresso como um rascunho.
+    </p>
+  </div>
+  
+  <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2">
+    <Button variant="outline" onClick={handleDescartar} disabled={salvando}>
+      Descartar Alterações
+    </Button>
+    <Button onClick={handleSalvarRascunho} disabled={salvando}>
+      {salvando ? 'Salvando...' : 'Salvar como Rascunho'}
+    </Button>
+  </div>
+</Modal>
     </div>
   );
 };

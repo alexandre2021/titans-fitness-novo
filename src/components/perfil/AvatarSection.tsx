@@ -3,25 +3,11 @@
 import React, { useRef, useState, useCallback } from 'react';
 import Cropper, { Area } from 'react-easy-crop';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Camera, Loader2, Palette, User as UserIcon } from 'lucide-react';
+import { Camera, Loader2, Palette, User as UserIcon, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogFooter,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
+import Modal from 'react-modal';
 import { Slider } from "@/components/ui/slider";
 import { Button } from '@/components/ui/button';
 
@@ -81,26 +67,8 @@ const AVATAR_COLORS = [
   '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6366F1'
 ];
 
-const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(false);
-
-  React.useEffect(() => {
-    const checkScreenSize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    checkScreenSize();
-    window.addEventListener('resize', checkScreenSize);
-
-    return () => window.removeEventListener('resize', checkScreenSize);
-  }, []);
-
-  return isMobile;
-};
-
 interface ImageCropDialogProps {
   imageSrc: string | null;
-  isMobile: boolean;
   isUploading: boolean;
   onClose: () => void;
   onSave: () => void;
@@ -109,7 +77,6 @@ interface ImageCropDialogProps {
 
 const ImageCropDialog: React.FC<ImageCropDialogProps> = ({
   imageSrc,
-  isMobile,
   isUploading,
   onClose,
   onSave,
@@ -128,7 +95,7 @@ const ImageCropDialog: React.FC<ImageCropDialogProps> = ({
   if (!imageSrc) return null;
 
   const Content = (
-    <>
+    <div className="p-4">
       <div className="relative h-64 w-full bg-muted" data-vaul-no-drag>
         <Cropper
           image={imageSrc}
@@ -152,25 +119,30 @@ const ImageCropDialog: React.FC<ImageCropDialogProps> = ({
           onValueChange={(value) => setZoom(value[0])}
         />
       </div>
-    </>
+    </div>
   );
 
-  const DialogComponent = isMobile ? Drawer : Dialog;
-  const DialogContentComponent = isMobile ? DrawerContent : DialogContent;
-
   return (
-    <DialogComponent open={!!imageSrc} onOpenChange={(open) => !open && onClose()}>
-      <DialogContentComponent>
-        <DialogHeader>
-          <DialogTitle>Ajustar Imagem</DialogTitle>
-        </DialogHeader>
+    <Modal
+      isOpen={!!imageSrc}
+      onRequestClose={onClose}
+      shouldCloseOnOverlayClick={true}
+      shouldCloseOnEsc={true}
+      className="bg-white rounded-lg max-w-md w-full mx-4 outline-none"
+      overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+    >
+      <div className="flex items-center justify-between p-4 border-b">
+        <h2 className="text-lg font-semibold">Ajustar Imagem</h2>
+        <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
         {Content}
-        <DialogFooter className={isMobile ? "p-4 flex-row gap-2" : ""}>
-          <Button variant="outline" onClick={onClose} className={isMobile ? "w-full" : ""}>Cancelar</Button>
-          <Button onClick={onSave} disabled={isUploading} className={isMobile ? "w-full" : ""}>{isUploading ? "Salvando..." : "Salvar"}</Button>
-        </DialogFooter>
-      </DialogContentComponent>
-    </DialogComponent>
+      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 p-4 border-t">
+        <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">Cancelar</Button>
+        <Button onClick={onSave} disabled={isUploading} className="w-full sm:w-auto">{isUploading ? "Salvando..." : "Salvar"}</Button>
+      </div>
+    </Modal>
   );
 };
 
@@ -197,8 +169,6 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
-
-  const isMobile = useIsMobile();
 
   // Defensive check for when userProfile is still loading
   if (!profile) {
@@ -386,7 +356,6 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
           <input type="file" accept="image/*" capture="user" ref={fileInputRef} onChange={onFileChange} style={{ display: 'none' }} />
         <ImageCropDialog
           imageSrc={imageSrc}
-          isMobile={isMobile}
           isUploading={isUploading}
           onClose={() => setImageSrc(null)}
           onSave={handleUploadCroppedImage}
@@ -415,62 +384,41 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
     </div>
   );
 
-  if (isMobile) {
-    return (
-      <>
-        <div className="flex flex-col items-center gap-4 mx-auto">
-          {AvatarWithLetter}
-          <Drawer open={isColorPickerOpen} onOpenChange={setIsColorPickerOpen}>
-            <DrawerTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Palette className="h-4 w-4 mr-2" />
-                Alterar Cor
-              </Button>
-            </DrawerTrigger>
-            <DrawerContent>
-              <DrawerHeader className="text-left">
-                <DrawerTitle>Escolher Cor</DrawerTitle>
-              </DrawerHeader>
-              {ColorPickerContent}
-            </DrawerContent>
-          </Drawer>
-          <input type="file" accept="image/*" capture="user" ref={fileInputRef} onChange={onFileChange} style={{ display: 'none' }} />
-        </div>
-        <ImageCropDialog
-          imageSrc={imageSrc}
-          isMobile={isMobile}
-          isUploading={isUploading}
-          onClose={() => setImageSrc(null)}
-          onSave={handleUploadCroppedImage}
-          setCroppedAreaPixels={setCroppedAreaPixels}
-        />
-      </>
-    );
-  }
-
   return (
     <>
       <div className="flex flex-col items-center gap-4 mx-auto">
         {AvatarWithLetter}
-        <Dialog open={isColorPickerOpen} onOpenChange={setIsColorPickerOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
-              <Palette className="h-4 w-4 mr-2" />
-              Alterar Cor
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Escolher Cor</DialogTitle>
-            </DialogHeader>
-            {ColorPickerContent}
-          </DialogContent>
-        </Dialog>
+        <Button variant="outline" size="sm" onClick={() => setIsColorPickerOpen(true)}>
+          <Palette className="h-4 w-4 mr-2" />
+          Alterar Cor
+        </Button>
         <input type="file" accept="image/*" capture="user" ref={fileInputRef} onChange={onFileChange} style={{ display: 'none' }} />
       </div>
+
+      <Modal
+        isOpen={isColorPickerOpen}
+        onRequestClose={() => setIsColorPickerOpen(false)}
+        shouldCloseOnOverlayClick={true}
+        shouldCloseOnEsc={true}
+        className="bg-white rounded-lg max-w-sm w-full mx-4 outline-none"
+        overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      >
+        <div className="flex items-center justify-between p-4 border-b">
+          <h2 className="text-lg font-semibold">Escolher Cor</h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsColorPickerOpen(false)}
+            className="h-8 w-8 p-0"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        {ColorPickerContent}
+      </Modal>
+
       <ImageCropDialog
         imageSrc={imageSrc}
-        isMobile={isMobile}
         isUploading={isUploading}
         onClose={() => setImageSrc(null)}
         onSave={handleUploadCroppedImage}

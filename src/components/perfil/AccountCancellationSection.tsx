@@ -1,45 +1,16 @@
 // src/components/perfil/AccountCancellationSection.tsx
 
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Trash2 } from 'lucide-react';
+import { AlertTriangle, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerDescription,
-} from '@/components/ui/drawer';
+import Modal from 'react-modal';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-
-// Hook para detectar mobile
-const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  return isMobile;
-};
 
 interface ResponsiveModalProps {
   open: boolean;
@@ -50,40 +21,26 @@ interface ResponsiveModalProps {
 }
 
 const ResponsiveModal = ({ open, onOpenChange, title, description, children }: ResponsiveModalProps) => {
-  const isMobile = useIsMobile();
-
-  if (isMobile) {
-    return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-h-[90vh]">
-          <DrawerHeader className="text-left">
-            <DrawerTitle className="flex items-center gap-2 text-red-600">
-              <AlertTriangle className="h-5 w-5" />
-              {title}
-            </DrawerTitle>
-            <DrawerDescription>{description}</DrawerDescription>
-          </DrawerHeader>
-          <div className="px-4 pb-4 overflow-y-auto">
-            {children}
-          </div>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-red-600">
-            <AlertTriangle className="h-5 w-5" />
-            {title}
-          </DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
+    <Modal
+      isOpen={open}
+      onRequestClose={() => {}} // Impede o fechamento por ações padrão do modal
+      shouldCloseOnOverlayClick={false}
+      shouldCloseOnEsc={false}
+      className="bg-white rounded-lg max-w-md w-full mx-4 outline-none"
+      overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+    >
+      <div className="flex items-center p-6 border-b">
+        <h2 className="text-lg font-semibold flex items-center gap-2 text-red-600">
+          <AlertTriangle className="h-5 w-5" />
+          {title}
+        </h2>
+      </div>
+      <div className="p-6">
+        <p className="text-sm text-muted-foreground mb-4">{description}</p>
         {children}
-      </DialogContent>
-    </Dialog>
+      </div>
+    </Modal>
   );
 };
 

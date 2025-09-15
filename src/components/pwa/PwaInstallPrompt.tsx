@@ -8,10 +8,8 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Download, Smartphone } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from '@/components/ui/drawer';
+import { Download, Smartphone, X } from 'lucide-react';
+import Modal from 'react-modal';
 
 // Estendemos a interface de Event para incluir as propriedades específicas do BeforeInstallPromptEvent
 interface BeforeInstallPromptEvent extends Event {
@@ -24,7 +22,6 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const PwaInstallPrompt = () => {
-  const isMobile = useIsMobile();
   const [installPromptEvent, setInstallPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [showGuidance, setShowGuidance] = useState(false);
 
@@ -56,31 +53,11 @@ const PwaInstallPrompt = () => {
     setShowGuidance(false);
   };
 
-  // Mostra o botão apenas em dispositivos móveis quando o prompt estiver disponível
-  if (!installPromptEvent || !isMobile) {
+  // Mostra o botão apenas quando o prompt estiver disponível
+  if (!installPromptEvent) {
     return null;
   }
-
-  const GuidanceContent = () => (
-    <>
-      <div className="p-4 md:p-0">
-        <p className="text-muted-foreground">
-          A instalação leva apenas alguns segundos. Após instalar, feche o navegador e abra o app pelo novo ícone na sua tela inicial para uma experiência completa!
-        </p>
-      </div>
-      {isMobile ? (
-        <DrawerFooter>
-          <Button onClick={handleInstallClick}>Ok, instalar!</Button>
-          <Button variant="outline" onClick={() => setShowGuidance(false)}>Cancelar</Button>
-        </DrawerFooter>
-      ) : (
-        <DialogFooter className="mt-4">
-          <Button variant="outline" onClick={() => setShowGuidance(false)}>Cancelar</Button>
-          <Button onClick={handleInstallClick}>Ok, instalar!</Button>
-        </DialogFooter>
-      )}
-    </>
-  );
+  const handleClose = () => setShowGuidance(false);
 
   return (
     <>
@@ -91,15 +68,33 @@ const PwaInstallPrompt = () => {
         </Button>
       </div>
 
-      {isMobile ? (
-        <Drawer open={showGuidance} onOpenChange={setShowGuidance}>
-          <DrawerContent><DrawerHeader className="text-left"><DrawerTitle className="flex items-center gap-2"><Smartphone /> Instalar o Titans Fitness</DrawerTitle><DrawerDescription>Tenha acesso rápido e offline ao app.</DrawerDescription></DrawerHeader><GuidanceContent /></DrawerContent>
-        </Drawer>
-      ) : (
-        <Dialog open={showGuidance} onOpenChange={setShowGuidance}>
-          <DialogContent><DialogHeader><DialogTitle className="flex items-center gap-2"><Smartphone /> Instalar o Titans Fitness</DialogTitle><DialogDescription>Tenha acesso rápido e offline ao app.</DialogDescription></DialogHeader><GuidanceContent /></DialogContent>
-        </Dialog>
-      )}
+      <Modal
+        isOpen={showGuidance}
+        onRequestClose={handleClose}
+        shouldCloseOnOverlayClick={true}
+        shouldCloseOnEsc={true}
+        className="bg-white rounded-lg max-w-md w-full mx-4 outline-none"
+        overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      >
+        <div className="flex items-center justify-between p-6 border-b">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Smartphone /> Instalar o Titans Fitness
+          </h2>
+          <Button variant="ghost" size="sm" onClick={handleClose} className="h-8 w-8 p-0">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="p-6 space-y-4">
+          <p className="text-sm text-muted-foreground">Tenha acesso rápido e offline ao app.</p>
+          <p className="text-sm text-muted-foreground">
+            A instalação leva apenas alguns segundos. Após instalar, feche o navegador e abra o app pelo novo ícone na sua tela inicial para uma experiência completa!
+          </p>
+        </div>
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 p-6 border-t">
+          <Button variant="outline" onClick={handleClose} className="w-full sm:w-auto">Cancelar</Button>
+          <Button onClick={handleInstallClick} className="w-full sm:w-auto">Ok, instalar!</Button>
+        </div>
+      </Modal>
     </>
   );
 };

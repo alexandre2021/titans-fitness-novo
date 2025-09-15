@@ -3,11 +3,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer';
-import { Clock, Play, Pause, Square, AlertTriangle, X } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { Clock, Play, Pause, Square, X } from 'lucide-react';
+import Modal from 'react-modal';
 import { EXERCICIO_CONSTANTS, MENSAGENS } from '@/constants/exercicio.constants';
 import { useExercicioExecucao } from '@/hooks/useExercicioExecucao';
 import { 
@@ -35,7 +32,6 @@ interface Props {
   onSessaoFinalizada: () => void;
   onSessaoPausada: () => void;
 }
-
 export const Executor = ({ 
   sessaoId, 
   sessaoData, // ✅ Usa a prop
@@ -44,7 +40,6 @@ export const Executor = ({
   onSessaoFinalizada,
   onSessaoPausada
 }: Props) => {
-  const isMobile = useIsMobile();
   const navigate = useNavigate();
   
   // Estados dos modais
@@ -557,67 +552,39 @@ export const Executor = ({
         onClose={() => setModalHistoricoVisible(false)}
       />
 
-      {/* ✅ Modal de Pausar - RESPONSIVA */}
-      {(() => {
-        // Conteúdo compartilhado
-        const PausarContent = () => (
-          <div className="flex flex-col space-y-3 pt-4">
-            <Button 
-              variant="outline"
-              onClick={pausarESair}
-              disabled={pausando}
-              className="w-full"
-            >
-              {pausando ? 'Salvando...' : 'Pausar e Sair'}
-            </Button>
+      <Modal
+        isOpen={modalPausarVisible}
+        onRequestClose={() => {}} // Impede o fechamento por ações padrão
+        shouldCloseOnOverlayClick={false}
+        shouldCloseOnEsc={false}
+        className="bg-white rounded-lg max-w-sm w-full mx-4 outline-none"
+        overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      >
+        <div className="flex items-center p-6 border-b">
+          <h2 className="text-lg font-semibold">Pausar Sessão</h2>
+        </div>
+        <div className="p-6 space-y-4">
+          <p className="text-sm text-muted-foreground">
+            O progresso atual será salvo. O que deseja fazer?
+          </p>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
             <Button
               variant="outline"
               onClick={() => setModalPausarVisible(false)}
-              className="w-full"
+              className="w-full sm:w-auto"
             >
               Cancelar
             </Button>
+            <Button 
+              onClick={pausarESair}
+              disabled={pausando}
+              className="w-full sm:w-auto"
+            >
+              {pausando ? 'Salvando...' : 'Pausar e Sair'}
+            </Button>
           </div>
-        );
-
-        if (isMobile) {
-          // 📱 MOBILE: Drawer
-          return (
-            <Drawer open={modalPausarVisible} onOpenChange={setModalPausarVisible}>
-              <DrawerContent>
-                <DrawerHeader className="text-center">
-                  <DrawerTitle className="text-lg font-semibold">
-                    Pausar Sessão
-                  </DrawerTitle>
-                  <DrawerDescription className="text-sm text-muted-foreground mt-2">
-                    O progresso atual será salvo. O que deseja fazer?
-                  </DrawerDescription>
-                </DrawerHeader>
-                
-                <div className="p-4 pt-0">
-                  <PausarContent />
-                </div>
-              </DrawerContent>
-            </Drawer>
-          );
-        }
-
-        // 💻 DESKTOP: Dialog
-        return (
-          <Dialog open={modalPausarVisible} onOpenChange={setModalPausarVisible}>
-            <DialogContent className="[&>button]:hidden">
-              <DialogHeader>
-                <DialogTitle>Pausar Sessão</DialogTitle>
-                <DialogDescription>
-                  O progresso atual será salvo. O que deseja fazer?
-                </DialogDescription>
-              </DialogHeader>
-              
-              <PausarContent />
-            </DialogContent>
-          </Dialog>
-        );
-      })()}
+        </div>
+      </Modal>
     </div>
   );
 };
