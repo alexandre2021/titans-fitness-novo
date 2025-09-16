@@ -1,6 +1,6 @@
 // src/pages/RotinaTreinos.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus, Trash2, GripVertical, X, Check, AlertTriangle } from 'lucide-react';
 import Modal from 'react-modal';
@@ -49,6 +49,7 @@ const RotinaTreinos = () => {
   const [treinos, setTreinos] = useState<TreinoTemp[]>([]);
   const [salvando, setSalvando] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [salvandoRascunho, setSalvandoRascunho] = useState(false);
 
   // 🔧 CORRIGIDO: Sempre usar treinos do storage (criados na configuração)
   useEffect(() => {
@@ -92,6 +93,16 @@ const RotinaTreinos = () => {
       setTreinos(treinosIniciais);
     }
   }, [alunoId, navigate, toast, rotinaStorage.isLoaded, rotinaStorage.storage]);
+
+  // Aviso para saídas externas (fechar aba, refresh)
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = ''; // Necessário para compatibilidade entre navegadores
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
 
   // Adicionar grupo muscular a um treino
   const adicionarGrupoMuscular = (treinoIndex: number, grupo: string) => {
@@ -181,7 +192,7 @@ const RotinaTreinos = () => {
       navigate(`/alunos-rotinas/${alunoId}`);
     } else {
       // Nova rotina - pode limpar tudo
-      rotinaStorage.limparStorage();
+      // A limpeza agora é feita no início do fluxo, em PaginaRotinas.tsx
       navigate(`/alunos-rotinas/${alunoId}`);
     }
   };
@@ -191,12 +202,12 @@ const RotinaTreinos = () => {
   };
 
   const handleSalvarRascunho = async () => {
-    setSalvando(true);
+    setSalvandoRascunho(true);
     try {
       const { success } = await rotinaStorage.salvarComoRascunho({ treinos });
 
       if (success) {
-        rotinaStorage.limparStorage();
+        setShowCancelDialog(false);
         navigate(`/alunos-rotinas/${alunoId}`);
       } else {
         throw new Error("Falha ao salvar rascunho.");
@@ -204,8 +215,7 @@ const RotinaTreinos = () => {
     } catch (error) {
       toast({ title: "Erro", description: "Não foi possível salvar o rascunho.", variant: "destructive" });
     } finally {
-      setSalvando(false);
-      setShowCancelDialog(false);
+      setSalvandoRascunho(false);
     }
   };
 
@@ -368,10 +378,10 @@ const RotinaTreinos = () => {
       </div>
 
       {/* Espaçamento para botões fixos no mobile */}
-      <div className="pb-20 md:pb-6"></div>
+      <div className="pb-20 md:pb-24"></div>
 
       {/* Botões de navegação - Desktop */}
-      <div className="hidden md:flex justify-between pt-6">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 hidden md:flex justify-between z-50">
         <div>
           <Button variant="ghost" onClick={handleVoltar} disabled={salvando}>
             <ChevronLeft className="h-4 w-4 mr-2" />
@@ -457,9 +467,9 @@ const RotinaTreinos = () => {
       {/* Modal de Cancelar - React Modal BLOQUEADA */}
       <Modal
         isOpen={showCancelDialog}
-        onRequestClose={() => {}} // Não permite fechar
-        shouldCloseOnOverlayClick={false}
-        shouldCloseOnEsc={false}
+        onRequestClose={() => setShowCancelDialog(false)}
+        shouldCloseOnOverlayClick={true}
+        shouldCloseOnEsc={true}
         className="bg-white rounded-lg p-6 max-w-md w-full mx-4 outline-none"
         overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
       >
@@ -475,11 +485,11 @@ const RotinaTreinos = () => {
         </div>
         
         <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2">
-          <Button variant="outline" onClick={handleDescartar} disabled={salvando}>
+          <Button variant="outline" onClick={handleDescartar} disabled={salvandoRascunho}>
             Descartar Alterações
           </Button>
-          <Button onClick={handleSalvarRascunho} disabled={salvando}>
-            {salvando ? 'Salvando...' : 'Salvar como Rascunho'}
+          <Button onClick={handleSalvarRascunho} disabled={salvandoRascunho}>
+            {salvandoRascunho ? 'Salvando...' : 'Salvar como Rascunho'}
           </Button>
         </div>
       </Modal>

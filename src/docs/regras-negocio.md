@@ -229,9 +229,10 @@ Esta seção define os padrões de componentes e interações que devem ser segu
 
 ## 7. Modais de Confirmação e Alerta
 
-- **REGRA 7.1 (Padrão de Modal Responsivo):** Todas as novas janelas modais destinadas a exibir informações importantes ou a solicitar uma confirmação do usuário (como alertas, diálogos de confirmação de exclusão, etc.) devem obrigatoriamente utilizar o componente padronizado `ResponsiveAlertDialog`.
-    - **Fundamento:** Este padrão garante uma experiência de usuário coesa e adaptável a diferentes dispositivos.
+- **REGRA 7.1 (Padrão de Modal Unificado):** Todas as janelas modais destinadas a exibir informações ou solicitar confirmação do usuário (alertas, diálogos de exclusão, etc.) devem utilizar o componente `<Modal>` do `react-modal`.
+    - **Fundamento:** Este padrão garante uma experiência de usuário coesa e consistente em toda a aplicação, simplificando a manutenção.
     - **Comportamento Esperado:**
-        - **Em telas grandes (Desktop):** O componente deve ser renderizado como um `Dialog` (caixa de diálogo centralizada).
-        - **Em telas pequenas (Mobile):** O componente deve ser renderizado como um `Drawer` (painel que desliza da parte inferior da tela).
-    - **Implementação:** O componente `ResponsiveAlertDialog` encapsula essa lógica, utilizando o hook `useMediaQuery` para detectar o tamanho da tela e renderizar a variação visual apropriada. Qualquer nova implementação deve importar e usar este componente em vez de criar modais customizados ou usar o `AlertDialog` padrão.
+        - O modal é estilizado com Tailwind CSS para ser totalmente responsivo.
+        - **Em telas grandes (Desktop):** Renderiza como uma caixa de diálogo centralizada.
+        - **Em telas pequenas (Mobile):** Ocupa a largura da tela com pequenas margens laterais, proporcionando uma experiência nativa.
+    - **Implementação:** O componente `<Modal>` é importado e configurado com classes CSS que definem sua aparência e comportamento responsivo, eliminando a necessidade de componentes separados para mobile e desktop.

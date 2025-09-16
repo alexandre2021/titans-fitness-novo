@@ -357,7 +357,7 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
           </Button>
         </div>
         
-          <input type="file" accept="image/*" ref={fileInputRef} onChange={onFileChange} style={{ display: 'none' }} />
+          <input type="file" accept="image/*" capture="user" ref={fileInputRef} onChange={onFileChange} style={{ display: 'none' }} />
         <ImageCropDialog
           imageSrc={imageSrc}
           isUploading={isUploading}
@@ -396,7 +396,7 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
           <Palette className="h-4 w-4 mr-2" />
           Alterar Cor
         </Button>
-        <input type="file" accept="image/*" ref={fileInputRef} onChange={onFileChange} style={{ display: 'none' }} />
+        <input type="file" accept="image/*" capture="user" ref={fileInputRef} onChange={onFileChange} style={{ display: 'none' }} />
       </div>
 
       <Modal

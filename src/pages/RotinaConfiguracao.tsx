@@ -1,7 +1,7 @@
-// src/pages/RotinaConfiguracao.tsx
+// src/pages/RotinaConfiguracao.tsx - CORREÇÃO RACE CONDITION
 
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate, useBlocker } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, User, X, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 import Modal from 'react-modal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -27,26 +27,32 @@ import {
   TreinoTemp
 } from '@/types/rotina.types';
 
-
-
 const RotinaConfiguracao = () => {
   const { alunoId } = useParams<{ alunoId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const rotinaStorage = useRotinaStorage(alunoId!);
   const { isLoaded: isStorageLoaded } = rotinaStorage;
+  // Estados permanecem os mesmos
   const [aluno, setAluno] = useState<Aluno | null>(null);
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [pagamentoExpandido, setPagamentoExpandido] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [salvandoRascunho, setSalvandoRascunho] = useState(false);
+  
+  // Controle para evitar múltiplas execuções
+  const [isProcessingRascunho, setIsProcessingRascunho] = useState(false);
+  
+  // ✅ NOVA FLAG: Para desabilitar blocker temporariamente
+  const [allowNavigation, setAllowNavigation] = useState(false);
   
   const [form, setForm] = useState<ConfiguracaoRotina>({
     nome: '',
     objetivo: '' as Objetivo,
     dificuldade: '' as Dificuldade,
-    duracao_semanas: 1, // ✅ Valor padrão 1
-    treinos_por_semana: 1, // ✅ Valor padrão 1
+    duracao_semanas: 1,
+    treinos_por_semana: 1,
     valor_total: 0,
     forma_pagamento: 'PIX',
     data_inicio: new Date().toISOString().split('T')[0],
@@ -57,62 +63,54 @@ const RotinaConfiguracao = () => {
 
   const [erros, setErros] = useState<{[key: string]: string}>({});
 
-  // Função para normalizar valores numéricos (remove zeros à esquerda)
-  const normalizarNumero = (valor: string): number => {
-    const numero = parseInt(valor) || 0;
-    return numero;
-  };
-
-  // Limpa erro de nome automaticamente ao digitar um valor válido
+  // Limpa erros de validação em tempo real conforme o usuário digita
   useEffect(() => {
-    if (erros.nome && form.nome && form.nome.trim().length > 0) {
-      setErros(prev => {
-        const { nome, ...rest } = prev;
-        return rest;
-      });
-    }
-  }, [form.nome, erros.nome]);
+    if (Object.keys(erros).length === 0) return;
 
+    const novosErros = { ...erros };
+    let mudou = false;
+
+    if (novosErros.nome && form.nome.trim().length > 0) {
+      delete novosErros.nome;
+      mudou = true;
+    }
+    if (novosErros.objetivo && form.objetivo) {
+      delete novosErros.objetivo;
+      mudou = true;
+    }
+    if (novosErros.dificuldade && form.dificuldade) {
+      delete novosErros.dificuldade;
+      mudou = true;
+    }
+    if (novosErros.duracao_semanas && form.duracao_semanas >= LIMITES.DURACAO_MIN && form.duracao_semanas <= LIMITES.DURACAO_MAX) {
+      delete novosErros.duracao_semanas;
+      mudou = true;
+    }
+    if (novosErros.treinos_por_semana && form.treinos_por_semana >= LIMITES.TREINOS_MIN && form.treinos_por_semana <= LIMITES.TREINOS_MAX) {
+      delete novosErros.treinos_por_semana;
+      mudou = true;
+    }
+    if (novosErros.valor_total && form.valor_total >= LIMITES.VALOR_MIN) {
+      delete novosErros.valor_total;
+      mudou = true;
+    }
+
+    if (mudou) {
+      setErros(novosErros);
+    }
+  }, [form, erros]);
   // Carregar dados do aluno e dados salvos
   useEffect(() => {
-    // Aguarda o storage ser carregado para evitar race condition na montagem
     if (!isStorageLoaded) return;
 
-    // SÓ limpa cache de exercícios se for início de nova rotina (não tem configuração salva)
     if (!rotinaStorage.storage.configuracao) {
       sessionStorage.removeItem('rotina_exercicios');
     }
-
-    let jaRedirecionou = false;
 
     const carregarDados = async () => {
       if (!alunoId) return;
 
       try {
-        // ✅ CORREÇÃO: Verificar se já existe rotina ativa APENAS se não estiver editando um rascunho.
-        const isEditingDraft = !!rotinaStorage.storage.draftId;
-
-        if (!isEditingDraft) {
-          const { data: rotinaAtiva } = await supabase
-            .from('rotinas')
-            .select('id, status')
-            .eq('aluno_id', alunoId)
-            .in('status', ['Ativa', 'Bloqueada']) // Usando status corretos
-            .limit(1);
-
-          if (rotinaAtiva && rotinaAtiva.length > 0 && !jaRedirecionou) {
-            jaRedirecionou = true;
-            toast({
-              title: "Rotina já existe",
-              description: "Este aluno já possui uma rotina ativa. Finalize ou cancele a rotina atual antes de criar uma nova.",
-              variant: "destructive"
-            });
-            navigate(`/alunos-rotinas/${alunoId}`);
-            return;
-          }
-        }
-
-        // Buscar dados do aluno
         const { data: alunoData, error } = await supabase
           .from('alunos')
           .select('*')
@@ -131,13 +129,11 @@ const RotinaConfiguracao = () => {
 
         setAluno(alunoData);
 
-        // Carregar configuração salva ou pré-preencher
         const configuracaoSalva = rotinaStorage.storage.configuracao;
         let dataToSet;
         if (configuracaoSalva) {
           dataToSet = configuracaoSalva;
         } else {
-          // Iniciar formulário em branco, sem preenchimento automático
           dataToSet = {
             nome: '',
             objetivo: '' as Objetivo,
@@ -167,7 +163,7 @@ const RotinaConfiguracao = () => {
     };
 
     carregarDados();
-  }, [alunoId, navigate, toast, isStorageLoaded, rotinaStorage.storage.configuracao, rotinaStorage.storage.draftId]);
+  }, [alunoId, navigate, toast, isStorageLoaded, rotinaStorage.storage.configuracao]);
 
   // Validar formulário
   const validarForm = (): boolean => {
@@ -239,39 +235,60 @@ const RotinaConfiguracao = () => {
 
   // Voltar para lista de rotinas
   const handleDescartar = () => {
-    // Verificar se está editando um rascunho existente
     const isEditingDraft = !!rotinaStorage.storage.draftId;
     
-    if (isEditingDraft) {
-      // Apenas navegar de volta sem limpar - preserva o rascunho
+    // ✅ Habilitar navegação antes de navegar
+    setAllowNavigation(true);
+    
+    setTimeout(() => {
+      if (isEditingDraft) {
+        // Apenas navegar de volta sem limpar - preserva o rascunho      
+      } else {
+        // Nova rotina - pode limpar tudo
+      }
       navigate(`/alunos-rotinas/${alunoId}`);
-    } else {
-      // Nova rotina - pode limpar tudo
-      rotinaStorage.limparStorage();
-      navigate(`/alunos-rotinas/${alunoId}`);
-    }
+    }, 10);
   };
 
   const handleCancelClick = () => {
     setShowCancelDialog(true);
   };
 
+  // NOVA IMPLEMENTAÇÃO: handleSalvarRascunho com debug detalhado
   const handleSalvarRascunho = async () => {
-    setSalvando(true);
+    console.log('🚀 === INÍCIO handleSalvarRascunho ===');
+    
+    // Proteção: Evitar múltiplas execuções simultâneas
+    if (isProcessingRascunho || salvandoRascunho) {
+      console.log('🚫 Já está processando rascunho, ignorando clique adicional');
+      return;
+    }
+
+    console.log('✅ Passando pelas verificações iniciais');
+    
+    setIsProcessingRascunho(true);
+    setSalvandoRascunho(true);
+    
+    console.log('✅ Estados atualizados para "processando"');
+
     try {
-      // A estratégia correta é salvar o formulário como está, respeitando os campos vazios.
-      // Apenas o nome da rotina recebe um padrão se estiver vazio, para exibição na lista de rascunhos.
+      // Usar dados atuais do formulário
+      console.log('📝 Dados do formulário atual:', form);
       const configParaSalvar = { ...form };
       
       if (!configParaSalvar.nome.trim()) {
+        console.log('⚠️ Nome vazio, usando nome padrão');
         configParaSalvar.nome = `Rascunho de Rotina (${new Date().toLocaleDateString()})`;
       }
 
-      // A função de salvar rascunho precisa da estrutura de treinos, mesmo que vazia.
-      // Criamos os treinos iniciais baseados na frequência definida no formulário (pode ser 0).
+      console.log('💾 Configuração final para salvar:', configParaSalvar);
+
+      // Criar treinos iniciais
+      console.log('🏗️ Criando treinos iniciais...');
       const treinosIniciais: TreinoTemp[] = [];
       const nomesTreinos = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
       const frequencia = configParaSalvar.treinos_por_semana || 0;
+      
       for (let i = 0; i < frequencia; i++) {
         treinosIniciais.push({
           id: `treino_draft_${Date.now()}_${i}`,
@@ -280,35 +297,105 @@ const RotinaConfiguracao = () => {
           ordem: i + 1,
         });
       }
+      
+      console.log('✅ Treinos iniciais criados:', treinosIniciais);
 
-      const { success } = await rotinaStorage.salvarComoRascunho({ 
+      // Chamar função de salvamento
+      console.log('🔄 Chamando rotinaStorage.salvarComoRascunho...');
+      
+      const resultado = await rotinaStorage.salvarComoRascunho({ 
         configuracao: configParaSalvar,
         treinos: treinosIniciais,
         exercicios: {}
       });
+      
+      console.log('📊 Resultado do salvamento:', resultado);
 
-      if (success) {
-        rotinaStorage.limparStorage();
-        navigate(`/alunos-rotinas/${alunoId}`);
+      if (resultado.success) {
+        console.log('✅ Rascunho salvo com sucesso! Fechando modal...');
+        
+        // Fechar modal primeiro
+        setShowCancelDialog(false);
+        console.log('✅ Modal fechado');
+        
+        // ✅ SOLUÇÃO CORRETA: Permitir navegação e navegar
+        console.log('🧭 Habilitando navegação...');
+        setAllowNavigation(true);
+        
+        // Usar setTimeout para garantir que o state foi atualizado
+        setTimeout(() => {
+          console.log('➡️ Navegando para lista de rotinas...');
+          navigate(`/alunos-rotinas/${alunoId}`, { replace: true });
+        }, 10);
+        
+        console.log('✅ Navegação preparada');
+        
       } else {
+        console.error('❌ Salvamento falhou');
         throw new Error("Falha ao salvar rascunho.");
       }
     } catch (error) {
-      toast({ title: "Erro ao salvar", description: (error as Error).message || "Não foi possível salvar o rascunho.", variant: "destructive" });
+      console.error('❌ ERRO CAPTURADO em handleSalvarRascunho:', error);
+      
+      // Log detalhado do erro
+      if (error instanceof Error) {
+        console.error('❌ Tipo do erro:', error.constructor.name);
+        console.error('❌ Mensagem:', error.message);
+        console.error('❌ Stack:', error.stack);
+      }
+      
+      toast({ 
+        title: "Erro ao salvar", 
+        description: error instanceof Error ? error.message : "Não foi possível salvar o rascunho.", 
+        variant: "destructive" 
+      });
     } finally {
-      setSalvando(false);
-      setShowCancelDialog(false);
+      console.log('🔄 Executando finally block...');
+      
+      // Sempre limpar estados, independente do resultado
+      setSalvandoRascunho(false);
+      setIsProcessingRascunho(false);
+      
+      console.log('✅ Estados limpos no finally');
+      console.log('🏁 === FIM handleSalvarRascunho ===');
     }
   };
 
-  // Limpar storage ao sair da página (voltar do navegador)
+  // Bloqueador CONDICIONAL - Com proteção contra múltiplas instâncias
+  const blocker = useBlocker(
+    ({ nextLocation }) => {
+      // Se allowNavigation está true, não bloqueia
+      if (allowNavigation) {
+        return false;
+      }
+      
+      // Se não há dados para proteger, não bloqueia
+      if (!form.nome && !form.objetivo) {
+        return false;
+      }
+      
+      // Bloqueia apenas navegações fora do fluxo de criação
+      return !nextLocation.pathname.startsWith(`/rotinas-criar/${alunoId}/`);
+    }
+  );
+
   useEffect(() => {
-    const handleBeforeUnload = () => {
-      rotinaStorage.limparStorage();
+    if (blocker && blocker.state === 'blocked') {
+      setShowCancelDialog(true);
+    } else if (blocker && blocker.state === 'unblocked') {
+      setShowCancelDialog(false);
+    }
+  }, [blocker]);
+
+  // Aviso para saídas externas (fechar aba, refresh)
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [rotinaStorage]);
+  }, []);
 
   if (loading) {
     return (
@@ -511,7 +598,6 @@ const RotinaConfiguracao = () => {
 
           {/* Seção Pagamento - Colapsável */}
           <div className="border rounded-lg overflow-hidden">
-            {/* Header da seção - sempre visível */}
             <button
               type="button"
               onClick={() => setPagamentoExpandido(!pagamentoExpandido)}
@@ -528,10 +614,8 @@ const RotinaConfiguracao = () => {
               )}
             </button>
 
-            {/* Conteúdo colapsável */}
             {pagamentoExpandido && (
               <div className="p-4 space-y-4 border-t bg-white">
-                {/* Linha Pagamentos: Valor Total e Forma de Pagamento */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="valor_total">Valor Total (R$)</Label>
@@ -567,7 +651,6 @@ const RotinaConfiguracao = () => {
                   </div>
                 </div>
 
-                {/* Observações de pagamento */}
                 <div className="space-y-2">
                   <Label htmlFor="observacoes_pagamento">Observações de Pagamento</Label>
                   <Textarea
@@ -585,10 +668,10 @@ const RotinaConfiguracao = () => {
       </Card>
 
       {/* Espaçamento para botões fixos no mobile */}
-      <div className="pb-20 md:pb-6"></div>
+      <div className="pb-20 md:pb-24"></div>
 
       {/* Botões de navegação - Desktop */}
-      <div className="hidden md:flex justify-end pt-6">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 hidden md:flex justify-end z-[60]">
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleCancelClick} disabled={salvando}>
             <X className="h-4 w-4 mr-2" />
@@ -611,7 +694,7 @@ const RotinaConfiguracao = () => {
       </div>
 
       {/* Botões de navegação - Mobile (fixos no rodapé) */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 md:hidden z-50">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 md:hidden z-[60]">
         <div className="flex justify-end gap-2 max-w-md mx-auto">
           <Button 
             variant="outline" 
@@ -644,35 +727,53 @@ const RotinaConfiguracao = () => {
         </div>
       </div>
 
-      {/* Modal de Cancelar - React Modal BLOQUEADA */}
-<Modal
-  isOpen={showCancelDialog}
-  onRequestClose={() => {}} // Não permite fechar
-  shouldCloseOnOverlayClick={false}
-  shouldCloseOnEsc={false}
-  className="bg-white rounded-lg p-6 max-w-md w-full mx-4 outline-none"
-  overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
->
-  <div className="flex items-center gap-2 mb-4">
-    <AlertTriangle className="h-5 w-5 text-orange-500" />
-    <h2 className="text-lg font-semibold">Sair da criação de rotina?</h2>
-  </div>
-  
-  <div className="mb-6">
-    <p className="text-sm text-gray-600 leading-relaxed">
-      Suas alterações não salvas serão perdidas. Você também pode salvar seu progresso como um rascunho.
-    </p>
-  </div>
-  
-  <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2">
-    <Button variant="outline" onClick={handleDescartar} disabled={salvando}>
-      Descartar Alterações
-    </Button>
-    <Button onClick={handleSalvarRascunho} disabled={salvando}>
-      {salvando ? 'Salvando...' : 'Salvar como Rascunho'}
-    </Button>
-  </div>
-</Modal>
+      {/* ✅ Modal de Cancelar CORRIGIDO - Proteção contra duplo clique */}
+      <Modal
+        isOpen={showCancelDialog}  
+        onRequestClose={() => {
+          if (blocker && blocker.state === 'blocked') blocker.reset();
+          setShowCancelDialog(false);
+        }}
+        shouldCloseOnOverlayClick={true}
+        shouldCloseOnEsc={true}
+        className="bg-white rounded-lg p-6 max-w-md w-full mx-4 outline-none"
+        overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <AlertTriangle className="h-5 w-5 text-orange-500" />
+          <h2 className="text-lg font-semibold">Sair da criação de rotina?</h2>
+        </div>
+        
+        <div className="mb-6">
+          <p className="text-sm text-gray-600 leading-relaxed">
+            Suas alterações não salvas serão perdidas. Você também pode salvar seu progresso como um rascunho.
+          </p>
+        </div>
+        
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleDescartar} 
+            disabled={salvandoRascunho || isProcessingRascunho}
+          >
+            Descartar Alterações
+          </Button>
+          <Button 
+            onClick={handleSalvarRascunho} 
+            disabled={salvandoRascunho || isProcessingRascunho}
+            className="relative"
+          >
+            {salvandoRascunho ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                Salvando...
+              </>
+            ) : (
+              'Salvar como Rascunho'
+            )}
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 };

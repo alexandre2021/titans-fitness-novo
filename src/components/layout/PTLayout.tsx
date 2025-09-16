@@ -4,7 +4,11 @@ import PTSidebar from "./PTSidebar";
 import PTBottomNav from "./PTBottomNav";
 import PTMobileHeader from "./PTMobileHeader";
 
-const PTLayout = () => {
+interface PTLayoutProps {
+  isFocusedMode?: boolean;
+}
+
+const PTLayout: React.FC<PTLayoutProps> = ({ isFocusedMode = false }) => {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -21,19 +25,19 @@ const PTLayout = () => {
   if (isMobile) {
     return (
       <div className="min-h-screen bg-background">
-        <PTMobileHeader />
-        <main className="pt-24 pb-16 p-4">
+        {!isFocusedMode && <PTMobileHeader />}
+        <main className={`p-4 ${isFocusedMode ? 'pt-6' : 'pt-24 pb-16'}`}>
           <Outlet />
         </main>
-        <PTBottomNav />
+        {!isFocusedMode && <PTBottomNav />}
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <PTSidebar />
-      <main className="flex-1 p-6 pl-72">
+      {!isFocusedMode && <PTSidebar />}
+      <main className={`flex-1 p-6 ${!isFocusedMode ? 'pl-72' : ''}`}>
         <Outlet />
       </main>
     </div>

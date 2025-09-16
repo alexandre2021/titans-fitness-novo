@@ -35,9 +35,9 @@ src/
 
 ---
 
-## ✨ Funcionalidade Principal: Edição de Perfil com Modais Responsivos
+## ✨ Funcionalidade Principal: Edição de Perfil com Modais Unificados
 
-A edição de perfil foi projetada para oferecer a melhor experiência em qualquer dispositivo, utilizando um padrão de modal responsivo.
+A edição de perfil foi projetada para oferecer uma experiência consistente em qualquer dispositivo, utilizando um padrão de modal unificado e responsivo baseado no `react-modal`.
 
 **Onde é implementado:**
 -   `src/components/perfil/AvatarSection.tsx` (aciona o modal)
@@ -46,39 +46,27 @@ A edição de perfil foi projetada para oferecer a melhor experiência em qualqu
 
 ### Como Funciona:
 
-O sistema detecta o tamanho da tela e adapta a interface de edição:
+Ao clicar em "Editar", um único componente de modal é aberto. Este modal é estilizado com Tailwind CSS para ser totalmente responsivo:
 
-📱 **Mobile (< 768px):**
--   Ao clicar em "Editar", um **Drawer** desliza da parte inferior da tela.
--   Ocupa a maior parte do espaço vertical (`max-h-[90vh]`), ideal para uso com o polegar.
--   A navegação é intuitiva e otimizada para telas de toque.
-
-💻 **Desktop (≥ 768px):**
--   Ao clicar em "Editar", um **Dialog** (modal) tradicional aparece no centro da tela.
--   Um overlay escuro foca a atenção do usuário no formulário de edição.
--   A experiência é familiar e produtiva para usuários de mouse e teclado.
+-   Em **telas grandes (Desktop)**, ele se comporta como um diálogo centralizado tradicional.
+-   Em **telas pequenas (Mobile)**, ele se ajusta para ocupar a largura da tela com pequenas margens, proporcionando uma experiência de usuário nativa e acessível.
 
 ### Implementação:
 
-O padrão é implementado através de um componente `ResponsiveModal` que encapsula a lógica de renderização condicional.
+O padrão é implementado diretamente com o componente `<Modal>` do `react-modal`, com classes de CSS que controlam sua aparência e responsividade.
 
 ```typescriptreact
 // Exemplo de uso em um componente de edição
 const EditPessoalModal = ({ open, onOpenChange, ... }) => {
-  const isMobile = useIsMobile();
-
-  if (isMobile) {
-    return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        {/* Conteúdo do formulário para mobile */}
-      </Drawer>
-    );
-  }
-  
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* Conteúdo do formulário para desktop */}
-    </Dialog>
+    <Modal
+      isOpen={open}
+      onRequestClose={() => onOpenChange(false)}
+      className="... classes responsivas ..."
+      overlayClassName="..."
+    >
+      {/* Conteúdo do formulário */}
+    </Modal>
   );
 };
 ```

@@ -150,7 +150,16 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   const [showDetalhesModal, setShowDetalhesModal] = useState(false);
 
   const handleNovaRotina = () => { // ✅ REGRA ATUALIZADA
-    console.log('🆕 Clicou Nova Rotina');
+    // ✅ NOVA VERIFICAÇÃO: Checar se já existe uma rotina ativa ou bloqueada
+    if (rotinasAtivas.some(r => r.status === 'Ativa' || r.status === 'Bloqueada')) {
+      toast({
+        title: "Rotina já existe",
+        description: "Este aluno já possui uma rotina ativa. Finalize ou exclua a rotina atual antes de criar uma nova.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (rotinasRascunho.length > 0) {
       toast({
         title: "Já existe um rascunho",
@@ -159,6 +168,9 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
       });
       return;
     }
+    // Limpar qualquer rascunho de sessão anterior antes de iniciar um novo
+    sessionStorage.removeItem('rotina_em_criacao');
+
     setNavegandoNovaRotina(true);
     navigate(`/rotinas-criar/${alunoId}/configuracao`);
   };
@@ -209,11 +221,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
 
       // 3. Salvar no sessionStorage e navegar
       sessionStorage.setItem('rotina_em_criacao', JSON.stringify(rotinaStorageData));
-      
-      toast({
-        title: "Rascunho carregado",
-        description: "Continue de onde parou.",
-      });
+
       navigate(`/rotinas-criar/${alunoId}/configuracao`);
 
     } catch (error) {
@@ -483,10 +491,6 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         setRotinasAtivas(prev => prev.filter(r => r.id !== selectedRotina.id));
       }
 
-      toast({
-        title: "Rotina excluída",
-        description: "A rotina foi removida com sucesso.",
-      });
     } catch (error) {
       console.error("Erro ao excluir rotina:", error);
       toast({

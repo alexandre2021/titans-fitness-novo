@@ -172,12 +172,15 @@ export default function ExecucaoSelecionarTreino() {
         return;
       }
 
-      // Se a sessão está 'em_aberto', atualiza o status para 'em_andamento'
-      if (sessao.status === 'em_aberto') {
+      // ✅ CORREÇÃO: Reativar sessões pausadas E em_aberto
+      if (sessao.status === 'em_aberto' || sessao.status === 'pausada') {
         const hoje = new Date().toISOString().split('T')[0];
         const { error } = await supabase
           .from('execucoes_sessao')
-          .update({ status: 'em_andamento', data_execucao: hoje })
+          .update({ 
+            status: 'em_andamento', // ✅ Sempre define como em_andamento
+            data_execucao: hoje 
+          })
           .eq('id', sessao.id);
         
         if (error) throw error;

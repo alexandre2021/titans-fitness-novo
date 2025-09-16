@@ -1,5 +1,6 @@
 // src/components/layout/ProtectedRoutes.tsx
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import AlunoLayout from './AlunoLayout';
 import PTLayout from './PTLayout';
@@ -9,6 +10,7 @@ const ProtectedRoutes = () => {
   const { user, loading: authLoading } = useAuth();
   const [userType, setUserType] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
 
   useEffect(() => {
     const determineUserType = async () => {
@@ -66,12 +68,16 @@ const ProtectedRoutes = () => {
     return null;
   }
 
+  const isFocusedMode = location.pathname.startsWith('/rotinas-criar/') || location.pathname.startsWith('/execucao-rotina/executar-treino/');
+
   if (userType === 'aluno') {
-    return <AlunoLayout />;
+    // Passa o modo focado para o layout do aluno
+    return <AlunoLayout isFocusedMode={isFocusedMode} />;
   }
 
   if (userType === 'personal_trainer') {
-    return <PTLayout />;
+    // Passa o modo focado para o layout do PT
+    return <PTLayout isFocusedMode={isFocusedMode} />;
   }
 
   // Fallback caso o tipo de usuário não seja reconhecido

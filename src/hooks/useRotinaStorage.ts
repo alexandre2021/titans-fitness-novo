@@ -1,4 +1,4 @@
-// src/hooks/useRotinaStorage.ts - CORREÇÃO USANDO IDs + Limpeza Inteligente
+// src/hooks/useRotinaStorage.ts - CORREÇÃO RACE CONDITION + Log Detalhado
 
 import { useState, useEffect, useCallback } from 'react';
 import { RotinaStorage as OriginalRotinaStorage, ConfiguracaoRotina, TreinoTemp, ExercicioTemp } from '@/types/rotina.types';
@@ -17,7 +17,7 @@ export const useRotinaStorage = (alunoId: string) => {
   });
   const [isLoaded, setIsLoaded] = useState(false);
   
-  // 🚫 CONTROLE DE DUPLA LIMPEZA
+  // Controle de dupla limpeza
   const [ultimaLimpeza, setUltimaLimpeza] = useState<number>(0);
   const INTERVALO_LIMPEZA = 2000; // 2 segundos
 
@@ -31,15 +31,15 @@ export const useRotinaStorage = (alunoId: string) => {
     if (dadosSalvos) {
       try {
         const dados = JSON.parse(dadosSalvos) as RotinaStorage;
-        // Verificar se é do mesmo aluno
         if (dados.alunoId === alunoId) {
+          console.log('📂 Carregando dados salvos:', dados);
           setStorage(dados);
         } else {
-          // Limpar dados de outro aluno
+          console.log('🧹 Limpando dados de outro aluno');
           sessionStorage.removeItem(STORAGE_KEY);
         }
       } catch (error) {
-        console.error('Erro ao carregar dados do storage:', error);
+        console.error('❌ Erro ao carregar dados do storage:', error);
         sessionStorage.removeItem(STORAGE_KEY);
       }
     }
@@ -47,12 +47,14 @@ export const useRotinaStorage = (alunoId: string) => {
   }, [alunoId]);
 
   // Salvar no sessionStorage sempre que os dados mudarem
-  const salvarStorage = useCallback((novosados: RotinaStorage) => {
-    setStorage(novosados);
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(novosados));
-    console.log('🔥 SALVANDO no sessionStorage:', novosados);
+  const salvarStorage = useCallback((novosDados: RotinaStorage) => {
+    console.log('💾 Salvando no sessionStorage:', novosDados);
+    setStorage(novosDados);
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(novosDados));
+    
+    // Verificação imediata
     const verificacao = sessionStorage.getItem(STORAGE_KEY);
-    console.log('🔥 VERIFICAÇÃO imediata:', JSON.parse(verificacao || '{}'));
+    console.log('🔍 Verificação imediata - dados salvos:', JSON.parse(verificacao || '{}'));
   }, []);
 
   // Função para salvar configuração com ajuste automático de treinos
@@ -74,7 +76,7 @@ export const useRotinaStorage = (alunoId: string) => {
     if (frequenciaAntiga && frequenciaAntiga !== novaFrequencia && treinosAtuais.length > 0) {
       
       if (novaFrequencia < frequenciaAntiga) {
-        // 📉 DIMINUIU: Remover treinos excedentes + seus exercícios
+        // Diminuiu: Remover treinos excedentes + seus exercícios
         console.log(`📉 Frequência diminuiu de ${frequenciaAntiga}x para ${novaFrequencia}x`);
         
         const treinosParaManter = treinosAtuais.slice(0, novaFrequencia);
@@ -89,29 +91,25 @@ export const useRotinaStorage = (alunoId: string) => {
         treinosParaRemover.forEach(treino => {
           if (treino.id && exerciciosAjustados[treino.id]) {
             console.log(`🗑️ Removendo exercícios do treino ${treino.nome} (ID: ${treino.id})`);
-            // Criar nova referência para exerciciosAjustados
             const { [treino.id]: removed, ...rest } = exerciciosAjustados;
             exerciciosAjustados = rest;
             isModified = true;
-            
-            // Marcar limpeza executada (remoção por frequência não precisa throttling)
             setUltimaLimpeza(Date.now());
           }
         });
         
       } else if (novaFrequencia > frequenciaAntiga) {
-        // 📈 AUMENTOU: Criar novos treinos vazios
+        // Aumentou: Criar novos treinos vazios
         console.log(`📈 Frequência aumentou de ${frequenciaAntiga}x para ${novaFrequencia}x`);
         
         const nomesTreinos = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
         const novosTreinos = [];
         
-        // Adicionar treinos vazios para completar a nova frequência
         for (let i = frequenciaAntiga; i < novaFrequencia; i++) {
           const novoTreino = {
             id: `treino_${nomesTreinos[i].toLowerCase()}_${Date.now()}_${i}`,
             nome: `Treino ${nomesTreinos[i]}`,
-            grupos_musculares: [], // VAZIO - PT deve configurar
+            grupos_musculares: [],
             observacoes: '',
             ordem: i + 1,
             tempo_estimado_minutos: 60
@@ -144,7 +142,7 @@ export const useRotinaStorage = (alunoId: string) => {
     salvarStorage(novoStorage);
   }, [storage, salvarStorage]);
 
-  // 🧠 FUNÇÃO PARA VERIFICAR COMPATIBILIDADE DE EXERCÍCIO
+  // Verificar compatibilidade de exercício
   const verificarCompatibilidadeExercicio = useCallback(async (exercicioId: string, gruposPermitidos: string[]): Promise<boolean> => {
     try {
       const { data: exercicio, error } = await supabase
@@ -166,11 +164,11 @@ export const useRotinaStorage = (alunoId: string) => {
       return compativel;
     } catch (error) {
       console.error('Erro ao verificar compatibilidade:', error);
-      return false; // Em caso de erro, assumir incompatível por segurança
+      return false;
     }
   }, []);
 
-  // 🎯 FUNÇÃO CORRIGIDA - Limpeza Inteligente de Exercícios
+  // Limpeza Inteligente de Exercícios
   const salvarTreinos = useCallback(async (novosTreinos: TreinoTemp[]) => {
     console.log('🔍 DEBUGANDO salvarTreinos:');
     console.log('📋 Treinos recebidos:', novosTreinos);
@@ -178,7 +176,6 @@ export const useRotinaStorage = (alunoId: string) => {
     // Gerar IDs únicos para treinos que não têm
     const treinosComId = novosTreinos.map((treino, index) => {
       if (!treino.id) {
-        // Gerar ID baseado em nome + timestamp para garantir unicidade
         const id = `treino_${treino.nome.toLowerCase().replace(/\s/g, '_')}_${Date.now()}_${index}`;
         console.log(`🆔 Gerando ID para ${treino.nome}: ${id}`);
         return { ...treino, id };
@@ -195,7 +192,7 @@ export const useRotinaStorage = (alunoId: string) => {
     console.log('📋 Treinos novos:', treinosComId.map(t => ({ id: t.id, nome: t.nome, grupos: t.grupos_musculares })));
     console.log('🎯 Exercícios atuais (chaves):', Object.keys(exerciciosAtuais));
 
-    // Helper para comparar arrays de strings ignorando a ordem
+    // Helper para comparar arrays
     const arraysSaoDiferentes = (a: string[], b: string[]) => {
       if (a.length !== b.length) return true;
       const sortedA = [...a].sort();
@@ -205,7 +202,7 @@ export const useRotinaStorage = (alunoId: string) => {
 
     // Verificar treinos antigos
     for (const treinoAntigo of treinosAntigos) {
-      if (!treinoAntigo.id) continue; // Pula treinos sem ID
+      if (!treinoAntigo.id) continue;
 
       const treinoNovoCorrespondente = treinosComId.find(t => t.id === treinoAntigo.id);
 
@@ -224,19 +221,19 @@ export const useRotinaStorage = (alunoId: string) => {
         const exerciciosDoTreino = novosExercicios[treinoAntigo.id] || [];
         
         if (exerciciosDoTreino.length > 0) {
-          // 🚫 VERIFICAR se pode executar limpeza
+          // Verificar se pode executar limpeza
           if (!podeExecutarLimpeza()) {
             console.log(`🚫 Limpeza bloqueada para treino ${treinoAntigo.nome} - muito recente (${Date.now() - ultimaLimpeza}ms atrás)`);
-            continue; // Pula a limpeza deste treino
+            continue;
           }
           
-          setUltimaLimpeza(Date.now()); // Marcar que limpeza foi executada
+          setUltimaLimpeza(Date.now());
           
           console.log(`🔄 Grupos musculares do treino ${treinoAntigo.nome} (ID: ${treinoAntigo.id}) alterados:`);
           console.log(`   Antes: [${treinoAntigo.grupos_musculares.join(', ')}]`);
           console.log(`   Depois: [${treinoNovoCorrespondente.grupos_musculares.join(', ')}]`);
           
-          // 🧠 LIMPEZA INTELIGENTE: Verificar compatibilidade de cada exercício
+          // Limpeza inteligente: Verificar compatibilidade de cada exercício
           const exerciciosCompativeis: ExercicioTemp[] = [];
           
           for (const exercicio of exerciciosDoTreino) {
@@ -249,7 +246,7 @@ export const useRotinaStorage = (alunoId: string) => {
             let manterExercicio = false;
             
             if (exercicio.exercicio_2_id) {
-              // 🎯 SÉRIE COMBINADA: AMBOS devem ser compatíveis
+              // Série combinada: AMBOS devem ser compatíveis
               const exercicio2Compativel = await verificarCompatibilidadeExercicio(
                 exercicio.exercicio_2_id, 
                 treinoNovoCorrespondente.grupos_musculares
@@ -258,7 +255,7 @@ export const useRotinaStorage = (alunoId: string) => {
               manterExercicio = exercicio1Compativel && exercicio2Compativel;
               console.log(`   🔍 Série combinada: Ex1=${exercicio1Compativel}, Ex2=${exercicio2Compativel}, Resultado=${manterExercicio}`);
             } else {
-              // 🎯 SÉRIE SIMPLES: apenas o principal precisa ser compatível
+              // Série simples: apenas o principal precisa ser compatível
               manterExercicio = exercicio1Compativel;
               console.log(`   🔍 Série simples: Ex1=${exercicio1Compativel}, Resultado=${manterExercicio}`);
             }
@@ -288,7 +285,7 @@ export const useRotinaStorage = (alunoId: string) => {
 
     const novoStorage: RotinaStorage = {
       ...storage,
-      treinos: treinosComId, // Salvar treinos com IDs
+      treinos: treinosComId,
       etapaAtual: 'exercicios' as const,
     };
 
@@ -307,7 +304,7 @@ export const useRotinaStorage = (alunoId: string) => {
     const exerciciosAtuais = storage.exercicios || {};
     const novosExercicios = {
       ...exerciciosAtuais,
-      [treinoId]: exercicios // Usar ID do treino como chave
+      [treinoId]: exercicios
     };
     const novoStorage = {
       ...storage,
@@ -316,7 +313,7 @@ export const useRotinaStorage = (alunoId: string) => {
     salvarStorage(novoStorage);
   }, [storage, salvarStorage]);
 
-  // 🎯 FUNÇÃO CORRIGIDA - Converter exercícios por NOME para ID
+  // Converter exercícios por NOME para ID
   const salvarTodosExercicios = useCallback((exerciciosPorTreino: Record<string, ExercicioTemp[]>) => {
     console.log('💾 Salvando TODOS exercícios (recebido por nome):', exerciciosPorTreino);
     
@@ -367,6 +364,7 @@ export const useRotinaStorage = (alunoId: string) => {
 
   // Função para limpar storage
   const limparStorage = useCallback(() => {
+    console.log('🧹 Limpando storage completo');
     sessionStorage.removeItem(STORAGE_KEY);
     setStorage({
       alunoId,
@@ -397,7 +395,7 @@ export const useRotinaStorage = (alunoId: string) => {
     salvarStorage(novoStorage);
   }, [storage, salvarStorage]);
 
-  // Funções de validação (CORRIGIDAS para usar IDs)
+  // Funções de validação (usando IDs)
   const temConfiguracao = useCallback(() => {
     return !!storage.configuracao;
   }, [storage.configuracao]);
@@ -409,8 +407,8 @@ export const useRotinaStorage = (alunoId: string) => {
   const temExercicios = useCallback(() => {
     if (!storage.treinos || !storage.exercicios) return false;
     for (const treino of storage.treinos) {
-      if (!treino.id) continue; // Pular treinos sem ID
-      const exerciciosTreino = storage.exercicios[treino.id] || []; // Usar ID
+      if (!treino.id) continue;
+      const exerciciosTreino = storage.exercicios[treino.id] || [];
       if (exerciciosTreino.length === 0) return false;
     }
     return true;
@@ -420,7 +418,7 @@ export const useRotinaStorage = (alunoId: string) => {
     return temConfiguracao() && temTreinos() && temExercicios();
   }, [temConfiguracao, temTreinos, temExercicios]);
 
-  // Função para obter resumo dos dados (CORRIGIDA para usar IDs)
+  // Função para obter resumo dos dados (usando IDs)
   const obterResumo = useCallback(() => {
     const totalTreinos = storage.treinos?.length || 0;
     let totalExercicios = 0;
@@ -428,8 +426,8 @@ export const useRotinaStorage = (alunoId: string) => {
 
     if (storage.exercicios && storage.treinos) {
       for (const treino of storage.treinos) {
-        if (!treino.id) continue; // Pular treinos sem ID
-        const exerciciosTreino = storage.exercicios[treino.id] || []; // Usar ID
+        if (!treino.id) continue;
+        const exerciciosTreino = storage.exercicios[treino.id] || [];
         totalExercicios += exerciciosTreino.length;
         
         for (const exercicio of exerciciosTreino) {
@@ -447,11 +445,16 @@ export const useRotinaStorage = (alunoId: string) => {
     };
   }, [storage]);
 
+  // ✅ CORREÇÃO PRINCIPAL: Função salvarComoRascunho SEM navegação automática
   const salvarComoRascunho = useCallback(async (
     data?: Partial<Pick<RotinaStorage, 'configuracao' | 'treinos' | 'exercicios'>> & { observacoesRotina?: string }
   ): Promise<{ success: boolean }> => {
+    console.log('🚀 INICIANDO salvarComoRascunho...');
+    console.log('👤 Usuário autenticado:', !!user);
+    console.log('📝 Dados recebidos:', data);
+    
     if (!user) {
-      console.error("Usuário não autenticado. Não é possível salvar o rascunho.");
+      console.error("❌ Usuário não autenticado. Não é possível salvar o rascunho.");
       return { success: false };
     }
 
@@ -459,14 +462,21 @@ export const useRotinaStorage = (alunoId: string) => {
     const { configuracao, treinos, exercicios = {} } = currentStorage;
     const observacoesRotina = data?.observacoesRotina;
 
+    console.log('📦 Storage mesclado:', currentStorage);
+    console.log('⚙️ Configuração:', configuracao);
+    console.log('🏋️ Treinos:', treinos);
+    console.log('💪 Exercícios:', exercicios);
+
     if (!configuracao || !treinos || treinos.length === 0) {
-      console.error("Dados insuficientes para salvar rascunho.");
+      console.error("❌ Dados insuficientes para salvar rascunho.");
+      console.log('❌ configuracao:', !!configuracao);
+      console.log('❌ treinos:', treinos?.length || 0);
       return { success: false };
     }
 
-    console.log("📝 Iniciando salvamento de rascunho...");
-
     try {
+      console.log('🔍 Verificando rascunho existente...');
+      
       // 1. Verificar se já existe um rascunho para este aluno
       const { data: rascunhoExistente, error: findError } = await supabase
         .from('rotinas')
@@ -475,7 +485,12 @@ export const useRotinaStorage = (alunoId: string) => {
         .eq('status', 'Rascunho')
         .maybeSingle();
 
-      if (findError) throw findError;
+      if (findError) {
+        console.error('❌ Erro ao buscar rascunho existente:', findError);
+        throw findError;
+      }
+
+      console.log('📋 Rascunho existente:', rascunhoExistente);
 
       const rotinaData = {
         aluno_id: alunoId,
@@ -495,6 +510,8 @@ export const useRotinaStorage = (alunoId: string) => {
         observacoes_rotina: observacoesRotina,
       };
 
+      console.log('💾 Dados da rotina a serem salvos:', rotinaData);
+
       let rotinaId: string;
 
       if (rascunhoExistente) {
@@ -506,14 +523,23 @@ export const useRotinaStorage = (alunoId: string) => {
           .from('rotinas')
           .update(rotinaData)
           .eq('id', rotinaId);
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error('❌ Erro ao atualizar rotina:', updateError);
+          throw updateError;
+        }
+        console.log('✅ Rotina atualizada com sucesso');
 
         // Limpar treinos antigos (cascade deve cuidar do resto)
+        console.log('🧹 Limpando treinos antigos...');
         const { error: deleteTreinosError } = await supabase
           .from('treinos')
           .delete()
           .eq('rotina_id', rotinaId);
-        if (deleteTreinosError) throw deleteTreinosError;
+        if (deleteTreinosError) {
+          console.error('❌ Erro ao limpar treinos antigos:', deleteTreinosError);
+          throw deleteTreinosError;
+        }
+        console.log('✅ Treinos antigos removidos');
         
       } else {
         // 2b. CRIAR novo rascunho
@@ -523,24 +549,46 @@ export const useRotinaStorage = (alunoId: string) => {
           .insert(rotinaData)
           .select('id')
           .single();
-        if (insertError || !novaRotina) throw insertError || new Error("Falha ao criar o registro da rotina.");
+        if (insertError || !novaRotina) {
+          console.error('❌ Erro ao criar rotina:', insertError);
+          throw insertError || new Error("Falha ao criar o registro da rotina.");
+        }
         rotinaId = novaRotina.id;
+        console.log(`✅ Nova rotina criada com ID: ${rotinaId}`);
       }
 
-      console.log(`✅ Rotina (rascunho) salva com ID: ${rotinaId}`);
-
       // 3. Inserir Treinos e seus filhos (Exercícios e Séries)
-      // Esta operação é complexa e idealmente seria uma transação (RPC).
-      // Como estamos no client-side, faremos em sequência.
+      console.log('🏗️ Iniciando criação de treinos...');
       for (const treinoTemp of treinos) {
-        const { data: treinoCriado, error: treinoError } = await supabase.from('treinos').insert({ rotina_id: rotinaId, nome: treinoTemp.nome, grupos_musculares: treinoTemp.grupos_musculares.join(','), ordem: treinoTemp.ordem, tempo_estimado_minutos: treinoTemp.tempo_estimado_minutos, observacoes: treinoTemp.observacoes }).select('id').single();
-        if (treinoError || !treinoCriado) throw treinoError || new Error('Falha ao salvar treino.');
+        console.log(`📝 Criando treino: ${treinoTemp.nome}`);
+        
+        const { data: treinoCriado, error: treinoError } = await supabase
+          .from('treinos')
+          .insert({
+            rotina_id: rotinaId,
+            nome: treinoTemp.nome,
+            grupos_musculares: treinoTemp.grupos_musculares.join(','),
+            ordem: treinoTemp.ordem,
+            tempo_estimado_minutos: treinoTemp.tempo_estimado_minutos,
+            observacoes: treinoTemp.observacoes
+          })
+          .select('id')
+          .single();
+          
+        if (treinoError || !treinoCriado) {
+          console.error('❌ Erro ao salvar treino:', treinoError);
+          throw treinoError || new Error('Falha ao salvar treino.');
+        }
+        
+        console.log(`✅ Treino criado com ID: ${treinoCriado.id}`);
 
         const exerciciosDoTreino = exercicios[treinoTemp.id!] || [];
+        console.log(`💪 Processando ${exerciciosDoTreino.length} exercícios para ${treinoTemp.nome}`);
+        
         for (const exercicioTemp of exerciciosDoTreino) {
           const { series } = exercicioTemp;
 
-          // ✅ CORREÇÃO: Construir o objeto explicitamente com as colunas que existem na tabela.
+          // Construir o objeto explicitamente com as colunas que existem na tabela
           const exercicioParaInserir = {
             treino_id: treinoCriado.id,
             exercicio_1_id: exercicioTemp.exercicio_1_id,
@@ -549,8 +597,21 @@ export const useRotinaStorage = (alunoId: string) => {
             intervalo_apos_exercicio: exercicioTemp.intervalo_apos_exercicio || null,
             observacoes: exercicioTemp.observacoes || null,
           };
-          const { data: exercicioCriado, error: exercicioError } = await supabase.from('exercicios_rotina').insert(exercicioParaInserir).select('id').single();
-          if (exercicioError || !exercicioCriado) throw exercicioError || new Error(`Falha ao salvar exercício: ${exercicioError?.message}`);
+          
+          console.log('📋 Inserindo exercício:', exercicioParaInserir);
+          
+          const { data: exercicioCriado, error: exercicioError } = await supabase
+            .from('exercicios_rotina')
+            .insert(exercicioParaInserir)
+            .select('id')
+            .single();
+            
+          if (exercicioError || !exercicioCriado) {
+            console.error('❌ Erro ao salvar exercício:', exercicioError);
+            throw exercicioError || new Error(`Falha ao salvar exercício: ${exercicioError?.message}`);
+          }
+          
+          console.log(`✅ Exercício criado com ID: ${exercicioCriado.id}`);
 
           if (series && series.length > 0) {
             const seriesParaInserir = series.map(s => ({
@@ -567,20 +628,51 @@ export const useRotinaStorage = (alunoId: string) => {
               repeticoes_2: s.repeticoes_2 ?? null,
               carga_2: s.carga_2 ?? null,
             }));
-            const { error: seriesError } = await supabase.from('series').insert(seriesParaInserir);
-            if (seriesError) throw seriesError;
+            
+            console.log(`📊 Inserindo ${seriesParaInserir.length} séries...`);
+            
+            const { error: seriesError } = await supabase
+              .from('series')
+              .insert(seriesParaInserir);
+              
+            if (seriesError) {
+              console.error('❌ Erro ao salvar séries:', seriesError);
+              throw seriesError;
+            }
+            
+            console.log(`✅ ${seriesParaInserir.length} séries criadas`);
           }
         }
       }
       
-      console.log("✅ Todos os exercícios e séries salvos.");
+      console.log("🎉 Todos os exercícios e séries salvos com sucesso!");
+      
+      // ✅ IMPORTANTE: Atualizar o storage local com o draftId para futuras operações
+      const novoStorage = {
+        ...currentStorage,
+        draftId: rotinaId
+      };
+      
+      // ✅ NÃO NAVEGAR AUTOMATICAMENTE - apenas salvar no storage
+      console.log('💾 Atualizando storage local com draftId:', rotinaId);
+      salvarStorage(novoStorage);
+      
+      console.log('🎯 Rascunho salvo com sucesso! ID:', rotinaId);
       return { success: true };
 
     } catch (error) {
       console.error("❌ Erro completo ao salvar rascunho:", error);
+      
+      // Log detalhado do erro para debugging
+      if (error instanceof Error) {
+        console.error("❌ Nome do erro:", error.name);
+        console.error("❌ Mensagem do erro:", error.message);
+        console.error("❌ Stack trace:", error.stack);
+      }
+      
       return { success: false };
     }
-  }, [storage, user, alunoId]);
+  }, [storage, user, alunoId, salvarStorage]);
 
   return {
     storage,

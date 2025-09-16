@@ -3,8 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import Modal from 'react-modal';
 import { Activity, Calendar, Eye, Camera, X, TrendingUp } from 'lucide-react';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -501,45 +500,33 @@ const AvaliacoesAluno = () => {
         </div>
       )}
 
-      {/* Modal Responsivo */}
-      {!isDesktop ? (
-        /* Mobile: Drawer */
-        <Drawer open={modalVisible} onOpenChange={setModalVisible}>
-          <DrawerContent className="max-h-[90vh]">
-            <DrawerHeader className="relative text-left">
-              <DrawerTitle className="text-lg font-semibold">
-                Avaliação de {avaliacaoSelecionada?.data_avaliacao.split('-').reverse().join('/')}
-              </DrawerTitle>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleFecharModal}
-                className="absolute right-2 top-2 h-8 w-8 rounded-full"
-              >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Fechar</span>
-              </Button>
-            </DrawerHeader>
-            <div className="px-4 pb-4 overflow-y-auto">
-              {renderModalContent()}
-            </div>
-          </DrawerContent>
-        </Drawer>
-      ) : (
-        /* Desktop: Dialog */
-        <Dialog open={modalVisible} onOpenChange={setModalVisible}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-lg font-semibold">
-                Avaliação de {avaliacaoSelecionada?.data_avaliacao.split('-').reverse().join('/')}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="mt-2">
-              {renderModalContent()}
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      {/* Modal Unificado com react-modal */}
+      <Modal
+        isOpen={modalVisible}
+        onRequestClose={handleFecharModal}
+        shouldCloseOnOverlayClick={true}
+        shouldCloseOnEsc={true}
+        className="bg-white rounded-lg shadow-xl flex flex-col max-w-4xl w-full max-h-[90vh] outline-none"
+        overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      >
+        <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
+          <h2 className="text-lg font-semibold">
+            Avaliação de {avaliacaoSelecionada?.data_avaliacao.split('-').reverse().join('/')}
+          </h2>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleFecharModal}
+            className="h-8 w-8 rounded-full"
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Fechar</span>
+          </Button>
+        </div>
+        <div className="p-4 overflow-y-auto">
+          {renderModalContent()}
+        </div>
+      </Modal>
     </div>
   );
 };

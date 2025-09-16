@@ -47,14 +47,12 @@ export const Executor = ({
   const [modalIntervaloExercicio, setModalIntervaloExercicio] = useState(false);
   const [modalDetalhesVisible, setModalDetalhesVisible] = useState(false);
   const [modalHistoricoVisible, setModalHistoricoVisible] = useState(false);
-  const [modalPausarVisible, setModalPausarVisible] = useState(false);
   
   const [exercicioSelecionado, setExercicioSelecionado] = useState('');
   const [dadosCronometroSerie, setDadosCronometroSerie] = useState<CronometroSerieData | null>(null);
   const [dadosCronometroExercicio, setDadosCronometroExercicio] = useState<CronometroExercicioData | null>(null);
   
   const [finalizando, setFinalizando] = useState(false);
-  const [pausando, setPausando] = useState(false);
   const [sessaoPausada, setSessaoPausada] = useState(false);
   const [cronometroPausado, setCronometroPausado] = useState(false);
 
@@ -62,7 +60,7 @@ export const Executor = ({
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       // Condição para ativar o bloqueio: treino em andamento
-      const isExecuting = !sessaoPausada && !cronometroPausado && !finalizando && !pausando;
+      const isExecuting = !sessaoPausada && !cronometroPausado && !finalizando;
       
       if (isExecuting) {
         // Padrão para navegadores modernos
@@ -74,7 +72,7 @@ export const Executor = ({
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [sessaoPausada, cronometroPausado, finalizando, pausando]);
+  }, [sessaoPausada, cronometroPausado, finalizando]);
 
   useEffect(() => {
     console.log('� Entrando na execução - Resetando estados locais');
@@ -123,26 +121,6 @@ export const Executor = ({
     return true;
   }, []);
 
-  const mostrarModalPausar = useCallback(() => {
-    setModalPausarVisible(true);
-  }, []);
-
-  // ✅ Pausar e sair
-  const pausarESair = useCallback(async () => {
-    setPausando(true);
-    try {
-      const sucesso = await pausarSessao();
-      // A modal é fechada ANTES da navegação para garantir que a UI atualize.
-      setModalPausarVisible(false);
-      if (sucesso) {
-        onSessaoPausada();
-      }
-    } finally {
-      // Garante que o estado de 'pausando' seja resetado mesmo se ocorrer um erro.
-      setPausando(false);
-    }
-  }, [pausarSessao, onSessaoPausada]);
-
 
   // ✅ Botão principal (pausar/continuar)
   const handleBotaoPrincipal = useCallback(() => {
@@ -152,11 +130,11 @@ export const Executor = ({
       setSessaoPausada(false);
       setCronometroPausado(false);
     } else {
-      // Pausar: mostrar modal de confirmação
-      console.log('⏸️ Abrindo modal de pausa...');
-      setModalPausarVisible(true);
+      // ✅ CHAMADA DIRETA - sem modal local
+      console.log('⏸️ Pausando via callback...');
+      onSessaoPausada(); // Chama diretamente
     }
-  }, [sessaoPausada, cronometroPausado]);
+  }, [sessaoPausada, cronometroPausado, onSessaoPausada]);
 
   // ✅ FUNÇÃO SIMPLIFICADA - finalizarSessao (igual ao PT)
   const finalizarSessao = useCallback(async () => {
@@ -469,15 +447,10 @@ export const Executor = ({
               variant="outline"
               size="lg"
               onClick={handleBotaoPrincipal}
-              disabled={pausando || finalizando || loading}
+              disabled={finalizando || loading}
               className="flex-1"
             >
-              {pausando ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                  Processando...
-                </>
-              ) : (sessaoPausada || cronometroPausado) ? (
+              {(sessaoPausada || cronometroPausado) ? (
                 <>
                   <Play className="mr-2 h-4 w-4" />
                   Continuar
@@ -496,7 +469,7 @@ export const Executor = ({
                 console.log('🔥 DEBUG - BOTÃO FINALIZAR CLICADO');
                 finalizarSessao();
               }}
-              disabled={finalizando || pausando || loading}
+              disabled={finalizando || loading}
               className="flex-1"
             >
               {finalizando ? (
@@ -551,40 +524,6 @@ export const Executor = ({
         alunoId={sessaoData.aluno_id}
         onClose={() => setModalHistoricoVisible(false)}
       />
-
-      <Modal
-        isOpen={modalPausarVisible}
-        onRequestClose={() => {}} // Impede o fechamento por ações padrão
-        shouldCloseOnOverlayClick={false}
-        shouldCloseOnEsc={false}
-        className="bg-white rounded-lg max-w-sm w-full mx-4 outline-none"
-        overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-      >
-        <div className="flex items-center p-6 border-b">
-          <h2 className="text-lg font-semibold">Pausar Sessão</h2>
-        </div>
-        <div className="p-6 space-y-4">
-          <p className="text-sm text-muted-foreground">
-            O progresso atual será salvo. O que deseja fazer?
-          </p>
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => setModalPausarVisible(false)}
-              className="w-full sm:w-auto"
-            >
-              Cancelar
-            </Button>
-            <Button 
-              onClick={pausarESair}
-              disabled={pausando}
-              className="w-full sm:w-auto"
-            >
-              {pausando ? 'Salvando...' : 'Pausar e Sair'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 };

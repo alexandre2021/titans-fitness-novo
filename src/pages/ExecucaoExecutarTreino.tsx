@@ -1,16 +1,18 @@
-// src/pages/ExecucaoExecutarTreino.tsx
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+// ExecucaoExecutarTreino.tsx - VERSÃO CORRIGIDA SEM MODAIS DUPLICADAS
+
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import { useParams, useNavigate, useBlocker } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Executor } from '@/components/rotina/execucao/Executor';
+import Modal from 'react-modal';
+import { AlertTriangle, X } from 'lucide-react';
 import { 
   SessaoData, 
   UserProfile 
 } from '@/types/exercicio.types';
 
-// Tipagem específica para dados da sessão do Supabase
 interface SessaoSupabase {
   id: string;
   rotina_id: string;
@@ -38,13 +40,15 @@ export default function ExecucaoExecutarTreino() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // ✅ ESTADOS
+  // ESTADOS
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [sessaoData, setSessaoData] = useState<SessaoData | null>(null);
   const [modoExecucao, setModoExecucao] = useState<'pt' | 'aluno' | null>(null);
+  const [showPauseDialog, setShowPauseDialog] = useState(false);
+  const [shouldBlock, setShouldBlock] = useState(false);
+  const hasNavigated = useRef(false);
 
-  // Função utilitária para comparar campos relevantes de sessão
   const shallowCompareSessao = useCallback((a: SessaoData | null, b: SessaoData | null): boolean => {
     if (!a || !b) return false;
     return (
@@ -62,11 +66,9 @@ export default function ExecucaoExecutarTreino() {
     );
   }, []);
 
-  // ✅ Memoizar sessaoData para evitar looping no Executor
   const sessaoDataMemo = useMemo((): SessaoData | null => {
     if (!sessaoData) return null;
     
-    // Cria um novo objeto apenas com campos primitivos para evitar referências instáveis
     return {
       id: sessaoData.id,
       rotina_id: sessaoData.rotina_id,
@@ -76,7 +78,6 @@ export default function ExecucaoExecutarTreino() {
       data_execucao: sessaoData.data_execucao,
       tempo_total_minutos: sessaoData.tempo_total_minutos,
       tempo_decorrido: sessaoData.tempo_decorrido,
-      // Passe apenas nomes dos objetos aninhados para evitar referência instável
       rotinas: sessaoData.rotinas ? { 
         nome: sessaoData.rotinas.nome, 
         permite_execucao_aluno: sessaoData.rotinas.permite_execucao_aluno 
@@ -86,10 +87,8 @@ export default function ExecucaoExecutarTreino() {
     };
   }, [sessaoData]);
 
-  // ✅ FUNÇÃO PARA DETERMINAR MODO
   const determinarModoExecucao = useCallback(async (userId: string, sessao: SessaoData): Promise<'pt' | 'aluno' | null> => {
     try {
-      // 1. Descobrir o tipo de usuário a partir da tabela de perfis
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .select('user_type')
@@ -102,7 +101,6 @@ export default function ExecucaoExecutarTreino() {
 
       const { user_type } = profile;
 
-      // 2. Agir com base no tipo de usuário
       if (user_type === 'personal_trainer') {
         const { data: ptData, error: ptError } = await supabase
           .from('personal_trainers')
@@ -123,7 +121,6 @@ export default function ExecucaoExecutarTreino() {
       } 
       
       else if (user_type === 'aluno') {
-        // Validações para o aluno
         if (userId !== sessao.aluno_id) {
           toast({
             variant: "destructive",
@@ -131,7 +128,7 @@ export default function ExecucaoExecutarTreino() {
             description: "Você não tem permissão para executar a sessão de outro aluno.",
           });
           navigate(-1);
-          return null; // Retorna null para indicar falha na validação
+          return null;
         }
 
         if (!sessao.rotinas?.permite_execucao_aluno) {
@@ -163,7 +160,6 @@ export default function ExecucaoExecutarTreino() {
       } 
       
       else {
-        // Caso para 'admin' ou outro tipo não esperado
         throw new Error(`Tipo de usuário '${user_type}' não autorizado para executar treinos.`);
       }
 
@@ -176,25 +172,22 @@ export default function ExecucaoExecutarTreino() {
         description: errorMessage,
       });
       navigate(-1);
-      return null; // Retorna null em caso de erro
+      return null;
     }
   }, [navigate, toast]);
 
-  // ✅ FUNÇÃO PARA CARREGAR DADOS
   const loadSessionData = useCallback(async () => {
     if (!sessaoId) return;
     
     try {
       setLoading(true);
 
-      // Verificar autenticação
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
         navigate('/login');
         return;
       }
 
-      // ✅ BUSCAR DADOS DA SESSÃO SEM JOIN COM ALUNOS
       const { data: sessaoRaw, error: sessaoError } = await supabase
         .from('execucoes_sessao')
         .select(`
@@ -228,10 +221,27 @@ export default function ExecucaoExecutarTreino() {
         return;
       }
 
-      // Cast com tipagem correta
       const sessao = sessaoRaw as SessaoSupabase;
 
-      // ✅ BUSCAR DADOS DO ALUNO SEPARADAMENTE
+      if (sessao.status === 'pausada') {
+        console.log('🔄 Sessão pausada detectada na execução, reativando...');
+        
+        const { error: updateError } = await supabase
+          .from('execucoes_sessao')
+          .update({ 
+            status: 'em_andamento',
+            data_execucao: new Date().toISOString().split('T')[0]
+          })
+          .eq('id', sessaoId);
+
+        if (updateError) {
+          console.error('Erro ao reativar sessão:', updateError);
+        } else {
+          sessao.status = 'em_andamento';
+          console.log('✅ Sessão reativada para em_andamento');
+        }
+      }
+
       const { data: alunoRaw, error: alunoError } = await supabase
         .from('alunos')
         .select('nome_completo')
@@ -251,7 +261,6 @@ export default function ExecucaoExecutarTreino() {
 
       const alunoData = alunoRaw as AlunoSupabase;
 
-      // ✅ COMBINAR OS DADOS COM TIPAGEM CORRETA
       const sessaoCompleta: SessaoData = {
         id: sessao.id,
         rotina_id: sessao.rotina_id,
@@ -273,10 +282,8 @@ export default function ExecucaoExecutarTreino() {
         }
       };
 
-      // Só atualiza o estado se realmente mudou
       setSessaoData(prev => shallowCompareSessao(prev, sessaoCompleta) ? prev : sessaoCompleta);
 
-      // Determinar tipo de usuário e modo de execução
       const modo = await determinarModoExecucao(user.id, sessaoCompleta);
       setModoExecucao(modo);
 
@@ -293,7 +300,6 @@ export default function ExecucaoExecutarTreino() {
     }
   }, [sessaoId, navigate, toast, determinarModoExecucao, shallowCompareSessao]);
 
-  // ✅ VERIFICAR SE SESSÃO ESTÁ VÁLIDA
   const verificarStatusSessao = useCallback((): boolean => {
     if (!sessaoData) return false;
 
@@ -320,14 +326,10 @@ export default function ExecucaoExecutarTreino() {
     return true;
   }, [sessaoData, navigate, toast]);
 
-  // ✅ CARREGAR DADOS
-  useEffect(() => {
-    loadSessionData();
-  }, [loadSessionData]);
-
-  // ✅ CALLBACK DE FINALIZAÇÃO
   const handleSessaoFinalizada = useCallback(() => {
-    // Navegação diferenciada baseada no tipo de usuário
+    if (hasNavigated.current) return;
+    hasNavigated.current = true;
+    
     if (userProfile?.user_type === 'personal_trainer') {
       navigate(`/alunos-rotinas/${sessaoData?.aluno_id}`);
     } else {
@@ -335,17 +337,120 @@ export default function ExecucaoExecutarTreino() {
     }
   }, [userProfile, sessaoData, navigate]);
 
-  // ✅ NOVO CALLBACK DE PAUSA
+  // ✅ SOLUÇÃO UNIFICADA: handleSessaoPausada apenas dispara navegação
   const handleSessaoPausada = useCallback(() => {
-    // Navega para a tela de seleção de treino da rotina atual
-    if (sessaoData?.rotina_id) {
-      navigate(`/execucao-rotina/selecionar-treino/${sessaoData.rotina_id}`);
-    } else {
-      handleSessaoFinalizada(); // Fallback para a navegação padrão
-    }
-  }, [sessaoData, navigate, handleSessaoFinalizada]);
+    if (hasNavigated.current) return;
+    
+    console.log('⏸️ Botão pausar clicado - disparando navegação que será interceptada');
+    
+    // Simplesmente dispara a navegação - o blocker vai interceptar e mostrar a modal
+    // ✅ CORREÇÃO: Mudar para navigate(-1) para simular o botão "voltar" do navegador
+    // e unificar os dois fluxos de pausa.
+    navigate(-1);
+  }, [navigate, hasNavigated]);
 
-  // ✅ LOADING
+  // Gerenciamento do bloqueio
+  useEffect(() => {
+    const status = sessaoData?.status;
+    const shouldBlockValue = status === 'em_andamento' || status === 'em_aberto';
+    console.log('🔒 Status da sessão:', status, '| Deve bloquear:', shouldBlockValue);
+    setShouldBlock(shouldBlockValue);
+  }, [sessaoData]);
+
+  // ✅ BLOCKER SIMPLIFICADO: Remove lógica do pausedByExecutor
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => {
+    const shouldBlockNavigation = shouldBlock && !hasNavigated.current;
+    console.log('🚫 Tentativa de navegação - shouldBlock:', shouldBlock, 'hasNavigated:', hasNavigated.current);
+    return shouldBlockNavigation;
+  });
+
+  useEffect(() => {
+    console.log('📊 Blocker state:', blocker.state);
+    if (blocker.state === 'blocked' && !showPauseDialog) {
+      console.log('🛑 Navegação bloqueada pelo botão voltar, mostrando modal');
+      setShowPauseDialog(true);
+    }
+  }, [blocker.state, showPauseDialog]);
+
+  // Fallback para fechar aba/janela
+  useEffect(() => {
+    if (!shouldBlock) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasNavigated.current) return;
+      
+      console.log('⚠️ Tentativa de sair da página detectada');
+      e.preventDefault();
+      e.returnValue = 'Você tem uma sessão de treino em andamento. Tem certeza que deseja sair?';
+      return e.returnValue;
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [shouldBlock]);
+
+  useEffect(() => {
+    loadSessionData();
+  }, [loadSessionData]);
+
+  // ✅ MODAL ÚNICA - Também desativa blocker antes de navegar
+  const handleConfirmPauseAndExit = useCallback(async () => {
+    console.log('✅ Confirmando pausa e saída via botão voltar');
+    
+    try {
+      // DESATIVAR O BLOQUEADOR PRIMEIRO
+      setShouldBlock(false);
+      
+      // Limpar sessionStorage
+      sessionStorage.removeItem('rotina_em_criacao');
+      
+      if (sessaoData?.id && !hasNavigated.current) {
+        const { error } = await supabase
+          .from('execucoes_sessao')
+          .update({ 
+            status: 'pausada',
+            data_execucao: new Date().toISOString().split('T')[0]
+          })
+          .eq('id', sessaoData.id);
+
+        if (error) {
+          console.error('Erro ao pausar sessão:', error);
+          toast({
+            variant: "destructive",
+            title: "Erro",
+            description: "Erro ao pausar a sessão. Tente novamente.",
+          });
+          return;
+        }
+      }
+
+      setShowPauseDialog(false);
+      hasNavigated.current = true;
+
+      // Aguardar para garantir que o blocker seja desativado
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      if (blocker.state === 'blocked') {
+        blocker.proceed();
+      }
+    } catch (error) {
+      console.error('Erro ao confirmar pausa:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Erro ao processar solicitação. Tente novamente.",
+      });
+    }
+  }, [blocker, sessaoData, toast]);
+
+  const handleCancelPauseDialog = useCallback(() => {
+    console.log('❌ Cancelando saída via botão voltar');
+    setShowPauseDialog(false);
+    if (blocker.state === 'blocked') {
+      blocker.reset?.();
+    }
+  }, [blocker]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -357,7 +462,6 @@ export default function ExecucaoExecutarTreino() {
     );
   }
 
-  // ✅ VERIFICAÇÕES DE ERRO
   if (!sessaoData || !userProfile || !modoExecucao) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -371,7 +475,6 @@ export default function ExecucaoExecutarTreino() {
     );
   }
 
-  // ✅ VERIFICAR STATUS DA SESSÃO
   if (!verificarStatusSessao()) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -385,7 +488,6 @@ export default function ExecucaoExecutarTreino() {
     );
   }
 
-  // ✅ RENDERIZAR COMPONENTE EXECUTOR
   return (
     <div className="min-h-screen bg-background">
       <Executor
@@ -396,6 +498,36 @@ export default function ExecucaoExecutarTreino() {
         onSessaoFinalizada={handleSessaoFinalizada}
         onSessaoPausada={handleSessaoPausada}
       />
+
+      {/* ✅ MODAL ÚNICA - Apenas para botão "voltar" do navegador */}
+      <Modal
+        isOpen={showPauseDialog}
+        onRequestClose={() => {}}
+        shouldCloseOnOverlayClick={false}
+        shouldCloseOnEsc={false}
+        className="bg-white rounded-lg p-6 max-w-md w-full mx-4 outline-none shadow-2xl"
+        overlayClassName="fixed inset-0 bg-black/60 flex items-center justify-center z-[100]"
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <AlertTriangle className="h-5 w-5 text-orange-500" />
+          <h2 className="text-lg font-semibold">Pausar e Sair?</h2>
+        </div>
+        
+        <div className="mb-6">
+          <p className="text-sm text-gray-600 leading-relaxed">
+            Você está saindo da execução do treino. Seu progresso será salvo e você poderá continuar mais tarde.
+          </p>
+        </div>
+        
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 gap-2">
+          <Button variant="outline" onClick={handleCancelPauseDialog}>
+            Continuar Treino
+          </Button>
+          <Button onClick={handleConfirmPauseAndExit}>
+            Pausar e Sair
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

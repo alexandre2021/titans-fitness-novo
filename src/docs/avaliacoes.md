@@ -74,7 +74,7 @@ A visão do aluno é focada no consumo dos dados e no acompanhamento do seu pró
 -   **Botão de Detalhes:** Cada item possui um botão (`<Eye />`) para abrir os detalhes completos.
 
 ### 5.2. Detalhes da Avaliação (Modal em `AvaliacoesAluno.tsx`)
--   Ao clicar em "Detalhes", uma interface modal é aberta (Drawer no mobile, Dialog no desktop).
+   Ao clicar em "Detalhes", uma interface modal responsiva é aberta, garantindo uma boa experiência tanto em desktops quanto em dispositivos móveis.
 -   O conteúdo desta modal espelha a tela de detalhes do PT, garantindo consistência visual e apresentando os mesmos cards: Fotos, Medidas Principais, Medidas Corporais, Análise de Simetria e Observações.
 -   **Otimização:** As imagens só são carregadas do Storage quando o modal é aberto, evitando sobrecarregar a tela de listagem principal.
 
@@ -82,8 +82,7 @@ A visão do aluno é focada no consumo dos dados e no acompanhamento do seu pró
 
 ## 6. Pontos Importantes e Observações
 
-- **Consistência de UI:** A tela de detalhes da avaliação foi projetada para ser visualmente idêntica para o PT e para o Aluno, mudando apenas o contêiner (página vs. modal). Isso cria uma experiência coesa.
-- **Responsividade:** A visão do aluno utiliza o hook `useIsMobile` para adaptar a interface, mostrando um `Drawer` (gaveta) em telas pequenas e um `Dialog` (modal) em telas maiores, além de ajustar botões e layouts.
+- **Consistência de UI e Responsividade:** A tela de detalhes da avaliação é visualmente idêntica para o PT e para o Aluno, mudando apenas o contêiner (página vs. modal). A experiência de modais foi unificada em todo o projeto para garantir consistência, utilizando um componente responsivo que se adapta a telas grandes e dispositivos móveis.
 - **Segurança:** O uso de RLS no Supabase é o pilar de segurança que impede vazamento de dados entre usuários.
 - **Duplicação de Código:** Atualmente, a interface `AvaliacaoFisica` e as funções de cálculo (`getIMCClassification`, `calcularDiferenca`, `calcularSimetria`) estão duplicadas nos arquivos `AlunosAvaliacaoDetalhes.tsx` e `AvaliacoesAluno.tsx`.
 
