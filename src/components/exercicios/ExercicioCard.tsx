@@ -1,13 +1,8 @@
 // components/exercicios/ExercicioCard.tsx
-import { useState } from 'react';
-import Modal from 'react-modal';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
 import { ExercicioOptionsModal } from './ExercicioOptionsModal';
 import { Tables } from '@/integrations/supabase/types';
-import { AlertTriangle, Trash2 } from 'lucide-react';
 
 type Exercicio = Tables<"exercicios">;
 
@@ -34,37 +29,6 @@ export const ExercicioCard = ({
   onCriarCopia, 
   onExcluir 
 }: ExercicioCardProps) => {
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const { toast } = useToast();
-
-  const handleExcluir = async () => {
-    if (!onExcluir) return;
-    
-    setIsDeleting(true);
-    try {
-      await onExcluir(exercicio.id);
-      toast({
-        title: "Exercício excluído",
-        description: "O exercício foi removido com sucesso.",
-      });
-      setShowDeleteDialog(false);
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível excluir o exercício. Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handleCancelar = () => {
-    if (isDeleting) return;
-    setShowDeleteDialog(false);
-  };
-
   const corGrupoMuscular = exercicio.grupo_muscular 
     ? CORES_GRUPOS_MUSCULARES[exercicio.grupo_muscular] || 'bg-gray-100 text-black'
     : 'bg-gray-100 text-black';
@@ -107,66 +71,11 @@ export const ExercicioCard = ({
             <ExercicioOptionsModal 
               exercicio={exercicio}
               onCriarCopia={onCriarCopia}
-              onExcluir={() => setShowDeleteDialog(true)}
+              onExcluir={() => onExcluir?.(exercicio.id)}
             />
           </div>
         </CardContent>
       </Card>
-
-      {/* Modal de Confirmação de Exclusão - React Modal BLOQUEADA */}
-      <Modal
-        isOpen={showDeleteDialog}
-        onRequestClose={() => {}} // Não permite fechar
-        shouldCloseOnOverlayClick={false}
-        shouldCloseOnEsc={false}
-        className="bg-white rounded-lg p-6 max-w-md w-full mx-4 outline-none"
-        overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-      >
-        <div className="flex items-center gap-2 mb-4">
-          <AlertTriangle className="h-5 w-5 text-red-500" />
-          <h2 className="text-lg font-semibold">Excluir Exercício</h2>
-        </div>
-        
-        <div className="mb-6">
-          <p className="text-sm text-gray-600 leading-relaxed">
-            Tem certeza que deseja excluir o exercício{" "}
-            <span className="font-semibold text-gray-900">
-              "{exercicio.nome}"
-            </span>?
-          </p>
-          <p className="text-sm text-gray-600 mt-2">
-            Esta ação não pode ser desfeita e todos os dados do exercício serão removidos.
-          </p>
-        </div>
-        
-        <div className="flex gap-3 justify-end">
-          <Button 
-            variant="outline" 
-            onClick={handleCancelar}
-            disabled={isDeleting}
-          >
-            Cancelar
-          </Button>
-          <Button 
-            variant="destructive" 
-            onClick={handleExcluir} 
-            disabled={isDeleting}
-            className="flex items-center gap-2"
-          >
-            {isDeleting ? (
-              <>
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                Excluindo...
-              </>
-            ) : (
-              <>
-                <Trash2 className="h-4 w-4" />
-                Excluir
-              </>
-            )}
-          </Button>
-        </div>
-      </Modal>
     </>
   );
 };

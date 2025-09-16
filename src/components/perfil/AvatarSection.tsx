@@ -189,6 +189,10 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
       reader.addEventListener('load', () => setImageSrc(reader.result as string));
       reader.readAsDataURL(file);
       setIsMenuOpen(false);
+      // Limpa o valor do input para permitir que o evento onChange seja disparado
+      // novamente se o usuário selecionar o mesmo arquivo (ou a câmera retornar um
+      // arquivo com o mesmo nome), um problema comum em dispositivos móveis.
+      e.target.value = '';
     }
   };
 
@@ -353,7 +357,7 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
           </Button>
         </div>
         
-          <input type="file" accept="image/*" capture="user" ref={fileInputRef} onChange={onFileChange} style={{ display: 'none' }} />
+          <input type="file" accept="image/*" ref={fileInputRef} onChange={onFileChange} style={{ display: 'none' }} />
         <ImageCropDialog
           imageSrc={imageSrc}
           isUploading={isUploading}
@@ -392,7 +396,7 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
           <Palette className="h-4 w-4 mr-2" />
           Alterar Cor
         </Button>
-        <input type="file" accept="image/*" capture="user" ref={fileInputRef} onChange={onFileChange} style={{ display: 'none' }} />
+        <input type="file" accept="image/*" ref={fileInputRef} onChange={onFileChange} style={{ display: 'none' }} />
       </div>
 
       <Modal

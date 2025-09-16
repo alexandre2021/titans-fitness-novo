@@ -427,47 +427,42 @@ export const useExercicioExecucao = (
     rotinaId: string, 
     sessaoConcluidaId: string
   ): Promise<boolean> => {
-    try {
-      console.log(`🔍 Verificando se rotina ${rotinaId} está completa (ignorando a sessão recém-concluída ${sessaoConcluidaId})`);
-      
-      const { data: sessoes, error } = await supabase
-        .from('execucoes_sessao')
-        .select('id, status')
-        .eq('rotina_id', rotinaId);
-
-      if (error) {
-        console.error('❌ Erro ao verificar sessões da rotina:', error);
-        return false;
-      }
-
-      if (!sessoes || sessoes.length === 0) {
-        console.log('⚠️ Nenhuma sessão encontrada para a rotina');
-        return false;
-      }
-
-      // Contar sessões pendentes, ignorando a que acabamos de concluir.
-      const sessoesPendentes = sessoes.filter(s => 
-        s.id !== sessaoConcluidaId && // Ignora a sessão atual
-        (s.status === 'em_aberto' || 
-         s.status === 'em_andamento' || 
-         s.status === 'pausada')
-      );
-      const totalSessoes = sessoes.length;
-
-      console.log(`📊 Status das sessões:`, {
-        total: totalSessoes,
-        pendentes: sessoesPendentes.length,
-        concluidasEstimadas: totalSessoes - sessoesPendentes.length 
-      });
-
-      const rotinaCompleta = sessoesPendentes.length === 0 && totalSessoes > 0;
-      console.log(rotinaCompleta ? '✅ Rotina COMPLETA!' : '⏳ Rotina ainda em andamento');
-      
-      return rotinaCompleta;
-    } catch (error) {
-      console.error('❌ Erro ao verificar conclusão da rotina:', error);
-      return false;
-    }
+     try {
+       console.log(`🔍 Verificando se rotina ${rotinaId} está completa...`);
+       
+       const { data: sessoes, error } = await supabase
+         .from('execucoes_sessao')
+         .select('id, status')
+         .eq('rotina_id', rotinaId);
+ 
+       if (error) {
+         console.error('❌ Erro ao verificar sessões da rotina:', error);
+         return false;
+       }
+ 
+       if (!sessoes || sessoes.length === 0) {
+         console.log('⚠️ Nenhuma sessão encontrada para a rotina');
+         return false;
+       }
+ 
+       // Filtra por todas as sessões que NÃO estão concluídas.
+       const sessoesNaoConcluidas = sessoes.filter(s => s.status !== 'concluida');
+ 
+       // A rotina está completa se:
+       // 1. A lista de não concluídas tem apenas 1 item, e esse item é a sessão que estamos finalizando agora.
+       const cenario1 = sessoesNaoConcluidas.length === 1 && sessoesNaoConcluidas[0].id === sessaoConcluidaId;
+       // 2. A lista de não concluídas está vazia (caso de race condition onde o update da sessão atual já foi refletido no select).
+       const cenario2 = sessoesNaoConcluidas.length === 0;
+ 
+       const rotinaCompleta = cenario1 || cenario2;
+ 
+       console.log(`📊 Verificação de completude: ${rotinaCompleta ? '✅ ROTINA COMPLETA' : '⏳ Rotina ainda em andamento'}`);
+       
+       return rotinaCompleta;
+     } catch (error) {
+       console.error('❌ Erro ao verificar conclusão da rotina:', error);
+       return false;
+     }
   }, []);
 
   // Atualizar status da rotina para Concluída

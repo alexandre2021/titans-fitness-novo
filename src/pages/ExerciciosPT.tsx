@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Modal from 'react-modal';
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,7 @@ const ExerciciosPT = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [busca, setBusca] = useState("");
   const [showScrollTopButton, setShowScrollTopButton] = useState(false);
+  const deletingRef = useRef(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -94,28 +95,29 @@ const ExerciciosPT = () => {
     }
   };
 
-  const handleConfirmarExclusao = async () => {
-    if (!exercicioParaExcluir) return;
+  const handleConfirmarExclusao = useCallback(async () => {
+    if (!exercicioParaExcluir || isDeleting || deletingRef.current) return;
+
     setIsDeleting(true);
+    deletingRef.current = true;
+
     try {
       await excluirExercicio(exercicioParaExcluir.id);
-      toast({
-        title: "Exercício excluído",
-        description: "O exercício foi removido com sucesso.",
-      });
+
+      // Resetar estados sem mostrar toast (o hook já mostra)
+      setExercicioParaExcluir(null);
+      setIsDeleting(false);
+      deletingRef.current = false;
+      setShowDeleteDialog(false);
+
     } catch (error) {
       console.error("Erro ao excluir exercício:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível excluir o exercício. Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
+      
+      // Em caso de erro, resetar estados (o hook já mostra o toast de erro)
       setIsDeleting(false);
-      setShowDeleteDialog(false);
-      setExercicioParaExcluir(null);
+      deletingRef.current = false;
     }
-  };
+  }, [exercicioParaExcluir, isDeleting, excluirExercicio]);
 
   const handleCancelarExclusao = () => {
     if (isDeleting) return;
