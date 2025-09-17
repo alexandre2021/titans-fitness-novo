@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import Modal from 'react-modal';
 import { ArrowLeft, Plus, MoreVertical, BookCopy, Trash2, Edit, FilePlus, AlertTriangle, Repeat, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +24,7 @@ const MeusModelos = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const [modelos, setModelos] = useState<ModeloRotina[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,18 +117,16 @@ const MeusModelos = () => {
 
   return (
     <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate(-1)} className="h-10 w-10 p-0">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+      {isDesktop && (
+        <div className="items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Meus Modelos</h1>
-            <p className="text-muted-foreground">Gerencie seus modelos de rotina para agilizar seu trabalho</p>
+            <p className="text-muted-foreground">
+              Gerencie seus modelos de rotina para agilizar seu trabalho
+            </p>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Filtros */}
       <FiltrosRotinaModelo

@@ -502,7 +502,7 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
                   {isSaving ? (
                     <><Loader2 className="h-4 w-4 animate-spin mr-2" />Salvando...</>
                   ) : (
-                    <><Check className="h-4 w-4 mr-2" />Salvar</>
+                    "Salvar"
                   )}
                 </Button>
             </div>
@@ -682,9 +682,9 @@ const EditarModelo = () => {
     }
   };
 
-  const updateState = (data: Partial<ModeloEmEdicao>) => {
+  const updateState = useCallback((data: Partial<ModeloEmEdicao>) => {
     setModeloEmEdicao(prev => ({ ...prev, ...data }));
-  };
+  }, []);
 
   const handleAvancarConfiguracao = (data: ModeloConfiguracaoData) => {
     const oldConfig = modeloEmEdicao.configuracao;

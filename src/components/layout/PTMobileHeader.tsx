@@ -74,6 +74,7 @@ const PTMobileHeader = () => {
       "/index-pt": "Inicial",
       "/alunos": "Alunos",
       "/exercicios-pt": "Exercícios",
+      "/meus-modelos": "Meus Modelos",
       "/agenda-pt": "Agenda",
       "/mensagens-pt": "Mensagens",
       "/perfil-pt": "Meu Perfil",
