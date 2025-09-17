@@ -227,7 +227,7 @@ const ExerciciosPT = () => {
           </div>
 
           {showFilters && (
-            <div className="p-4 border rounded-lg bg-muted/30">
+            <div className="p-4 border rounded-lg bg-background">
               <FiltrosExercicios 
                 filtros={filtros}
                 onFiltrosChange={setFiltros}

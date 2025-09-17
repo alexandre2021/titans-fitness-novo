@@ -7,8 +7,10 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectScrollUpButton,
+  SelectScrollDownButton,
 } from "@/components/ui/select";
-import { X } from "lucide-react";
+import { X, ChevronUp, ChevronDown } from "lucide-react";
 
 interface FiltrosExerciciosState {
   grupoMuscular: string;
@@ -23,7 +25,7 @@ interface FiltrosExerciciosProps {
 
 export const FiltrosExercicios: React.FC<FiltrosExerciciosProps> = ({ 
   filtros, 
-  onFiltrosChange 
+  onFiltrosChange
 }) => {
   console.log('🎛️ FiltrosExercicios renderizado com:', filtros);
 
@@ -53,7 +55,9 @@ export const FiltrosExercicios: React.FC<FiltrosExerciciosProps> = ({
     { value: 'Fitas de Suspensão', label: 'Fitas de Suspensão' },
     { value: 'Elásticos', label: 'Elásticos' },
     { value: 'Bola Suíça', label: 'Bola Suíça' },
-    { value: 'Bolas Medicinais', label: 'Bolas Medicinais' }
+    { value: 'Bolas Medicinais', label: 'Bolas Medicinais' },
+    { value: 'Landmine', label: 'Landmine' },
+    { value: 'Bola Bosu', label: 'Bola Bosu' }
   ];
 
   // Dificuldades reais da tabela
@@ -79,7 +83,7 @@ export const FiltrosExercicios: React.FC<FiltrosExerciciosProps> = ({
   return (
     <Card className="border-0 shadow-none">
       <CardContent className="p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-4 items-end">
           <div className="flex-1">
             <label className="text-sm font-medium mb-2 block">Grupo Muscular</label>
             <Select
@@ -92,12 +96,18 @@ export const FiltrosExercicios: React.FC<FiltrosExerciciosProps> = ({
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[70] max-h-[200px]" position="popper" sideOffset={4}>
+                <SelectScrollUpButton className="flex items-center justify-center h-6 bg-white border-b">
+                  <ChevronUp className="h-4 w-4" />
+                </SelectScrollUpButton>
                 {gruposMusculares.map((grupo) => (
                   <SelectItem key={grupo.value} value={grupo.value}>
                     {grupo.label}
                   </SelectItem>
                 ))}
+                <SelectScrollDownButton className="flex items-center justify-center h-6 bg-white border-t">
+                  <ChevronDown className="h-4 w-4" />
+                </SelectScrollDownButton>
               </SelectContent>
             </Select>
           </div>
@@ -111,12 +121,18 @@ export const FiltrosExercicios: React.FC<FiltrosExerciciosProps> = ({
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[70] max-h-[200px]" position="popper" sideOffset={4}>
+                <SelectScrollUpButton className="flex items-center justify-center h-6 bg-white border-b">
+                  <ChevronUp className="h-4 w-4" />
+                </SelectScrollUpButton>
                 {equipamentos.map((equipamento) => (
                   <SelectItem key={equipamento.value} value={equipamento.value}>
                     {equipamento.label}
                   </SelectItem>
                 ))}
+                <SelectScrollDownButton className="flex items-center justify-center h-6 bg-white border-t">
+                  <ChevronDown className="h-4 w-4" />
+                </SelectScrollDownButton>
               </SelectContent>
             </Select>
           </div>
@@ -130,12 +146,18 @@ export const FiltrosExercicios: React.FC<FiltrosExerciciosProps> = ({
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[70] max-h-[200px]" position="popper" sideOffset={4}>
+                <SelectScrollUpButton className="flex items-center justify-center h-6 bg-white border-b">
+                  <ChevronUp className="h-4 w-4" />
+                </SelectScrollUpButton>
                 {dificuldades.map((dificuldade) => (
                   <SelectItem key={dificuldade.value} value={dificuldade.value}>
                     {dificuldade.label}
                   </SelectItem>
                 ))}
+                <SelectScrollDownButton className="flex items-center justify-center h-6 bg-white border-t">
+                  <ChevronDown className="h-4 w-4" />
+                </SelectScrollDownButton>
               </SelectContent>
             </Select>
           </div>

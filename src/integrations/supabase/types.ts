@@ -491,7 +491,206 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
+      },
+      modelos_exercicio: {
+        Row: {
+          id: string
+          modelo_treino_id: string
+          exercicio_1_id: string
+          exercicio_2_id: string | null
+          ordem: number
+          intervalo_apos_exercicio: number | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          modelo_treino_id: string
+          exercicio_1_id: string
+          exercicio_2_id?: string | null
+          ordem: number
+          intervalo_apos_exercicio?: number | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          modelo_treino_id?: string
+          exercicio_1_id?: string
+          exercicio_2_id?: string | null
+          ordem?: number
+          intervalo_apos_exercicio?: number | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modelos_exercicio_modelo_treino_id_fkey"
+            columns: ["modelo_treino_id"]
+            isOneToOne: false
+            referencedRelation: "modelos_treino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "modelos_exercicio_exercicio_1_id_fkey"
+            columns: ["exercicio_1_id"]
+            isOneToOne: false
+            referencedRelation: "exercicios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "modelos_exercicio_exercicio_2_id_fkey"
+            columns: ["exercicio_2_id"]
+            isOneToOne: false
+            referencedRelation: "exercicios"
+            referencedColumns: ["id"]
+          },
+        ]
+      },
+      modelos_rotina: {
+        Row: {
+          id: string
+          personal_trainer_id: string
+          nome: string
+          objetivo: string
+          dificuldade: string
+          treinos_por_semana: number
+          duracao_semanas: number
+          observacoes_rotina: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          personal_trainer_id: string
+          nome: string
+          objetivo: string
+          dificuldade: string
+          treinos_por_semana: number
+          duracao_semanas: number
+          observacoes_rotina?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          personal_trainer_id?: string
+          nome?: string
+          objetivo?: string
+          dificuldade?: string
+          treinos_por_semana?: number
+          duracao_semanas?: number
+          observacoes_rotina?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modelos_rotina_personal_trainer_id_fkey"
+            columns: ["personal_trainer_id"]
+            isOneToOne: false
+            referencedRelation: "personal_trainers"
+            referencedColumns: ["id"]
+          },
+        ]
+      },
+      modelos_serie: {
+        Row: {
+          id: string
+          modelo_exercicio_id: string
+          numero_serie: number
+          repeticoes: number | null
+          carga: number | null
+          repeticoes_1: number | null
+          carga_1: number | null
+          repeticoes_2: number | null
+          carga_2: number | null
+          tem_dropset: boolean | null
+          carga_dropset: number | null
+          intervalo_apos_serie: number | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          modelo_exercicio_id: string
+          numero_serie: number
+          repeticoes?: number | null
+          carga?: number | null
+          repeticoes_1?: number | null
+          carga_1?: number | null
+          repeticoes_2?: number | null
+          carga_2?: number | null
+          tem_dropset?: boolean | null
+          carga_dropset?: number | null
+          intervalo_apos_serie?: number | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          modelo_exercicio_id?: string
+          numero_serie?: number
+          repeticoes?: number | null
+          carga?: number | null
+          repeticoes_1?: number | null
+          carga_1?: number | null
+          repeticoes_2?: number | null
+          carga_2?: number | null
+          tem_dropset?: boolean | null
+          carga_dropset?: number | null
+          intervalo_apos_serie?: number | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modelos_serie_modelo_exercicio_id_fkey"
+            columns: ["modelo_exercicio_id"]
+            isOneToOne: false
+            referencedRelation: "modelos_exercicio"
+            referencedColumns: ["id"]
+          },
+        ]
+      },
+      modelos_treino: {
+        Row: {
+          id: string
+          modelo_rotina_id: string
+          nome: string
+          grupos_musculares: string[]
+          ordem: number
+          observacoes: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          modelo_rotina_id: string
+          nome: string
+          grupos_musculares: string[]
+          ordem: number
+          observacoes?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          modelo_rotina_id?: string
+          nome?: string
+          grupos_musculares?: string[]
+          ordem?: number
+          observacoes?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modelos_treino_modelo_rotina_id_fkey"
+            columns: ["modelo_rotina_id"]
+            isOneToOne: false
+            referencedRelation: "modelos_rotina"
+            referencedColumns: ["id"]
+          },
+        ]
+      },
       personal_trainers: {
         Row: {
           anos_experiencia: string | null

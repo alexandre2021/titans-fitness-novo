@@ -48,6 +48,9 @@ import RotinaConfiguracao from "./pages/RotinaConfiguracao";
 import RotinaTreinos from "./pages/RotinaTreinos";
 import RotinaExercicios from "./pages/RotinaExercicios";
 import RotinaRevisao from "./pages/RotinaRevisao";
+import MeusModelos from "./pages/MeusModelos";
+import NovoModelo from "./pages/NovoModelo";
+import EditarModelo from "./pages/EditarModelo";
 import EsqueciSenha from "./pages/EsqueciSenha";
 import ResetarSenha from "./pages/ResetarSenha";
 
@@ -85,6 +88,13 @@ const router = createBrowserRouter([
       { path: "/onboarding-pt/informacoes-basicas", element: <OnboardingPTInformacoesBasicas /> },
       { path: "/onboarding-pt/experiencia-profissional", element: <OnboardingPTExperienciaProfissional /> },
       { path: "/onboarding-pt/redes-sociais", element: <OnboardingPTRedesSociais /> },
+      // Rotas de criação de modelo e rotina (sem layout principal para modo de foco)
+      { path: "/modelos/novo", element: <NovoModelo /> },
+      { path: "/modelos/editar/:modeloId", element: <EditarModelo /> },
+      { path: "/rotinas-criar/:alunoId/configuracao", element: <RotinaConfiguracao /> },
+      { path: "/rotinas-criar/:alunoId/treinos", element: <RotinaTreinos /> },
+      { path: "/rotinas-criar/:alunoId/exercicios", element: <RotinaExercicios /> },
+      { path: "/rotinas-criar/:alunoId/revisao", element: <RotinaRevisao /> },
       // Rotas protegidas com layout (PT e Aluno)
       {
         element: <ProtectedRoutes />,
@@ -101,6 +111,7 @@ const router = createBrowserRouter([
           { path: "/agenda-pt", element: <AgendaPT /> },
           { path: "/mensagens-pt", element: <MensagensPT /> },
           { path: "/perfil-pt", element: <PerfilPT /> },
+          { path: "/meus-modelos", element: <MeusModelos /> },
           { path: "/configuracoes-pt", element: <ConfiguracoesPT /> },
           { path: "/detalhes-aluno/:id", element: <DetalhesAluno /> },
           { path: "/alunos-parq/:id", element: <AlunosParQ /> },
@@ -109,10 +120,6 @@ const router = createBrowserRouter([
           { path: "/alunos-avaliacoes/:id/nova", element: <AlunosAvaliacaoNova /> },
           { path: "/alunos-avaliacoes/:id/:avaliacaoId", element: <AlunosAvaliacaoDetalhes /> },
           { path: "/alunos-rotinas/:id/:rotinaId", element: <AlunosRotinaDetalhes /> },
-          { path: "/rotinas-criar/:alunoId/configuracao", element: <RotinaConfiguracao /> },
-          { path: "/rotinas-criar/:alunoId/treinos", element: <RotinaTreinos /> },
-          { path: "/rotinas-criar/:alunoId/exercicios", element: <RotinaExercicios /> },
-          { path: "/rotinas-criar/:alunoId/revisao", element: <RotinaRevisao /> },
           // Rotas do Aluno
           { path: "/index-aluno", element: <IndexAluno /> },
           { path: "/minhas-rotinas", element: <PaginaRotinas modo="aluno" /> },

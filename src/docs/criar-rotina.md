@@ -54,6 +54,7 @@ src/
 - ✅ Validações em tempo real
 - ✅ **NOVO:** Execução pelo aluno vem **ativada por padrão**
 - ✅ Pré-preenchimento inteligente baseado no histórico
+- ✅ **NOVO:** Permite iniciar do zero ou a partir de um modelo de rotina
 - ✅ Verificação de rotina ativa existente
 
 **Campos do Formulário:**
@@ -227,6 +228,9 @@ src/
 
 ## 🎮 **Fluxo de Navegação**
 
+```
+/meus-modelos → (Seleciona um modelo) ↘
+```
 ```
 /rotinas-criar/:alunoId/configuracao  →  (Etapa 1)
          ↓ (salvamento automático)

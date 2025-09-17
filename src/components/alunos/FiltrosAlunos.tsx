@@ -77,7 +77,7 @@ export const FiltrosAlunos: React.FC<FiltrosAlunosProps> = ({ filtros, onFiltros
 
       {/* Filtros avançados: só aparecem se showFiltros for true */}
       {showFiltros && (
-        <div className="mt-4 p-4 border rounded-lg bg-muted/30">
+        <div className="mt-4 p-4 border rounded-lg bg-background">
           <div className="flex flex-col sm:flex-row gap-4">
             {/* Situação */}
             <div className="flex-1">

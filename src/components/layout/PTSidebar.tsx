@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Home, Users, Dumbbell, LogOut, User, Settings } from "lucide-react";
+import { Home, Users, Dumbbell, LogOut, User, Settings, BookCopy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
@@ -9,6 +9,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -52,14 +53,19 @@ const PTSidebar = () => {
       icon: Home,
     },
     {
-      title: "Alunos",
-      href: "/alunos",
-      icon: Users,
-    },
-    {
       title: "Exercícios",
       href: "/exercicios-pt",
       icon: Dumbbell,
+    },
+    {
+      title: "Modelos",
+      href: "/meus-modelos",
+      icon: BookCopy,
+    },
+    {
+      title: "Alunos",
+      href: "/alunos",
+      icon: Users,
     },
   ];
 
@@ -135,14 +141,16 @@ const PTSidebar = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem onClick={() => navigate('/perfil-pt')}>
-              <User className="mr-2 h-4 w-4" />
-              Perfil
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate('/configuracoes-pt')}>
-              <Settings className="mr-2 h-4 w-4" />
-              Configurações
-            </DropdownMenuItem>
+            <DropdownMenuGroup>
+              <DropdownMenuItem onClick={() => navigate('/perfil-pt')}>
+                <User className="mr-2 h-4 w-4" />
+                Perfil
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/configuracoes-pt')}>
+                <Settings className="mr-2 h-4 w-4" />
+                Configurações
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-red-600">
               <LogOut className="mr-2 h-4 w-4" />

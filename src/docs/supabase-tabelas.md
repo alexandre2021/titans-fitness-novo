@@ -347,6 +347,82 @@ Este documento descreve a estrutura completa das tabelas do banco de dados, incl
 
 ---
 
+## 2. Tabelas de Modelos de Rotina
+
+Este conjunto de tabelas armazena os **modelos (templates)** de rotinas criados pelos Personal Trainers. Eles são independentes das rotinas atribuídas aos alunos e servem como base para novas criações.
+
+### Tabela: `public.modelos_rotina`
+**Descrição**: Armazena os modelos de rotina (templates) criados pelos Personal Trainers.
+
+| Coluna | Posição | Tipo de Dado | Nulável | Padrão | Tipo de Restrição | Nome da Restrição | Chave Estrangeira |
+|---|---|---|---|---|---|---|---|
+| `id` | 1 | `uuid` | False | `gen_random_uuid()` | `PRIMARY KEY` | `modelos_rotina_pkey` | |
+| `personal_trainer_id` | 2 | `uuid` | False | | `FOREIGN KEY (ON DELETE CASCADE)` | `modelos_rotina_personal_trainer_id_fkey` | `public.personal_trainers(id)` |
+| `nome` | 3 | `character varying` | False | | | | |
+| `descricao` | 4 | `text` | True | | | | |
+| `objetivo` | 5 | `character varying` | True | | | | |
+| `dificuldade` | 6 | `character varying` | False | | | | |
+| `treinos_por_semana` | 7 | `integer` | False | | | | |
+| `duracao_semanas` | 8 | `integer` | False | | | | |
+| `observacoes_rotina` | 9 | `text` | True | | | | |
+| `created_at` | 10 | `timestamp with time zone` | False | `now()` | | | |
+| `updated_at` | 11 | `timestamp with time zone` | False | `now()` | | | |
+
+---
+
+### Tabela: `public.modelos_treino`
+**Descrição**: Armazena os treinos (A, B, C...) que compõem um modelo de rotina.
+
+| Coluna | Posição | Tipo de Dado | Nulável | Padrão | Tipo de Restrição | Nome da Restrição | Chave Estrangeira |
+|---|---|---|---|---|---|---|---|
+| `id` | 1 | `uuid` | False | `gen_random_uuid()` | `PRIMARY KEY` | `modelos_treino_pkey` | |
+| `modelo_rotina_id` | 2 | `uuid` | False | | `FOREIGN KEY (ON DELETE CASCADE)` | `modelos_treino_modelo_rotina_id_fkey` | `public.modelos_rotina(id)` |
+| `nome` | 3 | `character varying` | False | | | | |
+| `grupos_musculares` | 4 | `text[]` | False | `'{}'::text[]` | | | |
+| `ordem` | 5 | `integer` | False | | | | |
+| `observacoes` | 6 | `text` | True | | | | |
+| `created_at` | 7 | `timestamp with time zone` | False | `now()` | | | |
+
+---
+
+### Tabela: `public.modelos_exercicio`
+**Descrição**: Armazena os exercícios (simples ou combinados) de um treino de modelo.
+
+| Coluna | Posição | Tipo de Dado | Nulável | Padrão | Tipo de Restrição | Nome da Restrição | Chave Estrangeira |
+|---|---|---|---|---|---|---|---|
+| `id` | 1 | `uuid` | False | `gen_random_uuid()` | `PRIMARY KEY` | `modelos_exercicio_pkey` | |
+| `modelo_treino_id` | 2 | `uuid` | False | | `FOREIGN KEY (ON DELETE CASCADE)` | `modelos_exercicio_modelo_treino_id_fkey` | `public.modelos_treino(id)` |
+| `exercicio_1_id` | 3 | `uuid` | False | | `FOREIGN KEY (ON DELETE SET NULL)` | `modelos_exercicio_exercicio_1_id_fkey` | `public.exercicios(id)` |
+| `exercicio_2_id` | 4 | `uuid` | True | | `FOREIGN KEY (ON DELETE SET NULL)` | `modelos_exercicio_exercicio_2_id_fkey` | `public.exercicios(id)` |
+| `ordem` | 5 | `integer` | False | | | | |
+| `intervalo_apos_exercicio` | 6 | `integer` | True | `120` | | | |
+| `observacoes` | 7 | `text` | True | | | | |
+| `created_at` | 8 | `timestamp with time zone` | False | `now()` | | | |
+
+---
+
+### Tabela: `public.modelos_serie`
+**Descrição**: Armazena as séries (reps, carga, etc.) de um exercício de modelo.
+
+| Coluna | Posição | Tipo de Dado | Nulável | Padrão | Tipo de Restrição | Nome da Restrição | Chave Estrangeira |
+|---|---|---|---|---|---|---|---|
+| `id` | 1 | `uuid` | False | `gen_random_uuid()` | `PRIMARY KEY` | `modelos_serie_pkey` | |
+| `modelo_exercicio_id` | 2 | `uuid` | False | | `FOREIGN KEY (ON DELETE CASCADE)` | `modelos_serie_modelo_exercicio_id_fkey` | `public.modelos_exercicio(id)` |
+| `numero_serie` | 3 | `integer` | False | | | | |
+| `repeticoes` | 4 | `integer` | True | | | | |
+| `carga` | 5 | `numeric` | True | | | | |
+| `repeticoes_1` | 6 | `integer` | True | | | | |
+| `carga_1` | 7 | `numeric` | True | | | | |
+| `repeticoes_2` | 8 | `integer` | True | | | | |
+| `carga_2` | 9 | `numeric` | True | | | | |
+| `tem_dropset` | 10 | `boolean` | True | `false` | | | |
+| `carga_dropset` | 11 | `numeric` | True | | | | |
+| `intervalo_apos_serie` | 12 | `integer` | True | | | | |
+| `observacoes` | 13 | `text` | True | | | | |
+| `created_at` | 14 | `timestamp with time zone` | False | `now()` | | | |
+
+---
+
 ## 2. Tipos Personalizados (ENUMs)
 
 ### `plano_tipo`

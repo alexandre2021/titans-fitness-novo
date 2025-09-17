@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, Settings, ArrowLeft } from "lucide-react";
+import { LogOut, User, Settings, ArrowLeft, BookCopy } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -137,14 +138,16 @@ const PTMobileHeader = () => {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => navigate('/perfil-pt')}>
-            <User className="mr-2 h-5 w-5" />
-            <span className="text-base">Perfil</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => navigate('/configuracoes-pt')}>
-            <Settings className="mr-2 h-5 w-5" />
-            <span className="text-base">Configurações</span>
-          </DropdownMenuItem>
+          <DropdownMenuGroup>
+            <DropdownMenuItem onClick={() => navigate('/perfil-pt')}>
+              <User className="mr-2 h-5 w-5" />
+              <span className="text-base">Perfil</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/configuracoes-pt')}>
+              <Settings className="mr-2 h-5 w-5" />
+              <span className="text-base">Configurações</span>
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleLogout} className="text-red-600">
             <LogOut className="mr-2 h-5 w-5" />

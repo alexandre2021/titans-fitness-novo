@@ -53,6 +53,7 @@ const getCancellationConfig = (userType: 'personal_trainer' | 'aluno') => {
         "• Sua conta será permanentemente excluída",
         "• Todos os seus exercícios criados serão removidos", 
         "• Rotinas ativas serão canceladas automaticamente",
+        "• Seus modelos de rotina serão removidos",
         "• Alunos vinculados serão automaticamente desvinculados",
         "• Históricos dos alunos serão preservados",
         "• Esta ação não pode ser desfeita"
