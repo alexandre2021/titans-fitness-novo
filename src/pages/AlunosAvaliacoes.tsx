@@ -4,9 +4,9 @@ import Modal from 'react-modal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/badge'; 
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { ArrowLeft, BarChart3, TrendingUp, Calendar, Plus, Eye, MoreVertical, Trash2, AlertTriangle, Info } from 'lucide-react';
+import { ArrowLeft, BarChart3, TrendingUp, Calendar, Plus, Eye, MoreVertical, Trash2, AlertTriangle, Info, ChevronDown } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -318,7 +318,7 @@ const AlunosAvaliacoes = () => {
     <div className="space-y-6 p-6">
       {/* Cabeçalho da Página (Apenas para Desktop) */}
       {isDesktop && (
-        <div className="items-center justify-between">
+        <div className="flex items-center gap-4">
           <Button 
             variant="ghost" 
             onClick={() => navigate('/alunos')}
@@ -405,9 +405,15 @@ const AlunosAvaliacoes = () => {
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
+                          {isDesktop ? (
+                            <Button variant="outline" size="sm" className="ml-auto">
+                              Ações <ChevronDown className="ml-2 h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button variant="default" className="h-10 w-10 rounded-full p-0 [&_svg]:size-6">
+                              <MoreVertical />
+                            </Button>
+                          )}
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleVerDetalhes(avaliacao.id)}>

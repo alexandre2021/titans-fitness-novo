@@ -2,14 +2,22 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { UserPlus, Users, Plus, Mail, MailCheck, Trash2, Send, ChevronDown, ChevronRight } from "lucide-react";
+import { UserPlus, Users, Plus, Mail, MailCheck, Trash2, Send, ChevronDown, ChevronRight, Search, Filter, X } from "lucide-react";
 import { useAlunos } from "@/hooks/useAlunos";
 import { useAuth } from "@/hooks/useAuth";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { AlunoCard } from "@/components/alunos/AlunoCard";
-import { FiltrosAlunos } from "@/components/alunos/FiltrosAlunos";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -30,6 +38,7 @@ const AlunosPT = () => {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [convitesPendentes, setConvitesPendentes] = useState<ConvitePendente[]>([]);
   const [convitesCollapsed, setConvitesCollapsed] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
 
   // Carregar convites pendentes
   const carregarConvitesPendentes = useCallback(async () => {
@@ -113,6 +122,12 @@ const AlunosPT = () => {
     return tipo === 'cadastro' ? 'Convite de cadastro' : 'Convite de vínculo';
   };
 
+  const limparFiltros = () => {
+    setFiltros({ busca: '', situacao: 'todos', genero: 'todos' });
+  };
+
+  const temFiltrosAtivos = filtros.situacao !== 'todos' || filtros.genero !== 'todos' || filtros.busca !== '';
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -126,7 +141,7 @@ const AlunosPT = () => {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Cabeçalho */}
       {isDesktop && (
         <div className="items-center justify-between">
@@ -244,7 +259,75 @@ const AlunosPT = () => {
       ) : (
         <>
           {/* Filtros e busca */}
-          <FiltrosAlunos filtros={filtros} onFiltrosChange={setFiltros} />
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Buscar por nome ou email..."
+                  value={filtros.busca}
+                  onChange={e => setFiltros({ ...filtros, busca: e.target.value })}
+                  className="pl-10"
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex-shrink-0 md:hidden"
+                aria-label="Mostrar filtros"
+              >
+                <Filter className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                className="hidden md:flex items-center gap-2"
+              >
+                <Filter className="h-4 w-4" />
+                Filtros
+              </Button>
+            </div>
+
+            {showFilters && (
+              <div className="p-4 border rounded-lg bg-background">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="filtro-situacao">Situação</Label>
+                    <Select value={filtros.situacao} onValueChange={value => setFiltros({ ...filtros, situacao: value })}>
+                      <SelectTrigger id="filtro-situacao"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todos</SelectItem>
+                        <SelectItem value="ativo">Ativo</SelectItem>
+                        <SelectItem value="pendente">Pendente</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="filtro-genero">Gênero</Label>
+                    <Select value={filtros.genero} onValueChange={value => setFiltros({ ...filtros, genero: value })}>
+                      <SelectTrigger id="filtro-genero"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todos</SelectItem>
+                        <SelectItem value="masculino">Masculino</SelectItem>
+                        <SelectItem value="feminino">Feminino</SelectItem>
+                        <SelectItem value="outro">Outro</SelectItem>
+                        <SelectItem value="nao_informar">Prefiro não informar</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {temFiltrosAtivos && (
+                    <div className="flex items-end">
+                      <Button variant="outline" size="sm" onClick={limparFiltros} className="flex items-center gap-2 w-full sm:w-auto">
+                        <X className="h-4 w-4" />
+                        Limpar
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Estatísticas */}
           <div className="flex items-center gap-4 text-sm text-muted-foreground">

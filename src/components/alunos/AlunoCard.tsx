@@ -1,12 +1,23 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Modal from 'react-modal';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { AlunoOptionsModal } from './AlunoOptionsModal';
-import { AlertTriangle, Trash2 } from 'lucide-react';
+import { 
+  AlertTriangle, 
+  Trash2, 
+  MoreVertical, 
+  ChevronDown, 
+  Eye, 
+  FileText, 
+  BarChart3, 
+  ShieldQuestion 
+} from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useMediaQuery } from '@/hooks/use-media-query';
 
 interface Aluno {
   id: string;
@@ -31,6 +42,8 @@ export const AlunoCard = ({ aluno, onDesvincular }: AlunoCardProps) => {
   const [showUnlinkDialog, setShowUnlinkDialog] = useState(false);
   const [isUnlinking, setIsUnlinking] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const handleDesvincular = async () => {
     setIsUnlinking(true);
@@ -100,10 +113,41 @@ export const AlunoCard = ({ aluno, onDesvincular }: AlunoCardProps) => {
               </div>
             </div>
 
-            <AlunoOptionsModal 
-              alunoId={aluno.id}
-              onDesvincular={() => setShowUnlinkDialog(true)}
-            />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                {isDesktop ? (
+                  <Button variant="outline" size="sm" className="ml-auto flex-shrink-0">
+                    Ações <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button variant="default" className="h-10 w-10 rounded-full p-0 flex-shrink-0 [&_svg]:size-6">
+                    <MoreVertical />
+                  </Button>
+                )}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => navigate(`/detalhes-aluno/${aluno.id}`)}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  Ver Detalhes
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate(`/alunos-rotinas/${aluno.id}`)}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Rotinas
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate(`/alunos-avaliacoes/${aluno.id}`)}>
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  Avaliações
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate(`/alunos-parq/${aluno.id}`)}>
+                  <ShieldQuestion className="mr-2 h-4 w-4" />
+                  PAR-Q
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowUnlinkDialog(true)} className="text-destructive focus:text-destructive">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Desvincular
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardContent>
       </Card>

@@ -4,19 +4,30 @@ import Modal from 'react-modal';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowUp, Plus, Search, Filter, Dumbbell, ShieldAlert, Info, AlertTriangle, Trash2, X } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 import { useToast } from "@/hooks/use-toast";
 import { useExercicios } from "@/hooks/useExercicios";
 import { ExercicioCard } from "@/components/exercicios/ExercicioCard";
-import { FiltrosExercicios } from "@/components/exercicios/FiltrosExercicios";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
 // Configurar o react-modal para acessibilidade
 if (typeof window !== 'undefined') {
   Modal.setAppElement('#root'); // ou o ID do seu elemento raiz
 }
+
+const GRUPOS_MUSCULARES = ['Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Abdômen', 'Pernas', 'Glúteos', 'Panturrilha'];
+const EQUIPAMENTOS = ['Barra', 'Halteres', 'Máquina', 'Peso Corporal', 'Cabo', 'Kettlebell', 'Fitas de Suspensão', 'Elásticos', 'Bola Suíça', 'Bolas Medicinais', 'Landmine', 'Bola Bosu'];
+const DIFICULDADES = ['Baixa', 'Média', 'Alta'];
 
 const ExerciciosPT = () => {
   const navigate = useNavigate();
@@ -228,10 +239,38 @@ const ExerciciosPT = () => {
 
           {showFilters && (
             <div className="p-4 border rounded-lg bg-background">
-              <FiltrosExercicios 
-                filtros={filtros}
-                onFiltrosChange={setFiltros}
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="filtro-grupo">Grupo Muscular</Label>
+                  <Select value={filtros.grupoMuscular} onValueChange={(value) => setFiltros(prev => ({ ...prev, grupoMuscular: value }))}>
+                    <SelectTrigger id="filtro-grupo"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      {GRUPOS_MUSCULARES.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="filtro-equipamento">Equipamento</Label>
+                  <Select value={filtros.equipamento} onValueChange={(value) => setFiltros(prev => ({ ...prev, equipamento: value }))}>
+                    <SelectTrigger id="filtro-equipamento"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      {EQUIPAMENTOS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="filtro-dificuldade">Dificuldade</Label>
+                  <Select value={filtros.dificuldade} onValueChange={(value) => setFiltros(prev => ({ ...prev, dificuldade: value }))}>
+                    <SelectTrigger id="filtro-dificuldade"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todas</SelectItem>
+                      {DIFICULDADES.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
           )}
 
@@ -318,11 +357,39 @@ const ExerciciosPT = () => {
           </div>
 
           {showFilters && (
-            <div className="p-4 border rounded-lg bg-muted/30">
-              <FiltrosExercicios 
-                filtros={filtros}
-                onFiltrosChange={setFiltros}
-              />
+            <div className="p-4 border rounded-lg bg-background">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="filtro-grupo-p">Grupo Muscular</Label>
+                  <Select value={filtros.grupoMuscular} onValueChange={(value) => setFiltros(prev => ({ ...prev, grupoMuscular: value }))}>
+                    <SelectTrigger id="filtro-grupo-p"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      {GRUPOS_MUSCULARES.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="filtro-equipamento-p">Equipamento</Label>
+                  <Select value={filtros.equipamento} onValueChange={(value) => setFiltros(prev => ({ ...prev, equipamento: value }))}>
+                    <SelectTrigger id="filtro-equipamento-p"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      {EQUIPAMENTOS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="filtro-dificuldade-p">Dificuldade</Label>
+                  <Select value={filtros.dificuldade} onValueChange={(value) => setFiltros(prev => ({ ...prev, dificuldade: value }))}>
+                    <SelectTrigger id="filtro-dificuldade-p"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todas</SelectItem>
+                      {DIFICULDADES.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
           )}
 

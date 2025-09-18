@@ -13,6 +13,7 @@ import {
   Clock, 
   Plus, 
   MoreVertical,
+  ChevronDown,
   Eye,
   Play,
   Activity,
@@ -24,6 +25,9 @@ import {
   Calendar,
   CalendarCheck, // ✅ Adicionado
   FileText,
+  FilePlus,
+  BookCopy,
+  Loader2,
   AlertTriangle,
   X
 } from 'lucide-react';
@@ -145,11 +149,14 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [navegandoNovaRotina, setNavegandoNovaRotina] = useState(false);
+  const [showCriarModal, setShowCriarModal] = useState(false);
+  const [loadingModelos, setLoadingModelos] = useState(false);
+  const [temModelos, setTemModelos] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showDetalhesModal, setShowDetalhesModal] = useState(false);
-
-  const handleNovaRotina = () => { // ✅ REGRA ATUALIZADA
+  
+  const handleNovaRotinaClick = async () => {
     // ✅ NOVA VERIFICAÇÃO: Checar se já existe uma rotina ativa ou bloqueada
     if (rotinasAtivas.some(r => r.status === 'Ativa' || r.status === 'Bloqueada')) {
       toast({
@@ -168,11 +175,38 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
       });
       return;
     }
-    // Limpar qualquer rascunho de sessão anterior antes de iniciar um novo
-    sessionStorage.removeItem('rotina_em_criacao');
 
+    // Check if PT has models to decide which options to show
+    setLoadingModelos(true);
+    try {
+        if (!user) return;
+        const { count, error } = await supabase
+            .from('modelos_rotina')
+            .select('*', { count: 'exact', head: true })
+            .eq('personal_trainer_id', user.id);
+
+        if (error) throw error;
+        setTemModelos((count || 0) > 0);
+    } catch (error) {
+        console.error("Erro ao verificar modelos:", error);
+        setTemModelos(false); // Assume no models on error
+    } finally {
+        setLoadingModelos(false);
+    }
+
+    setShowCriarModal(true);
+  };
+
+  const handleCriarDoZero = () => {
+    setShowCriarModal(false);
+    sessionStorage.removeItem('rotina_em_criacao');
     setNavegandoNovaRotina(true);
     navigate(`/rotinas-criar/${alunoId}/configuracao`);
+  };
+
+  const handleUsarModelo = () => {
+    setShowCriarModal(false);
+    navigate(`/selecionar-modelo?alunoId=${alunoId}`);
   };
 
   // ✅ NOVA FUNÇÃO: Carrega um rascunho para o sessionStorage e navega para edição
@@ -546,9 +580,15 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="h-8 w-8 p-0" disabled={isUpdatingStatus}>
-            <MoreVertical className="h-4 w-4" />
-          </Button>
+          {isDesktop ? (
+            <Button variant="outline" size="sm" className="ml-auto" disabled={isUpdatingStatus}>
+              Ações <ChevronDown className="ml-2 h-4 w-4" />
+            </Button>
+          ) : (
+            <Button variant="default" className="h-10 w-10 rounded-full p-0 [&_svg]:size-6" disabled={isUpdatingStatus}>
+              <MoreVertical />
+            </Button>
+          )}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => handleVerDetalhes(rotina.id)}>
@@ -846,13 +886,19 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
                             </div>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <span className="sr-only">Abrir menu</span>
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
+                                {isDesktop ? (
+                                  <Button variant="outline" size="sm">
+                                    Ações <ChevronDown className="ml-2 h-4 w-4" />
+                                  </Button>
+                                ) : (
+                                  <Button variant="default" className="h-10 w-10 rounded-full p-0 [&_svg]:size-6">
+                                    <MoreVertical />
+                                  </Button>
+                                )}
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleContinuarRascunho(rotina.id)}><Play className="mr-2 h-4 w-4" /><span>Continuar</span></DropdownMenuItem>                                <DropdownMenuItem onClick={() => handleExcluirRotina(rotina)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Excluir</span></DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleContinuarRascunho(rotina.id)}><Play className="mr-2 h-4 w-4" /><span>Continuar</span></DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleExcluirRotina(rotina)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Excluir</span></DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </CardContent>
@@ -1099,21 +1145,16 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
       {modo === 'personal' && activeTab === 'atual' && (
         <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
           {/* Mobile: Round floating button */}
-          <Button
-            onClick={handleNovaRotina}
+          <Button onClick={handleNovaRotinaClick}
             disabled={navegandoNovaRotina}
             className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
             aria-label="Nova Rotina"
           >
             <Plus />
           </Button>
-
           {/* Desktop: Standard floating button */}
           <Button
-            onClick={() => {
-              console.log('🔴 TESTE: Clicou Nova Rotina');
-              handleNovaRotina();
-            }}
+            onClick={handleNovaRotinaClick}
             disabled={navegandoNovaRotina}
             className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6"
             size="lg"
@@ -1123,6 +1164,41 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
           </Button>
         </div>
       )}
+
+      {/* Modal de Criação de Rotina */}
+      <ResponsiveModal
+        open={showCriarModal}
+        onOpenChange={setShowCriarModal}
+        title="Como criar a rotina"
+      >
+        <div className="space-y-4">
+          <Button onClick={handleCriarDoZero} className="w-full" size="lg">
+            Rotina em Branco
+          </Button>
+          {loadingModelos ? (
+              <Button disabled className="w-full" size="lg">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Verificando modelos...
+              </Button>
+          ) : temModelos ? (
+              <Button onClick={handleUsarModelo} className="w-full" variant="outline" size="lg">
+                  Usar um Modelo
+              </Button>
+          ) : (
+            <div className="mt-6 pt-4 border-t border-dashed">
+              <div className="flex items-start gap-3 text-sm">
+                <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium text-foreground">Dica: Agilize seu trabalho!</p>
+                  <p className="text-muted-foreground">
+                    Crie <strong className="text-foreground">Modelos de Rotina</strong> para montar treinos para seus alunos em segundos. Você poderá criá-los na seção "Modelos" do menu principal.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </ResponsiveModal>
     </>
   );
 };

@@ -1,14 +1,22 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import Modal from 'react-modal';
-import { ArrowLeft, Plus, MoreVertical, BookCopy, Trash2, Edit, FilePlus, AlertTriangle, Repeat, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, MoreVertical, BookCopy, Trash2, Edit, AlertTriangle, Repeat, Loader2, Search, Filter, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { FiltrosRotinaModelo } from "@/components/rotinasModelo/FiltrosRotinaModelo";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Tables } from "@/integrations/supabase/types";
@@ -29,6 +37,7 @@ const MeusModelos = () => {
   const [modelos, setModelos] = useState<ModeloRotina[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtros, setFiltros] = useState({ busca: '', objetivo: 'todos', dificuldade: 'todos', frequencia: 'todos' });
+  const [showFilters, setShowFilters] = useState(false);
 
   const [modeloParaExcluir, setModeloParaExcluir] = useState<ModeloRotina | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -116,7 +125,7 @@ const MeusModelos = () => {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {isDesktop && (
         <div className="items-center justify-between">
           <div>
@@ -128,21 +137,81 @@ const MeusModelos = () => {
         </div>
       )}
 
-      {/* Filtros */}
-      <FiltrosRotinaModelo
-        filtros={filtros}
-        onFiltrosChange={setFiltros}
-        objetivos={OBJETIVOS}
-        dificuldades={DIFICULDADES}
-        frequencias={FREQUENCIAS}
-      />
+      {/* Busca e Filtros */}
+      <div className="space-y-4">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Buscar modelos..."
+              value={filtros.busca}
+              onChange={(e) => setFiltros(prev => ({ ...prev, busca: e.target.value }))}
+              className="pl-10"
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex-shrink-0 md:hidden"
+            aria-label="Mostrar filtros"
+          >
+            <Filter className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowFilters(!showFilters)}
+            className="hidden md:flex items-center gap-2"
+          >
+            <Filter className="h-4 w-4" />
+            Filtros
+          </Button>
+        </div>
+
+        {showFilters && (
+          <div className="p-4 border rounded-lg bg-background">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="filtro-objetivo">Objetivo</Label>
+                <Select value={filtros.objetivo} onValueChange={(value) => setFiltros(prev => ({ ...prev, objetivo: value }))}>
+                  <SelectTrigger id="filtro-objetivo"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    {OBJETIVOS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filtro-dificuldade">Dificuldade</Label>
+                <Select value={filtros.dificuldade} onValueChange={(value) => setFiltros(prev => ({ ...prev, dificuldade: value }))}>
+                  <SelectTrigger id="filtro-dificuldade"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todas</SelectItem>
+                    {DIFICULDADES.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="filtro-frequencia">Frequência</Label>
+                <Select value={filtros.frequencia} onValueChange={(value) => setFiltros(prev => ({ ...prev, frequencia: value }))}>
+                  <SelectTrigger id="filtro-frequencia"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todas</SelectItem>
+                    {FREQUENCIAS.map(f => <SelectItem key={f} value={String(f)}>{f}x / semana</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Lista de Modelos */}
       {modelosFiltrados.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <BookCopy className="h-16 w-16 text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Nenhum modelo encontrado</h3>
+            <h3 className="text-xl font-semibold mb-2">Nenhum modelo de rotina</h3>
             <p className="text-muted-foreground mb-6 max-w-md">
               {modelos.length === 0 ? 'Crie seu primeiro modelo de rotina para reutilizá-lo com seus alunos.' : 'Tente ajustar os filtros ou o termo de busca.'}
             </p>
@@ -157,9 +226,15 @@ const MeusModelos = () => {
                   <span className="flex-1 mr-2">{modelo.nome}</span>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0 flex-shrink-0">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
+                      {isDesktop ? (
+                        <Button variant="outline" size="sm" className="ml-auto flex-shrink-0">
+                          Ações <ChevronDown className="ml-2 h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button variant="default" className="h-10 w-10 rounded-full p-0 flex-shrink-0 [&_svg]:size-6">
+                          <MoreVertical />
+                        </Button>
+                      )}
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => handleEditarModelo(modelo.id)}>
@@ -196,9 +271,22 @@ const MeusModelos = () => {
 
       {/* Botão Flutuante */}
       <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
-        <Button onClick={handleNovoModelo} className="rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center md:h-auto md:w-auto md:rounded-md md:px-4 md:py-2 md:gap-2" aria-label="Novo Modelo">
-          <Plus className="h-6 w-6 md:h-5 md:w-5" />
-          <span className="hidden md:inline">Novo Modelo</span>
+        {/* Mobile: Round floating button */}
+        <Button
+          onClick={handleNovoModelo}
+          className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
+          aria-label="Novo Modelo"
+        >
+          <Plus />
+        </Button>
+        {/* Desktop: Standard floating button */}
+        <Button
+          onClick={handleNovoModelo}
+          className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6"
+          size="lg"
+        >
+          <Plus />
+          Novo Modelo
         </Button>
       </div>
 

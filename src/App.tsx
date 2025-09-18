@@ -52,6 +52,7 @@ import MeusModelos from "./pages/MeusModelos";
 import NovoModelo from "./pages/NovoModelo";
 import EditarModelo from "./pages/EditarModelo";
 import EsqueciSenha from "./pages/EsqueciSenha";
+import NovoModeloSelecao from "./pages/NovoModeloSelecao";
 import ResetarSenha from "./pages/ResetarSenha";
 
 // ✅ NOVAS IMPORTAÇÕES PARA EXECUÇÃO
@@ -95,6 +96,7 @@ const router = createBrowserRouter([
       { path: "/rotinas-criar/:alunoId/treinos", element: <RotinaTreinos /> },
       { path: "/rotinas-criar/:alunoId/exercicios", element: <RotinaExercicios /> },
       { path: "/rotinas-criar/:alunoId/revisao", element: <RotinaRevisao /> },
+      { path: "/selecionar-modelo", element: <NovoModeloSelecao /> },
       // Rotas protegidas com layout (PT e Aluno)
       {
         element: <ProtectedRoutes />,

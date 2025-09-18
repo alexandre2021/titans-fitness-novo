@@ -26,7 +26,7 @@ const PTBottomNav = () => {
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-background border-t md:hidden">
+    <div className="fixed bottom-0 left-0 right-0 md:hidden">
       <nav className="flex">
         {navigationItems.map((item) => (
           <NavLink
@@ -35,8 +35,8 @@ const PTBottomNav = () => {
             className={({ isActive }) =>
               `flex flex-1 flex-col items-center justify-center py-2 px-1 transition-colors ${
                 isActive
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "bg-primary text-primary-foreground font-semibold"
+                  : "bg-secondary text-secondary-foreground/90 hover:text-secondary-foreground"
               }`
             }
           >

@@ -1,7 +1,11 @@
 // components/exercicios/ExercicioCard.tsx
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ExercicioOptionsModal } from './ExercicioOptionsModal';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { MoreVertical, ChevronDown, Eye, Edit, Copy, Trash2 } from 'lucide-react';
+import { useMediaQuery } from '@/hooks/use-media-query';
 import { Tables } from '@/integrations/supabase/types';
 
 type Exercicio = Tables<"exercicios">;
@@ -9,7 +13,7 @@ type Exercicio = Tables<"exercicios">;
 interface ExercicioCardProps {
   exercicio: Exercicio;
   onCriarCopia?: (exercicioId: string) => void;
-  onExcluir?: (exercicioId: string) => Promise<void>;
+  onExcluir?: (exercicioId: string) => void;
 }
 
 const CORES_GRUPOS_MUSCULARES: { [key: string]: string } = {
@@ -29,6 +33,12 @@ export const ExercicioCard = ({
   onCriarCopia, 
   onExcluir 
 }: ExercicioCardProps) => {
+  const navigate = useNavigate();
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+
+  const handleDetalhes = () => navigate(`/exercicios-pt/detalhes/${exercicio.id}`);
+  const handleEditar = () => navigate(`/exercicios-pt/editar/${exercicio.id}`);
+
   const corGrupoMuscular = exercicio.grupo_muscular 
     ? CORES_GRUPOS_MUSCULARES[exercicio.grupo_muscular] || 'bg-gray-100 text-black'
     : 'bg-gray-100 text-black';
@@ -68,11 +78,43 @@ export const ExercicioCard = ({
               </div>
             </div>
 
-            <ExercicioOptionsModal 
-              exercicio={exercicio}
-              onCriarCopia={onCriarCopia}
-              onExcluir={() => onExcluir?.(exercicio.id)}
-            />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                {isDesktop ? (
+                  <Button variant="outline" size="sm" className="flex-shrink-0">
+                    Ações <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button variant="default" className="h-10 w-10 rounded-full p-0 flex-shrink-0 [&_svg]:size-6">
+                    <MoreVertical />
+                  </Button>
+                )}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleDetalhes}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  Ver Detalhes
+                </DropdownMenuItem>
+                {exercicio.tipo === 'personalizado' && onExcluir && (
+                  <>
+                    <DropdownMenuItem onClick={handleEditar}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onExcluir(exercicio.id)} className="text-destructive focus:text-destructive">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Excluir
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {exercicio.tipo === 'padrao' && onCriarCopia && (
+                  <DropdownMenuItem onClick={() => onCriarCopia && onCriarCopia(exercicio.id)}>
+                    <Copy className="mr-2 h-4 w-4" />
+                    Criar Cópia Personalizada
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardContent>
       </Card>

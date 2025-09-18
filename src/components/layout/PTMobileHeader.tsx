@@ -37,7 +37,7 @@ const PTMobileHeader = () => {
     if (user) fetchProfile();
   }, [user]);
 
-  const getPageConfig = (): { title: React.ReactNode; showBackButton: boolean; backPath?: string } => {
+  const getPageConfig = (): { title: React.ReactNode; subtitle?: string; showBackButton: boolean; backPath?: string } => {
     const path = location.pathname;
 
     // Páginas de Ação (com botão de voltar)
@@ -67,22 +67,24 @@ const PTMobileHeader = () => {
     if (path.startsWith('/detalhes-aluno/')) return { title: 'Detalhes do Aluno', showBackButton: true };
     if (path.startsWith('/convite-aluno')) return { title: 'Convidar Aluno', showBackButton: true };
     if (path.startsWith('/rotinas-criar/')) return { title: 'Criar Rotina', showBackButton: true };
+    if (path.startsWith('/selecionar-modelo')) return { title: 'Selecionar Modelo', showBackButton: true };
     if (path.startsWith('/execucao-rotina/')) return { title: 'Execução de Treino', showBackButton: true };
 
     // Páginas Principais (sem botão de voltar)
-    const mainPages: { [key: string]: string } = {
-      "/index-pt": "Inicial",
-      "/alunos": "Alunos",
-      "/exercicios-pt": "Exercícios",
-      "/meus-modelos": "Meus Modelos",
-      "/agenda-pt": "Agenda",
-      "/mensagens-pt": "Mensagens",
-      "/perfil-pt": "Meu Perfil",
-      "/configuracoes-pt": "Configurações",
+    const mainPages: { [key: string]: { title: string; subtitle?: string } } = {
+      "/index-pt": { title: "Inicial", subtitle: `Bem-vindo, ${profile?.nome_completo?.split(' ')[0] || 'Personal'}!` },
+      "/alunos": { title: "Alunos", subtitle: "Gerencie seus alunos e acompanhe seu progresso" },
+      "/exercicios-pt": { title: "Exercícios", subtitle: "Gerencie seus exercícios padrão e personalizados" },
+      "/meus-modelos": { title: "Meus Modelos", subtitle: "Gerencie seus modelos de rotina" },
+      "/agenda-pt": { title: "Agenda" },
+      "/mensagens-pt": { title: "Mensagens" },
+      "/perfil-pt": { title: "Meu Perfil" },
+      "/configuracoes-pt": { title: "Configurações" },
     };
 
     if (mainPages[path]) {
-      return { title: mainPages[path], showBackButton: false };
+      const page = mainPages[path];
+      return { title: page.title, subtitle: page.subtitle, showBackButton: false };
     }
 
     // Default: Logo (para páginas não mapeadas ou a raiz do PT)
@@ -118,7 +120,7 @@ const PTMobileHeader = () => {
     );
   };
 
-  const { title, showBackButton, backPath } = getPageConfig();
+  const { title, subtitle, showBackButton, backPath } = getPageConfig();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-20 flex items-center justify-between p-4 border-b bg-background md:hidden">
@@ -128,7 +130,12 @@ const PTMobileHeader = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
-        <div className="text-lg font-semibold truncate">{title}</div>
+        <div className="flex-1 truncate">
+          <div className="text-lg font-semibold truncate">{title}</div>
+          {subtitle && (
+            <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
+          )}
+        </div>
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
