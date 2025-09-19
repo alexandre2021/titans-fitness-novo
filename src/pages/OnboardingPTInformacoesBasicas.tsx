@@ -9,11 +9,11 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import CustomSelect from "@/components/ui/CustomSelect";
 
 const formSchema = z.object({
   nomeCompleto: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
@@ -24,6 +24,13 @@ const formSchema = z.object({
 });
 
 type FormData = z.infer<typeof formSchema>;
+
+const GENERO_OPTIONS = [
+  { value: 'Masculino', label: 'Masculino' },
+  { value: 'Feminino', label: 'Feminino' },
+  { value: 'Outro', label: 'Outro' },
+  { value: 'Prefiro não informar', label: 'Prefiro não informar' },
+];
 
 const OnboardingPTInformacoesBasicas = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -154,23 +161,16 @@ const OnboardingPTInformacoesBasicas = () => {
                 name="genero"
                 control={control}
                 render={({ field }) => (
-                  <Select 
-                    onValueChange={(value) => {
-                      field.onChange(value);
+                  <CustomSelect
+                    inputId="genero"
+                    value={GENERO_OPTIONS.find(opt => opt.value === field.value)}
+                    onChange={(option) => {
+                      field.onChange(option ? option.value : '');
                       clearErrors("genero");
-                    }} 
-                    value={field.value}
-                  >
-                    <SelectTrigger className="border-border">
-                      <SelectValue placeholder="Selecione seu gênero" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Masculino">Masculino</SelectItem>
-                      <SelectItem value="Feminino">Feminino</SelectItem>
-                      <SelectItem value="Outro">Outro</SelectItem>
-                      <SelectItem value="Prefiro não informar">Prefiro não informar</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    }}
+                    options={GENERO_OPTIONS}
+                    placeholder="Selecione seu gênero"
+                  />
                 )}
               />
               {errors.genero && (

@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Modal from 'react-modal';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -82,7 +82,6 @@ export const AccountCancellationSection = ({ userType }: AccountCancellationSect
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [confirmationText, setConfirmationText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
-  const { toast } = useToast();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -90,10 +89,8 @@ export const AccountCancellationSection = ({ userType }: AccountCancellationSect
 
   const handleAccountCancellation = async () => {
     if (confirmationText.toLowerCase() !== 'cancelar conta') {
-      toast({
-        title: "Erro de confirmação",
+      toast.error("Erro de confirmação", {
         description: "Digite exatamente 'CANCELAR CONTA' para confirmar.",
-        variant: "destructive",
       });
       return;
     }
@@ -112,8 +109,7 @@ export const AccountCancellationSection = ({ userType }: AccountCancellationSect
         throw new Error(error.message || 'Erro ao cancelar conta');
       }
 
-      toast({
-        title: "Conta cancelada",
+      toast.success("Conta cancelada", {
         description: "Sua conta foi cancelada com sucesso. Você será redirecionado para a página inicial.",
       });
 
@@ -123,10 +119,8 @@ export const AccountCancellationSection = ({ userType }: AccountCancellationSect
 
     } catch (error) {
       console.error('Erro ao cancelar conta:', error);
-      toast({
-        title: "Erro",
+      toast.error("Erro", {
         description: error.message || "Não foi possível cancelar a conta. Tente novamente.",
-        variant: "destructive",
       });
     } finally {
       setIsDeleting(false);

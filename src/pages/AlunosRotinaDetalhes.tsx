@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from "sonner";
 import { useExercicioLookup } from '@/hooks/useExercicioLookup';
 import { formatters } from '@/utils/formatters';
 
@@ -92,7 +92,6 @@ const AlunosRotinaDetalhes = () => {
   const { id: alunoId, rotinaId } = useParams<{ id: string; rotinaId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { toast } = useToast();
   const { getExercicioInfo } = useExercicioLookup();
   
   const [aluno, setAluno] = useState<AlunoInfo | null>(null);
@@ -115,11 +114,9 @@ const AlunosRotinaDetalhes = () => {
 
         if (alunoError) {
           console.error('Erro ao buscar aluno:', alunoError);
-          toast({
-            title: "Erro",
-            description: "Aluno não encontrado.",
-            variant: "destructive",
-          });
+          toast.error("Erro", {
+            description: "Aluno não encontrado."
+          })
           navigate('/alunos');
           return;
         }
@@ -137,11 +134,9 @@ const AlunosRotinaDetalhes = () => {
 
         if (rotinaError) {
           console.error('Erro ao buscar rotina:', rotinaError);
-          toast({
-            title: "Erro",
-            description: "Rotina não encontrada.",
-            variant: "destructive",
-          });
+          toast.error("Erro", {
+            description: "Rotina não encontrada."
+          })
           navigate(`/alunos-rotinas/${alunoId}`);
           return;
         }
@@ -222,11 +217,9 @@ const AlunosRotinaDetalhes = () => {
 
       } catch (error) {
         console.error('Erro ao buscar dados:', error);
-        toast({
-          title: "Erro",
-          description: "Erro ao carregar dados da rotina.",
-          variant: "destructive",
-        });
+        toast.error("Erro", {
+          description: "Erro ao carregar dados da rotina."
+        })
         navigate(`/alunos-rotinas/${alunoId}`);
       } finally {
         setLoading(false);
@@ -234,7 +227,7 @@ const AlunosRotinaDetalhes = () => {
     };
 
     fetchDados();
-  }, [alunoId, rotinaId, user, navigate, toast]);
+  }, [alunoId, rotinaId, user, navigate]);
 
   const renderAvatar = () => {
     if (!aluno) return null;

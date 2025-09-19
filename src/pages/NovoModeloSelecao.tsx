@@ -1,16 +1,18 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, BookCopy, Repeat, Loader2, Check, Plus } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { FiltrosRotinaModelo } from "@/components/rotinasModelo/FiltrosRotinaModelo";
+import { ArrowLeft, BookCopy, Repeat, Loader2, Check, Plus, Search, Filter, X } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Tables } from "@/integrations/supabase/types";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { ExercicioModelo, SerieModelo } from "./EditarModelo"; // Reutilizando tipos
+import CustomSelect from "@/components/ui/CustomSelect";
 
 type ModeloRotina = Tables<'modelos_rotina'>;
 type Aluno = Pick<Tables<'alunos'>, 'id' | 'nome_completo'>;
@@ -19,10 +21,13 @@ const OBJETIVOS = ['Ganho de massa', 'Emagrecimento', 'Definição muscular', 'C
 const DIFICULDADES = ['Baixa', 'Média', 'Alta'];
 const FREQUENCIAS = [1, 2, 3, 4, 5, 6, 7];
 
+const OBJETIVOS_OPTIONS = [{ value: 'todos', label: 'Todos' }, ...OBJETIVOS.map(o => ({ value: o, label: o }))];
+const DIFICULDADES_OPTIONS = [{ value: 'todos', label: 'Todas' }, ...DIFICULDADES.map(d => ({ value: d, label: d }))];
+const FREQUENCIAS_OPTIONS = [{ value: 'todos', label: 'Todas' }, ...FREQUENCIAS.map(f => ({ value: String(f), label: `${f}x / semana` }))];
+
 const NovoModeloSelecao = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { toast } = useToast();
   const { user } = useAuth();
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
@@ -32,11 +37,22 @@ const NovoModeloSelecao = () => {
   const [modelos, setModelos] = useState<ModeloRotina[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtros, setFiltros] = useState({ busca: '', objetivo: 'todos', dificuldade: 'todos', frequencia: 'todos' });
+  const [showFilters, setShowFilters] = useState(false);
   const [selecionandoModeloId, setSelecionandoModeloId] = useState<string | null>(null);
+
+  const temFiltrosAvancadosAtivos = filtros.objetivo !== 'todos' || filtros.dificuldade !== 'todos' || filtros.frequencia !== 'todos';
+
+  const temFiltrosAtivos = temFiltrosAvancadosAtivos || filtros.busca !== '';
+
+  const limparFiltros = () => {
+    setFiltros({ busca: '', objetivo: 'todos', dificuldade: 'todos', frequencia: 'todos' });
+  };
 
   useEffect(() => {
     if (!alunoId) {
-      toast({ title: "Erro", description: "ID do aluno não fornecido.", variant: "destructive" });
+      toast.error("Erro", {
+        description: "ID do aluno não fornecido."
+      });
       navigate('/alunos');
       return;
     }
@@ -54,7 +70,9 @@ const NovoModeloSelecao = () => {
           .single();
 
         if (alunoError || !alunoData) {
-          toast({ title: "Erro", description: "Aluno não encontrado.", variant: "destructive" });
+          toast.error("Erro", {
+            description: "Aluno não encontrado."
+          });
           navigate('/alunos');
           return;
         }
@@ -70,18 +88,16 @@ const NovoModeloSelecao = () => {
         if (modelosError) throw modelosError;
         setModelos(modelosData || []);
       } catch (error) {
-        toast({
-          title: "Erro ao carregar dados",
-          description: "Não foi possível carregar os modelos. Tente novamente.",
-          variant: "destructive",
-        });
+        toast.error("Erro ao carregar dados", {
+          description: "Não foi possível carregar os modelos. Tente novamente."
+        })
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [user, alunoId, navigate, toast]);
+  }, [user, alunoId, navigate]);
 
   const handleSelecionarModelo = async (modelo: ModeloRotina) => {
     if (!alunoId || !aluno) return;
@@ -134,7 +150,7 @@ const NovoModeloSelecao = () => {
       const rotinaStorageData = {
         alunoId: alunoId,
         configuracao: {
-          nome: `Rotina de ${aluno.nome_completo} (Baseado em ${modelo.nome})`,
+          nome: modelo.nome,
           objetivo: modelo.objetivo,
           dificuldade: modelo.dificuldade,
           duracao_semanas: modelo.duracao_semanas,
@@ -157,11 +173,9 @@ const NovoModeloSelecao = () => {
 
     } catch (error) {
       console.error("Erro ao selecionar modelo:", error);
-      toast({
-        title: "Erro ao selecionar modelo",
-        description: "Não foi possível carregar os dados do modelo selecionado.",
-        variant: "destructive",
-      });
+      toast.error("Erro ao selecionar modelo", {
+        description: "Não foi possível carregar os dados do modelo selecionado."
+      })
     } finally {
       setSelecionandoModeloId(null);
     }
@@ -186,8 +200,13 @@ const NovoModeloSelecao = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-lg text-muted-foreground">Carregando modelos...</p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -210,13 +229,82 @@ const NovoModeloSelecao = () => {
         </div>
       </div>
 
-      <FiltrosRotinaModelo
-        filtros={filtros}
-        onFiltrosChange={setFiltros}
-        objetivos={OBJETIVOS}
-        dificuldades={DIFICULDADES}
-        frequencias={FREQUENCIAS}
-      />
+      {/* Busca e Filtros */}
+      <div className="space-y-4">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Buscar modelos..."
+              value={filtros.busca}
+              onChange={(e) => setFiltros(prev => ({ ...prev, busca: e.target.value }))}
+              className="pl-10"
+            />
+          </div>
+          <Button
+            variant="default"
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex-shrink-0 md:hidden relative h-10 w-10 rounded-full p-0 [&_svg]:size-6"
+            aria-label="Mostrar filtros"
+          >
+            <Filter />
+            {temFiltrosAvancadosAtivos && (
+              <span className="absolute top-[-2px] left-[-2px] block h-3 w-3 rounded-full bg-secondary ring-2 ring-white" />
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowFilters(!showFilters)}
+            className="hidden md:flex items-center gap-2 relative"
+          >
+            <Filter className="h-4 w-4" />
+            Filtros
+            {temFiltrosAvancadosAtivos && (
+              <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-secondary ring-1 ring-background" />
+            )}
+          </Button>
+        </div>
+
+        {showFilters && (
+          <div className="p-4 border rounded-lg bg-background">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+              <div className="space-y-2 flex-1">
+                <Label htmlFor="filtro-objetivo">Objetivo</Label>
+                <CustomSelect
+                  inputId="filtro-objetivo"
+                  value={OBJETIVOS_OPTIONS.find(opt => opt.value === filtros.objetivo)}
+                  onChange={(option) => setFiltros(prev => ({ ...prev, objetivo: option ? String(option.value) : 'todos' }))}
+                  options={OBJETIVOS_OPTIONS}
+                />
+              </div>
+              <div className="space-y-2 flex-1">
+                <Label htmlFor="filtro-dificuldade">Dificuldade</Label>
+                <CustomSelect
+                  inputId="filtro-dificuldade"
+                  value={DIFICULDADES_OPTIONS.find(opt => opt.value === filtros.dificuldade)}
+                  onChange={(option) => setFiltros(prev => ({ ...prev, dificuldade: option ? String(option.value) : 'todos' }))}
+                  options={DIFICULDADES_OPTIONS}
+                />
+              </div>
+              <div className="space-y-2 flex-1">
+                <Label htmlFor="filtro-frequencia">Frequência</Label>
+                <CustomSelect
+                  inputId="filtro-frequencia"
+                  value={FREQUENCIAS_OPTIONS.find(opt => opt.value === filtros.frequencia)}
+                  onChange={(option) => setFiltros(prev => ({ ...prev, frequencia: option ? String(option.value) : 'todos' }))}
+                  options={FREQUENCIAS_OPTIONS}
+                />
+              </div>
+              {temFiltrosAtivos && (
+                <Button variant="outline" size="sm" onClick={limparFiltros} className="flex items-center gap-2 w-full sm:w-auto flex-shrink-0">
+                  <X className="h-4 w-4" />
+                  Limpar
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {modelosFiltrados.length === 0 ? (
         <Card className="border-dashed">

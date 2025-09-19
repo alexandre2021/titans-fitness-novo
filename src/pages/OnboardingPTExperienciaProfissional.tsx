@@ -6,7 +6,6 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +13,7 @@ import { X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import CustomSelect from "@/components/ui/CustomSelect";
 
 const especializacoesOpcoes = [
   "Musculação e Hipertrofia",
@@ -37,6 +37,16 @@ const formSchema = z.object({
 });
 
 type FormData = z.infer<typeof formSchema>;
+
+const ANOS_EXPERIENCIA_OPTIONS = [
+  { value: 'Menos de 1 ano', label: 'Menos de 1 ano' },
+  { value: '1-2 anos', label: '1-2 anos' },
+  { value: '3-5 anos', label: '3-5 anos' },
+  { value: '5-10 anos', label: '5-10 anos' },
+  { value: 'Mais de 10 anos', label: 'Mais de 10 anos' },
+];
+
+const ESPECIALIZACOES_OPTIONS = especializacoesOpcoes.map(o => ({ value: o, label: o }));
 
 const OnboardingPTExperienciaProfissional = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -127,18 +137,13 @@ const OnboardingPTExperienciaProfissional = () => {
               <Label htmlFor="anosExperiencia" className="text-text-primary">
                 Anos de Experiência
               </Label>
-              <Select onValueChange={(value) => setValue("anosExperiencia", value)} value={anosExperiencia}>
-                <SelectTrigger className="border-border">
-                  <SelectValue placeholder="Selecione seus anos de experiência (opcional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Menos de 1 ano">Menos de 1 ano</SelectItem>
-                  <SelectItem value="1-2 anos">1-2 anos</SelectItem>
-                  <SelectItem value="3-5 anos">3-5 anos</SelectItem>
-                  <SelectItem value="5-10 anos">5-10 anos</SelectItem>
-                  <SelectItem value="Mais de 10 anos">Mais de 10 anos</SelectItem>
-                </SelectContent>
-              </Select>
+              <CustomSelect
+                inputId="anosExperiencia"
+                value={ANOS_EXPERIENCIA_OPTIONS.find(opt => opt.value === anosExperiencia)}
+                onChange={(option) => setValue("anosExperiencia", option ? option.value : '')}
+                options={ANOS_EXPERIENCIA_OPTIONS}
+                placeholder="Selecione seus anos de experiência (opcional)"
+              />
               {errors.anosExperiencia && (
                 <p className="text-sm text-destructive">{errors.anosExperiencia.message}</p>
               )}
@@ -148,22 +153,13 @@ const OnboardingPTExperienciaProfissional = () => {
               <Label className="text-text-primary">
                 Especializações
               </Label>
-              <Select onValueChange={adicionarEspecializacao}>
-                <SelectTrigger className="border-border">
-                  <SelectValue placeholder="Adicionar especialização (opcional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {especializacoesOpcoes.map((opcao) => (
-                    <SelectItem 
-                      key={opcao} 
-                      value={opcao}
-                      disabled={especializacoesSelecionadas.includes(opcao)}
-                    >
-                      {opcao}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <CustomSelect
+                inputId="especializacoes"
+                value={null}
+                onChange={(option) => option && adicionarEspecializacao(option.value)}
+                options={ESPECIALIZACOES_OPTIONS.filter(opt => !especializacoesSelecionadas.includes(opt.value))}
+                placeholder="Adicionar especialização (opcional)"
+              />
               
               {especializacoesSelecionadas.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">

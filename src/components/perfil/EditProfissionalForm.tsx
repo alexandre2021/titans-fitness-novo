@@ -17,16 +17,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { isEqual } from 'lodash';
+import CustomSelect from "@/components/ui/CustomSelect";
 
 const formSchema = z.object({
   cref: z.string().optional(),
@@ -39,6 +33,16 @@ const ESPECIALIZACOES_OPTIONS = [
   "Corrida", "Ciclismo", "Boxe", "Muay Thai", "Fisioterapia", "Reabilitação",
   "Emagrecimento", "Hipertrofia", "Idosos", "Gestantes", "Crianças"
 ];
+
+const ANOS_EXPERIENCIA_OPTIONS = [
+  { value: 'menos_1', label: 'Menos de 1 ano' },
+  { value: '1_2', label: '1-2 anos' },
+  { value: '3_5', label: '3-5 anos' },
+  { value: '6_10', label: '6-10 anos' },
+  { value: 'mais_10', label: 'Mais de 10 anos' },
+];
+
+const ESPECIALIZACOES_SELECT_OPTIONS = ESPECIALIZACOES_OPTIONS.map(esp => ({ value: esp, label: esp }));
 
 interface ProfileData {
   cref?: string;
@@ -55,8 +59,6 @@ interface EditProfissionalFormProps {
 export const EditProfissionalForm = ({ profile, onSave }: EditProfissionalFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [especializacoes, setEspecializacoes] = useState<string[]>([]);
-  const [novaEspecializacao, setNovaEspecializacao] = useState("");
-  const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -92,10 +94,9 @@ export const EditProfissionalForm = ({ profile, onSave }: EditProfissionalFormPr
     }
   };
 
-  const adicionarEspecializacao = () => {
-    if (novaEspecializacao && !especializacoes.includes(novaEspecializacao)) {
-      setEspecializacoes([...especializacoes, novaEspecializacao]);
-      setNovaEspecializacao("");
+  const adicionarEspecializacao = (especializacao: string) => {
+    if (especializacao && !especializacoes.includes(especializacao)) {
+      setEspecializacoes([...especializacoes, especializacao]);
     }
   };
 
@@ -121,20 +122,17 @@ export const EditProfissionalForm = ({ profile, onSave }: EditProfissionalFormPr
 
       if (error) throw error;
 
-      toast({
-        title: "Perfil atualizado",
-        description: "Suas informações profissionais foram atualizadas com sucesso.",
-      });
+      toast.success("Perfil atualizado", {
+        description: "Suas informações profissionais foram atualizadas com sucesso."
+      })
 
       onSave();
       form.reset(values);
     } catch (error) {
       console.error('Error updating profile:', error);
-      toast({
-        title: "Erro",
-        description: error instanceof Error ? error.message : "Erro ao atualizar perfil. Tente novamente.",
-        variant: "destructive",
-      });
+      toast.error("Erro", {
+        description: error instanceof Error ? error.message : "Erro ao atualizar perfil. Tente novamente."
+      })
     } finally {
       setIsLoading(false);
     }
@@ -163,20 +161,15 @@ export const EditProfissionalForm = ({ profile, onSave }: EditProfissionalFormPr
           render={({ field }) => (
             <FormItem>
               <FormLabel>Anos de Experiência</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value || ''}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="menos_1">Menos de 1 ano</SelectItem>
-                  <SelectItem value="1_2">1-2 anos</SelectItem>
-                  <SelectItem value="3_5">3-5 anos</SelectItem>
-                  <SelectItem value="6_10">6-10 anos</SelectItem>
-                  <SelectItem value="mais_10">Mais de 10 anos</SelectItem>
-                </SelectContent>
-              </Select>
+              <FormControl>
+                <CustomSelect
+                  inputId="anos_experiencia"
+                  value={ANOS_EXPERIENCIA_OPTIONS.find(opt => opt.value === field.value)}
+                  onChange={(option) => field.onChange(option ? option.value : '')}
+                  options={ANOS_EXPERIENCIA_OPTIONS}
+                  placeholder="Selecione"
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -185,23 +178,13 @@ export const EditProfissionalForm = ({ profile, onSave }: EditProfissionalFormPr
         <div>
           <FormLabel>Especializações</FormLabel>
           <div className="space-y-2">
-            <div className="flex gap-2">
-              <Select onValueChange={setNovaEspecializacao} value={novaEspecializacao}>
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Adicionar especialização" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ESPECIALIZACOES_OPTIONS.map((esp) => (
-                    <SelectItem key={esp} value={esp}>
-                      {esp}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button type="button" onClick={adicionarEspecializacao} variant="outline">
-                Adicionar
-              </Button>
-            </div>
+            <CustomSelect
+              inputId="especializacoes"
+              value={null}
+              onChange={(option) => option && adicionarEspecializacao(option.value)}
+              options={ESPECIALIZACOES_SELECT_OPTIONS.filter(opt => !especializacoes.includes(opt.value))}
+              placeholder="Adicionar especialização"
+            />
             
             <div className="flex flex-wrap gap-2">
               {especializacoes.map((esp) => (

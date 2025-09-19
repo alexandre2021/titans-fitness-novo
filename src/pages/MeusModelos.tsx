@@ -3,23 +3,17 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import Modal from 'react-modal';
-import { ArrowLeft, Plus, MoreVertical, BookCopy, Trash2, Edit, AlertTriangle, Repeat, Loader2, Search, Filter, ChevronDown } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft, Plus, MoreVertical, BookCopy, Trash2, Edit, AlertTriangle, Repeat, Search, Filter, ChevronDown, X } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Tables } from "@/integrations/supabase/types";
+import CustomSelect from "@/components/ui/CustomSelect";
 
 type ModeloRotina = Tables<'modelos_rotina'>;
 
@@ -27,10 +21,13 @@ const OBJETIVOS = ['Ganho de massa', 'Emagrecimento', 'Definição muscular', 'C
 const DIFICULDADES = ['Baixa', 'Média', 'Alta'];
 const FREQUENCIAS = [1, 2, 3, 4, 5, 6, 7];
 
+const OBJETIVOS_OPTIONS = [{ value: 'todos', label: 'Todos' }, ...OBJETIVOS.map(o => ({ value: o, label: o }))];
+const DIFICULDADES_OPTIONS = [{ value: 'todos', label: 'Todas' }, ...DIFICULDADES.map(d => ({ value: d, label: d }))];
+const FREQUENCIAS_OPTIONS = [{ value: 'todos', label: 'Todas' }, ...FREQUENCIAS.map(f => ({ value: String(f), label: `${f}x / semana` }))];
+
 // Main component
 const MeusModelos = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { user } = useAuth();
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
@@ -41,6 +38,14 @@ const MeusModelos = () => {
 
   const [modeloParaExcluir, setModeloParaExcluir] = useState<ModeloRotina | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const temFiltrosAvancadosAtivos = filtros.objetivo !== 'todos' || filtros.dificuldade !== 'todos' || filtros.frequencia !== 'todos';
+
+  const temFiltrosAtivos = temFiltrosAvancadosAtivos || filtros.busca !== '';
+
+  const limparFiltros = () => {
+    setFiltros({ busca: '', objetivo: 'todos', dificuldade: 'todos', frequencia: 'todos' });
+  };
 
   useEffect(() => {
     const fetchModelos = async () => {
@@ -58,18 +63,16 @@ const MeusModelos = () => {
         }
         setModelos(data || []);
       } catch (error) {
-        toast({
-          title: "Erro ao buscar modelos",
-          description: "Não foi possível carregar seus modelos de rotina. Tente novamente.",
-          variant: "destructive",
-        });
+        toast.error("Erro ao buscar modelos", {
+          description: "Não foi possível carregar seus modelos de rotina. Tente novamente."
+        })
       } finally {
         setLoading(false);
       }
     };
 
     fetchModelos();
-  }, [user, toast]);
+  }, [user]);
 
   const handleExcluirModelo = (modelo: ModeloRotina) => {
     setModeloParaExcluir(modelo);
@@ -82,9 +85,11 @@ const MeusModelos = () => {
       const { error } = await supabase.from('modelos_rotina').delete().eq('id', modeloParaExcluir.id);
       if (error) throw error;
       setModelos(prev => prev.filter(m => m.id !== modeloParaExcluir.id));
-      toast({ title: "Modelo excluído", description: `O modelo "${modeloParaExcluir.nome}" foi removido.` });
+      toast.success("Modelo excluído", { description: `O modelo "${modeloParaExcluir.nome}" foi removido.` });
     } catch (error) {
-      toast({ title: "Erro ao excluir", description: "Não foi possível remover o modelo. Tente novamente.", variant: "destructive" });
+      toast.error("Erro ao excluir", {
+        description: "Não foi possível remover o modelo. Tente novamente."
+      })
     } finally {
       setIsDeleting(false);
       setModeloParaExcluir(null);
@@ -118,8 +123,13 @@ const MeusModelos = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-lg text-muted-foreground">Carregando modelos...</p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -150,57 +160,65 @@ const MeusModelos = () => {
             />
           </div>
           <Button
-            variant="outline"
-            size="icon"
+            variant="default"
             onClick={() => setShowFilters(!showFilters)}
-            className="flex-shrink-0 md:hidden"
+            className="flex-shrink-0 md:hidden relative h-10 w-10 rounded-full p-0 [&_svg]:size-6"
             aria-label="Mostrar filtros"
           >
-            <Filter className="h-4 w-4" />
+            <Filter />
+            {temFiltrosAvancadosAtivos && (
+              <span className="absolute top-[-2px] left-[-2px] block h-3 w-3 rounded-full bg-secondary ring-2 ring-white" />
+            )}
           </Button>
           <Button
             variant="outline"
             onClick={() => setShowFilters(!showFilters)}
-            className="hidden md:flex items-center gap-2"
+            className="hidden md:flex items-center gap-2 relative"
           >
             <Filter className="h-4 w-4" />
             Filtros
+            {temFiltrosAvancadosAtivos && (
+              <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-secondary ring-1 ring-background" />
+            )}
           </Button>
         </div>
 
         {showFilters && (
           <div className="p-4 border rounded-lg bg-background">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+              <div className="space-y-2 flex-1">
                 <Label htmlFor="filtro-objetivo">Objetivo</Label>
-                <Select value={filtros.objetivo} onValueChange={(value) => setFiltros(prev => ({ ...prev, objetivo: value }))}>
-                  <SelectTrigger id="filtro-objetivo"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos</SelectItem>
-                    {OBJETIVOS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <CustomSelect
+                  inputId="filtro-objetivo"
+                  value={OBJETIVOS_OPTIONS.find(opt => opt.value === filtros.objetivo)}
+                  onChange={(option) => setFiltros(prev => ({ ...prev, objetivo: option ? String(option.value) : 'todos' }))}
+                  options={OBJETIVOS_OPTIONS}
+                />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 flex-1">
                 <Label htmlFor="filtro-dificuldade">Dificuldade</Label>
-                <Select value={filtros.dificuldade} onValueChange={(value) => setFiltros(prev => ({ ...prev, dificuldade: value }))}>
-                  <SelectTrigger id="filtro-dificuldade"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todas</SelectItem>
-                    {DIFICULDADES.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <CustomSelect
+                  inputId="filtro-dificuldade"
+                  value={DIFICULDADES_OPTIONS.find(opt => opt.value === filtros.dificuldade)}
+                  onChange={(option) => setFiltros(prev => ({ ...prev, dificuldade: option ? String(option.value) : 'todos' }))}
+                  options={DIFICULDADES_OPTIONS}
+                />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 flex-1">
                 <Label htmlFor="filtro-frequencia">Frequência</Label>
-                <Select value={filtros.frequencia} onValueChange={(value) => setFiltros(prev => ({ ...prev, frequencia: value }))}>
-                  <SelectTrigger id="filtro-frequencia"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todas</SelectItem>
-                    {FREQUENCIAS.map(f => <SelectItem key={f} value={String(f)}>{f}x / semana</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <CustomSelect
+                  inputId="filtro-frequencia"
+                  value={FREQUENCIAS_OPTIONS.find(opt => opt.value === filtros.frequencia)}
+                  onChange={(option) => setFiltros(prev => ({ ...prev, frequencia: option ? String(option.value) : 'todos' }))}
+                  options={FREQUENCIAS_OPTIONS}
+                />
               </div>
+              {temFiltrosAtivos && (
+                <Button variant="outline" size="sm" onClick={limparFiltros} className="flex items-center gap-2 w-full sm:w-auto flex-shrink-0">
+                  <X className="h-4 w-4" />
+                  Limpar
+                </Button>
+              )}
             </div>
           </div>
         )}
@@ -238,12 +256,12 @@ const MeusModelos = () => {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => handleEditarModelo(modelo.id)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Editar Modelo
+                        <Edit className="mr-2 h-5 w-5" />
+                        <span className="text-base">Editar Modelo</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleExcluirModelo(modelo)} className="text-destructive focus:text-destructive">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Excluir
+                        <Trash2 className="mr-2 h-5 w-5" />
+                        <span className="text-base">Excluir</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

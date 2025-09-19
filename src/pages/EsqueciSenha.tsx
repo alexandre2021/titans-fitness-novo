@@ -5,14 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 export default function EsqueciSenha() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [countdown, setCountdown] = useState(60);
-  const { toast } = useToast();
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -38,14 +37,11 @@ export default function EsqueciSenha() {
     setLoading(false);
 
     if (error) {
-      toast({
-        title: "Erro ao redefinir a senha",
+      toast.error("Erro ao redefinir a senha", {
         description: "Ocorreu um erro ao tentar enviar o e-mail de redefinição. Por favor, verifique o e-mail digitado e tente novamente.",
-        variant: "destructive",
       });
     } else {
-      toast({
-        title: "Sucesso",
+      toast.success("Sucesso", {
         description: "Se o e-mail estiver correto, você receberá um link para redefinir sua senha.",
       });
       setEmailSent(true);

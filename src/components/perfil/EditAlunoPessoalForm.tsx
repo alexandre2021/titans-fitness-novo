@@ -16,16 +16,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import { PhoneInput } from "@/components/ui/phone-input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import CustomSelect from "@/components/ui/CustomSelect";
 
 const formSchema = z.object({
   nome_completo: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
@@ -34,6 +28,13 @@ const formSchema = z.object({
   genero: z.string().optional(),
   descricao_pessoal: z.string().optional(),
 });
+
+const GENERO_OPTIONS = [
+  { value: 'masculino', label: 'Masculino' },
+  { value: 'feminino', label: 'Feminino' },
+  { value: 'outro', label: 'Outro' },
+  { value: 'nao_informar', label: 'Prefiro não informar' },
+];
 
 interface AlunoProfileData {
   nome_completo: string;
@@ -50,7 +51,6 @@ interface EditAlunoPessoalFormProps {
 
 export const EditAlunoPessoalForm = ({ profile, onSave }: EditAlunoPessoalFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -102,20 +102,17 @@ export const EditAlunoPessoalForm = ({ profile, onSave }: EditAlunoPessoalFormPr
 
       if (error) throw error;
 
-      toast({
-        title: "Perfil atualizado",
-        description: "Suas informações foram atualizadas com sucesso.",
-      });
+      toast.success("Perfil atualizado", {
+        description: "Suas informações foram atualizadas com sucesso."
+      })
 
       onSave();
       form.reset(values);
     } catch (error) {
       console.error("Error updating profile:", error);
-      toast({
-        title: "Erro",
-        description: error instanceof Error ? error.message : "Erro ao atualizar perfil. Tente novamente.",
-        variant: "destructive",
-      });
+      toast.error("Erro", {
+        description: error instanceof Error ? error.message : "Erro ao atualizar perfil. Tente novamente."
+      })
     } finally {
       setIsLoading(false);
     }
@@ -173,19 +170,15 @@ export const EditAlunoPessoalForm = ({ profile, onSave }: EditAlunoPessoalFormPr
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Gênero</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ''}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="masculino">Masculino</SelectItem>
-                    <SelectItem value="feminino">Feminino</SelectItem>
-                    <SelectItem value="outro">Outro</SelectItem>
-                    <SelectItem value="nao_informar">Prefiro não informar</SelectItem>
-                  </SelectContent>
-                </Select>
+                <FormControl>
+                  <CustomSelect
+                    inputId="genero"
+                    value={GENERO_OPTIONS.find(opt => opt.value === field.value)}
+                    onChange={(option) => field.onChange(option ? option.value : '')}
+                    options={GENERO_OPTIONS}
+                    placeholder="Selecione"
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}

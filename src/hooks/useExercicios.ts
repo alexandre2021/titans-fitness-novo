@@ -3,30 +3,18 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 type Exercicio = Tables<"exercicios">;
 
-interface FiltrosExercicios {
-  grupoMuscular: string;
-  equipamento: string;
-  dificuldade: string;
-}
-
 export const useExercicios = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
   
   const [exerciciosPadrao, setExerciciosPadrao] = useState<Exercicio[]>([]);
   const [exerciciosPersonalizados, setExerciciosPersonalizados] = useState<Exercicio[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [totalPersonalizados, setTotalPersonalizados] = useState(0);
-  
-  const [filtros, setFiltros] = useState<FiltrosExercicios>({
-    grupoMuscular: 'todos',
-    equipamento: 'todos',
-    dificuldade: 'todos'
-  });
 
   // Buscar exercícios padrão
   const fetchExerciciosPadrao = useCallback(async () => {
@@ -52,13 +40,9 @@ export const useExercicios = () => {
       
     } catch (error) {
       console.error('❌ Erro ao buscar exercícios padrão:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os exercícios padrão.",
-        variant: "destructive",
-      });
+      toast.error("Erro ao buscar exercícios", { description: "Não foi possível carregar os exercícios padrão." });
     }
-  }, [toast]);
+  }, []);
 
   // Buscar exercícios personalizados do PT
   const fetchExerciciosPersonalizados = useCallback(async () => {
@@ -123,13 +107,9 @@ export const useExercicios = () => {
       
     } catch (error) {
       console.error('❌ Erro ao buscar exercícios personalizados:', error);
-      toast({
-        title: "Erro", 
-        description: "Não foi possível carregar os exercícios personalizados.",
-        variant: "destructive",
-      });
+      toast.error("Erro ao buscar exercícios", { description: "Não foi possível carregar os exercícios personalizados." });
     }
-  }, [user, toast]);
+  }, [user]);
 
   // Função auxiliar para deletar mídia do Cloudflare
   const deleteMediaFromCloudflare = useCallback(async (fileUrl: string) => {
@@ -222,22 +202,17 @@ export const useExercicios = () => {
       setExerciciosPersonalizados(prev => prev.filter(ex => ex.id !== exercicioId));
       setTotalPersonalizados(prev => prev - 1);
 
-      toast({
-        title: "Sucesso",
-        description: "Exercício excluído com sucesso!",
-      });
+      toast.success("Sucesso", { description: "Exercício excluído com sucesso!" });
 
       console.log(`✅ Exercício ${exercicioId} excluído com sucesso`);
       
     } catch (error) {
       console.error('❌ Erro ao excluir exercício:', error);
-      toast({
-        title: "Erro",
+      toast.error("Erro ao excluir", {
         description: "Não foi possível excluir o exercício. Tente novamente.",
-        variant: "destructive",
-      });
+      })
     }
-  }, [user, toast, deleteMediaFromCloudflare]);
+  }, [user, deleteMediaFromCloudflare]);
 
   // Recarregar dados
   const refetch = useCallback(async () => {
@@ -252,32 +227,32 @@ export const useExercicios = () => {
 
   // Carregar dados iniciais
   useEffect(() => {
-    const loadData = async () => {
-      console.log('🚀 =========================');
-      console.log('🚀 INICIANDO DEBUG DETALHADO');
-      console.log('🚀 =========================');
-      console.log('👤 User object completo:', user);
-      console.log('👤 User ID:', user?.id);
-      console.log('👤 User Email:', user?.email);
-      
-      setLoading(true);
-      
-      // Carregar dados
-      await Promise.all([
-        fetchExerciciosPadrao(),
-        fetchExerciciosPersonalizados()
-      ]);
-      
-      setLoading(false);
-      console.log('✅ =========================');
-      console.log('✅ DEBUG CONCLUÍDO');
-      console.log('✅ =========================');
-    };
-
     if (user) {
+      const loadData = async () => {
+        console.log('🚀 =========================');
+        console.log('🚀 INICIANDO DEBUG DETALHADO');
+        console.log('🚀 =========================');
+        console.log('👤 User object completo:', user);
+        console.log('👤 User ID:', user?.id);
+        console.log('👤 User Email:', user?.email);
+        
+        // Carregar dados
+        await Promise.all([
+          fetchExerciciosPadrao(),
+          fetchExerciciosPersonalizados()
+        ]);
+        
+        setLoading(false);
+        setInitialLoadComplete(true);
+        console.log('✅ =========================');
+        console.log('✅ DEBUG CONCLUÍDO');
+        console.log('✅ =========================');
+      };
       loadData();
     } else {
       console.log('⚠️ Aguardando usuário ser carregado...');
+      setLoading(false);
+      setInitialLoadComplete(true); // Evita spinner infinito no logout
     }
   }, [user, fetchExerciciosPadrao, fetchExerciciosPersonalizados]);
 
@@ -285,8 +260,7 @@ export const useExercicios = () => {
     exerciciosPadrao,
     exerciciosPersonalizados,
     loading,
-    filtros,
-    setFiltros,
+    initialLoadComplete,
     excluirExercicio,
     totalPersonalizados,
     refetch

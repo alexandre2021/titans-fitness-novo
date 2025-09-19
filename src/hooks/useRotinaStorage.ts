@@ -69,11 +69,29 @@ export const useRotinaStorage = (alunoId: string) => {
     let treinosAjustados = [...treinosAtuais];
     let exerciciosAjustados = { ...exerciciosAtuais };
     let isModified = false;
-
+ 
     console.log(`🔍 Frequência: ${frequenciaAntiga || 'nova'} → ${novaFrequencia}`);
-
-    // Se já existem treinos e a frequência mudou
-    if (frequenciaAntiga && frequenciaAntiga !== novaFrequencia && treinosAtuais.length > 0) {
+ 
+    // ✅ CORREÇÃO: Se não há treinos, criar a estrutura inicial.
+    // Isso garante que os treinos existam no storage ANTES de navegar para a próxima etapa.
+    if (treinosAtuais.length === 0) {
+      console.log('✨ Criando estrutura de treinos inicial...');
+      const nomesTreinos = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+      const treinosIniciais: TreinoTemp[] = [];
+      for (let i = 0; i < novaFrequencia; i++) {
+        treinosIniciais.push({
+          id: `treino_${nomesTreinos[i].toLowerCase()}_${Date.now()}_${i}`,
+          nome: `Treino ${nomesTreinos[i]}`,
+          grupos_musculares: [],
+          observacoes: '',
+          ordem: i + 1,
+          tempo_estimado_minutos: 60
+        });
+      }
+      treinosAjustados = treinosIniciais;
+      isModified = true;
+    } else if (frequenciaAntiga && frequenciaAntiga !== novaFrequencia) {
+      // Se já existem treinos e a frequência mudou
       
       if (novaFrequencia < frequenciaAntiga) {
         // Diminuiu: Remover treinos excedentes + seus exercícios
@@ -362,6 +380,20 @@ export const useRotinaStorage = (alunoId: string) => {
     salvarStorage(novoStorage);
   }, [storage, salvarStorage]);
 
+  // Salvar apenas as observações finais da rotina (para o botão Voltar da Revisão)
+  const salvarObservacoesRotina = useCallback(async (observacoes: string): Promise<void> => {
+    if (!storage.configuracao) return;
+
+    const novoStorage = {
+      ...storage,
+      configuracao: {
+        ...storage.configuracao,
+        observacoes_rotina: observacoes
+      }
+    };
+    salvarStorage(novoStorage);
+  }, [storage, salvarStorage]);
+
   // Função para limpar storage
   const limparStorage = useCallback(() => {
     console.log('🧹 Limpando storage completo');
@@ -646,17 +678,11 @@ export const useRotinaStorage = (alunoId: string) => {
       }
       
       console.log("🎉 Todos os exercícios e séries salvos com sucesso!");
-      
-      // ✅ IMPORTANTE: Atualizar o storage local com o draftId para futuras operações
-      const novoStorage = {
-        ...currentStorage,
-        draftId: rotinaId
-      };
-      
-      // ✅ NÃO NAVEGAR AUTOMATICAMENTE - apenas salvar no storage
-      console.log('💾 Atualizando storage local com draftId:', rotinaId);
-      salvarStorage(novoStorage);
-      
+
+      // ✅ CORREÇÃO: Limpar o storage local após salvar o rascunho no banco de dados.
+      // Isso garante que o banco de dados seja a única fonte da verdade para rascunhos.
+      limparStorage();
+
       console.log('🎯 Rascunho salvo com sucesso! ID:', rotinaId);
       return { success: true };
 
@@ -672,7 +698,7 @@ export const useRotinaStorage = (alunoId: string) => {
       
       return { success: false };
     }
-  }, [storage, user, alunoId, salvarStorage]);
+  }, [storage, user, alunoId, limparStorage]);
 
   return {
     storage,
@@ -681,6 +707,7 @@ export const useRotinaStorage = (alunoId: string) => {
     salvarTreinos,
     salvarExerciciosTreino,
     salvarTodosExercicios,
+    salvarObservacoesRotina,
     avancarParaRevisao,
     voltarEtapa,
     limparStorage,

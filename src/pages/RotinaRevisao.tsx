@@ -2,7 +2,7 @@ import { SerieConfig } from '@/types/rotina.types';
 // src/pages/RotinaRevisao.tsx
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useBlocker } from 'react-router-dom';
 import { ChevronLeft, Check, User, Calendar, Target, DollarSign, Clock, Dumbbell, Info, AlertCircle, CheckCircle2, BicepsFlexed, ClipboardType, X, AlertTriangle } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import Modal from 'react-modal';
@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useRotinaStorage } from '@/hooks/useRotinaStorage';
 import { useExercicioLookup } from '@/hooks/useExercicioLookup';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,7 +44,6 @@ type Aluno = Tables<'alunos'>;
 const RotinaRevisao: React.FC = () => {
   const { alunoId } = useParams<{ alunoId: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { user } = useAuth();
   const rotinaStorage = useRotinaStorage(alunoId!);
   const { getExercicioInfo } = useExercicioLookup();
@@ -55,6 +54,7 @@ const RotinaRevisao: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [salvandoRascunho, setSalvandoRascunho] = useState(false);
+  const isNavigatingRef = useRef(false);
 
   const handleCancelClick = () => {
     setShowCancelDialog(true);
@@ -70,6 +70,27 @@ const RotinaRevisao: React.FC = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
+  // Bloqueador de navegação para evitar perda de dados
+  const blocker = useBlocker(
+    () => {
+      if (isNavigatingRef.current) {
+        return false;
+      }
+      // Bloquear se houver qualquer observação adicionada
+      const hasChanges = observacoes.trim().length > 0;
+      return hasChanges;
+    }
+  );
+
+  // Efeito para lidar com o estado do blocker
+  useEffect(() => {
+    if (blocker && blocker.state === 'blocked') {
+      setShowCancelDialog(true);
+    } else if (blocker && blocker.state === 'unblocked') {
+      setShowCancelDialog(false);
+    }
+  }, [blocker]);
+
   // Carregar dados do aluno (sempre no topo)
   useEffect(() => {
     const carregarAluno = async () => {
@@ -81,10 +102,8 @@ const RotinaRevisao: React.FC = () => {
           .eq('id', alunoId)
           .single();
         if (error || !data) {
-          toast({
-            title: "Erro",
+          toast.error("Erro", {
             description: "Não foi possível carregar os dados do aluno.",
-            variant: "destructive"
           });
           navigate('/alunos');
           return;
@@ -98,7 +117,7 @@ const RotinaRevisao: React.FC = () => {
       }
     };
     carregarAluno();
-  }, [alunoId, navigate, toast]);
+  }, [alunoId, navigate]);
 
   const handleSalvarRascunho = async () => {
     setSalvandoRascunho(true);
@@ -107,12 +126,16 @@ const RotinaRevisao: React.FC = () => {
 
       if (success) {
         setShowCancelDialog(false);
-        navigate(`/alunos-rotinas/${alunoId}`);
+        if (blocker && blocker.state === 'blocked') {
+          blocker.proceed();
+        } else {
+          navigate(`/alunos-rotinas/${alunoId}`);
+        }
       } else {
         throw new Error("Falha ao salvar rascunho.");
       }
     } catch (error) {
-      toast({ title: "Erro", description: "Não foi possível salvar o rascunho.", variant: "destructive" });
+      toast.error("Erro", { description: "Não foi possível salvar o rascunho." });
     } finally {
       setSalvandoRascunho(false);
     }
@@ -124,10 +147,8 @@ const RotinaRevisao: React.FC = () => {
     if (!rotinaStorage.storage.configuracao || 
         !rotinaStorage.storage.treinos || 
         !rotinaStorage.storage.exercicios) {
-      toast({
-        title: "Dados incompletos",
+      toast.error("Dados incompletos", {
         description: "Complete todas as etapas antes de finalizar a rotina.",
-        variant: "destructive"
       });
       navigate(`/rotinas-criar/${alunoId}/exercicios`);
       return;
@@ -137,15 +158,13 @@ const RotinaRevisao: React.FC = () => {
       !exercicios[treino.id] || exercicios[treino.id].length === 0
     );
     if (treinosSemExercicios.length > 0) {
-      toast({
-        title: "Exercícios pendentes",
+      toast.error("Exercícios pendentes", {
         description: "Todos os treinos devem ter pelo menos 1 exercício.",
-        variant: "destructive"
       });
       navigate(`/rotinas-criar/${alunoId}/exercicios`);
       return;
     }
-  }, [alunoId, navigate, toast, rotinaStorage.isLoaded, rotinaStorage.storage]);
+  }, [alunoId, navigate, rotinaStorage.isLoaded, rotinaStorage.storage]);
   
   const handleFinalizar = async () => {
     if (!user || !aluno) return;
@@ -154,6 +173,7 @@ const RotinaRevisao: React.FC = () => {
     if (!configuracao || !treinos || !exercicios) return;
 
     setFinalizando(true);
+    isNavigatingRef.current = true;
 
     try {
       // 1. Criar rotina principal
@@ -319,16 +339,32 @@ const RotinaRevisao: React.FC = () => {
 
       // 5. Limpar storage e navegar
       rotinaStorage.limparStorage();
+      console.log('✅ [Passo 4] Finalizando. Storage DEVE estar limpo:', sessionStorage.getItem('rotina_em_criacao'));
 
       navigate(`/alunos-rotinas/${alunoId}`);
 
     } catch (error) {
       console.error('Erro ao finalizar rotina:', error);
-      toast({
-        title: "Erro ao criar rotina",
+      toast.error("Erro ao criar rotina", {
         description: error instanceof Error ? error.message : "Erro inesperado ao salvar a rotina.",
-        variant: "destructive"
       });
+    } finally {
+      setFinalizando(false);
+    }
+  };
+
+  // Voltar para exercícios
+  const handleVoltar = async () => {
+    isNavigatingRef.current = true;
+    setFinalizando(true); // Reutiliza o estado de carregamento do botão "Finalizar"
+    try {
+      // Salva as observações antes de voltar
+      await rotinaStorage.salvarObservacoesRotina(observacoes);
+      console.log('⬅️ [Passo 4 -> 3] Voltando para Exercícios. Storage:', sessionStorage.getItem('rotina_em_criacao'));
+      navigate(`/rotinas-criar/${alunoId}/exercicios`);
+    } catch (error) {
+      console.error('Erro ao salvar observações ao voltar:', error);
+      toast.error("Erro", { description: "Não foi possível salvar as observações." });
     } finally {
       setFinalizando(false);
     }
@@ -338,13 +374,10 @@ const RotinaRevisao: React.FC = () => {
   const handleDescartar = () => {
     // Verificar se está editando um rascunho existente
     const isEditingDraft = !!rotinaStorage.storage.draftId;
-    
-    if (isEditingDraft) {
-      // Apenas navegar de volta sem limpar - preserva o rascunho
-      navigate(`/alunos-rotinas/${alunoId}`);
+
+    if (blocker && blocker.state === 'blocked') {
+      blocker.proceed();
     } else {
-      // Nova rotina - pode limpar tudo
-      // A limpeza agora é feita no início do fluxo, em PaginaRotinas.tsx
       navigate(`/alunos-rotinas/${alunoId}`);
     }
   };
@@ -594,7 +627,7 @@ const RotinaRevisao: React.FC = () => {
       {/* Botões de navegação - Desktop */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 hidden md:flex justify-between z-50 gap-2">
         <div>
-          <Button variant="ghost" onClick={() => navigate(`/rotinas-criar/${alunoId}/exercicios`)} disabled={finalizando || showCancelDialog} className="flex items-center">
+          <Button variant="ghost" onClick={handleVoltar} disabled={finalizando || showCancelDialog} className="flex items-center">
             <ChevronLeft className="h-4 w-4 mr-2" />
             Voltar
           </Button>
@@ -630,7 +663,7 @@ const RotinaRevisao: React.FC = () => {
           {/* Esquerda: Voltar */}
           <Button
             variant="ghost"
-            onClick={() => navigate(`/rotinas-criar/${alunoId}/exercicios`)}
+            onClick={handleVoltar}
             disabled={finalizando}
             size="sm"
             className="px-3"
@@ -676,7 +709,10 @@ const RotinaRevisao: React.FC = () => {
       {/* Modal de Cancelar - React Modal BLOQUEADA */}
       <Modal
         isOpen={showCancelDialog}
-        onRequestClose={() => setShowCancelDialog(false)}
+        onRequestClose={() => {
+          if (blocker && blocker.state === 'blocked') blocker.reset();
+          setShowCancelDialog(false);
+        }}
         shouldCloseOnOverlayClick={true}
         shouldCloseOnEsc={true}
         className="bg-white rounded-lg p-6 max-w-md w-full mx-4 outline-none"

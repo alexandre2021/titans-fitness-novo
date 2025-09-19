@@ -15,7 +15,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Eye, EyeOff, ArrowLeft, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -50,7 +50,6 @@ export default function CadastroAluno() {
   }>({status: 'idle'});
   
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const { user, loading: authLoading } = useAuth();
 
@@ -151,24 +150,21 @@ export default function CadastroAluno() {
     const ptNameFromUrl = searchParams.get('pt');
     const isFromInvite = searchParams.get('ref') === 'convite';
     if (ptNameFromUrl && isFromInvite) {
-      toast({
-        title: "Bem-vindo!",
+      toast.success("Bem-vindo!", {
         description: `${ptNameFromUrl} te convidou para o Titans Fitness! Complete seu cadastro abaixo.`,
-        duration: 5000,
+        duration: 5000
       });
     }
-  }, [authLoading, user, searchParams, validateToken, form, toast]);
+  }, [authLoading, user, searchParams, validateToken, form]);
 
   // ============================================
   // NOVA IMPLEMENTAÇÃO COM EDGE FUNCTION
   // ============================================
   const onSubmit = async (data: FormData) => {
     if (tokenValidation.status !== 'valid' || !tokenValidation.conviteData) {
-      toast({
-        title: "Erro",
-        description: "Token de convite inválido. Não é possível prosseguir com o cadastro.",
-        variant: "destructive",
-      });
+      toast.error("Erro", {
+        description: "Token de convite inválido. Não é possível prosseguir com o cadastro."
+      })
       return;
     }
 
@@ -200,11 +196,9 @@ export default function CadastroAluno() {
 
       if (error) {
         console.error('Erro na Edge Function:', error);
-        toast({
-          title: "Erro no cadastro",
-          description: "Erro interno no servidor. Tente novamente.",
-          variant: "destructive",
-        });
+        toast.error("Erro no cadastro", {
+          description: "Erro interno no servidor. Tente novamente."
+        })
         return;
       }
 
@@ -222,33 +216,28 @@ export default function CadastroAluno() {
           errorMessage = result.error;
         }
 
-        toast({
-          title: "Erro no cadastro",
-          description: errorMessage,
-          variant: "destructive",
-        });
+        toast.error("Erro no cadastro", {
+          description: errorMessage
+        })
         return;
       }
 
       // Sucesso!
       console.log("Cadastro realizado com sucesso!");
       
-      toast({
-        title: "Sucesso!",
+      toast.success("Sucesso!", {
         description: `Cadastro realizado com sucesso! Agora você treina com ${tokenValidation.ptName}. Faça login para começar.`,
-        duration: 5000,
-      });
+        duration: 5000
+      })
 
       // Redirecionar para login
       navigate('/login?message=cadastro_sucesso');
 
     } catch (error) {
       console.error('Erro inesperado no cadastro:', error);
-      toast({
-        title: "Erro",
-        description: "Erro inesperado. Tente novamente.",
-        variant: "destructive",
-      });
+      toast.error("Erro", {
+        description: "Erro inesperado. Tente novamente."
+      })
     } finally {
       setIsLoading(false);
       console.log("=== FIM DO PROCESSO DE CADASTRO ===");

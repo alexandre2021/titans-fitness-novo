@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import Modal from 'react-modal';
 
 const formSchema = z.object({
@@ -35,7 +35,6 @@ export const PasswordChangeSection = () => {
     nova: false,
     confirmar: false,
   });
-  const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -80,9 +79,8 @@ export const PasswordChangeSection = () => {
 
       if (updateError) throw updateError;
 
-      toast({
-        title: "Senha alterada",
-        description: "Sua senha foi alterada com sucesso.",
+      toast.success("Senha alterada", {
+        description: "Sua senha foi alterada com sucesso."
       });
 
       form.reset();
@@ -94,10 +92,8 @@ export const PasswordChangeSection = () => {
       }
       
       console.error('Error changing password:', error);
-      toast({
-        title: "Erro ao alterar senha",
-        description: errorMessage,
-        variant: "destructive",
+      toast.error("Erro ao alterar senha", {
+        description: errorMessage
       });
     } finally {
       setIsLoading(false);

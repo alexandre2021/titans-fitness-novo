@@ -8,12 +8,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectScrollUpButton, SelectScrollDownButton } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useRotinaStorage } from '@/hooks/useRotinaStorage';
 import { supabase } from '@/integrations/supabase/client';
+import CustomSelect from "@/components/ui/CustomSelect";
 import { 
   ConfiguracaoRotina, 
   OBJETIVOS, 
@@ -27,10 +27,15 @@ import {
   TreinoTemp
 } from '@/types/rotina.types';
 
+const OBJETIVOS_OPTIONS = OBJETIVOS.map(o => ({ value: o, label: o }));
+const DIFICULDADES_OPTIONS = DIFICULDADES.map(d => ({ value: d, label: d }));
+const FORMAS_PAGAMENTO_OPTIONS = FORMAS_PAGAMENTO.map(f => ({ value: f, label: f }));
+const DURACAO_OPTIONS = Array.from({ length: 52 }, (_, i) => ({ value: String(i + 1), label: `${i + 1} semana${i > 0 ? 's' : ''}` }));
+const TREINOS_OPTIONS = Array.from({ length: 7 }, (_, i) => ({ value: String(i + 1), label: `${i + 1}x / semana` }));
+
 const RotinaConfiguracao = () => {
   const { alunoId } = useParams<{ alunoId: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const rotinaStorage = useRotinaStorage(alunoId!);
   const { isLoaded: isStorageLoaded } = rotinaStorage;
   // Estados permanecem os mesmos
@@ -41,11 +46,7 @@ const RotinaConfiguracao = () => {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [salvandoRascunho, setSalvandoRascunho] = useState(false);
   
-  // Controle para evitar múltiplas execuções
-  const [isProcessingRascunho, setIsProcessingRascunho] = useState(false);
-  
-  // ✅ NOVA FLAG: Para desabilitar blocker temporariamente
-  const [allowNavigation, setAllowNavigation] = useState(false);
+  const isNavigatingRef = useRef(false);
   
   const [form, setForm] = useState<ConfiguracaoRotina>({
     nome: '',
@@ -118,10 +119,8 @@ const RotinaConfiguracao = () => {
           .single();
 
         if (error || !alunoData) {
-          toast({
-            title: "Erro",
+          toast.error("Erro", {
             description: "Não foi possível carregar os dados do aluno.",
-            variant: "destructive"
           });
           navigate('/alunos');
           return;
@@ -152,10 +151,8 @@ const RotinaConfiguracao = () => {
 
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
-        toast({
-          title: "Erro",
+        toast.error("Erro", {
           description: "Erro inesperado ao carregar dados.",
-          variant: "destructive"
         });
       } finally {
         setLoading(false);
@@ -163,10 +160,10 @@ const RotinaConfiguracao = () => {
     };
 
     carregarDados();
-  }, [alunoId, navigate, toast, isStorageLoaded, rotinaStorage.storage.configuracao]);
+  }, [alunoId, navigate, isStorageLoaded, rotinaStorage.storage.configuracao]);
 
   // Validar formulário
-  const validarForm = (): boolean => {
+  const validarForm = (): { [key: string]: string } => {
     const novosErros: {[key: string]: string} = {};
 
     if (!form.nome || form.nome.trim().length === 0) {
@@ -193,40 +190,39 @@ const RotinaConfiguracao = () => {
       novosErros.valor_total = `Valor deve ser maior ou igual a ${LIMITES.VALOR_MIN}`;
     }
 
-    setErros(novosErros);
-    return Object.keys(novosErros).length === 0;
+    return novosErros;
   };
 
   // Salvar e avançar
   const handleProximo = async () => {
     console.log('🔍 Validando formulário...');
-    const isValid = validarForm();
+    const validationErrors = validarForm();
+    setErros(validationErrors);
+    const isValid = Object.keys(validationErrors).length === 0;
     console.log('📋 Resultado da validação:', isValid);
-    console.log('❌ Erros encontrados:', erros);
+    console.log('❌ Erros encontrados:', validationErrors);
     
     if (!isValid) {
       console.log('🚨 Formulário inválido - parando execução');
-      toast({
-        title: "Dados inválidos",
+      toast.error("Dados inválidos", {
         description: "Por favor, corrija os erros antes de continuar.",
-        variant: "destructive"
       });
       return;
     }
     
     console.log('✅ Formulário válido - prosseguindo');
     setSalvando(true);
+    isNavigatingRef.current = true;
     try {
       await rotinaStorage.salvarConfiguracao(form);
       console.log('✅ Configuração salva:', form);
       console.log('✅ Storage após salvar:', rotinaStorage.storage);
+      console.log('➡️ [Passo 1 -> 2] Saindo da Configuração. Storage:', sessionStorage.getItem('rotina_em_criacao'));
       navigate(`/rotinas-criar/${alunoId}/treinos`);
     } catch (error) {
       console.error('Erro ao salvar:', error);
-      toast({
-        title: "Erro",
+      toast.error("Erro", {
         description: "Erro ao salvar configuração.",
-        variant: "destructive"
       });
     } finally {
       setSalvando(false);
@@ -236,18 +232,12 @@ const RotinaConfiguracao = () => {
   // Voltar para lista de rotinas
   const handleDescartar = () => {
     const isEditingDraft = !!rotinaStorage.storage.draftId;
-    
-    // ✅ Habilitar navegação antes de navegar
-    setAllowNavigation(true);
-    
-    setTimeout(() => {
-      if (isEditingDraft) {
-        // Apenas navegar de volta sem limpar - preserva o rascunho      
-      } else {
-        // Nova rotina - pode limpar tudo
-      }
+
+    if (blocker && blocker.state === 'blocked') {
+      blocker.proceed();
+    } else {
       navigate(`/alunos-rotinas/${alunoId}`);
-    }, 10);
+    }
   };
 
   const handleCancelClick = () => {
@@ -256,35 +246,17 @@ const RotinaConfiguracao = () => {
 
   // NOVA IMPLEMENTAÇÃO: handleSalvarRascunho com debug detalhado
   const handleSalvarRascunho = async () => {
-    console.log('🚀 === INÍCIO handleSalvarRascunho ===');
-    
-    // Proteção: Evitar múltiplas execuções simultâneas
-    if (isProcessingRascunho || salvandoRascunho) {
-      console.log('🚫 Já está processando rascunho, ignorando clique adicional');
-      return;
-    }
-
-    console.log('✅ Passando pelas verificações iniciais');
-    
-    setIsProcessingRascunho(true);
     setSalvandoRascunho(true);
-    
-    console.log('✅ Estados atualizados para "processando"');
 
     try {
       // Usar dados atuais do formulário
-      console.log('📝 Dados do formulário atual:', form);
       const configParaSalvar = { ...form };
       
       if (!configParaSalvar.nome.trim()) {
-        console.log('⚠️ Nome vazio, usando nome padrão');
         configParaSalvar.nome = `Rascunho de Rotina (${new Date().toLocaleDateString()})`;
       }
 
-      console.log('💾 Configuração final para salvar:', configParaSalvar);
-
       // Criar treinos iniciais
-      console.log('🏗️ Criando treinos iniciais...');
       const treinosIniciais: TreinoTemp[] = [];
       const nomesTreinos = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
       const frequencia = configParaSalvar.treinos_por_semana || 0;
@@ -298,84 +270,46 @@ const RotinaConfiguracao = () => {
         });
       }
       
-      console.log('✅ Treinos iniciais criados:', treinosIniciais);
-
       // Chamar função de salvamento
-      console.log('🔄 Chamando rotinaStorage.salvarComoRascunho...');
-      
       const resultado = await rotinaStorage.salvarComoRascunho({ 
         configuracao: configParaSalvar,
         treinos: treinosIniciais,
         exercicios: {}
       });
       
-      console.log('📊 Resultado do salvamento:', resultado);
-
       if (resultado.success) {
-        console.log('✅ Rascunho salvo com sucesso! Fechando modal...');
         
         // Fechar modal primeiro
         setShowCancelDialog(false);
-        console.log('✅ Modal fechado');
-        
-        // ✅ SOLUÇÃO CORRETA: Permitir navegação e navegar
-        console.log('🧭 Habilitando navegação...');
-        setAllowNavigation(true);
-        
-        // Usar setTimeout para garantir que o state foi atualizado
-        setTimeout(() => {
-          console.log('➡️ Navegando para lista de rotinas...');
+
+        if (blocker && blocker.state === 'blocked') {
+          blocker.proceed();
+        } else {
           navigate(`/alunos-rotinas/${alunoId}`, { replace: true });
-        }, 10);
-        
-        console.log('✅ Navegação preparada');
+        }
         
       } else {
-        console.error('❌ Salvamento falhou');
         throw new Error("Falha ao salvar rascunho.");
       }
     } catch (error) {
-      console.error('❌ ERRO CAPTURADO em handleSalvarRascunho:', error);
-      
-      // Log detalhado do erro
-      if (error instanceof Error) {
-        console.error('❌ Tipo do erro:', error.constructor.name);
-        console.error('❌ Mensagem:', error.message);
-        console.error('❌ Stack:', error.stack);
-      }
-      
-      toast({ 
-        title: "Erro ao salvar", 
-        description: error instanceof Error ? error.message : "Não foi possível salvar o rascunho.", 
-        variant: "destructive" 
-      });
+      toast.error("Erro ao salvar", {
+        description: error instanceof Error ? error.message : "Não foi possível salvar o rascunho."
+      })
     } finally {
-      console.log('🔄 Executando finally block...');
-      
       // Sempre limpar estados, independente do resultado
       setSalvandoRascunho(false);
-      setIsProcessingRascunho(false);
-      
-      console.log('✅ Estados limpos no finally');
-      console.log('🏁 === FIM handleSalvarRascunho ===');
     }
   };
 
   // Bloqueador CONDICIONAL - Com proteção contra múltiplas instâncias
   const blocker = useBlocker(
-    ({ nextLocation }) => {
-      // Se allowNavigation está true, não bloqueia
-      if (allowNavigation) {
+    () => {
+      if (isNavigatingRef.current) {
         return false;
       }
-      
-      // Se não há dados para proteger, não bloqueia
-      if (!form.nome && !form.objetivo) {
-        return false;
-      }
-      
-      // Bloqueia apenas navegações fora do fluxo de criação
-      return !nextLocation.pathname.startsWith(`/rotinas-criar/${alunoId}/`);
+      // Bloqueia se o formulário foi preenchido
+      const hasChanges = form.nome.trim().length > 0 || !!form.objetivo;
+      return hasChanges;
     }
   );
 
@@ -477,21 +411,15 @@ const RotinaConfiguracao = () => {
               <Label htmlFor="objetivo">
                 Objetivo <span className="text-red-500">*</span>
               </Label>
-              <Select
-                value={form.objetivo}
-                onValueChange={(value) => setForm(prev => ({ ...prev, objetivo: value as Objetivo }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o objetivo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {OBJETIVOS.map(objetivo => (
-                    <SelectItem key={objetivo} value={objetivo}>
-                      {objetivo}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <CustomSelect
+                inputId="objetivo"
+                value={OBJETIVOS_OPTIONS.find(opt => opt.value === form.objetivo)}
+                onChange={(option) => setForm(prev => ({ ...prev, objetivo: option ? option.value as Objetivo : '' as Objetivo }))}
+                options={OBJETIVOS_OPTIONS}
+                placeholder="Selecione o objetivo"
+                menuPortalTarget={document.body}
+                styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+              />
               {erros.objetivo && <p className="text-sm text-red-500">{erros.objetivo}</p>}
             </div>
 
@@ -499,21 +427,15 @@ const RotinaConfiguracao = () => {
               <Label htmlFor="dificuldade">
                 Dificuldade <span className="text-red-500">*</span>
               </Label>
-              <Select
-                value={form.dificuldade}
-                onValueChange={(value) => setForm(prev => ({ ...prev, dificuldade: value as Dificuldade }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a dificuldade" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DIFICULDADES.map(dificuldade => (
-                    <SelectItem key={dificuldade} value={dificuldade}>
-                      {dificuldade}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <CustomSelect
+                inputId="dificuldade"
+                value={DIFICULDADES_OPTIONS.find(opt => opt.value === form.dificuldade)}
+                onChange={(option) => setForm(prev => ({ ...prev, dificuldade: option ? option.value as Dificuldade : '' as Dificuldade }))}
+                options={DIFICULDADES_OPTIONS}
+                placeholder="Selecione a dificuldade"
+                menuPortalTarget={document.body}
+                styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+              />
               {erros.dificuldade && <p className="text-sm text-red-500">{erros.dificuldade}</p>}
             </div>
           </div>
@@ -524,27 +446,14 @@ const RotinaConfiguracao = () => {
               <Label htmlFor="duracao_semanas">
                 Duração (semanas) <span className="text-red-500">*</span>
               </Label>
-              <Select
-                value={form.duracao_semanas.toString()}
-                onValueChange={(value) => setForm(prev => ({ ...prev, duracao_semanas: parseInt(value) }))}
-              >
-                <SelectTrigger id="duracao_semanas" className={erros.duracao_semanas ? 'border-red-500' : ''}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectScrollUpButton>
-                    <ChevronUp />
-                  </SelectScrollUpButton>
-                  {Array.from({ length: 52 }, (_, i) => i + 1).map(semana => (
-                    <SelectItem key={semana} value={semana.toString()}>
-                      {semana} semana{semana > 1 ? 's' : ''}
-                    </SelectItem>
-                  ))}
-                  <SelectScrollDownButton>
-                    <ChevronDown />
-                  </SelectScrollDownButton>
-                </SelectContent>
-              </Select>
+              <CustomSelect
+                inputId="duracao_semanas"
+                value={DURACAO_OPTIONS.find(opt => opt.value === String(form.duracao_semanas))}
+                onChange={(option) => setForm(prev => ({ ...prev, duracao_semanas: option ? parseInt(option.value) : 1 }))}
+                options={DURACAO_OPTIONS}
+                menuPortalTarget={document.body}
+                styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+              />
               {erros.duracao_semanas && <p className="text-sm text-red-500">{erros.duracao_semanas}</p>}
             </div>
 
@@ -552,21 +461,14 @@ const RotinaConfiguracao = () => {
               <Label htmlFor="treinos_por_semana">
                 Treinos por semana <span className="text-red-500">*</span>
               </Label>
-              <Select
-                value={form.treinos_por_semana.toString()}
-                onValueChange={(value) => setForm(prev => ({ ...prev, treinos_por_semana: parseInt(value) }))}
-              >
-                <SelectTrigger id="treinos_por_semana" className={erros.treinos_por_semana ? 'border-red-500' : ''}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 7 }, (_, i) => i + 1).map(treino => (
-                    <SelectItem key={treino} value={treino.toString()}>
-                      {treino} treino{treino > 1 ? 's' : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <CustomSelect
+                inputId="treinos_por_semana"
+                value={TREINOS_OPTIONS.find(opt => opt.value === String(form.treinos_por_semana))}
+                onChange={(option) => setForm(prev => ({ ...prev, treinos_por_semana: option ? parseInt(option.value) : 1 }))}
+                options={TREINOS_OPTIONS}
+                menuPortalTarget={document.body}
+                styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+              />
               {erros.treinos_por_semana && <p className="text-sm text-red-500">{erros.treinos_por_semana}</p>}
             </div>
           </div>
@@ -633,21 +535,14 @@ const RotinaConfiguracao = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="forma_pagamento">Forma de Pagamento</Label>
-                    <Select
-                      value={form.forma_pagamento}
-                      onValueChange={(value) => setForm(prev => ({ ...prev, forma_pagamento: value as FormaPagamento }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {FORMAS_PAGAMENTO.map(forma => (
-                          <SelectItem key={forma} value={forma}>
-                            {forma}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <CustomSelect
+                      inputId="forma_pagamento"
+                      value={FORMAS_PAGAMENTO_OPTIONS.find(opt => opt.value === form.forma_pagamento)}
+                      onChange={(option) => setForm(prev => ({ ...prev, forma_pagamento: option ? option.value as FormaPagamento : 'PIX' }))}
+                      options={FORMAS_PAGAMENTO_OPTIONS}
+                      menuPortalTarget={document.body}
+                      styles={{ menuPortal: (base) => ({ ...base, zIndex: 9999 }) }}
+                    />
                   </div>
                 </div>
 
@@ -754,13 +649,13 @@ const RotinaConfiguracao = () => {
           <Button 
             variant="outline" 
             onClick={handleDescartar} 
-            disabled={salvandoRascunho || isProcessingRascunho}
+            disabled={salvandoRascunho}
           >
             Descartar Alterações
           </Button>
           <Button 
             onClick={handleSalvarRascunho} 
-            disabled={salvandoRascunho || isProcessingRascunho}
+            disabled={salvandoRascunho}
             className="relative"
           >
             {salvandoRascunho ? (

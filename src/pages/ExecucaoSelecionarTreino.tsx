@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Play, CheckCircle, Clock, Target, Calendar, ListChecks, User, Shield } from 'lucide-react';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from "sonner";
 import { 
   Rotina, 
   UltimaSessao, 
@@ -30,7 +30,6 @@ export default function ExecucaoSelecionarTreino() {
   const { rotinaId } = useParams<{ rotinaId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { toast } = useToast();
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
   // Estados
@@ -149,26 +148,22 @@ export default function ExecucaoSelecionarTreino() {
       if (error instanceof Error) {
         errorMessage = error.message;
       }
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: errorMessage,
-      });
+      toast.error("Erro", {
+        description: errorMessage
+      })
       navigate(-1);
     } finally {
       setLoading(false);
     }
-  }, [navigate, toast, buscarUltimaSessao]);
+  }, [navigate, buscarUltimaSessao]);
 
   // ✅ INICIAR SESSÃO
   const handleIniciarSessao = async (sessao: SessaoParaLista) => {
     try {
       if (sessao.status === 'concluida') {
-        toast({
-          variant: "destructive",
-          title: "Sessão Concluída",
-          description: "Esta sessão já foi finalizada e não pode ser executada novamente.",
-        });
+        toast.error("Sessão Concluída", {
+          description: "Esta sessão já foi finalizada e não pode ser executada novamente."
+        })
         return;
       }
 
@@ -190,11 +185,9 @@ export default function ExecucaoSelecionarTreino() {
       navigate(`/execucao-rotina/executar-treino/${sessao.id}`);
     } catch (error) {
       console.error('Erro ao iniciar sessão:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível iniciar a sessão de treino.",
-      });
+      toast.error("Erro", {
+        description: "Não foi possível iniciar a sessão de treino."
+      })
     }
   };
 

@@ -15,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 const formSchema = z.object({
   peso: z.string().optional(),
@@ -34,7 +34,6 @@ interface EditAlunoFisicasFormProps {
 
 export const EditAlunoFisicasForm = ({ profile, onSave }: EditAlunoFisicasFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -74,19 +73,16 @@ export const EditAlunoFisicasForm = ({ profile, onSave }: EditAlunoFisicasFormPr
 
       if (error) throw error;
 
-      toast({
-        title: "Perfil atualizado",
-        description: "Suas informações físicas foram atualizadas com sucesso.",
+      toast.success("Perfil atualizado", {
+        description: "Suas informações físicas foram atualizadas com sucesso."
       });
 
       onSave();
       form.reset(values);
     } catch (error) {
       console.error("Error updating profile:", error);
-      toast({
-        title: "Erro",
-        description: error instanceof Error ? error.message : "Erro ao atualizar perfil. Tente novamente.",
-        variant: "destructive",
+      toast.error("Erro", {
+        description: error instanceof Error ? error.message : "Erro ao atualizar perfil. Tente novamente."
       });
     } finally {
       setIsLoading(false);

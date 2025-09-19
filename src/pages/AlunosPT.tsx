@@ -4,13 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { UserPlus, Users, Plus, Mail, MailCheck, Trash2, Send, ChevronDown, ChevronRight, Search, Filter, X } from "lucide-react";
@@ -18,8 +11,9 @@ import { useAlunos } from "@/hooks/useAlunos";
 import { useAuth } from "@/hooks/useAuth";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { AlunoCard } from "@/components/alunos/AlunoCard";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import CustomSelect from "@/components/ui/CustomSelect";
 
 interface ConvitePendente {
   id: string;
@@ -30,9 +24,22 @@ interface ConvitePendente {
   expires_at: string;
 }
 
+const SITUACAO_OPTIONS = [
+  { value: 'todos', label: 'Todos' },
+  { value: 'ativo', label: 'Ativo' },
+  { value: 'pendente', label: 'Pendente' },
+];
+
+const GENERO_OPTIONS = [
+  { value: 'todos', label: 'Todos' },
+  { value: 'masculino', label: 'Masculino' },
+  { value: 'feminino', label: 'Feminino' },
+  { value: 'outro', label: 'Outro' },
+  { value: 'nao_informar', label: 'Prefiro não informar' },
+];
+
 const AlunosPT = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { user } = useAuth();
   const { alunos, loading, filtros, setFiltros, desvincularAluno } = useAlunos();
   const isDesktop = useMediaQuery("(min-width: 768px)");
@@ -74,17 +81,14 @@ const AlunosPT = () => {
       // Remover da lista local
       setConvitesPendentes(prev => prev.filter(c => c.id !== conviteId));
 
-      toast({
-        title: "Convite cancelado",
-        description: `O convite para ${email} foi cancelado.`,
-      });
+      toast.success("Convite cancelado", {
+        description: `O convite para ${email} foi cancelado.`
+      })
     } catch (error) {
       console.error('Erro ao cancelar convite:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível cancelar o convite.",
-        variant: "destructive",
-      });
+      toast.error("Erro", {
+        description: "Não foi possível cancelar o convite."
+      })
     }
   };
 
@@ -128,12 +132,15 @@ const AlunosPT = () => {
 
   const temFiltrosAtivos = filtros.situacao !== 'todos' || filtros.genero !== 'todos' || filtros.busca !== '';
 
+  const temFiltrosAvancadosAtivos = filtros.situacao !== 'todos' || filtros.genero !== 'todos';
+
   if (loading) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <p className="text-lg text-muted-foreground">Carregando...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-lg text-muted-foreground">Carregando alunos...</p>
           </div>
         </div>
       </div>
@@ -271,21 +278,26 @@ const AlunosPT = () => {
                 />
               </div>
               <Button
-                variant="outline"
-                size="icon"
+                variant="default"
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex-shrink-0 md:hidden"
+                className="flex-shrink-0 md:hidden relative h-10 w-10 rounded-full p-0 [&_svg]:size-6"
                 aria-label="Mostrar filtros"
               >
-                <Filter className="h-4 w-4" />
+                <Filter />
+                {temFiltrosAvancadosAtivos && (
+                  <span className="absolute top-[-2px] left-[-2px] block h-3 w-3 rounded-full bg-secondary ring-2 ring-white" />
+                )}
               </Button>
               <Button
                 variant="outline"
                 onClick={() => setShowFilters(!showFilters)}
-                className="hidden md:flex items-center gap-2"
+                className="hidden md:flex items-center gap-2 relative"
               >
                 <Filter className="h-4 w-4" />
                 Filtros
+                {temFiltrosAvancadosAtivos && (
+                  <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-secondary ring-1 ring-background" />
+                )}
               </Button>
             </div>
 
@@ -294,27 +306,21 @@ const AlunosPT = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="filtro-situacao">Situação</Label>
-                    <Select value={filtros.situacao} onValueChange={value => setFiltros({ ...filtros, situacao: value })}>
-                      <SelectTrigger id="filtro-situacao"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="todos">Todos</SelectItem>
-                        <SelectItem value="ativo">Ativo</SelectItem>
-                        <SelectItem value="pendente">Pendente</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <CustomSelect
+                      inputId="filtro-situacao"
+                      value={SITUACAO_OPTIONS.find(opt => opt.value === filtros.situacao)}
+                      onChange={(option) => setFiltros(prev => ({ ...prev, situacao: option ? String(option.value) : 'todos' }))}
+                      options={SITUACAO_OPTIONS}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="filtro-genero">Gênero</Label>
-                    <Select value={filtros.genero} onValueChange={value => setFiltros({ ...filtros, genero: value })}>
-                      <SelectTrigger id="filtro-genero"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="todos">Todos</SelectItem>
-                        <SelectItem value="masculino">Masculino</SelectItem>
-                        <SelectItem value="feminino">Feminino</SelectItem>
-                        <SelectItem value="outro">Outro</SelectItem>
-                        <SelectItem value="nao_informar">Prefiro não informar</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <CustomSelect
+                      inputId="filtro-genero"
+                      value={GENERO_OPTIONS.find(opt => opt.value === filtros.genero)}
+                      onChange={(option) => setFiltros(prev => ({ ...prev, genero: option ? String(option.value) : 'todos' }))}
+                      options={GENERO_OPTIONS}
+                    />
                   </div>
                   {temFiltrosAtivos && (
                     <div className="flex items-end">

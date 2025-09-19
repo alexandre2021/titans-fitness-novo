@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { useParams, useNavigate, useBlocker } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from "sonner";
 import { Executor } from '@/components/rotina/execucao/Executor';
 import Modal from 'react-modal';
 import { AlertTriangle, X } from 'lucide-react';
@@ -38,7 +38,6 @@ interface AlunoSupabase {
 export default function ExecucaoExecutarTreino() {
   const { sessaoId } = useParams<{ sessaoId: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   // ESTADOS
   const [loading, setLoading] = useState(true);
@@ -122,21 +121,17 @@ export default function ExecucaoExecutarTreino() {
       
       else if (user_type === 'aluno') {
         if (userId !== sessao.aluno_id) {
-          toast({
-            variant: "destructive",
-            title: "Acesso Negado",
-            description: "Você não tem permissão para executar a sessão de outro aluno.",
-          });
+          toast.error("Acesso Negado", {
+            description: "Você não tem permissão para executar a sessão de outro aluno."
+          })
           navigate(-1);
           return null;
         }
 
         if (!sessao.rotinas?.permite_execucao_aluno) {
-          toast({
-            variant: "destructive",
-            title: "Execução não Permitida",
-            description: "Esta rotina não permite execução independente. Fale com seu Personal Trainer.",
-          });
+          toast.error("Execução não Permitida", {
+            description: "Esta rotina não permite execução independente. Fale com seu Personal Trainer."
+          })
           navigate(-1);
           return null;
         }
@@ -166,15 +161,13 @@ export default function ExecucaoExecutarTreino() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
       console.error('Erro ao determinar modo de execução:', errorMessage);
-      toast({
-        variant: "destructive",
-        title: "Erro de Permissão",
-        description: errorMessage,
-      });
+      toast.error("Erro de Permissão", {
+        description: errorMessage
+      })
       navigate(-1);
       return null;
     }
-  }, [navigate, toast]);
+  }, [navigate]);
 
   const loadSessionData = useCallback(async () => {
     if (!sessaoId) return;
@@ -212,11 +205,9 @@ export default function ExecucaoExecutarTreino() {
 
       if (sessaoError || !sessaoRaw) {
         console.error('Erro ao buscar sessão:', sessaoError);
-        toast({
-          variant: "destructive",
-          title: "Erro",
-          description: "Sessão não encontrada",
-        });
+        toast.error("Erro", {
+          description: "Sessão não encontrada"
+        })
         navigate(-1);
         return;
       }
@@ -250,11 +241,9 @@ export default function ExecucaoExecutarTreino() {
 
       if (alunoError || !alunoRaw) {
         console.error('Erro ao buscar aluno:', alunoError);
-        toast({
-          variant: "destructive",
-          title: "Erro",
-          description: "Dados do aluno não encontrados",
-        });
+        toast.error("Erro", {
+          description: "Dados do aluno não encontrados"
+        })
         navigate(-1);
         return;
       }
@@ -289,42 +278,36 @@ export default function ExecucaoExecutarTreino() {
 
     } catch (error) {
       console.error('Erro ao carregar dados da sessão:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Erro ao carregar dados da sessão",
-      });
+      toast.error("Erro", {
+        description: "Erro ao carregar dados da sessão"
+      })
       navigate(-1);
     } finally {
       setLoading(false);
     }
-  }, [sessaoId, navigate, toast, determinarModoExecucao, shallowCompareSessao]);
+  }, [sessaoId, navigate, determinarModoExecucao, shallowCompareSessao]);
 
   const verificarStatusSessao = useCallback((): boolean => {
     if (!sessaoData) return false;
 
     if (sessaoData.status === 'concluida') {
-      toast({
-        variant: "destructive",
-        title: "Sessão Finalizada",
-        description: "Esta sessão já foi concluída e não pode ser executada novamente.",
-      });
+      toast.error("Sessão Finalizada", {
+        description: "Esta sessão já foi concluída e não pode ser executada novamente."
+      })
       navigate(-1);
       return false;
     }
 
     if (sessaoData.status === 'cancelada') {
-      toast({
-        variant: "destructive",
-        title: "Sessão Cancelada",
-        description: "Esta sessão foi cancelada e não pode ser executada.",
-      });
+      toast.error("Sessão Cancelada", {
+        description: "Esta sessão foi cancelada e não pode ser executada."
+      })
       navigate(-1);
       return false;
     }
 
     return true;
-  }, [sessaoData, navigate, toast]);
+  }, [sessaoData, navigate]);
 
   const handleSessaoFinalizada = useCallback(() => {
     if (hasNavigated.current) return;
@@ -415,11 +398,9 @@ export default function ExecucaoExecutarTreino() {
 
         if (error) {
           console.error('Erro ao pausar sessão:', error);
-          toast({
-            variant: "destructive",
-            title: "Erro",
-            description: "Erro ao pausar a sessão. Tente novamente.",
-          });
+          toast.error("Erro", {
+            description: "Erro ao pausar a sessão. Tente novamente."
+          })
           return;
         }
       }
@@ -435,13 +416,11 @@ export default function ExecucaoExecutarTreino() {
       }
     } catch (error) {
       console.error('Erro ao confirmar pausa:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
+      toast.error("Erro", {
         description: "Erro ao processar solicitação. Tente novamente.",
-      });
+      })
     }
-  }, [blocker, sessaoData, toast]);
+  }, [blocker, sessaoData]);
 
   const handleCancelPauseDialog = useCallback(() => {
     console.log('❌ Cancelando saída via botão voltar');

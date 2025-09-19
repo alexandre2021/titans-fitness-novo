@@ -117,7 +117,10 @@ const AlunosParQ = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-center min-h-[400px]">
-          <p className="text-lg text-muted-foreground">Carregando...</p>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-lg text-muted-foreground">Carregando questionário...</p>
+          </div>
         </div>
       </div>
     );
@@ -146,7 +149,7 @@ const AlunosParQ = () => {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Cabeçalho da Página (Apenas para Desktop) */}
       {isDesktop && (
         <div className="flex items-center gap-4">

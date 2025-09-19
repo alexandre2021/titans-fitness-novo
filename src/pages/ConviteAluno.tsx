@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/form";
 import { ArrowLeft, Mail, AlertCircle, CheckCircle, UserX } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 
 
@@ -51,7 +51,6 @@ const ConviteAluno = () => {
   } | null>(null);
  
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { user } = useAuth();
 
 
@@ -136,11 +135,9 @@ const ConviteAluno = () => {
 
   const handleEnviarConvite = async (data: FormData) => {
     if (!user) {
-      toast({
-        title: "Erro",
-        description: "Dados do usuário não encontrados.",
-        variant: "destructive",
-      });
+      toast.error("Erro", {
+        description: "Dados do usuário não encontrados."
+      })
       return;
     }
 

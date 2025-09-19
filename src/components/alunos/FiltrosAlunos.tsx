@@ -2,13 +2,7 @@ import { useState } from 'react';
 import { Search, X, Filter } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import CustomSelect from '@/components/ui/CustomSelect';
 
 interface FiltrosAlunosState {
   busca: string;
@@ -20,6 +14,20 @@ interface FiltrosAlunosProps {
   filtros: FiltrosAlunosState;
   onFiltrosChange: (filtros: FiltrosAlunosState) => void;
 }
+
+const SITUACAO_OPTIONS = [
+  { value: 'todos', label: 'Todos' },
+  { value: 'ativo', label: 'Ativo' },
+  { value: 'pendente', label: 'Pendente' },
+];
+
+const GENERO_OPTIONS = [
+  { value: 'todos', label: 'Todos' },
+  { value: 'masculino', label: 'Masculino' },
+  { value: 'feminino', label: 'Feminino' },
+  { value: 'outro', label: 'Outro' },
+  { value: 'nao_informar', label: 'Prefiro não informar' },
+];
 
 export const FiltrosAlunos: React.FC<FiltrosAlunosProps> = ({ filtros, onFiltrosChange }) => {
   const [showFiltros, setShowFiltros] = useState(false);
@@ -82,39 +90,23 @@ export const FiltrosAlunos: React.FC<FiltrosAlunosProps> = ({ filtros, onFiltros
             {/* Situação */}
             <div className="flex-1">
               <label className="text-sm font-medium mb-2 block">Situação</label>
-              <Select
-                value={filtros.situacao}
-                onValueChange={value => onFiltrosChange({ ...filtros, situacao: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  <SelectItem value="ativo">Ativo</SelectItem>
-                  <SelectItem value="pendente">Pendente</SelectItem>
-                </SelectContent>
-              </Select>
+              <CustomSelect
+                inputId="filtro-situacao"
+                value={SITUACAO_OPTIONS.find(opt => opt.value === filtros.situacao)}
+                onChange={(option) => onFiltrosChange({ ...filtros, situacao: option ? String(option.value) : 'todos' })}
+                options={SITUACAO_OPTIONS}
+              />
             </div>
 
             {/* Gênero */}
             <div className="flex-1">
               <label className="text-sm font-medium mb-2 block">Gênero</label>
-              <Select
-                value={filtros.genero}
-                onValueChange={value => onFiltrosChange({ ...filtros, genero: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  <SelectItem value="masculino">Masculino</SelectItem>
-                  <SelectItem value="feminino">Feminino</SelectItem>
-                  <SelectItem value="outro">Outro</SelectItem>
-                  <SelectItem value="nao_informar">Prefiro não informar</SelectItem>
-                </SelectContent>
-              </Select>
+              <CustomSelect
+                inputId="filtro-genero"
+                value={GENERO_OPTIONS.find(opt => opt.value === filtros.genero)}
+                onChange={(option) => onFiltrosChange({ ...filtros, genero: option ? String(option.value) : 'todos' })}
+                options={GENERO_OPTIONS}
+              />
             </div>
 
             {/* Limpar */}

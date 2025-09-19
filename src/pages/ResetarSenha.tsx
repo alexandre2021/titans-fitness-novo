@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function ResetarSenha() {
@@ -17,7 +17,6 @@ export default function ResetarSenha() {
   const [error, setError] = useState<string | null>(null);
   const [urlError, setUrlError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { toast } = useToast();
 
   useEffect(() => {
     const hash = window.location.hash;
@@ -64,14 +63,11 @@ export default function ResetarSenha() {
     setLoading(false);
 
     if (updateError) {
-      toast({
-        title: "Erro ao redefinir a senha",
+      toast.error("Erro ao redefinir a senha", {
         description: "Não foi possível redefinir sua senha. O link pode ter expirado. Por favor, tente o processo de 'Esqueci a senha' novamente.",
-        variant: "destructive",
       });
     } else {
-      toast({
-        title: "Sucesso!",
+      toast.success("Sucesso!", {
         description: "Sua senha foi redefinida com sucesso. Você já pode fazer o login.",
       });
       navigate("/login");

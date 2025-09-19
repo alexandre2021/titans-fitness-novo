@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Camera, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { formatters } from '@/utils/formatters';
 
 interface AlunoInfo {
@@ -49,7 +49,6 @@ const AlunosAvaliacaoDetalhes = () => {
   const { id, avaliacaoId } = useParams<{ id: string; avaliacaoId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { toast } = useToast();
   
   // Estados principais
   const [aluno, setAluno] = useState<AlunoInfo | null>(null);
@@ -186,10 +185,8 @@ const AlunosAvaliacaoDetalhes = () => {
 
         if (alunoError) {
           console.error('Erro ao buscar aluno:', alunoError);
-          toast({
-            title: "Erro",
-            description: "Aluno não encontrado.",
-            variant: "destructive",
+          toast.error("Erro", {
+            description: "Aluno não encontrado."
           });
           navigate('/alunos');
           return;
@@ -207,10 +204,8 @@ const AlunosAvaliacaoDetalhes = () => {
 
         if (avaliacaoError) {
           console.error('Erro ao buscar avaliação:', avaliacaoError);
-          toast({
-            title: "Erro",
-            description: "Avaliação não encontrada.",
-            variant: "destructive",
+          toast.error("Erro", {
+            description: "Avaliação não encontrada."
           });
           navigate(`/alunos-avaliacoes/${id}`);
           return;
@@ -220,10 +215,8 @@ const AlunosAvaliacaoDetalhes = () => {
 
       } catch (error) {
         console.error('Erro ao buscar dados:', error);
-        toast({
-          title: "Erro",
-          description: "Erro ao carregar dados.",
-          variant: "destructive",
+        toast.error("Erro", {
+          description: "Erro ao carregar dados."
         });
       } finally {
         setLoading(false);
@@ -231,7 +224,7 @@ const AlunosAvaliacaoDetalhes = () => {
     };
 
     fetchDados();
-  }, [id, avaliacaoId, user, navigate, toast]);
+  }, [id, avaliacaoId, user, navigate]);
 
   // Carregar imagens quando avaliação for carregada
   useEffect(() => {

@@ -14,7 +14,7 @@ import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFoo
 import { ArrowLeft, Camera, X, Save, Upload, Eye, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { formatters } from '@/utils/formatters';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -72,7 +72,6 @@ const AlunosAvaliacaoNova = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { toast } = useToast();
   
   // Estados principais
   const [aluno, setAluno] = useState<AlunoInfo | null>(null);
@@ -173,10 +172,8 @@ const AlunosAvaliacaoNova = () => {
 
         if (alunoError) {
           console.error('Erro ao buscar aluno:', alunoError);
-          toast({
-            title: "Erro",
-            description: "Aluno não encontrado.",
-            variant: "destructive",
+          toast.error("Erro", {
+            description: "Aluno não encontrado."
           });
           navigate('/alunos');
           return;
@@ -186,10 +183,8 @@ const AlunosAvaliacaoNova = () => {
 
       } catch (error) {
         console.error('Erro ao buscar dados:', error);
-        toast({
-          title: "Erro",
-          description: "Erro ao carregar dados do aluno.",
-          variant: "destructive",
+        toast.error("Erro", {
+          description: "Erro ao carregar dados do aluno."
         });
       } finally {
         setLoading(false);
@@ -197,7 +192,7 @@ const AlunosAvaliacaoNova = () => {
     };
 
     fetchDados();
-  }, [id, user, navigate, toast]);
+  }, [id, user, navigate]);
 
   const renderAvatar = () => {
     if (!aluno) return null;
@@ -283,10 +278,8 @@ const AlunosAvaliacaoNova = () => {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
       console.error("Erro no upload:", error);
-      toast({
-        title: "Falha no Upload",
-        description: `Erro ao enviar o arquivo: ${errorMessage}`,
-        variant: "destructive"
+      toast.error("Falha no Upload", {
+        description: `Erro ao enviar o arquivo: ${errorMessage}`
       });
       throw error;
     }
@@ -294,7 +287,7 @@ const AlunosAvaliacaoNova = () => {
 
   const salvarAvaliacao = async (data: NovaAvaliacaoForm) => {
     setSaving(true);
-    toast({ title: "Processando", description: "Salvando avaliação e otimizando imagens..." });
+    toast.info("Processando", { description: "Salvando avaliação e otimizando imagens..." });
 
     try {
       const imc = calcularIMC(data.peso, data.altura);
@@ -369,9 +362,8 @@ const AlunosAvaliacaoNova = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Avaliação criada",
-        description: "A avaliação física foi registrada com sucesso.",
+      toast.success("Avaliação criada", {
+        description: "A avaliação física foi registrada com sucesso."
       });
 
       // Voltar para a página de avaliações
@@ -379,10 +371,8 @@ const AlunosAvaliacaoNova = () => {
 
     } catch (error) {
       console.error('Erro ao salvar avaliação:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao salvar a avaliação. Tente novamente.",
-        variant: "destructive",
+      toast.error("Erro", {
+        description: "Erro ao salvar a avaliação. Tente novamente."
       });
     } finally {
       setSaving(false);

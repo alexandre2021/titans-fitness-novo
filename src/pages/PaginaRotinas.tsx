@@ -41,7 +41,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useExercicioLookup } from '@/hooks/useExercicioLookup';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import RotinaDetalhesModal from '@/components/rotina/RotinaDetalhesModal';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { ExercicioRotina, Serie } from '@/types/rotina.types';
@@ -130,7 +130,6 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   const params = useParams<{ id: string }>();
   const { user } = useAuth();
   const { getExercicioInfo } = useExercicioLookup();
-  const { toast } = useToast();
   const isDesktop = useMediaQuery("(min-width: 768px)");
   
   // Deriva o alunoId do contexto de rota (para PT) ou de autenticação (para Aluno)
@@ -159,19 +158,15 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   const handleNovaRotinaClick = async () => {
     // ✅ NOVA VERIFICAÇÃO: Checar se já existe uma rotina ativa ou bloqueada
     if (rotinasAtivas.some(r => r.status === 'Ativa' || r.status === 'Bloqueada')) {
-      toast({
-        title: "Rotina já existe",
+      toast.error("Rotina já existe", {
         description: "Este aluno já possui uma rotina ativa. Finalize ou exclua a rotina atual antes de criar uma nova.",
-        variant: "destructive",
       });
       return;
     }
 
     if (rotinasRascunho.length > 0) {
-      toast({
-        title: "Já existe um rascunho",
+      toast.error("Já existe um rascunho", {
         description: "Finalize ou descarte o rascunho atual antes de criar uma nova rotina.",
-        variant: "destructive",
       });
       return;
     }
@@ -260,9 +255,8 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
 
     } catch (error) {
       console.error("Erro ao carregar rascunho:", error);
-      toast({
-        title: "Erro ao carregar rascunho",
-        variant: "destructive",
+      toast.error("Erro ao carregar rascunho", {
+        description: "Não foi possível carregar o rascunho. Tente novamente.",
       });
       setNavegandoNovaRotina(false);
     }
@@ -291,10 +285,8 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         // Checar erros e tratar
         if (alunoResult.error) {
           console.error('Erro ao buscar aluno:', alunoResult.error);
-          toast({
-            title: "Erro",
+          toast.error("Erro", {
             description: "Aluno não encontrado.",
-            variant: "destructive",
           });
           navigate('/alunos');
           return;
@@ -309,10 +301,8 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
 
       } catch (error) {
         console.error('Erro ao buscar dados:', error);
-        toast({
-          title: "Erro",
+        toast.error("Erro", {
           description: "Erro ao carregar dados do aluno.",
-          variant: "destructive",
         });
       } finally {
         setLoading(false);
@@ -320,7 +310,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
     };
 
     fetchDados();
-  }, [alunoId, user, navigate, toast, modo]);
+  }, [alunoId, user, navigate, modo]);
 
   const renderAvatar = () => {
     if (!aluno) return null;
@@ -445,10 +435,8 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
 
     } catch (error) {
       console.error('Erro ao visualizar PDF:', error);
-      toast({
-        title: "Erro",
+      toast.error("Erro", {
         description: "Não foi possível abrir o PDF da rotina.",
-        variant: "destructive",
       });
     }
   };
@@ -464,10 +452,8 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   
       if (error) {
         console.error(`Erro ao alterar status para ${novoStatus}:`, error);
-        toast({
-          title: "Erro",
+        toast.error("Erro", {
           description: `Não foi possível alterar o status da rotina. Tente novamente.`,
-          variant: "destructive",
         });
       } else {
         // Atualizar lista local
@@ -475,17 +461,14 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
           r.id === rotina.id ? { ...r, status: novoStatus } : r
         ));
         
-        toast({
-          title: `Rotina ${novoStatus === 'Ativa' ? 'Ativada' : 'Bloqueada'}`,
+        toast.success(`Rotina ${novoStatus === 'Ativa' ? 'Ativada' : 'Bloqueada'}`, {
           description: `O status da rotina foi atualizado.`,
         });
       }
     } catch (error) {
       console.error(`Erro inesperado ao alterar status para ${novoStatus}:`, error);
-      toast({
-        title: "Erro",
+      toast.error("Erro", {
         description: "Ocorreu um erro inesperado. Tente novamente.",
-        variant: "destructive",
       });
     } finally {
       setIsUpdatingStatus(false);
@@ -527,10 +510,8 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
 
     } catch (error) {
       console.error("Erro ao excluir rotina:", error);
-      toast({
-        title: "Erro",
+      toast.error("Erro", {
         description: "Não foi possível excluir a rotina. Tente novamente.",
-        variant: "destructive",
       });
     } finally {
       setIsDeleting(false);
@@ -548,14 +529,20 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
+            {isDesktop ? (
+              <Button variant="outline" size="sm" className="ml-auto">
+                Ações <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            ) : (
+              <Button variant="default" className="h-10 w-10 rounded-full p-0 flex-shrink-0 [&_svg]:size-6">
+                <MoreVertical />
+              </Button>
+            )}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => handleConcluidaClick(rotina)}>
-              <Eye className="mr-2 h-4 w-4" />
-              Ver Informações
+              <Eye className="mr-2 h-5 w-5" />
+              <span className="text-base">Ver Informações</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -566,12 +553,12 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0" disabled>
+            <Button variant="ghost" className="h-10 w-10 rounded-full p-0 flex-shrink-0" disabled>
               <MoreVertical className="h-4 w-4 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem disabled>Rotina Cancelada</DropdownMenuItem>
+            <DropdownMenuItem disabled><span className="text-base">Rotina Cancelada</span></DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );
@@ -585,58 +572,58 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
               Ações <ChevronDown className="ml-2 h-4 w-4" />
             </Button>
           ) : (
-            <Button variant="default" className="h-10 w-10 rounded-full p-0 [&_svg]:size-6" disabled={isUpdatingStatus}>
+            <Button variant="default" className="h-10 w-10 rounded-full p-0 flex-shrink-0 [&_svg]:size-6" disabled={isUpdatingStatus}>
               <MoreVertical />
             </Button>
           )}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => handleVerDetalhes(rotina.id)}>
-            <Eye className="mr-2 h-4 w-4" />
-            Detalhes
+            <Eye className="mr-2 h-5 w-5" />
+            <span className="text-base">Detalhes</span>
           </DropdownMenuItem>
           {rotina.status === 'Ativa' && modo === 'personal' && (
             <>
               <DropdownMenuItem onClick={() => handleTreinar(rotina.id)}>
-                <Play className="mr-2 h-4 w-4" />
-                Treinar
+                <Play className="mr-2 h-5 w-5" />
+                <span className="text-base">Treinar</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleUpdateRotinaStatus(rotina, 'Bloqueada')}>
-                <Ban className="mr-2 h-4 w-4" />
-                Bloquear
+                <Ban className="mr-2 h-5 w-5" />
+                <span className="text-base">Bloquear</span>
               </DropdownMenuItem>
               <DropdownMenuItem 
                 onClick={() => handleExcluirRotina(rotina)}
                 className="text-destructive focus:text-destructive"
               >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Excluir
+                <Trash2 className="mr-2 h-5 w-5" />
+                <span className="text-base">Excluir</span>
               </DropdownMenuItem>
             </>
           )}
 
           {rotina.status === 'Ativa' && modo === 'aluno' && (
             <DropdownMenuItem onClick={() => handleTreinar(rotina.id)}>
-              <Play className="mr-2 h-4 w-4" />
-              Treinar
+              <Play className="mr-2 h-5 w-5" />
+              <span className="text-base">Treinar</span>
             </DropdownMenuItem>
           )}
 
           {rotina.status === 'Bloqueada' && modo === 'aluno' && (
-            <DropdownMenuItem disabled>Rotina Bloqueada</DropdownMenuItem>
+            <DropdownMenuItem disabled><span className="text-base">Rotina Bloqueada</span></DropdownMenuItem>
           )}
           {rotina.status === 'Bloqueada' && modo === 'personal' && (
             <>
               <DropdownMenuItem onClick={() => handleUpdateRotinaStatus(rotina, 'Ativa')}>
-                <Activity className="mr-2 h-4 w-4" />
-                Reativar
+                <Activity className="mr-2 h-5 w-5" />
+                <span className="text-base">Reativar</span>
               </DropdownMenuItem>
               <DropdownMenuItem 
                 onClick={() => handleExcluirRotina(rotina)}
                 className="text-destructive focus:text-destructive"
               >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Excluir
+                <Trash2 className="mr-2 h-5 w-5" />
+                <span className="text-base">Excluir</span>
               </DropdownMenuItem>
             </>
           )}
@@ -662,7 +649,10 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-center min-h-[400px]">
-          <p className="text-lg text-muted-foreground">Carregando...</p>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-lg text-muted-foreground">Carregando rotinas...</p>
+          </div>
         </div>
       </div>
     );
@@ -697,7 +687,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
 
   return (
     <>
-      <div className="space-y-6 p-6">
+      <div className="space-y-6">
         {/* Cabeçalho da Página (Apenas para Desktop) */}
         {isDesktop && (
           <div className="flex items-center justify-between">
@@ -891,14 +881,18 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
                                     Ações <ChevronDown className="ml-2 h-4 w-4" />
                                   </Button>
                                 ) : (
-                                  <Button variant="default" className="h-10 w-10 rounded-full p-0 [&_svg]:size-6">
+                                  <Button variant="default" className="h-10 w-10 rounded-full p-0 flex-shrink-0 [&_svg]:size-6">
                                     <MoreVertical />
                                   </Button>
                                 )}
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleContinuarRascunho(rotina.id)}><Play className="mr-2 h-4 w-4" /><span>Continuar</span></DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleExcluirRotina(rotina)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Excluir</span></DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleContinuarRascunho(rotina.id)}>
+                                  <Play className="mr-2 h-5 w-5" /><span className="text-base">Continuar</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleExcluirRotina(rotina)} className="text-destructive focus:text-destructive">
+                                  <Trash2 className="mr-2 h-5 w-5" /><span className="text-base">Excluir</span>
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </CardContent>

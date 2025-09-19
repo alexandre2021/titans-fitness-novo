@@ -5,13 +5,7 @@ import { format, parse, isValid, getDaysInMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 import { cn } from "@/lib/utils";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import CustomSelect from "@/components/ui/CustomSelect";
 
 const useIsMobile = () => {
   const [isMobile, setIsMobile] = React.useState(false);
@@ -106,47 +100,34 @@ export function DatePicker({
 
   const daysInSelectedMonth = (year && month) ? getDaysInMonth(new Date(parseInt(year, 10), parseInt(month, 10) - 1)) : 31;
   const days = Array.from({ length: daysInSelectedMonth }, (_, i) => String(i + 1).padStart(2, "0"));
+  const dayOptions = days.map(d => ({ value: d, label: d }));
+  const yearOptions = years.map(y => ({ value: y, label: y }));
 
   return (
     <div className={cn("grid grid-cols-3 gap-2", className)}>
-      <Select value={day} onValueChange={(val) => handleDateChange("day", val)}>
-        <SelectTrigger aria-label="Dia">
-          <SelectValue placeholder="Dia" />
-        </SelectTrigger>
-        <SelectContent className="max-h-56">
-          {days.map((d) => (
-            <SelectItem key={d} value={d}>
-              {d}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <CustomSelect
+        inputId="date-picker-day"
+        value={dayOptions.find(d => d.value === day)}
+        onChange={(option) => handleDateChange("day", option ? String(option.value) : '')}
+        options={dayOptions}
+        placeholder="Dia"
+      />
 
-      <Select value={month} onValueChange={(val) => handleDateChange("month", val)}>
-        <SelectTrigger aria-label="Mês">
-          <SelectValue placeholder="Mês" />
-        </SelectTrigger>
-        <SelectContent className="max-h-56">
-          {months.map((m) => (
-            <SelectItem key={m.value} value={m.value}>
-              {m.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <CustomSelect
+        inputId="date-picker-month"
+        value={months.find(m => m.value === month)}
+        onChange={(option) => handleDateChange("month", option ? String(option.value) : '')}
+        options={months}
+        placeholder="Mês"
+      />
 
-      <Select value={year} onValueChange={(val) => handleDateChange("year", val)}>
-        <SelectTrigger aria-label="Ano">
-          <SelectValue placeholder="Ano" />
-        </SelectTrigger>
-        <SelectContent className="max-h-56">
-          {years.map((y) => (
-            <SelectItem key={y} value={y}>
-              {y}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <CustomSelect
+        inputId="date-picker-year"
+        value={yearOptions.find(y => y.value === year)}
+        onChange={(option) => handleDateChange("year", option ? String(option.value) : '')}
+        options={yearOptions}
+        placeholder="Ano"
+      />
     </div>
   );
 }

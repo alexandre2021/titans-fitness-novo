@@ -6,7 +6,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Camera, Loader2, Palette, User as UserIcon, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import Modal from 'react-modal';
 import { Slider } from "@/components/ui/slider";
 import { Button } from '@/components/ui/button';
@@ -162,7 +162,6 @@ interface AvatarSectionProps {
 export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfileUpdate, userType }) => {
   const tableName = userType === 'personal_trainer' ? 'personal_trainers' : 'alunos'; // Corrigido para usar a tabela correta
   const { user } = useAuth();
-  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -246,11 +245,11 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
       onProfileUpdate();
       setIsMenuOpen(false); // Fecha o menu de opções se estiver aberto
 
-      toast({ title: "Avatar atualizado com sucesso!" });
+      toast.success("Avatar atualizado com sucesso!");
 
     } catch (error) {
       console.error("Erro ao atualizar avatar:", error);
-      toast({ title: "Erro", description: "Não foi possível atualizar seu avatar.", variant: "destructive" });
+      toast.error("Erro", { description: "Não foi possível atualizar seu avatar." });
     } finally {
       setIsUploading(false);
       setImageSrc(null);
@@ -285,12 +284,12 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
         await supabase.storage.from('avatars').remove([path]);
       }
 
-      toast({ title: "Foto removida", description: "Seu avatar de letra foi restaurado." });
+      toast.success("Foto removida", { description: "Seu avatar de letra foi restaurado." });
       onProfileUpdate();
       setIsMenuOpen(false);
     } catch (error) {
       console.error("Erro ao remover imagem:", error);
-      toast({ title: "Erro", description: "Não foi possível remover sua foto.", variant: "destructive" });
+      toast.error("Erro", { description: "Não foi possível remover sua foto." });
     }
   };
 
@@ -304,12 +303,12 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
 
       if (error) throw error;
 
-      toast({ title: "Cor atualizada", description: "A cor do seu avatar foi alterada." });
+      toast.success("Cor atualizada", { description: "A cor do seu avatar foi alterada." });
       onProfileUpdate();
       setIsColorPickerOpen(false);
     } catch (error) {
       console.error("Erro ao alterar cor:", error);
-      toast({ title: "Erro", description: "Não foi possível alterar a cor.", variant: "destructive" });
+      toast.error("Erro", { description: "Não foi possível alterar a cor." });
     }
   };
 

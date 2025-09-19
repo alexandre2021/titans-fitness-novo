@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Eye, Copy, Edit, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Tables } from "@/integrations/supabase/types";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -17,7 +17,6 @@ type Exercicio = Tables<"exercicios">;
 const DetalhesExercicio = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { user } = useAuth();
   const isMobile = useIsMobile();
   
@@ -183,11 +182,9 @@ const DetalhesExercicio = () => {
         
       } catch (error) {
         console.error('❌ Erro ao carregar exercício:', error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível carregar os detalhes do exercício.",
-          variant: "destructive",
-        });
+        toast.error("Erro", {
+          description: "Não foi possível carregar os detalhes do exercício."
+        })
         navigate('/exercicios-pt');
       } finally {
         setLoading(false);
@@ -195,7 +192,7 @@ const DetalhesExercicio = () => {
     };
 
     fetchExercicio();
-  }, [id, user, navigate, toast, loadSignedUrls]);
+  }, [id, user, navigate, loadSignedUrls]);
 
   const handleCriarCopia = () => {
     if (!exercicio) return;

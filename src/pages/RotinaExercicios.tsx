@@ -1,7 +1,7 @@
 // src/pages/RotinaExercicios.tsx
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useBlocker } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus, Trash2, Clock, X, Check, AlertTriangle } from 'lucide-react';
 import Modal from 'react-modal';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useRotinaStorage } from '@/hooks/useRotinaStorage';
 import { useExercicioLookup } from '@/hooks/useExercicioLookup';
 import { ExercicioRotinaLocal, SerieConfig, TreinoComExercicios } from '@/types/rotina.types';
@@ -26,7 +26,6 @@ import ExercicioModal from '@/components/rotina/exercicios/ExercicioModal';
 const RotinaExerciciosContent: React.FC = () => {
   const { alunoId } = useParams<{ alunoId: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const rotinaStorage = useRotinaStorage(alunoId!);
 
   const {
@@ -45,20 +44,19 @@ const RotinaExerciciosContent: React.FC = () => {
   const [salvando, setSalvando] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [salvandoRascunho, setSalvandoRascunho] = useState(false);
+  const isNavigatingRef = useRef(false);
 
   // Verificar se tem treinos salvos (sempre no topo)
   useEffect(() => {
     if (!rotinaStorage.isLoaded) return;
     if (!rotinaStorage.storage.treinos || rotinaStorage.storage.treinos.length === 0) {
-      toast({
-        title: "Treinos não encontrados",
+      toast.error("Treinos não encontrados", {
         description: "Complete a definição dos treinos antes de configurar os exercícios.",
-        variant: "destructive"
       });
       navigate(`/rotinas-criar/${alunoId}/treinos`);
       return;
     }
-  }, [alunoId, navigate, toast, rotinaStorage.isLoaded, rotinaStorage.storage]);
+  }, [alunoId, navigate, rotinaStorage.isLoaded, rotinaStorage.storage]);
 
   // Limpeza de storage ao sair da página (sempre no topo)
   useEffect(() => {    
@@ -69,6 +67,27 @@ const RotinaExerciciosContent: React.FC = () => {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
+
+  // Bloqueador de navegação para evitar perda de dados
+  const blocker = useBlocker(
+    () => {
+      if (isNavigatingRef.current) {
+        return false;
+      }
+      // Bloquear se houver qualquer exercício adicionado
+      const hasChanges = totalExercicios > 0;
+      return hasChanges;
+    }
+  );
+
+  // Efeito para lidar com o estado do blocker
+  useEffect(() => {
+    if (blocker && blocker.state === 'blocked') {
+      setShowCancelDialog(true);
+    } else if (blocker && blocker.state === 'unblocked') {
+      setShowCancelDialog(false);
+    }
+  }, [blocker]);
 
   // Calcular treinos com exercícios
   const treinosComExercicios = dadosCompletos.treinos.filter((treino: TreinoComExercicios) => 
@@ -97,6 +116,7 @@ const RotinaExerciciosContent: React.FC = () => {
 
     console.log('✅ Requisitos atendidos - prosseguindo');
     setSalvando(true);
+    isNavigatingRef.current = true;
     try {
       // Salvar exercícios antes de avançar
       console.log('💾 Salvando exercícios antes de avançar...');
@@ -121,13 +141,12 @@ const RotinaExerciciosContent: React.FC = () => {
         await rotinaStorage.avancarParaRevisao();
       }
 
+      console.log('➡️ [Passo 3 -> 4] Saindo dos Exercícios. Storage:', sessionStorage.getItem('rotina_em_criacao'));
       navigate(`/rotinas-criar/${alunoId}/revisao`);
     } catch (error) {
       console.error('Erro ao salvar:', error);
-      toast({
-        title: "Erro",
+      toast.error("Erro", {
         description: "Erro ao salvar exercícios.",
-        variant: "destructive"
       });
     } finally {
       setSalvando(false);
@@ -138,13 +157,10 @@ const RotinaExerciciosContent: React.FC = () => {
   const handleDescartar = () => {
     // Verificar se está editando um rascunho existente
     const isEditingDraft = !!rotinaStorage.storage.draftId;
-    
-    if (isEditingDraft) {
-      // Apenas navegar de volta sem limpar - preserva o rascunho
-      navigate(`/alunos-rotinas/${alunoId}`);
+
+    if (blocker && blocker.state === 'blocked') {
+      blocker.proceed();
     } else {
-      // Nova rotina - pode limpar tudo
-      // A limpeza agora é feita no início do fluxo, em PaginaRotinas.tsx
       navigate(`/alunos-rotinas/${alunoId}`);
     }
   };
@@ -170,20 +186,43 @@ const RotinaExerciciosContent: React.FC = () => {
 
       if (success) {
         setShowCancelDialog(false);
-        navigate(`/alunos-rotinas/${alunoId}`);
+        if (blocker && blocker.state === 'blocked') {
+          blocker.proceed();
+        } else {
+          navigate(`/alunos-rotinas/${alunoId}`);
+        }
       } else {
         throw new Error("Falha ao salvar rascunho.");
       }
     } catch (error) {
-      toast({ title: "Erro", description: "Não foi possível salvar o rascunho.", variant: "destructive" });
+      toast.error("Erro", { description: "Não foi possível salvar o rascunho." });
     } finally {
       setSalvandoRascunho(false);
     }
   };
 
   // Voltar para treinos
-  const handleVoltar = () => {
-    navigate(`/rotinas-criar/${alunoId}/treinos`);
+  const handleVoltar = async () => {
+    isNavigatingRef.current = true;
+    setSalvando(true);
+    try {
+      const exerciciosParaSalvar: Record<string, import("@/types/rotina.types").ExercicioRotinaLocal[]> = {};
+      dadosCompletos.treinos.forEach((treino: TreinoComExercicios) => {
+        const exercicios = treino.exercicios;
+        if (exercicios && exercicios.length > 0) {
+          exerciciosParaSalvar[treino.id] = exercicios;
+        }
+      });
+      await rotinaStorage.salvarTodosExercicios(exerciciosParaSalvar);
+
+      console.log('⬅️ [Passo 3 -> 2] Voltando para Treinos. Storage:', sessionStorage.getItem('rotina_em_criacao'));
+      navigate(`/rotinas-criar/${alunoId}/treinos`);
+    } catch (error) {
+      console.error('Erro ao salvar ao voltar:', error);
+      toast.error("Erro", { description: "Não foi possível salvar as alterações." });
+    } finally {
+      setSalvando(false);
+    }
   };
 
   // Função para scroll suave até o card de requisitos
@@ -393,7 +432,7 @@ const RotinaExerciciosContent: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header com breadcrumb */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
@@ -526,7 +565,10 @@ const RotinaExerciciosContent: React.FC = () => {
       {/* Modal de Cancelar - React Modal BLOQUEADA */}
       <Modal
         isOpen={showCancelDialog}
-        onRequestClose={() => setShowCancelDialog(false)}
+        onRequestClose={() => {
+          if (blocker && blocker.state === 'blocked') blocker.reset();
+          setShowCancelDialog(false);
+        }}
         shouldCloseOnOverlayClick={true}
         shouldCloseOnEsc={true}
         className="bg-white rounded-lg p-6 max-w-md w-full mx-4 outline-none"

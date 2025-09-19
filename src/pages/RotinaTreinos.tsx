@@ -1,7 +1,7 @@
 // src/pages/RotinaTreinos.tsx
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useBlocker } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus, Trash2, GripVertical, X, Check, AlertTriangle } from 'lucide-react';
 import Modal from 'react-modal';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useRotinaStorage } from '@/hooks/useRotinaStorage';
 import { TreinoTemp } from '@/types/rotina.types';
 
@@ -43,23 +43,21 @@ const CORES_GRUPOS_MUSCULARES: {[key: string]: string} = {
 const RotinaTreinos = () => {
   const { alunoId } = useParams<{ alunoId: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const rotinaStorage = useRotinaStorage(alunoId!);
 
   const [treinos, setTreinos] = useState<TreinoTemp[]>([]);
   const [salvando, setSalvando] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [salvandoRascunho, setSalvandoRascunho] = useState(false);
+  const isNavigatingRef = useRef(false);
 
   // 🔧 CORRIGIDO: Sempre usar treinos do storage (criados na configuração)
   useEffect(() => {
     if (!rotinaStorage.isLoaded) return;
     
     if (!rotinaStorage.storage.configuracao) {
-      toast({
-        title: "Configuração não encontrada",
+      toast.error("Configuração não encontrada", {
         description: "Complete a configuração antes de definir os treinos.",
-        variant: "destructive"
       });
       navigate(`/rotinas-criar/${alunoId}/configuracao`);
       return;
@@ -92,7 +90,7 @@ const RotinaTreinos = () => {
       console.log('🔄 Criando treinos fallback:', treinosIniciais);
       setTreinos(treinosIniciais);
     }
-  }, [alunoId, navigate, toast, rotinaStorage.isLoaded, rotinaStorage.storage]);
+  }, [alunoId, navigate, rotinaStorage.isLoaded, rotinaStorage.storage]);
 
   // Aviso para saídas externas (fechar aba, refresh)
   useEffect(() => {
@@ -103,6 +101,27 @@ const RotinaTreinos = () => {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
+
+  // Bloqueador de navegação para evitar perda de dados
+  const blocker = useBlocker(
+    () => {
+      if (isNavigatingRef.current) {
+        return false;
+      }
+      // Bloquear se houver qualquer alteração (pelo menos um grupo muscular adicionado)
+      const hasChanges = treinos.some(t => t.grupos_musculares.length > 0);
+      return hasChanges;
+    }
+  );
+
+  // Efeito para lidar com o estado do blocker
+  useEffect(() => {
+    if (blocker && blocker.state === 'blocked') {
+      setShowCancelDialog(true);
+    } else if (blocker && blocker.state === 'unblocked') {
+      setShowCancelDialog(false);
+    }
+  }, [blocker]);
 
   // Adicionar grupo muscular a um treino
   const adicionarGrupoMuscular = (treinoIndex: number, grupo: string) => {
@@ -166,16 +185,16 @@ const RotinaTreinos = () => {
 
     console.log('✅ Requisitos atendidos - prosseguindo');
     setSalvando(true);
+    isNavigatingRef.current = true;
     try {
       // 🎯 IMPORTANTE: Usar salvarTreinos que tem limpeza inteligente
       await rotinaStorage.salvarTreinos(treinos);
+      console.log('➡️ [Passo 2 -> 3] Saindo dos Treinos. Storage:', sessionStorage.getItem('rotina_em_criacao'));
       navigate(`/rotinas-criar/${alunoId}/exercicios`);
     } catch (error) {
       console.error('Erro ao salvar:', error);
-      toast({
-        title: "Erro",
+      toast.error("Erro", {
         description: "Erro ao salvar treinos.",
-        variant: "destructive"
       });
     } finally {
       setSalvando(false);
@@ -186,13 +205,10 @@ const RotinaTreinos = () => {
   const handleDescartar = () => {
     // Verificar se está editando um rascunho existente
     const isEditingDraft = !!rotinaStorage.storage.draftId;
-    
-    if (isEditingDraft) {
-      // Apenas navegar de volta sem limpar - preserva o rascunho
-      navigate(`/alunos-rotinas/${alunoId}`);
+
+    if (blocker && blocker.state === 'blocked') {
+      blocker.proceed();
     } else {
-      // Nova rotina - pode limpar tudo
-      // A limpeza agora é feita no início do fluxo, em PaginaRotinas.tsx
       navigate(`/alunos-rotinas/${alunoId}`);
     }
   };
@@ -208,20 +224,35 @@ const RotinaTreinos = () => {
 
       if (success) {
         setShowCancelDialog(false);
-        navigate(`/alunos-rotinas/${alunoId}`);
+        if (blocker && blocker.state === 'blocked') {
+          blocker.proceed();
+        } else {
+          navigate(`/alunos-rotinas/${alunoId}`);
+        }
       } else {
         throw new Error("Falha ao salvar rascunho.");
       }
     } catch (error) {
-      toast({ title: "Erro", description: "Não foi possível salvar o rascunho.", variant: "destructive" });
+      toast.error("Erro", { description: "Não foi possível salvar o rascunho." });
     } finally {
       setSalvandoRascunho(false);
     }
   };
 
   // Voltar: retorna para etapa de configuração (sem limpar storage)
-  const handleVoltar = () => {
-    navigate(`/rotinas-criar/${alunoId}/configuracao`);
+  const handleVoltar = async () => {
+    isNavigatingRef.current = true;
+    setSalvando(true);
+    try {
+      await rotinaStorage.salvarTreinos(treinos);
+      console.log('⬅️ [Passo 2 -> 1] Voltando para Configuração. Storage:', sessionStorage.getItem('rotina_em_criacao'));
+      navigate(`/rotinas-criar/${alunoId}/configuracao`);
+    } catch (error) {
+      console.error('Erro ao salvar ao voltar:', error);
+      toast.error("Erro", { description: "Não foi possível salvar as alterações." });
+    } finally {
+      setSalvando(false);
+    }
   };
 
   // Função para scroll suave até o card de requisitos
@@ -239,7 +270,7 @@ const RotinaTreinos = () => {
   const configuracao = rotinaStorage.storage.configuracao;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header com breadcrumb */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
@@ -467,7 +498,10 @@ const RotinaTreinos = () => {
       {/* Modal de Cancelar - React Modal BLOQUEADA */}
       <Modal
         isOpen={showCancelDialog}
-        onRequestClose={() => setShowCancelDialog(false)}
+        onRequestClose={() => {
+          if (blocker && blocker.state === 'blocked') blocker.reset();
+          setShowCancelDialog(false);
+        }}
         shouldCloseOnOverlayClick={true}
         shouldCloseOnEsc={true}
         className="bg-white rounded-lg p-6 max-w-md w-full mx-4 outline-none"

@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { 
   AlertTriangle, 
   Trash2, 
@@ -41,7 +41,6 @@ interface AlunoCardProps {
 export const AlunoCard = ({ aluno, onDesvincular }: AlunoCardProps) => {
   const [showUnlinkDialog, setShowUnlinkDialog] = useState(false);
   const [isUnlinking, setIsUnlinking] = useState(false);
-  const { toast } = useToast();
   const navigate = useNavigate();
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
@@ -50,17 +49,14 @@ export const AlunoCard = ({ aluno, onDesvincular }: AlunoCardProps) => {
     const success = await onDesvincular(aluno.id);
     
     if (success) {
-      toast({
-        title: "Aluno desvinculado",
-        description: "O vínculo com o aluno foi removido com sucesso.",
+      toast.success("Aluno desvinculado", {
+        description: "O vínculo com o aluno foi removido com sucesso."
       });
       setShowUnlinkDialog(false);
     } else {
-      toast({
-        title: "Erro",
-        description: "Não foi possível desvincular o aluno. Tente novamente.",
-        variant: "destructive",
-      });
+      toast.error("Erro", {
+        description: "Não foi possível desvincular o aluno. Tente novamente."
+      })
     }
     setIsUnlinking(false);
   };
@@ -127,24 +123,24 @@ export const AlunoCard = ({ aluno, onDesvincular }: AlunoCardProps) => {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => navigate(`/detalhes-aluno/${aluno.id}`)}>
-                  <Eye className="mr-2 h-4 w-4" />
-                  Ver Detalhes
+                  <Eye className="mr-2 h-5 w-5" />
+                  <span className="text-base">Ver Detalhes</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate(`/alunos-rotinas/${aluno.id}`)}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Rotinas
+                  <FileText className="mr-2 h-5 w-5" />
+                  <span className="text-base">Rotinas</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate(`/alunos-avaliacoes/${aluno.id}`)}>
-                  <BarChart3 className="mr-2 h-4 w-4" />
-                  Avaliações
+                  <BarChart3 className="mr-2 h-5 w-5" />
+                  <span className="text-base">Avaliações</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate(`/alunos-parq/${aluno.id}`)}>
-                  <ShieldQuestion className="mr-2 h-4 w-4" />
-                  PAR-Q
+                  <ShieldQuestion className="mr-2 h-5 w-5" />
+                  <span className="text-base">PAR-Q</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setShowUnlinkDialog(true)} className="text-destructive focus:text-destructive">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Desvincular
+                  <Trash2 className="mr-2 h-5 w-5" />
+                  <span className="text-base">Desvincular</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

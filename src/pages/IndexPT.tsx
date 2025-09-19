@@ -24,7 +24,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 
 interface DashboardStats {
@@ -65,7 +65,6 @@ interface ConvitePendente {
 const IndexPT = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>({
@@ -113,16 +112,13 @@ const IndexPT = () => {
       // Remover da lista local
       setConvitesPendentes(prev => prev.filter(c => c.id !== conviteId));
 
-      toast({
-        title: "Convite cancelado",
+      toast.success("Convite cancelado", {
         description: `O convite para ${email} foi cancelado.`,
       });
     } catch (error) {
       console.error('Erro ao cancelar convite:', error);
-      toast({
-        title: "Erro",
+      toast.error("Erro", {
         description: "Não foi possível cancelar o convite.",
-        variant: "destructive",
       });
     }
   };
@@ -382,17 +378,19 @@ const IndexPT = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p>Carregando dashboard...</p>
+      <div className="space-y-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-lg text-muted-foreground">Carregando dashboard...</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Header */}
       {isDesktop && (
         <div>

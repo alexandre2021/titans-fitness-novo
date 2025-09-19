@@ -18,7 +18,7 @@ import Modal from 'react-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import CustomSelect from '@/components/ui/CustomSelect';
 import { Badge } from '@/components/ui/badge';
 import { useRotinaExerciciosContext } from '@/context/useRotinaExerciciosContext';
 import { ExercicioDetalhesModal } from '../execucao/shared/ExercicioDetalhesModal';
@@ -110,6 +110,11 @@ export const ExercicioModal: React.FC = () => {
     atualizarFiltro('equipamento', 'todos');
   };
 
+  // Função para remover um filtro específico
+  const removerFiltro = (filtro: keyof typeof filtros) => {
+    atualizarFiltro(filtro, 'todos');
+  };
+
   // Confirmar seleção e adicionar exercício
   const handleConfirmar = () => {
     if (!isSelecaoValida()) return;
@@ -133,6 +138,15 @@ export const ExercicioModal: React.FC = () => {
   const equipamentosDisponiveis = Array.from(
     new Set(exerciciosFiltrados.map(ex => ex.equipamento).filter(Boolean))
   ).sort();
+
+  // Options for CustomSelect
+  const GRUPO_MUSCULAR_OPTIONS = [{ value: 'todos', label: 'Todos os grupos' }, ...gruposFiltro.map((g: string) => ({ value: g, label: g }))]
+  const TIPO_OPTIONS = [
+    { value: 'todos', label: 'Todos' },
+    { value: 'padrao', label: 'Padrão' },
+    { value: 'personalizado', label: 'Personalizado' }
+  ]
+  const EQUIPAMENTO_OPTIONS = [{ value: 'todos', label: 'Todos' }, ...equipamentosDisponiveis.map((e: string) => ({ value: e, label: e }))]
 
   return (
     <>
@@ -209,6 +223,34 @@ export const ExercicioModal: React.FC = () => {
               </Button>
             </div>
 
+            {/* Filtros Ativos */}
+            {temFiltrosAtivos && (
+              <div className="pt-3 border-t border-gray-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <Filter className="h-3.5 w-3.5 text-gray-500" />
+                  <span className="text-xs font-medium text-gray-600">Filtros Ativos:</span>
+                </div>
+                <div className="flex flex-wrap gap-2 items-center">
+                  {Object.entries(filtros).map(([key, value]) => {
+                    if (value && value !== 'todos' && key !== 'busca') {
+                      return (
+                        <Badge key={key} variant="secondary" className="pl-2 pr-1 py-1 text-sm bg-blue-100 text-blue-800">
+                          {String(value)}
+                          <button onClick={() => removerFiltro(key as keyof typeof filtros)} className="ml-1.5 p-0.5 rounded-full hover:bg-blue-200">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      );
+                    }
+                    return null;
+                  })}
+                  <Button variant="ghost" size="sm" onClick={limparFiltros} className="h-auto px-2 py-1 text-xs text-blue-600 hover:text-blue-800">
+                    Limpar tudo
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Busca + Botão Filtros */}
             <div className="flex flex-col sm:flex-row gap-4">
               {/* Busca principal */}
@@ -224,7 +266,7 @@ export const ExercicioModal: React.FC = () => {
               
               {/* Botão Filtros */}
               <Button
-                variant="outline"
+                variant="default"
                 onClick={() => setShowFiltros(prev => !prev)}
                 className="flex items-center gap-2"
               >
@@ -235,85 +277,61 @@ export const ExercicioModal: React.FC = () => {
 
             {/* Filtros avançados */}
             {showFiltros && (
-              <div className={`flex flex-col sm:flex-row gap-4 ${temFiltrosAtivos ? 'items-start' : 'items-end'}`}>
+              <div className="flex flex-col sm:flex-row gap-4 items-end pt-3 border-t border-gray-200">
                 {/* Filtro de Grupo Muscular */}
                 {mostrarFiltroGrupo && (
                   <div className="flex-1 space-y-2">
                     <Label className="text-sm font-medium">Grupo Muscular</Label>
-                    <Select
-                      value={filtros.grupo_muscular || 'todos'}
-                      onValueChange={(value) => atualizarFiltro('grupo_muscular', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="todos">Todos os grupos</SelectItem>
-                        {gruposFiltro.map((grupo: string) => (
-                          <SelectItem key={String(grupo)} value={grupo}>
-                            {grupo}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <CustomSelect
+                      inputId="filtro-grupo-muscular"
+                      value={GRUPO_MUSCULAR_OPTIONS.find(opt => opt.value === filtros.grupo_muscular)}
+                      onChange={(option) => atualizarFiltro('grupo_muscular', option ? String(option.value) : 'todos')}
+                      options={GRUPO_MUSCULAR_OPTIONS}
+                      menuPortalTarget={document.body}
+                      styles={{ 
+                        menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                        menu: (base) => ({ ...base, maxHeight: '240px', overflowY: 'auto' })
+                      }}
+                    />
                   </div>
                 )}
 
                 {/* Filtro Tipo */}
                 {temExerciciosPersonalizados && (
                   <div className="flex-1 space-y-2">
-                    <Label className="text-sm font-medium">Tipo</Label>
-                    <Select
-                      value={filtros.tipo}
-                      onValueChange={(value) => atualizarFiltro('tipo', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="todos">Todos</SelectItem>
-                        <SelectItem value="padrao">Padrão</SelectItem>
-                        <SelectItem value="personalizado">Personalizado</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label className="text-sm font-medium">Tipo de Exercício</Label>
+                    <div className="flex gap-2">
+                      {TIPO_OPTIONS.map(opt => (
+                        <Button
+                          key={opt.value}
+                          type="button"
+                          variant={filtros.tipo === opt.value ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => atualizarFiltro('tipo', opt.value)}
+                          className="flex-1"
+                        >
+                          {opt.label}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
                 )}
 
                 {/* Equipamento */}
                 <div className="flex-1 space-y-2">
                   <Label className="text-sm font-medium">Equipamento</Label>
-                  <Select
-                    value={filtros.equipamento}
-                    onValueChange={(value) => atualizarFiltro('equipamento', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todos">Todos</SelectItem>
-                      {equipamentosDisponiveis.map((equipamento: string) => (
-                        <SelectItem key={String(equipamento)} value={equipamento}>
-                          {equipamento}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <CustomSelect
+                    inputId="filtro-equipamento"
+                    value={EQUIPAMENTO_OPTIONS.find(opt => opt.value === filtros.equipamento)}
+                    onChange={(option) => atualizarFiltro('equipamento', option ? String(option.value) : 'todos')}
+                    options={EQUIPAMENTO_OPTIONS}
+                    menuPortalTarget={document.body}
+                    styles={{ 
+                      menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                      menu: (base) => ({ ...base, maxHeight: '240px', overflowY: 'auto' })
+                    }}
+                  />
                 </div>
-
-                {/* Botão Limpar */}
-                {temFiltrosAtivos && (
-                  <div className="flex items-end">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={limparFiltros}
-                      className="flex items-center gap-2"
-                    >
-                      <X className="h-4 w-4" />
-                      Limpar
-                    </Button>
-                  </div>
-                )}
               </div>
             )}
 

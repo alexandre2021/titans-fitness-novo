@@ -1,7 +1,7 @@
 import { useState, useEffect, FormEvent, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
 
@@ -15,21 +15,13 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  SelectScrollUpButton,
-  SelectScrollDownButton,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useExercicioLookup } from "@/hooks/useExercicioLookup";
 import { SerieSimplesModelo } from "@/components/rotinasModelo/SerieSimplesModelo";
 import { SerieCombinadaModelo } from "@/components/rotinasModelo/SerieCombinadaModelo";
 import { ExercicioModalModelo } from "@/components/rotinasModelo/ExercicioModalModelo";
+import CustomSelect from "@/components/ui/CustomSelect";
 
 // --- Constantes ---
 const OBJETIVOS = ['Ganho de massa', 'Emagrecimento', 'Definição muscular', 'Condicionamento físico', 'Reabilitação', 'Performance esportiva'];
@@ -47,6 +39,11 @@ const CORES_GRUPOS_MUSCULARES: { [key: string]: string } = {
   'Glúteos': 'bg-violet-100 text-violet-800',
   'Panturrilha': 'bg-indigo-100 text-indigo-800'
 };
+
+const OBJETIVOS_OPTIONS = OBJETIVOS.map(o => ({ value: o, label: o }));
+const DIFICULDADES_OPTIONS = DIFICULDADES.map(d => ({ value: d, label: d }));
+const FREQUENCIAS_OPTIONS = FREQUENCIAS.map(f => ({ value: String(f), label: `${f}x / semana` }));
+const DURACAO_OPTIONS = Array.from({ length: 52 }, (_, i) => i + 1).map(semana => ({ value: String(semana), label: `${semana} semana${semana > 1 ? 's' : ''}` }));
 
 // --- Tipos ---
 type ModeloConfiguracaoData = {
@@ -185,40 +182,46 @@ const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar }: ModeloConfig
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="objetivo">Objetivo</Label>
-              <Select onValueChange={(value) => handleInputChange('objetivo', value)} value={formData.objetivo}>
-                <SelectTrigger id="objetivo"><SelectValue placeholder="Selecione o objetivo" /></SelectTrigger>
-                <SelectContent>{OBJETIVOS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
-              </Select>
+              <CustomSelect
+                inputId="objetivo"
+                value={OBJETIVOS_OPTIONS.find(opt => opt.value === formData.objetivo)}
+                onChange={(option) => handleInputChange('objetivo', option ? option.value : '')}
+                options={OBJETIVOS_OPTIONS}
+                placeholder="Selecione o objetivo"
+              />
               {errors.objetivo && <p className="text-sm text-destructive mt-1">{errors.objetivo}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="dificuldade">Dificuldade</Label>
-              <Select onValueChange={(value) => handleInputChange('dificuldade', value)} value={formData.dificuldade}>
-                <SelectTrigger id="dificuldade"><SelectValue placeholder="Selecione a dificuldade" /></SelectTrigger>
-                <SelectContent>{DIFICULDADES.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
-              </Select>
+              <CustomSelect
+                inputId="dificuldade"
+                value={DIFICULDADES_OPTIONS.find(opt => opt.value === formData.dificuldade)}
+                onChange={(option) => handleInputChange('dificuldade', option ? option.value : '')}
+                options={DIFICULDADES_OPTIONS}
+                placeholder="Selecione a dificuldade"
+              />
               {errors.dificuldade && <p className="text-sm text-destructive mt-1">{errors.dificuldade}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="frequencia">Frequência</Label>
-              <Select onValueChange={(value) => handleInputChange('treinos_por_semana', Number(value))} value={formData.treinos_por_semana ? String(formData.treinos_por_semana) : ""}>
-                <SelectTrigger id="frequencia"><SelectValue placeholder="Treinos por semana" /></SelectTrigger>
-                <SelectContent>{FREQUENCIAS.map(f => <SelectItem key={f} value={String(f)}>{f}x / semana</SelectItem>)}</SelectContent>
-              </Select>
+              <CustomSelect
+                inputId="frequencia"
+                value={FREQUENCIAS_OPTIONS.find(opt => opt.value === String(formData.treinos_por_semana))}
+                onChange={(option) => handleInputChange('treinos_por_semana', option ? Number(option.value) : undefined)}
+                options={FREQUENCIAS_OPTIONS}
+                placeholder="Treinos por semana"
+              />
               {errors.treinos_por_semana && <p className="text-sm text-destructive mt-1">{errors.treinos_por_semana}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="duracao">Duração</Label>
-              <Select onValueChange={(value) => handleInputChange('duracao_semanas', Number(value))} value={formData.duracao_semanas ? String(formData.duracao_semanas) : ""}>
-                <SelectTrigger id="duracao"><SelectValue placeholder="Duração em semanas" /></SelectTrigger>
-                <SelectContent>
-                  <SelectScrollUpButton><ChevronUp /></SelectScrollUpButton>
-                  {Array.from({ length: 52 }, (_, i) => i + 1).map(semana => (
-                    <SelectItem key={semana} value={String(semana)}>{semana} semana{semana > 1 ? 's' : ''}</SelectItem>
-                  ))}
-                  <SelectScrollDownButton><ChevronDown /></SelectScrollDownButton>
-                </SelectContent>
-              </Select>
+              <CustomSelect
+                inputId="duracao"
+                value={DURACAO_OPTIONS.find(opt => opt.value === String(formData.duracao_semanas))}
+                onChange={(option) => handleInputChange('duracao_semanas', option ? Number(option.value) : undefined)}
+                options={DURACAO_OPTIONS}
+                placeholder="Duração em semanas"
+              />
               {errors.duracao_semanas && <p className="text-sm text-destructive mt-1">{errors.duracao_semanas}</p>}
             </div>
           </div>
@@ -519,7 +522,6 @@ const EditarModelo = () => {
   const { modeloId } = useParams<{ modeloId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { toast } = useToast();
   const { getExercicioInfo } = useExercicioLookup();
 
   const [loading, setLoading] = useState(true);
@@ -530,7 +532,7 @@ const EditarModelo = () => {
   useEffect(() => {
     const fetchModelo = async () => {
       if (!modeloId || !user) {
-        toast({ title: "Erro", description: "ID do modelo ou usuário inválido.", variant: "destructive" });
+        toast.error("Erro", { description: "ID do modelo ou usuário inválido." });
         navigate("/meus-modelos");
         return;
       }
@@ -583,7 +585,7 @@ const EditarModelo = () => {
         });
 
       } catch (error) {
-        toast({ title: "Erro ao carregar modelo", description: error instanceof Error ? error.message : "Ocorreu um erro desconhecido", variant: "destructive" });
+        toast.error("Erro ao carregar modelo", { description: error instanceof Error ? error.message : "Ocorreu um erro desconhecido" });
         navigate("/meus-modelos");
       } finally {
         setLoading(false);
@@ -591,7 +593,7 @@ const EditarModelo = () => {
     };
 
     fetchModelo();
-  }, [modeloId, user, navigate, toast]);
+  }, [modeloId, user, navigate]);
 
   const handleSalvarAlteracoes = async () => {
     if (!user || !modeloId) return;
@@ -599,7 +601,7 @@ const EditarModelo = () => {
 
     const { configuracao, treinos, exercicios } = modeloEmEdicao;
     if (!configuracao || !treinos || !exercicios) {
-      toast({ title: "Dados incompletos", variant: "destructive" });
+      toast.error("Dados incompletos");
       setIsSaving(false);
       return;
     }
@@ -671,12 +673,12 @@ const EditarModelo = () => {
         }
       }
 
-      toast({ title: "Modelo atualizado!", description: "Suas alterações foram salvas com sucesso." });
+      toast.success("Modelo atualizado!", { description: "Suas alterações foram salvas com sucesso." });
       navigate("/meus-modelos");
 
     } catch (error) {
       console.error("Erro ao salvar alterações:", error);
-      toast({ title: "Erro ao Salvar", description: error instanceof Error ? error.message : "Ocorreu um erro desconhecido", variant: "destructive" });
+      toast.error("Erro ao Salvar", { description: error instanceof Error ? error.message : "Ocorreu um erro desconhecido" });
     } finally {
       setIsSaving(false);
     }
@@ -767,7 +769,7 @@ const EditarModelo = () => {
           });
 
           if (filteredExercises.length < exercisesForThisTreino.length) {
-            toast({ title: `Exercícios removidos do Treino ${newTreino.nome}`, description: "Alguns exercícios foram removidos por não pertencerem mais aos grupos musculares selecionados." });
+            toast.info(`Exercícios removidos do Treino ${newTreino.nome}`, { description: "Alguns exercícios foram removidos por não pertencerem mais aos grupos musculares selecionados." });
           }
 
           newExercicios[newTreino.id] = filteredExercises;
@@ -804,8 +806,13 @@ const EditarModelo = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      <div className="p-6">
+        <div className="flex items-center justify-center min-h-[calc(100vh-3rem)]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-lg text-muted-foreground">Carregando modelo...</p>
+          </div>
+        </div>
       </div>
     );
   }

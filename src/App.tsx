@@ -145,7 +145,7 @@ const App = () => (
     <AuthProvider>
       <TooltipProvider>
         <Toaster />
-        <Sonner position="top-right" />
+        <Sonner position="bottom-left" />
         <PwaInstallPrompt />
         <PwaUpdateNotification />
         <RouterProvider router={router} />

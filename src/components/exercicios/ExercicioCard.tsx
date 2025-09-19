@@ -92,25 +92,25 @@ export const ExercicioCard = ({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={handleDetalhes}>
-                  <Eye className="mr-2 h-4 w-4" />
-                  Ver Detalhes
+                  <Eye className="mr-2 h-5 w-5" />
+                  <span className="text-base">Ver Detalhes</span>
                 </DropdownMenuItem>
                 {exercicio.tipo === 'personalizado' && onExcluir && (
                   <>
                     <DropdownMenuItem onClick={handleEditar}>
-                      <Edit className="mr-2 h-4 w-4" />
-                      Editar
+                      <Edit className="mr-2 h-5 w-5" />
+                      <span className="text-base">Editar</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onExcluir(exercicio.id)} className="text-destructive focus:text-destructive">
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Excluir
+                      <Trash2 className="mr-2 h-5 w-5" />
+                      <span className="text-base">Excluir</span>
                     </DropdownMenuItem>
                   </>
                 )}
                 {exercicio.tipo === 'padrao' && onCriarCopia && (
                   <DropdownMenuItem onClick={() => onCriarCopia && onCriarCopia(exercicio.id)}>
-                    <Copy className="mr-2 h-4 w-4" />
-                    Criar Cópia Personalizada
+                    <Copy className="mr-2 h-5 w-5" />
+                    <span className="text-base">Criar Cópia Personalizada</span>
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>

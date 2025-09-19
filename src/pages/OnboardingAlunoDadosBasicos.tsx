@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { useAlunoProfile } from "@/hooks/useAlunoProfile";
@@ -14,6 +13,14 @@ import { formatarTelefone } from "@/utils/formatters";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import QuestionarioSaudeModal from "@/components/QuestionarioSaudeModal";
+import CustomSelect from "@/components/ui/CustomSelect";
+
+const GENERO_OPTIONS = [
+  { value: 'masculino', label: 'Masculino' },
+  { value: 'feminino', label: 'Feminino' },
+  { value: 'outro', label: 'Outro' },
+  { value: 'prefiro_nao_dizer', label: 'Prefiro não dizer' },
+];
 
 const OnboardingAlunoDadosBasicos = () => {
   const navigate = useNavigate();
@@ -214,17 +221,13 @@ const OnboardingAlunoDadosBasicos = () => {
               {/* Gênero */}
               <div className="space-y-2">
                 <Label htmlFor="genero">Gênero</Label>
-                <Select value={formData.genero} onValueChange={(value) => handleInputChange('genero', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione seu gênero" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="masculino">Masculino</SelectItem>
-                    <SelectItem value="feminino">Feminino</SelectItem>
-                    <SelectItem value="outro">Outro</SelectItem>
-                    <SelectItem value="prefiro_nao_dizer">Prefiro não dizer</SelectItem>
-                  </SelectContent>
-                </Select>
+                <CustomSelect
+                  inputId="genero"
+                  value={GENERO_OPTIONS.find(opt => opt.value === formData.genero)}
+                  onChange={(option) => handleInputChange('genero', option ? String(option.value) : '')}
+                  options={GENERO_OPTIONS}
+                  placeholder="Selecione seu gênero"
+                />
               </div>
               
               {/* Data de Nascimento */}

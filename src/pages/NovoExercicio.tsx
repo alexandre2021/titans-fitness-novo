@@ -7,13 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import Modal from 'react-modal';
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Save, Plus, Trash2, Eye, ExternalLink, Camera, Video, Upload, X } from "lucide-react";
@@ -22,6 +15,7 @@ import { toast as sonnerToast } from "sonner";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from "@/hooks/useAuth";
 import { VideoRecorder } from '@/components/media/VideoRecorder';
+import CustomSelect from "@/components/ui/CustomSelect";
 
 const NovoExercicio = () => {
   const navigate = useNavigate();
@@ -94,6 +88,10 @@ const NovoExercicio = () => {
   ];
 
   const dificuldades = ['Baixa', 'Média', 'Alta'];
+
+  const GRUPOS_MUSCULARES_OPTIONS = gruposMusculares.map(o => ({ value: o, label: o }));
+  const EQUIPAMENTOS_OPTIONS = equipamentos.map(d => ({ value: d, label: d }));
+  const DIFICULDADES_OPTIONS = dificuldades.map(f => ({ value: f, label: f }));
 
   const ResponsiveDeleteMediaConfirmation = ({ 
     open, onOpenChange, onConfirm, title, description
@@ -460,63 +458,38 @@ const NovoExercicio = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="grupo_muscular" className="text-sm font-medium text-muted-foreground">Grupo Muscular</Label>
-                <Select
-                  value={formData.grupo_muscular}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, grupo_muscular: value }))}
-                >
-                  <SelectTrigger className={errors.grupo_muscular ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {gruposMusculares.map((grupo) => (
-                      <SelectItem key={grupo} value={grupo}>
-                        {grupo}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <CustomSelect
+                  inputId="grupo_muscular"
+                  value={GRUPOS_MUSCULARES_OPTIONS.find(opt => opt.value === formData.grupo_muscular)}
+                  onChange={(option) => setFormData(prev => ({ ...prev, grupo_muscular: option ? String(option.value) : '' }))}
+                  options={GRUPOS_MUSCULARES_OPTIONS}
+                  placeholder="Selecione..."
+                />
                 {errors.grupo_muscular && (
                   <p className="text-sm text-red-500 mt-1">{errors.grupo_muscular}</p>
                 )}
               </div>
               <div>
                 <Label htmlFor="equipamento" className="text-sm font-medium text-muted-foreground">Equipamento</Label>
-                <Select
-                  value={formData.equipamento}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, equipamento: value }))}
-                >
-                  <SelectTrigger className={errors.equipamento ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {equipamentos.map((equipamento) => (
-                      <SelectItem key={equipamento} value={equipamento}>
-                        {equipamento}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <CustomSelect
+                  inputId="equipamento"
+                  value={EQUIPAMENTOS_OPTIONS.find(opt => opt.value === formData.equipamento)}
+                  onChange={(option) => setFormData(prev => ({ ...prev, equipamento: option ? String(option.value) : '' }))}
+                  options={EQUIPAMENTOS_OPTIONS}
+                  placeholder="Selecione..."
+                />
                 {errors.equipamento && (
                   <p className="text-sm text-red-500 mt-1">{errors.equipamento}</p>
                 )}
               </div>
               <div>
                 <Label htmlFor="dificuldade" className="text-sm font-medium text-muted-foreground">Dificuldade</Label>
-                <Select
-                  value={formData.dificuldade}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, dificuldade: value as "Baixa" | "Média" | "Alta" }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {dificuldades.map((dificuldade) => (
-                      <SelectItem key={dificuldade} value={dificuldade}>
-                        {dificuldade}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <CustomSelect
+                  inputId="dificuldade"
+                  value={DIFICULDADES_OPTIONS.find(opt => opt.value === formData.dificuldade)}
+                  onChange={(option) => setFormData(prev => ({ ...prev, dificuldade: option ? option.value as "Baixa" | "Média" | "Alta" : 'Baixa' }))}
+                  options={DIFICULDADES_OPTIONS}
+                />
               </div>
             </div>
 

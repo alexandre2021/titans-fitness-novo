@@ -4,20 +4,14 @@ import Modal from 'react-modal';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Label } from "@/components/ui/label"; 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowUp, Plus, Search, Filter, Dumbbell, ShieldAlert, Info, AlertTriangle, Trash2, X } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useExercicios } from "@/hooks/useExercicios";
 import { ExercicioCard } from "@/components/exercicios/ExercicioCard";
+import CustomSelect from "@/components/ui/CustomSelect";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
 // Configurar o react-modal para acessibilidade
@@ -29,22 +23,28 @@ const GRUPOS_MUSCULARES = ['Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', '
 const EQUIPAMENTOS = ['Barra', 'Halteres', 'Máquina', 'Peso Corporal', 'Cabo', 'Kettlebell', 'Fitas de Suspensão', 'Elásticos', 'Bola Suíça', 'Bolas Medicinais', 'Landmine', 'Bola Bosu'];
 const DIFICULDADES = ['Baixa', 'Média', 'Alta'];
 
+const GRUPOS_MUSCULARES_OPTIONS = [{ value: 'todos', label: 'Todos' }, ...GRUPOS_MUSCULARES.map(o => ({ value: o, label: o }))];
+const EQUIPAMENTOS_OPTIONS = [{ value: 'todos', label: 'Todos' }, ...EQUIPAMENTOS.map(d => ({ value: d, label: d }))];
+const DIFICULDADES_OPTIONS = [{ value: 'todos', label: 'Todas' }, ...DIFICULDADES.map(f => ({ value: f, label: f }))];
+
 const ExerciciosPT = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const LIMITE_EXERCICIOS_PERSONALIZADOS = 100;
   
   const {
     exerciciosPadrao,
     exerciciosPersonalizados,
-    loading,
-    filtros,
-    setFiltros,
+    initialLoadComplete,
     excluirExercicio,
     totalPersonalizados,
     refetch
   } = useExercicios();
 
+  const [filtros, setFiltros] = useState({
+    grupoMuscular: 'todos',
+    equipamento: 'todos',
+    dificuldade: 'todos'
+  });
   const [activeTab, setActiveTab] = useState<"padrao" | "personalizados">("padrao");
   const [showFilters, setShowFilters] = useState(false);
   const isDesktop = useMediaQuery("(min-width: 768px)");
@@ -76,11 +76,9 @@ const ExerciciosPT = () => {
 
   const handleNovoExercicio = () => {
     if (totalPersonalizados >= LIMITE_EXERCICIOS_PERSONALIZADOS) {
-      toast({
-        title: "Limite atingido",
+      toast.error("Limite atingido", {
         description: `Você atingiu o limite de ${LIMITE_EXERCICIOS_PERSONALIZADOS} exercícios personalizados. Para criar novos, remova algum exercício antigo.`,
-        variant: "destructive",
-      });
+      })
       return;
     }
     navigate("/exercicios-pt/novo");
@@ -88,11 +86,9 @@ const ExerciciosPT = () => {
 
   const handleCriarCopia = (exercicioId: string) => {
     if (totalPersonalizados >= LIMITE_EXERCICIOS_PERSONALIZADOS) {
-      toast({
-        title: "Limite atingido",
+      toast.error("Limite atingido", {
         description: `Você atingiu o limite de ${LIMITE_EXERCICIOS_PERSONALIZADOS} exercícios personalizados. Para criar novos, remova algum exercício antigo.`,
-        variant: "destructive",
-      });
+      })
       return;
     }
     navigate(`/exercicios-pt/copia/${exercicioId}`);
@@ -152,9 +148,18 @@ const ExerciciosPT = () => {
     return matchesBusca && matchesFiltros;
   });
 
+  const temFiltrosAvancadosAtivos = filtros.grupoMuscular !== 'todos' || filtros.equipamento !== 'todos' || filtros.dificuldade !== 'todos';
+
+  const temFiltrosAtivos = temFiltrosAvancadosAtivos || busca !== '';
+
+  const limparFiltros = () => {
+    setFiltros({ grupoMuscular: 'todos', equipamento: 'todos', dificuldade: 'todos' });
+    setBusca('');
+  };
+
   const canAddMore = totalPersonalizados < LIMITE_EXERCICIOS_PERSONALIZADOS;
 
-  if (loading) {
+  if (!initialLoadComplete) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-center min-h-[400px]">
@@ -206,13 +211,15 @@ const ExerciciosPT = () => {
                 />
               </div>
               <Button
-                variant="outline"
-                size="sm"
+                variant="default"
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-1 px-3 flex-shrink-0"
+                className="flex-shrink-0 relative h-10 w-10 rounded-full p-0 [&_svg]:size-6"
+                aria-label="Mostrar filtros"
               >
-                <Filter className="h-4 w-4" />
-                <span className="hidden xs:inline">Filtros</span>
+                <Filter />
+                {temFiltrosAvancadosAtivos && (
+                  <span className="absolute top-[-2px] left-[-2px] block h-3 w-3 rounded-full bg-secondary ring-2 ring-white" />
+                )}
               </Button>
             </div>
 
@@ -229,47 +236,53 @@ const ExerciciosPT = () => {
               <Button
                 variant="outline"
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 relative"
               >
                 <Filter className="h-4 w-4" />
                 Filtros
+                {temFiltrosAvancadosAtivos && (
+                  <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-secondary ring-1 ring-background" />
+                )}
               </Button>
             </div>
           </div>
 
           {showFilters && (
             <div className="p-4 border rounded-lg bg-background">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
+              <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+                <div className="space-y-2 flex-1"> 
                   <Label htmlFor="filtro-grupo">Grupo Muscular</Label>
-                  <Select value={filtros.grupoMuscular} onValueChange={(value) => setFiltros(prev => ({ ...prev, grupoMuscular: value }))}>
-                    <SelectTrigger id="filtro-grupo"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todos">Todos</SelectItem>
-                      {GRUPOS_MUSCULARES.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <CustomSelect
+                    inputId="filtro-grupo"
+                    value={GRUPOS_MUSCULARES_OPTIONS.find(opt => opt.value === filtros.grupoMuscular)}
+                    onChange={(option) => setFiltros(prev => ({ ...prev, grupoMuscular: option ? String(option.value) : 'todos' }))}
+                    options={GRUPOS_MUSCULARES_OPTIONS}
+                  />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 flex-1"> 
                   <Label htmlFor="filtro-equipamento">Equipamento</Label>
-                  <Select value={filtros.equipamento} onValueChange={(value) => setFiltros(prev => ({ ...prev, equipamento: value }))}>
-                    <SelectTrigger id="filtro-equipamento"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todos">Todos</SelectItem>
-                      {EQUIPAMENTOS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <CustomSelect
+                    inputId="filtro-equipamento"
+                    value={EQUIPAMENTOS_OPTIONS.find(opt => opt.value === filtros.equipamento)}
+                    onChange={(option) => setFiltros(prev => ({ ...prev, equipamento: option ? String(option.value) : 'todos' }))}
+                    options={EQUIPAMENTOS_OPTIONS}
+                  />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 flex-1"> 
                   <Label htmlFor="filtro-dificuldade">Dificuldade</Label>
-                  <Select value={filtros.dificuldade} onValueChange={(value) => setFiltros(prev => ({ ...prev, dificuldade: value }))}>
-                    <SelectTrigger id="filtro-dificuldade"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todos">Todas</SelectItem>
-                      {DIFICULDADES.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <CustomSelect
+                    inputId="filtro-dificuldade"
+                    value={DIFICULDADES_OPTIONS.find(opt => opt.value === filtros.dificuldade)}
+                    onChange={(option) => setFiltros(prev => ({ ...prev, dificuldade: option ? String(option.value) : 'todos' }))}
+                    options={DIFICULDADES_OPTIONS}
+                  />
                 </div>
+                {temFiltrosAtivos && (
+                  <Button variant="outline" size="sm" onClick={limparFiltros} className="flex items-center gap-2 w-full sm:w-auto flex-shrink-0">
+                    <X className="h-4 w-4" />
+                    Limpar
+                  </Button>
+                )}
               </div>
             </div>
           )}
@@ -325,13 +338,15 @@ const ExerciciosPT = () => {
                 />
               </div>
               <Button
-                variant="outline"
-                size="sm"
+                variant="default"
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-1 px-3 flex-shrink-0"
+                className="flex-shrink-0 relative h-10 w-10 rounded-full p-0 [&_svg]:size-6"
+                aria-label="Mostrar filtros"
               >
-                <Filter className="h-4 w-4" />
-                <span className="hidden xs:inline">Filtros</span>
+                <Filter />
+                {temFiltrosAvancadosAtivos && (
+                  <span className="absolute top-[-2px] left-[-2px] block h-3 w-3 rounded-full bg-secondary ring-2 ring-white" />
+                )}
               </Button>
             </div>
 
@@ -348,47 +363,53 @@ const ExerciciosPT = () => {
               <Button
                 variant="outline"
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 relative"
               >
                 <Filter className="h-4 w-4" />
                 Filtros
+                {temFiltrosAvancadosAtivos && (
+                  <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-secondary ring-1 ring-background" />
+                )}
               </Button>
             </div>
           </div>
 
           {showFilters && (
             <div className="p-4 border rounded-lg bg-background">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
+              <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+                <div className="space-y-2 flex-1"> 
                   <Label htmlFor="filtro-grupo-p">Grupo Muscular</Label>
-                  <Select value={filtros.grupoMuscular} onValueChange={(value) => setFiltros(prev => ({ ...prev, grupoMuscular: value }))}>
-                    <SelectTrigger id="filtro-grupo-p"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todos">Todos</SelectItem>
-                      {GRUPOS_MUSCULARES.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <CustomSelect
+                    inputId="filtro-grupo-p"
+                    value={GRUPOS_MUSCULARES_OPTIONS.find(opt => opt.value === filtros.grupoMuscular)}
+                    onChange={(option) => setFiltros(prev => ({ ...prev, grupoMuscular: option ? String(option.value) : 'todos' }))}
+                    options={GRUPOS_MUSCULARES_OPTIONS}
+                  />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 flex-1"> 
                   <Label htmlFor="filtro-equipamento-p">Equipamento</Label>
-                  <Select value={filtros.equipamento} onValueChange={(value) => setFiltros(prev => ({ ...prev, equipamento: value }))}>
-                    <SelectTrigger id="filtro-equipamento-p"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todos">Todos</SelectItem>
-                      {EQUIPAMENTOS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <CustomSelect
+                    inputId="filtro-equipamento-p"
+                    value={EQUIPAMENTOS_OPTIONS.find(opt => opt.value === filtros.equipamento)}
+                    onChange={(option) => setFiltros(prev => ({ ...prev, equipamento: option ? String(option.value) : 'todos' }))}
+                    options={EQUIPAMENTOS_OPTIONS}
+                  />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 flex-1"> 
                   <Label htmlFor="filtro-dificuldade-p">Dificuldade</Label>
-                  <Select value={filtros.dificuldade} onValueChange={(value) => setFiltros(prev => ({ ...prev, dificuldade: value }))}>
-                    <SelectTrigger id="filtro-dificuldade-p"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todos">Todas</SelectItem>
-                      {DIFICULDADES.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <CustomSelect
+                    inputId="filtro-dificuldade-p"
+                    value={DIFICULDADES_OPTIONS.find(opt => opt.value === filtros.dificuldade)}
+                    onChange={(option) => setFiltros(prev => ({ ...prev, dificuldade: option ? String(option.value) : 'todos' }))}
+                    options={DIFICULDADES_OPTIONS}
+                  />
                 </div>
+                {temFiltrosAtivos && (
+                  <Button variant="outline" size="sm" onClick={limparFiltros} className="flex items-center gap-2 w-full sm:w-auto flex-shrink-0">
+                    <X className="h-4 w-4" />
+                    Limpar
+                  </Button>
+                )}
               </div>
             </div>
           )}
@@ -552,11 +573,11 @@ const ExerciciosPT = () => {
         <div className="fixed bottom-36 md:bottom-24 right-4 md:right-6 z-50">
           <Button
             onClick={scrollToTop}
-            className="rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center md:h-12 md:w-12"
+            className="rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center md:h-12 md:w-12 [&_svg]:size-8 md:[&_svg]:size-6"
             aria-label="Voltar ao topo"
             variant="secondary"
           >
-            <ArrowUp className="h-9 w-9 md:h-6 md:w-6" />
+            <ArrowUp />
           </Button>
         </div>
       )}

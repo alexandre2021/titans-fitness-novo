@@ -8,7 +8,7 @@ import { Activity, Calendar, Eye, Camera, X, TrendingUp } from 'lucide-react';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 interface AvaliacaoFisica {
   id: string;
@@ -35,7 +35,6 @@ interface AvaliacaoFisica {
 
 const AvaliacoesAluno = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
   const isDesktop = useMediaQuery("(min-width: 768px)");
   
   // Estados principais
@@ -142,10 +141,8 @@ const AvaliacoesAluno = () => {
 
         if (error) {
           console.error('Erro ao buscar avaliações:', error);
-          toast({
-            title: "Erro",
+          toast.error("Erro", {
             description: "Não foi possível carregar suas avaliações.",
-            variant: "destructive",
           });
           return;
         }
@@ -153,10 +150,8 @@ const AvaliacoesAluno = () => {
         setAvaliacoes(data || []);
       } catch (error) {
         console.error('Erro ao buscar avaliações:', error);
-        toast({
-          title: "Erro",
+        toast.error("Erro", {
           description: "Erro inesperado ao carregar dados.",
-          variant: "destructive",
         });
       } finally {
         setLoading(false);
@@ -164,7 +159,7 @@ const AvaliacoesAluno = () => {
     };
 
     fetchAvaliacoes();
-  }, [user, toast]);
+  }, [user]);
 
   // Abrir modal com detalhes
   const handleVerDetalhes = async (avaliacao: AvaliacaoFisica) => {

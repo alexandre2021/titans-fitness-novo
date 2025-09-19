@@ -10,7 +10,7 @@ import { ArrowLeft, BarChart3, TrendingUp, Calendar, Plus, Eye, MoreVertical, Tr
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { formatters } from '@/utils/formatters';
 
 interface AlunoInfo {
@@ -118,15 +118,12 @@ const AlunosAvaliacoes = () => {
         .eq('aluno_id', id); // Garante que apenas o PT do aluno pode excluir
 
       if (error) {
-        toast({
-          title: 'Erro',
+        toast.error('Erro', {
           description: 'Não foi possível excluir a avaliação. Tente novamente.',
-          variant: 'destructive',
         });
       } else {
         setAvaliacoes(prev => prev.filter(a => a.id !== avaliacaoParaExcluir.id));
-        toast({
-          title: 'Avaliação excluída',
+        toast.success('Avaliação excluída', {
           description: 'A avaliação foi removida com sucesso.',
         });
         setShowDeleteDialog(false);
@@ -134,10 +131,8 @@ const AlunosAvaliacoes = () => {
       }
     } catch (error) {
       console.error('Erro inesperado na exclusão da avaliação:', error);
-      toast({
-        title: 'Erro',
+      toast.error('Erro', {
         description: 'Ocorreu um erro inesperado. Tente novamente.',
-        variant: 'destructive',
       });
     } finally {
       setIsDeleting(false);
@@ -158,7 +153,6 @@ const AlunosAvaliacoes = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isDesktop = useMediaQuery("(min-width: 768px)");
-  const { toast } = useToast();
   
   // Estados principais
   const [aluno, setAluno] = useState<AlunoInfo | null>(null);
@@ -181,10 +175,8 @@ const AlunosAvaliacoes = () => {
 
         if (alunoError) {
           console.error('Erro ao buscar aluno:', alunoError);
-          toast({
-            title: "Erro",
-            description: "Aluno não encontrado.",
-            variant: "destructive",
+          toast.error("Erro", {
+            description: "Aluno não encontrado."
           });
           navigate('/alunos');
           return;
@@ -207,18 +199,15 @@ const AlunosAvaliacoes = () => {
 
       } catch (error) {
         console.error('Erro ao buscar dados:', error);
-        toast({
-          title: "Erro",
-          description: "Erro ao carregar dados do aluno.",
-          variant: "destructive",
+        toast.error("Erro", {
+          description: "Erro ao carregar dados do aluno."
         });
       } finally {
         setLoading(false);
       }
     };
 
-    fetchDados();
-  }, [id, user, navigate, toast]);
+    fetchDados();  }, [id, user, navigate]);
 
   const renderAvatar = () => {
     if (!aluno) return null;
@@ -296,7 +285,10 @@ const AlunosAvaliacoes = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-center min-h-[400px]">
-          <p className="text-lg text-muted-foreground">Carregando...</p>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-lg text-muted-foreground">Carregando avaliações...</p>
+          </div>
         </div>
       </div>
     );
@@ -315,7 +307,7 @@ const AlunosAvaliacoes = () => {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Cabeçalho da Página (Apenas para Desktop) */}
       {isDesktop && (
         <div className="flex items-center gap-4">
@@ -410,19 +402,19 @@ const AlunosAvaliacoes = () => {
                               Ações <ChevronDown className="ml-2 h-4 w-4" />
                             </Button>
                           ) : (
-                            <Button variant="default" className="h-10 w-10 rounded-full p-0 [&_svg]:size-6">
+                            <Button variant="default" className="h-10 w-10 rounded-full p-0 flex-shrink-0 [&_svg]:size-6">
                               <MoreVertical />
                             </Button>
                           )}
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleVerDetalhes(avaliacao.id)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            Detalhes
+                            <Eye className="mr-2 h-5 w-5" />
+                            <span className="text-base">Detalhes</span>
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleExcluirAvaliacao(avaliacao)} className="text-destructive focus:text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Excluir
+                            <Trash2 className="mr-2 h-5 w-5" />
+                            <span className="text-base">Excluir</span>
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
