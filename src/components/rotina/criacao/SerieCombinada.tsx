@@ -13,7 +13,7 @@ interface Props {
   onUpdate: (dados: Partial<ExercicioModelo>) => void;
 }
 
-export const SerieCombinadaModelo = ({ exercicio, treinoId, isUltimoExercicio, onUpdate }: Props) => {
+export const SerieCombinada = ({ exercicio, treinoId, isUltimoExercicio, onUpdate }: Props) => {
   const { getExercicioInfo } = useExercicioLookup();
   
   // Lookup de nome e equipamento dos exercícios
@@ -34,10 +34,10 @@ export const SerieCombinadaModelo = ({ exercicio, treinoId, isUltimoExercicio, o
     const novaSerie: SerieModelo = {
       id: `serie_comb_${Date.now()}`,
       numero_serie: exercicio.series.length + 1,
-      repeticoes_1: 12,
-      carga_1: 10,
-      repeticoes_2: 12,
-      carga_2: 10,
+      repeticoes_1: 0,
+      carga_1: 0,
+      repeticoes_2: 0,
+      carga_2: 0,
       intervalo_apos_serie: 90,
     };
     onUpdate({ series: [...exercicio.series, novaSerie] });

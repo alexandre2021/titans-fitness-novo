@@ -1,5 +1,8 @@
 import { useState, useEffect, FormEvent, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,9 +20,9 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useExercicioLookup } from "@/hooks/useExercicioLookup";
-import { SerieSimplesModelo } from "@/components/rotinasModelo/SerieSimplesModelo";
-import { SerieCombinadaModelo } from "@/components/rotinasModelo/SerieCombinadaModelo";
-import { ExercicioModalModelo } from "@/components/rotinasModelo/ExercicioModalModelo";
+import { SerieSimples } from "@/components/rotina/criacao/SerieSimples";
+import { SerieCombinada } from "@/components/rotina/criacao/SerieCombinada";
+import { ExercicioModal } from "@/components/rotina/criacao/ExercicioModal";
 import { Tables } from "@/integrations/supabase/types";
 import CustomSelect from "@/components/ui/CustomSelect";
 
@@ -98,6 +101,7 @@ interface ModeloTreinosProps {
   initialData?: TreinoTemp[];
   configuracao?: ModeloConfiguracaoData;
   onCancelar: () => void;
+  onUpdate: (data: Partial<ModeloEmCriacao>) => void;
 }
 
 interface ModeloExerciciosProps {
@@ -262,14 +266,79 @@ const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar }: ModeloConfig
   );
 };
 
-// --- Etapa 2: Componente de Treinos ---
-const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCancelar }: ModeloTreinosProps) => {
-  const [treinos, setTreinos] = useState<TreinoTemp[]>([]);
+const SortableTreinoCard = ({ id, treino, index, atualizarCampoTreino, adicionarGrupoMuscular, removerGrupoMuscular }: {
+  id: string;
+  treino: TreinoTemp;
+  index: number;
+  atualizarCampoTreino: (index: number, campo: keyof TreinoTemp, valor: string | number) => void;
+  adicionarGrupoMuscular: (index: number, grupo: string) => void;
+  removerGrupoMuscular: (index: number, grupo: string) => void;
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
 
-  useEffect(() => {
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  const treinoCompleto = treino.nome && treino.nome.trim().length >= 2 && treino.grupos_musculares.length > 0;
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes}>
+      <Card className={treinoCompleto ? "border-green-200" : "border-gray-200"}>
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center justify-between text-lg">
+            <div {...listeners} className="flex items-center cursor-grab p-2 -m-2 rounded-lg">
+              <GripVertical className="h-5 w-5 mr-2 text-gray-400" />
+              Treino {String.fromCharCode(65 + index)}
+            </div>
+            {treinoCompleto && (
+              <Badge className="bg-green-100 text-green-800 text-xs flex items-center gap-1">
+                <Check className="h-3 w-3 mr-1" />
+                Requisitos
+              </Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Grupos Musculares</Label>
+            <div className="flex flex-wrap gap-2 min-h-[2.5rem] p-2 border rounded-md bg-gray-50">
+              {treino.grupos_musculares.length > 0 ? (
+                treino.grupos_musculares.map(grupo => (
+                  <Badge key={grupo} variant="secondary" className={`${CORES_GRUPOS_MUSCULARES[grupo] || 'bg-gray-100 text-gray-800'} cursor-pointer hover:opacity-80`} onClick={() => removerGrupoMuscular(index, grupo)}>
+                    {grupo} <X className="h-3 w-3 ml-1.5" />
+                  </Badge>
+                ))
+              ) : <span className="text-gray-500 text-sm p-1">Selecione os grupos musculares abaixo</span>}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-sm text-gray-600">Adicionar Grupos:</Label>
+            <div className="flex flex-wrap gap-2">
+              {GRUPOS_MUSCULARES.filter(g => !treino.grupos_musculares.includes(g)).map(g => (
+                <Badge key={g} variant="outline" className="cursor-pointer hover:bg-gray-100" onClick={() => adicionarGrupoMuscular(index, g)}><Plus className="h-3 w-3 mr-1" />{g}</Badge>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={`observacoes_${index}`}>Observações (Opcional)</Label>
+            <Textarea id={`observacoes_${index}`} value={treino.observacoes || ''} onChange={(e) => atualizarCampoTreino(index, 'observacoes', e.target.value)} placeholder="Adicione notas sobre este treino específico..." rows={2} />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+// --- Etapa 2: Componente de Treinos ---
+const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCancelar, onUpdate }: ModeloTreinosProps) => {
+  const [treinos, setTreinos] = useState<TreinoTemp[]>(() => {
     if (initialData && initialData.length > 0) {
-      setTreinos(initialData);
-    } else if (configuracao?.treinos_por_semana) {
+      return initialData;
+    }
+    if (configuracao?.treinos_por_semana) {
       const frequencia = configuracao.treinos_por_semana;
       const treinosIniciais: TreinoTemp[] = [];
       const nomesTreinos = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
@@ -281,9 +350,10 @@ const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCance
           ordem: i + 1,
         });
       }
-      setTreinos(treinosIniciais);
+      return treinosIniciais;
     }
-  }, [initialData, configuracao]);
+    return [];
+  });
 
   const adicionarGrupoMuscular = (treinoIndex: number, grupo: string) => {
     setTreinos(prev => prev.map((treino, index) => {
@@ -303,7 +373,7 @@ const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCance
     }));
   };
 
-  const atualizarTreino = (treinoIndex: number, campo: keyof TreinoTemp, valor: string | number) => {
+  const atualizarCampoTreino = (treinoIndex: number, campo: keyof TreinoTemp, valor: string | number) => {
     setTreinos(prev => prev.map((treino, index) => {
       if (index === treinoIndex) {
         return { ...treino, [campo]: valor };
@@ -311,6 +381,21 @@ const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCance
       return treino;
     }));
   };
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = treinos.findIndex((t) => t.id === active.id);
+      const newIndex = treinos.findIndex((t) => t.id === over.id);
+      setTreinos((items) => arrayMove(items, oldIndex, newIndex).map((item, index) => ({ ...item, ordem: index + 1 })));
+    }
+  }
 
   const treinosCompletos = treinos.filter(t => t.nome && t.nome.trim().length >= 2 && t.grupos_musculares.length > 0).length;
   const requisitosAtendidos = treinosCompletos === treinos.length;
@@ -319,6 +404,11 @@ const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCance
     if (requisitosAtendidos) {
       onAvancar(treinos);
     }
+  };
+
+  const handleVoltarClick = () => {
+    onUpdate({ treinos });
+    onVoltar();
   };
 
   return (
@@ -343,69 +433,22 @@ const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCance
         </CardContent>
       </Card>
       
-        <div className="space-y-4">
-        {treinos.map((treino, index) => (
-          <Card key={treino.id || index} className={treino.nome && treino.grupos_musculares.length > 0 ? "border-green-200" : "border-gray-200"}>
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center justify-between text-lg">
-                <div className="flex items-center">
-                  <GripVertical className="h-5 w-5 mr-2 text-gray-400" />
-                  Treino {String.fromCharCode(65 + index)}
-                </div>
-                {treino.nome && treino.grupos_musculares.length > 0 && (
-                  <Badge className="bg-green-100 text-green-800 text-xs flex items-center gap-1">
-                    <Check className="h-3 w-3 mr-1" />
-                    Requisitos
-                  </Badge>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor={`nome_${index}`}>Nome do Treino</Label>
-                <Input id={`nome_${index}`} value={treino.nome} onChange={(e) => atualizarTreino(index, 'nome', e.target.value)} placeholder={`Ex: Treino ${String.fromCharCode(65 + index)} - Peito e Tríceps`} />
-              </div>
-              <div className="space-y-2">
-                <Label>Grupos Musculares</Label>
-                <div className="flex flex-wrap gap-2 min-h-[2.5rem] p-2 border rounded-md bg-gray-50">
-                  {treino.grupos_musculares.length > 0 ? (
-                    treino.grupos_musculares.map(grupo => (
-                      <Badge key={grupo} variant="secondary" className={`${CORES_GRUPOS_MUSCULARES[grupo] || 'bg-gray-100 text-gray-800'} cursor-pointer hover:opacity-80`} onClick={() => removerGrupoMuscular(index, grupo)}>
-                        {grupo}
-                        <Trash2 className="h-3 w-3 ml-1" />
-                      </Badge>
-                    ))
-                  ) : (
-                    <span className="text-gray-500 text-sm">Selecione os grupos musculares abaixo</span>
-                  )}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm text-gray-600">Adicionar Grupos:</Label>
-                <div className="flex flex-wrap gap-2">
-                  {GRUPOS_MUSCULARES.filter(g => !treino.grupos_musculares.includes(g)).map(g => (
-                    <Badge key={g} variant="outline" className="cursor-pointer hover:bg-gray-100" onClick={() => adicionarGrupoMuscular(index, g)}>
-                      <Plus className="h-3 w-3 mr-1" />
-                      {g}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor={`observacoes_${index}`}>Observações</Label>
-                <Textarea id={`observacoes_${index}`} value={treino.observacoes || ''} onChange={(e) => atualizarTreino(index, 'observacoes', e.target.value)} placeholder="Observações específicas para este treino..." rows={2} />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={treinos.map(t => t.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-4">
+              {treinos.map((treino, index) => (
+                <SortableTreinoCard key={treino.id} id={treino.id} treino={treino} index={index} atualizarCampoTreino={atualizarCampoTreino} adicionarGrupoMuscular={adicionarGrupoMuscular} removerGrupoMuscular={removerGrupoMuscular} />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       
         {/* Espaçamento para botões fixos */}
       <div className="pb-20 md:pb-6" />
 
       {/* Botões de navegação - Desktop */}
       <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t p-4 hidden md:flex justify-between items-center z-50 px-6 lg:px-8">
-          <Button variant="outline" onClick={onVoltar} size="lg">
+          <Button variant="outline" onClick={handleVoltarClick} size="lg">
               <ChevronLeft className="h-4 w-4 mr-2" />
               Voltar
           </Button>
@@ -422,7 +465,7 @@ const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCance
       {/* Botões de navegação - Mobile */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 md:hidden z-50">
         <div className="flex gap-2">
-            <Button variant="outline" onClick={onVoltar} className="flex-1" size="lg">
+            <Button variant="outline" onClick={handleVoltarClick} className="flex-1" size="lg">
                 Voltar
             </Button>
             <Button variant="ghost" onClick={onCancelar} className="flex-1" size="lg">
@@ -468,7 +511,7 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
         exercicio_1_id: exerciciosSelecionados[0].id,
         exercicio_2_id: exerciciosSelecionados[1].id,
         tipo: 'combinada',
-        series: [{ id: `serie_comb_${Date.now()}`, numero_serie: 1, repeticoes_1: 12, carga_1: 10, repeticoes_2: 12, carga_2: 10, intervalo_apos_serie: 90 }],
+        series: [{ id: `serie_comb_${Date.now()}`, numero_serie: 1, repeticoes_1: 0, carga_1: 0, repeticoes_2: 0, carga_2: 0, intervalo_apos_serie: 90 }],
         intervalo_apos_exercicio: 120,
       };
       exerciciosParaAdicionar.push(exercicioCombinado);
@@ -478,7 +521,7 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
         id: `ex_modelo_${Date.now()}_${Math.random()}`,
         exercicio_1_id: ex.id,
         tipo: 'simples',
-        series: [{ id: `serie_${Date.now()}`, numero_serie: 1, repeticoes: 12, carga: 10, intervalo_apos_serie: 60 }],
+        series: [{ id: `serie_${Date.now()}`, numero_serie: 1, repeticoes: 0, carga: 0, intervalo_apos_serie: 60 }],
         intervalo_apos_exercicio: 90,
       }));
     }
@@ -555,9 +598,9 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
                           </Button>
                         </div>
                         {ex.tipo === 'simples' ? (
-                          <SerieSimplesModelo exercicio={ex} treinoId={treino.id} isUltimoExercicio={isUltimoExercicioDoTreino} onUpdate={dados => handleAtualizarExercicio(treino.id, ex.id, dados)} />
+                          <SerieSimples exercicio={ex} treinoId={treino.id} isUltimoExercicio={isUltimoExercicioDoTreino} onUpdate={dados => handleAtualizarExercicio(treino.id, ex.id, dados)} />
                         ) : (
-                          <SerieCombinadaModelo exercicio={ex} treinoId={treino.id} isUltimoExercicio={isUltimoExercicioDoTreino} onUpdate={dados => handleAtualizarExercicio(treino.id, ex.id, dados)} />
+                          <SerieCombinada exercicio={ex} treinoId={treino.id} isUltimoExercicio={isUltimoExercicioDoTreino} onUpdate={dados => handleAtualizarExercicio(treino.id, ex.id, dados)} />
                         )}
                       </div>
                     );
@@ -634,7 +677,7 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
       </div>
 
       {isModalOpen && (
-        <ExercicioModalModelo
+        <ExercicioModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onAdd={handleAdicionarExercicios}
@@ -729,7 +772,43 @@ const NovoModelo = () => {
   };
 
   const handleAvancarTreinos = (data: TreinoTemp[]) => {
-    updateStorage({ treinos: data, etapaAtual: 'exercicios' });
+    const oldExercicios = modeloEmCriacao.exercicios || {};
+    const newExercicios = { ...oldExercicios };
+    let hasChanges = false;
+
+    const compareMuscleGroups = (arr1: string[], arr2: string[]) => {
+      if (arr1.length !== arr2.length) return false;
+      const sorted1 = [...arr1].sort();
+      const sorted2 = [...arr2].sort();
+      return sorted1.every((value, index) => value === sorted2[index]);
+    };
+
+    data.forEach(newTreino => {
+      const oldTreino = modeloEmCriacao.treinos?.find(t => t.id === newTreino.id);
+
+      if (oldTreino && !compareMuscleGroups(oldTreino.grupos_musculares, newTreino.grupos_musculares)) {
+        const exercisesForThisTreino = newExercicios[newTreino.id] || [];
+
+        if (exercisesForThisTreino.length > 0) {
+          const filteredExercises = exercisesForThisTreino.filter(ex => {
+            const info1 = getExercicioInfo(ex.exercicio_1_id);
+            if (info1.grupo_muscular && newTreino.grupos_musculares.includes(info1.grupo_muscular)) return true;
+            if (ex.exercicio_2_id) {
+              const info2 = getExercicioInfo(ex.exercicio_2_id);
+              if (info2.grupo_muscular && newTreino.grupos_musculares.includes(info2.grupo_muscular)) return true;
+            }
+            return false;
+          });
+
+          if (filteredExercises.length < exercisesForThisTreino.length) {
+            toast.info(`Exercícios removidos do Treino ${newTreino.nome}`, { description: "Alguns exercícios foram removidos por não pertencerem mais aos grupos musculares selecionados." });
+          }
+          newExercicios[newTreino.id] = filteredExercises;
+          hasChanges = true;
+        }
+      }
+    });
+    updateStorage({ treinos: data, exercicios: hasChanges ? newExercicios : oldExercicios, etapaAtual: 'exercicios' });
     setEtapa('exercicios');
   };
 
@@ -810,15 +889,15 @@ const NovoModelo = () => {
           const seriesParaInserir = exercicio.series.map(serie => ({
             modelo_exercicio_id: exercicioCriado.id,
             numero_serie: serie.numero_serie,
-            repeticoes: serie.repeticoes ?? null,
-            carga: serie.carga ?? null,
-            repeticoes_1: serie.repeticoes_1 ?? null,
-            carga_1: serie.carga_1 ?? null,
-            repeticoes_2: serie.repeticoes_2 ?? null,
-            carga_2: serie.carga_2 ?? null,
+            repeticoes: serie.repeticoes ?? 0,
+            carga: serie.carga ?? 0,
+            repeticoes_1: serie.repeticoes_1 ?? 0,
+            carga_1: serie.carga_1 ?? 0,
+            repeticoes_2: serie.repeticoes_2 ?? 0,
+            carga_2: serie.carga_2 ?? 0,
             tem_dropset: serie.tem_dropset ?? false,
-            carga_dropset: serie.carga_dropset ?? null,
-            intervalo_apos_serie: serie.intervalo_apos_serie ?? null,
+            carga_dropset: serie.carga_dropset ?? 0,
+            intervalo_apos_serie: serie.intervalo_apos_serie ?? 60,
           }));
           const { error: erroSeries } = await supabase.from('modelos_serie').insert(seriesParaInserir);
           if (erroSeries) throw erroSeries;
@@ -844,7 +923,7 @@ const NovoModelo = () => {
   const renderEtapa = () => {
     switch (etapa) {
       case 'configuracao': return <ModeloConfiguracao onAvancar={handleAvancarConfiguracao} initialData={modeloEmCriacao.configuracao} onCancelar={handleCancelar} />;
-      case 'treinos': return <ModeloTreinos onAvancar={handleAvancarTreinos} onVoltar={handleVoltar} initialData={modeloEmCriacao.treinos} configuracao={modeloEmCriacao.configuracao} onCancelar={handleCancelar} />;
+      case 'treinos': return <ModeloTreinos onAvancar={handleAvancarTreinos} onVoltar={handleVoltar} initialData={modeloEmCriacao.treinos} configuracao={modeloEmCriacao.configuracao} onCancelar={handleCancelar} onUpdate={updateStorage} />;
       case 'exercicios': return <ModeloExercicios onFinalizar={handleFinalizarModelo} onVoltar={handleVoltar} initialData={modeloEmCriacao.exercicios} treinos={modeloEmCriacao.treinos || []} onUpdate={updateStorage} onCancelar={handleCancelar} isSaving={isSaving} />;
       default: return <ModeloConfiguracao onAvancar={handleAvancarConfiguracao} initialData={modeloEmCriacao.configuracao} onCancelar={handleCancelar} />;
     }

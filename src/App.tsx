@@ -43,11 +43,8 @@ import PaginaRotinas from "./pages/PaginaRotinas"; // ✅ Importa o novo compone
 import AlunosAvaliacoes from "./pages/AlunosAvaliacoes";
 import AlunosAvaliacaoNova from "./pages/AlunosAvaliacaoNova";
 import AlunosAvaliacaoDetalhes from "./pages/AlunosAvaliacaoDetalhes"; 
-import AlunosRotinaDetalhes from "./pages/AlunosRotinaDetalhes";
-import RotinaConfiguracao from "./pages/RotinaConfiguracao";
-import RotinaTreinos from "./pages/RotinaTreinos";
-import RotinaExercicios from "./pages/RotinaExercicios";
-import RotinaRevisao from "./pages/RotinaRevisao";
+import AlunosRotinaDetalhes from "./pages/AlunosRotinaDetalhes"; 
+import RotinaCriacao from "./pages/RotinaCriacao"; // ✅ Importa a nova página única
 import MeusModelos from "./pages/MeusModelos";
 import NovoModelo from "./pages/NovoModelo";
 import EditarModelo from "./pages/EditarModelo";
@@ -92,10 +89,7 @@ const router = createBrowserRouter([
       // Rotas de criação de modelo e rotina (sem layout principal para modo de foco)
       { path: "/modelos/novo", element: <NovoModelo /> },
       { path: "/modelos/editar/:modeloId", element: <EditarModelo /> },
-      { path: "/rotinas-criar/:alunoId/configuracao", element: <RotinaConfiguracao /> },
-      { path: "/rotinas-criar/:alunoId/treinos", element: <RotinaTreinos /> },
-      { path: "/rotinas-criar/:alunoId/exercicios", element: <RotinaExercicios /> },
-      { path: "/rotinas-criar/:alunoId/revisao", element: <RotinaRevisao /> },
+      { path: "/rotinas-criar/:alunoId", element: <RotinaCriacao /> }, // ✅ Rota única para criação
       { path: "/selecionar-modelo", element: <NovoModeloSelecao /> },
       // Rotas protegidas com layout (PT e Aluno)
       {

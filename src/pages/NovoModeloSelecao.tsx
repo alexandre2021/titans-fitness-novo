@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, BookCopy, Repeat, Loader2, Check, Plus, Search, Filter, X } from "lucide-react";
@@ -10,6 +8,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Tables } from "@/integrations/supabase/types";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { ExercicioModelo, SerieModelo } from "./EditarModelo"; // Reutilizando tipos
 import CustomSelect from "@/components/ui/CustomSelect";
@@ -29,7 +29,6 @@ const NovoModeloSelecao = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const alunoId = searchParams.get('alunoId');
 
@@ -104,15 +103,16 @@ const NovoModeloSelecao = () => {
     setSelecionandoModeloId(modelo.id);
 
     try {
-      // 1. Fetch all model data
+      // 1. Buscar todos os dados do modelo
       const { data: treinosModelo, error: treinosError } = await supabase.from("modelos_treino").select("*").eq("modelo_rotina_id", modelo.id).order("ordem");
       if (treinosError) throw treinosError;
 
-      // Create new treinos for the routine with new IDs
-      const treinosRotina = treinosModelo.map(t => ({
-        ...t,
-        id: `treino_rotina_${Date.now()}_${Math.random()}`, // New temp ID
-        grupos_musculares: t.grupos_musculares || [], // Ensure it's an array
+      const treinosRotina = treinosModelo.map((t, index) => ({
+        id: `treino_draft_${Date.now()}_${index}`,
+        nome: t.nome || `Treino ${String.fromCharCode(65 + index)}`,
+        grupos_musculares: t.grupos_musculares || [],
+        observacoes: t.observacoes || undefined,
+        ordem: t.ordem,
       }));
 
       const exerciciosPorTreinoRotina: Record<string, ExercicioModelo[]> = {};
@@ -125,12 +125,12 @@ const NovoModeloSelecao = () => {
         if (exerciciosError) throw exerciciosError;
 
         exerciciosPorTreinoRotina[treinoRotina.id] = exerciciosModelo.map(ex => ({
-          id: `ex_rotina_${Date.now()}_${Math.random()}`, // New ID for the routine exercise
+          id: `ex_draft_${Date.now()}_${Math.random()}`,
           exercicio_1_id: ex.exercicio_1_id,
           exercicio_2_id: ex.exercicio_2_id || undefined,
           tipo: ex.exercicio_2_id ? 'combinada' : 'simples',
           series: ex.modelos_serie.map((s: Tables<'modelos_serie'>) => ({
-            id: `serie_rotina_${Date.now()}_${Math.random()}`, // New ID for the routine serie
+            id: `serie_draft_${Date.now()}_${Math.random()}`,
             numero_serie: s.numero_serie,
             repeticoes: s.repeticoes ?? undefined,
             carga: s.carga ?? undefined,
@@ -146,20 +146,15 @@ const NovoModeloSelecao = () => {
         }));
       }
 
-      // 2. Build the object for sessionStorage
+      // 2. Montar o objeto para o sessionStorage
       const rotinaStorageData = {
-        alunoId: alunoId,
         configuracao: {
-          nome: modelo.nome,
-          objetivo: modelo.objetivo,
-          dificuldade: modelo.dificuldade,
+          nome: `${modelo.nome} (para ${aluno.nome_completo})`,
+          objetivo: modelo.objetivo || '',
+          dificuldade: modelo.dificuldade || '',
           duracao_semanas: modelo.duracao_semanas,
           treinos_por_semana: modelo.treinos_por_semana,
-          valor_total: 0,
-          forma_pagamento: 'PIX',
           data_inicio: new Date().toISOString().split('T')[0],
-          observacoes_pagamento: '',
-          permite_execucao_aluno: true,
           descricao: modelo.observacoes_rotina || ''
         },
         treinos: treinosRotina,
@@ -167,9 +162,9 @@ const NovoModeloSelecao = () => {
         etapaAtual: 'configuracao',
       };
 
-      // 3. Save to sessionStorage and navigate
-      sessionStorage.setItem('rotina_em_criacao', JSON.stringify(rotinaStorageData));
-      navigate(`/rotinas-criar/${alunoId}/configuracao`);
+      // 3. Salvar no sessionStorage e navegar para a página de criação
+      sessionStorage.setItem(`rotina_em_criacao_${alunoId}`, JSON.stringify(rotinaStorageData));
+      navigate(`/rotinas-criar/${alunoId}`);
 
     } catch (error) {
       console.error("Erro ao selecionar modelo:", error);

@@ -45,6 +45,8 @@ import { toast } from 'sonner';
 import RotinaDetalhesModal from '@/components/rotina/RotinaDetalhesModal';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { ExercicioRotina, Serie } from '@/types/rotina.types';
+import { ExercicioModelo } from './RotinaCriacao'; // Type for creation/editing state
+import { Tables } from '@/integrations/supabase/types'; // Supabase generated types
 
 // Componente de modal genérico usando react-modal
 interface ResponsiveModalProps {
@@ -194,13 +196,16 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
 
   const handleCriarDoZero = () => {
     setShowCriarModal(false);
-    sessionStorage.removeItem('rotina_em_criacao');
+    // Limpa qualquer rascunho anterior para este aluno específico, compatível com a nova página
+    sessionStorage.removeItem(`rotina_em_criacao_${alunoId}`);
     setNavegandoNovaRotina(true);
-    navigate(`/rotinas-criar/${alunoId}/configuracao`);
+    // Navega para a nova página única de criação de rotina
+    navigate(`/rotinas-criar/${alunoId}`);
   };
 
   const handleUsarModelo = () => {
     setShowCriarModal(false);
+    setNavegandoNovaRotina(true);
     navigate(`/selecionar-modelo?alunoId=${alunoId}`);
   };
 
@@ -215,32 +220,43 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
       const { data: treinos, error: treinosError } = await supabase.from('treinos').select('*').eq('rotina_id', rotinaId).order('ordem');
       if (treinosError) throw treinosError;
 
-      const exerciciosPorTreino: { [treinoId: string]: (ExercicioRotina & { series: Serie[] })[] } = {};
+      const exerciciosPorTreino: Record<string, ExercicioModelo[]> = {};
       for (const treino of treinos) {
-        const { data: exercicios, error: exerciciosError } = await supabase.from('exercicios_rotina').select('*, series(*)').eq('treino_id', treino.id).order('ordem');
+        const { data: exerciciosDb, error: exerciciosError } = await supabase.from('exercicios_rotina').select('*, series(*)').eq('treino_id', treino.id).order('ordem');
         if (exerciciosError) throw exerciciosError;
-        exerciciosPorTreino[treino.id] = exercicios;
+
+        exerciciosPorTreino[treino.id] = exerciciosDb.map(ex => ({
+          id: ex.id,
+          exercicio_1_id: ex.exercicio_1_id,
+          exercicio_2_id: ex.exercicio_2_id ?? undefined,
+          tipo: ex.exercicio_2_id ? 'combinada' : 'simples',
+          series: ex.series.map((s: Tables<'series'>) => ({
+            id: s.id,
+            numero_serie: s.numero_serie,
+            repeticoes: s.repeticoes ?? undefined,
+            carga: s.carga ?? undefined,
+            repeticoes_1: s.repeticoes_1 ?? undefined,
+            carga_1: s.carga_1 ?? undefined,
+            repeticoes_2: s.repeticoes_2 ?? undefined,
+            carga_2: s.carga_2 ?? undefined,
+            tem_dropset: s.tem_dropset ?? undefined,
+            carga_dropset: s.carga_dropset ?? undefined,
+            intervalo_apos_serie: s.intervalo_apos_serie ?? undefined,
+          })).sort((a, b) => a.numero_serie - b.numero_serie),
+          intervalo_apos_exercicio: ex.intervalo_apos_exercicio ?? undefined,
+        }));
       }
 
       // 2. Montar o objeto para o sessionStorage
       const rotinaStorageData = {
-        alunoId: alunoId!,
-        draftId: rotina.id,
-        // ✅ CORREÇÃO: Mapear explicitamente os dados da rotina para o objeto de configuração.
-        // Isso garante que todos os campos esperados pela tela de configuração existam
-        // e que valores nulos do banco de dados sejam convertidos para valores padrão (ex: '' ou 0),
-        // evitando que os inputs recebam `null` e se comportem de forma inesperada.
+        draftId: rotina.id, // Adiciona o ID do rascunho para o processo de atualização
         configuracao: {
           nome: rotina.nome || '',
           objetivo: rotina.objetivo || '',
           dificuldade: rotina.dificuldade || '',
-          duracao_semanas: rotina.duracao_semanas || 0,
-          treinos_por_semana: rotina.treinos_por_semana || 0,
-          valor_total: rotina.valor_total ?? 0,
-          forma_pagamento: rotina.forma_pagamento || 'PIX',
+          duracao_semanas: rotina.duracao_semanas ?? undefined,
+          treinos_por_semana: rotina.treinos_por_semana ?? undefined,
           data_inicio: rotina.data_inicio || new Date().toISOString().split('T')[0],
-          observacoes_pagamento: rotina.observacoes_pagamento || '',
-          permite_execucao_aluno: rotina.permite_execucao_aluno ?? true,
           descricao: rotina.descricao || ''
         },
         treinos: treinos.map(t => ({ ...t, grupos_musculares: t.grupos_musculares ? t.grupos_musculares.split(',') : [] })),
@@ -249,9 +265,9 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
       };
 
       // 3. Salvar no sessionStorage e navegar
-      sessionStorage.setItem('rotina_em_criacao', JSON.stringify(rotinaStorageData));
+      sessionStorage.setItem(`rotina_em_criacao_${alunoId}`, JSON.stringify(rotinaStorageData));
 
-      navigate(`/rotinas-criar/${alunoId}/configuracao`);
+      navigate(`/rotinas-criar/${alunoId}`);
 
     } catch (error) {
       console.error("Erro ao carregar rascunho:", error);
@@ -645,13 +661,15 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
     }
   };
 
-  if (loading) {
+  if (loading || navegandoNovaRotina) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-lg text-muted-foreground">Carregando rotinas...</p>
+            <p className="text-lg text-muted-foreground">
+              {navegandoNovaRotina ? "Preparando editor..." : "Carregando rotinas..."}
+            </p>
           </div>
         </div>
       </div>
@@ -1153,8 +1171,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
             className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6"
             size="lg"
       >
-            <Plus />
-            {navegandoNovaRotina ? "Navegando..." : "Nova Rotina"}
+            <Plus /> Nova Rotina
           </Button>
         </div>
       )}

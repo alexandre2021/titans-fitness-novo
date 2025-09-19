@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectScrollUpButton, SelectScrollDownButton } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useExercicios } from '@/hooks/useExercicios';
-import { ExercicioDetalhesModal } from '../rotina/execucao/shared/ExercicioDetalhesModal';
+import { ExercicioDetalhesModal } from '../execucao/shared/ExercicioDetalhesModal';
 import { Tables } from '@/integrations/supabase/types';
 
 // Constantes
@@ -63,7 +63,7 @@ interface Props {
   gruposMuscularesFiltro: string[];
 }
 
-export const ExercicioModalModelo: React.FC<Props> = ({
+export const ExercicioModal: React.FC<Props> = ({
   isOpen,
   onClose,
   onAdd,

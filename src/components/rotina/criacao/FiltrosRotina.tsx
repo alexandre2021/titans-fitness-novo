@@ -25,7 +25,7 @@ interface FiltrosProps {
   frequencias: number[];
 }
 
-export const FiltrosRotinaModelo: React.FC<FiltrosProps> = ({ filtros, onFiltrosChange, objetivos, dificuldades, frequencias }) => {
+export const FiltrosRotina: React.FC<FiltrosProps> = ({ filtros, onFiltrosChange, objetivos, dificuldades, frequencias }) => {
   const [showFiltros, setShowFiltros] = useState(false);
 
   const limparFiltros = () => {

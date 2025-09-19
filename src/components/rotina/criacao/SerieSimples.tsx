@@ -12,7 +12,7 @@ interface Props {
   onUpdate: (dados: Partial<ExercicioModelo>) => void;
 }
 
-export const SerieSimplesModelo = ({ exercicio, treinoId, isUltimoExercicio, onUpdate }: Props) => {
+export const SerieSimples = ({ exercicio, treinoId, isUltimoExercicio, onUpdate }: Props) => {
   const { getExercicioInfo } = useExercicioLookup();
   
   const exercicioInfo = getExercicioInfo(exercicio.exercicio_1_id);
@@ -29,8 +29,8 @@ export const SerieSimplesModelo = ({ exercicio, treinoId, isUltimoExercicio, onU
     const novaSerie: SerieModelo = {
       id: `serie_simples_${Date.now()}`,
       numero_serie: exercicio.series.length + 1,
-      repeticoes: 12,
-      carga: 10,
+      repeticoes: 0,
+      carga: 0,
       intervalo_apos_serie: 60,
     };
     onUpdate({ series: [...exercicio.series, novaSerie] });
