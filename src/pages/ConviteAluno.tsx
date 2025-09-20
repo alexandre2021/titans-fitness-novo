@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { QRCodeCanvas as QRCode } from "qrcode.react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Form,
@@ -15,7 +16,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { ArrowLeft, Mail, AlertCircle, CheckCircle, UserX } from "lucide-react";
+import { ArrowLeft, Mail, AlertCircle, CheckCircle, UserX, QrCode, Copy, X as IconX } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -37,18 +38,10 @@ const ConviteAluno = () => {
     titulo: string;
     mensagem: string;
   } | null>(null);
- 
-  const [tokenValidation, setTokenValidation] = useState<{
-    isValidating: boolean;
-    isValid: boolean;
-    conviteData?: {
-      id: string;
-      token_convite: string;
-      email_convidado: string;
-      pt_nome: string;
-    };
-    error?: string;
-  } | null>(null);
+
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
  
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -61,77 +54,42 @@ const ConviteAluno = () => {
     },
   });
 
-
-  // Validar token na URL ao carregar a página
-  useEffect(() => {
-    const validateToken = async (token: string) => {
-      setTokenValidation({ isValidating: true, isValid: false });
-     
-      try {
-        const { data, error } = await supabase.functions.invoke('validate-invite', {
-          body: { token }
-        });
-
-
-        if (error) {
-          console.error('Erro na validação do token:', error);
-          setTokenValidation({
-            isValidating: false,
-            isValid: false,
-            error: 'Erro ao validar convite. Tente novamente.'
-          });
-          return;
-        }
-
-
-        if (data?.success) {
-          form.setValue('email_aluno', data.convite.email_convidado);
-          setTokenValidation({
-            isValidating: false,
-            isValid: true,
-            conviteData: data.convite
-          });
-        } else {
-          setTokenValidation({
-            isValidating: false,
-            isValid: false,
-            error: data?.error || 'Token de convite inválido'
-          });
-        }
-      } catch (error) {
-        console.error('Erro na validação:', error);
-        setTokenValidation({
-          isValidating: false,
-          isValid: false,
-          error: 'Erro interno ao validar convite'
-        });
-      }
-    };
-
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
-   
-    if (token) {
-      validateToken(token);
+  const handleGerarQrCode = async () => {
+    if (!user) {
+      toast.error("Erro", { description: "Você precisa estar logado para gerar um convite." });
+      return;
     }
-  }, [form]);
 
-
-  // Função para invalidar o token após uso bem-sucedido
-  const invalidateToken = async (conviteId: string, token: string) => {
+    setIsGeneratingLink(true);
     try {
-      await supabase.functions.invoke('invalidate-invite', {
-        body: {
-          conviteId,
-          token
-        }
+      const { data, error } = await supabase.functions.invoke('gerar-convite-link', {
+        body: { personal_trainer_id: user.id },
       });
-    } catch (error) {
-      console.error('Erro ao invalidar token:', error);
+
+      if (error || !data?.success) {
+        throw new Error(error?.message || data?.error || "Falha ao gerar o link de convite.");
+      }
+
+      setQrCodeUrl(data.url);
+      setIsQrModalOpen(true);
+
+    } catch (e) {
+      const error = e as Error;
+      console.error("Erro ao gerar QR Code:", error);
+      toast.error("Erro ao gerar link", { description: error.message });
+    } finally {
+      setIsGeneratingLink(false);
     }
   };
 
+  const handleCopyLink = () => {
+    if (qrCodeUrl) {
+      navigator.clipboard.writeText(qrCodeUrl);
+      toast.success("Link copiado!", {
+        description: "O link de cadastro foi copiado para a área de transferência."
+      });
+    }
+  };
 
   const handleEnviarConvite = async (data: FormData) => {
     if (!user) {
@@ -179,13 +137,6 @@ const ConviteAluno = () => {
 
 
       if (responseData?.success) {
-        if (tokenValidation?.conviteData) {
-          await invalidateToken(
-            tokenValidation.conviteData.id,
-            tokenValidation.conviteData.token_convite
-          );
-        }
-       
         setResultado({
           tipo: 'sucesso',
           cenario: responseData.cenario,
@@ -274,57 +225,6 @@ const ConviteAluno = () => {
         </div>
       </div>
 
-      {/* Validação de Token */}
-      {tokenValidation && (
-        <Card className="border-l-4 border-l-blue-500">
-          <CardContent className="pt-4">
-            {tokenValidation.isValidating && (
-              <div className="flex items-center gap-3">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
-                <span className="text-sm">Validando convite...</span>
-              </div>
-            )}
-           
-            {!tokenValidation.isValidating && tokenValidation.isValid && tokenValidation.conviteData && (
-              <Alert>
-                <CheckCircle className="h-4 w-4" />
-                <AlertDescription>
-                  <div>
-                    <strong>Convite validado!</strong>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Você foi convidado por <strong>{tokenValidation.conviteData.pt_nome}</strong>
-                      <br />
-                      Email: {tokenValidation.conviteData.email_convidado}
-                    </p>
-                  </div>
-                </AlertDescription>
-              </Alert>
-            )}
-           
-            {!tokenValidation.isValidating && !tokenValidation.isValid && tokenValidation.error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  <div>
-                    <strong>Convite inválido</strong>
-                    <p className="mt-1 text-sm">{tokenValidation.error}</p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-2"
-                      onClick={() => navigate('/login')}
-                    >
-                      Voltar ao Login
-                    </Button>
-                  </div>
-                </AlertDescription>
-              </Alert>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-
       {/* Resultado do convite */}
       {resultado && (
         <Alert variant={getAlertVariant(resultado.tipo)} className="border-l-4">
@@ -352,85 +252,113 @@ const ConviteAluno = () => {
 
 
       {/* Formulário ou mensagem de indisponibilidade */}
-      {tokenValidation && !tokenValidation.isValid && !tokenValidation.isValidating ? (
-        <Card className="opacity-50 pointer-events-none">
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">
-              Formulário indisponível devido a convite inválido
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="pt-6">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleEnviarConvite)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="email_aluno"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email do Aluno</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            type="email"
-                            placeholder="Digite o email do aluno"
-                            className="pl-10"
-                            disabled={tokenValidation?.isValid || isLoading}
-                            readOnly={tokenValidation?.isValid}
-                            {...field}
-                          />
-                          {tokenValidation?.isValid && (
-                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                            </div>
-                          )}
-                        </div>
-                      </FormControl>
-                      {tokenValidation?.isValid && (
-                        <p className="text-xs text-muted-foreground">
-                          Email pré-preenchido através do convite
-                        </p>
-                      )}
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+      <Card>
+        <CardContent className="pt-6">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleEnviarConvite)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="email_aluno"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email do Aluno</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="email"
+                          placeholder="Digite o email do aluno"
+                          className="pl-10"
+                          disabled={isLoading}
+                          {...field}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
 
-                <div className="bg-muted/50 rounded-lg p-4 text-sm">
-                  <h4 className="font-medium mb-2">Como funciona:</h4>
-                  <ul className="space-y-1 text-muted-foreground">
-                    <li>• <strong>Aluno novo:</strong> Receberá um email para criar conta</li>
-                    <li>• <strong>Aluno existente:</strong> Receberá um email para aceitar o vínculo</li>
-                    <li>• <strong>Aluno vinculado a outro personal trainer:</strong> Convite será bloqueado automaticamente</li>
-                  </ul>
-                </div>
+              <div className="bg-muted/50 rounded-lg p-4 text-sm">
+                <h4 className="font-medium mb-2">Como funciona:</h4>
+                <ul className="space-y-1 text-muted-foreground">
+                  <li>• <strong>Aluno novo:</strong> Receberá um email para criar conta</li>
+                  <li>• <strong>Aluno existente:</strong> Receberá um email para aceitar o vínculo</li>
+                  <li>• <strong>Aluno vinculado a outro personal trainer:</strong> Convite será bloqueado automaticamente</li>
+                </ul>
+              </div>
 
 
-                <div className="flex gap-4 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => navigate("/alunos")}
-                    className="flex-1"
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={isLoading}
-                    className="flex-1"
-                  >
-                    {isLoading ? "Enviando..." : "Enviar Convite"}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
+              <div className="flex gap-4 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate("/alunos")}
+                  className="flex-1"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="flex-1"
+                >
+                  {isLoading ? "Enviando..." : "Enviar Convite"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+
+      {/* Divisor */}
+      <div className="relative flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t" />
+        </div>
+        <span className="relative bg-background px-2 text-xs uppercase text-muted-foreground">
+          Ou
+        </span>
+      </div>
+
+      {/* Cadastro Rápido com QR Code */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <QrCode className="h-5 w-5" />
+            Cadastro Rápido (Presencial)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            Se o aluno estiver com você, gere um QR Code para que ele possa se cadastrar rapidamente usando o próprio celular.
+          </p>
+          <Button onClick={handleGerarQrCode} variant="secondary" className="w-full" disabled={isGeneratingLink}>
+            {isGeneratingLink ? "Gerando..." : "Gerar QR Code de Convite"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Modal do QR Code */}
+      {isQrModalOpen && qrCodeUrl && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setIsQrModalOpen(false)}>
+          <Card className="w-full max-w-sm text-center" onClick={(e) => e.stopPropagation()}>
+            <CardHeader>
+              <CardTitle>Escaneie para Cadastrar</CardTitle>
+              <p className="text-sm text-muted-foreground">Peça para o aluno escanear este código com a câmera do celular.</p>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center gap-4">
+              <div className="p-4 bg-white rounded-lg">
+                <QRCode value={qrCodeUrl} size={256} />
+              </div>
+              <Button variant="outline" onClick={handleCopyLink} className="w-full">
+                <Copy className="mr-2 h-4 w-4" />
+                Copiar Link
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );
