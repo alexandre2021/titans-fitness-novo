@@ -265,8 +265,6 @@ export const useExercicioExecucao = (
               carga_dropset: serie.carga_dropset || undefined,
               intervalo_apos_serie: serie.intervalo_apos_serie || undefined,
               // Dados de execução iniciais
-              repeticoes_executadas: 0,
-              carga_executada: 0,
               carga_dropset_executada: 0,
               observacoes: '',
               executada: false
@@ -274,24 +272,23 @@ export const useExercicioExecucao = (
             
             if (progressoSerie) {
               if (ex.exercicio_2_id) {
-                // Série combinada - usar repeticoes_1/repeticoes_2 para exercícios separados.
-                // Não preencher repeticoes_executadas/carga_executada aqui, pois são para séries simples.
+                // Série combinada
                 return {
                   ...serieBase,
-                  repeticoes_1: progressoSerie.repeticoes_executadas_1 || 0,
-                  carga_1: progressoSerie.carga_executada_1 || 0,
-                  repeticoes_2: progressoSerie.repeticoes_executadas_2 || 0,
-                  carga_2: progressoSerie.carga_executada_2 || 0,
+                  repeticoes_executadas_1: progressoSerie.repeticoes_executadas_1 || 0,
+                  carga_executada_1: progressoSerie.carga_executada_1 || 0,
+                  repeticoes_executadas_2: progressoSerie.repeticoes_executadas_2 || 0,
+                  carga_executada_2: progressoSerie.carga_executada_2 || 0,
                   carga_dropset_executada: progressoSerie.carga_dropset || 0,
                   observacoes: progressoSerie.observacoes || '',
                   executada: progressoSerie.repeticoes_executadas_1 !== null || progressoSerie.repeticoes_executadas_2 !== null
                 };
               } else {
-                // Série simples
+                // Série simples (usa os campos _1 do banco)
                 return {
                   ...serieBase,
-                  repeticoes_executadas: progressoSerie.repeticoes_executadas_1 || 0,
-                  carga_executada: progressoSerie.carga_executada_1 || 0,
+                  repeticoes_executadas_1: progressoSerie.repeticoes_executadas_1 || 0,
+                  carga_executada_1: progressoSerie.carga_executada_1 || 0,
                   carga_dropset_executada: progressoSerie.carga_dropset || 0,
                   observacoes: progressoSerie.observacoes || '',
                   executada: progressoSerie.repeticoes_executadas_1 !== null
@@ -350,17 +347,11 @@ export const useExercicioExecucao = (
 
               // Lógica Definitiva: Uma série é considerada executada se os dados de execução
               // (repetições ou carga) são passados, mesmo que sejam 0.
-              const isExecuted = dadosSerie.repeticoes_executadas !== undefined || dadosSerie.carga_executada !== undefined ||
-                                 dadosSerie.repeticoes_1 !== undefined || dadosSerie.carga_1 !== undefined ||
+              const isExecuted = dadosSerie.repeticoes_executadas_1 !== undefined || dadosSerie.carga_executada_1 !== undefined ||
                                  dadosSerie.repeticoes_2 !== undefined || dadosSerie.carga_2 !== undefined;
 
               if (isExecuted) {
                 novaSerie.executada = true;
-                // ✅ CORREÇÃO: Se for série combinada, popular os campos genéricos
-                // para que as funções de contagem funcionem corretamente.
-                if (ex.exercicio_2_id) {
-                  novaSerie.repeticoes_executadas = dadosSerie.repeticoes_1 ?? novaSerie.repeticoes_1 ?? 0;
-                }
               }
 
               return novaSerie;
@@ -445,19 +436,16 @@ export const useExercicioExecucao = (
          return false;
        }
  
-       // Filtra por todas as sessões que NÃO estão concluídas.
-       const sessoesNaoConcluidas = sessoes.filter(s => s.status !== 'concluida');
- 
-       // A rotina está completa se:
-       // 1. A lista de não concluídas tem apenas 1 item, e esse item é a sessão que estamos finalizando agora.
-       const cenario1 = sessoesNaoConcluidas.length === 1 && sessoesNaoConcluidas[0].id === sessaoConcluidaId;
-       // 2. A lista de não concluídas está vazia (caso de race condition onde o update da sessão atual já foi refletido no select).
-       const cenario2 = sessoesNaoConcluidas.length === 0;
- 
-       const rotinaCompleta = cenario1 || cenario2;
+       // A rotina está completa se todas as *outras* sessões já estiverem concluídas.
+       // Esta abordagem é mais robusta e não depende de race conditions.
+       const outrasSessoesNaoConcluidas = sessoes.filter(
+         s => s.id !== sessaoConcluidaId && s.status !== 'concluida'
+       );
+
+       const rotinaCompleta = outrasSessoesNaoConcluidas.length === 0;
  
        console.log(`📊 Verificação de completude: ${rotinaCompleta ? '✅ ROTINA COMPLETA' : '⏳ Rotina ainda em andamento'}`);
-       
+
        return rotinaCompleta;
      } catch (error) {
        console.error('❌ Erro ao verificar conclusão da rotina:', error);

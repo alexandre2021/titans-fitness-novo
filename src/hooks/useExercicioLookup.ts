@@ -85,5 +85,5 @@ export function useExercicioLookup() {
     };
   };
 
-  return { getExercicioInfo };
+  return { getExercicioInfo, loading };
 }

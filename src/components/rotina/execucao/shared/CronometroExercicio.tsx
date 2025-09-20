@@ -9,8 +9,8 @@ interface Props {
   onClose: () => void;
   onComplete?: () => void;
   intervaloExercicio: number | null;
-  exercicioAtual: string;
-  proximoExercicio: string;
+  exercicioAtual?: string;
+  proximoExercicio?: { nome1: string; nome2?: string | null };
 }
 
 export const CronometroExercicio = ({
@@ -79,19 +79,21 @@ export const CronometroExercicio = ({
       <div className="w-full space-y-4">
         <div className="text-center">
           <p className="text-sm text-muted-foreground mb-1">Exercício atual:</p>
-          <p className="font-medium text-foreground text-base">
+          <p className="font-medium text-foreground text-base line-clamp-2">
             {exercicioAtual}
           </p>
         </div>
         
         <div className="flex items-center justify-center">
-          <ArrowRight className="h-5 w-5 text-muted-foreground" />
+          <ArrowRight className="h-5 w-5 text-muted-foreground shrink-0" />
         </div>
         
         <div className="text-center">
           <p className="text-sm text-muted-foreground mb-1">Próximo:</p>
-          <p className="font-medium text-foreground text-base">
-            {proximoExercicio}
+          <p className="font-medium text-foreground text-base line-clamp-2">
+            {proximoExercicio?.nome2
+              ? `${proximoExercicio.nome1} + ${proximoExercicio.nome2}`
+              : proximoExercicio?.nome1}
           </p>
         </div>
       </div>

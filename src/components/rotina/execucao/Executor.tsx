@@ -13,8 +13,8 @@ import {
   SessaoData, 
   UserProfile 
 } from '@/types/exercicio.types';
-import { exercicioUtils } from '@/utils/exercicio.utils';
-import { useExercicioLookup } from '@/utils/exercicioLookup';
+import { exercicioUtils } from '@/utils/exercicio.utils'; // This path is probably fine
+import { useExercicioLookup } from '@/hooks/useExercicioLookup'; // Correcting the import path
 
 // ✅ IMPORTS CORRIGIDOS - componentes shared
 import { CronometroSerie } from './shared/CronometroSerie';
@@ -22,6 +22,7 @@ import { CronometroExercicio } from './shared/CronometroExercicio';
 import { ExercicioDetalhesModal } from './shared/ExercicioDetalhesModal';
 import { ExercicioHistoricoModal } from './shared/ExercicioHistoricoModal';
 import { RegistroSerieCombinada } from './shared/RegistroSerieCombinada';
+import { ExercicioInfo } from '@/types/rotina.types';
 import { RegistroSerieSimples } from './shared/RegistroSerieSimples';
 
 interface Props {
@@ -83,7 +84,7 @@ export const Executor = ({
   // Hook principal - ✅ CORRIGIDO: passa sessaoData ao invés de sessaoId
   const {
     exercicios,
-    loading,
+    loading: exerciciosLoading,
     tempoSessao,
     atualizarSerieExecutada,
     pausarSessao,
@@ -96,11 +97,13 @@ export const Executor = ({
     exercicios.forEach((exercicio, exIdx) => {
       console.log(`Exercício ${exIdx}:`, {
         exercicio_1_id: exercicio.exercicio_1_id,
+        exercicio_2_id: exercicio.exercicio_2_id,
+        isCombinada: !!exercicio.exercicio_2_id,
         series: exercicio.series.map((serie, sIdx) => ({
           numero: serie.numero_serie,
           executada: serie.executada,
-          repeticoes_executadas: serie.repeticoes_executadas,
-          carga_executada: serie.carga_executada,
+          repeticoes_executadas_1: serie.repeticoes_executadas_1,
+          carga_executada_1: serie.carga_executada_1,
           observacoes: serie.observacoes
         }))
       });
@@ -114,13 +117,23 @@ export const Executor = ({
         .filter((id): id is string => typeof id === 'string')
     ));
   }, [exercicios]);
-  const { lookup } = useExercicioLookup(exercicioIds);
+  const { getExercicioInfo, loading: lookupLoading } = useExercicioLookup();
+
+  const lookup = React.useMemo(() => {
+    const newLookup: { [key: string]: ExercicioInfo } = {};
+    exercicioIds.forEach(id => {
+      newLookup[id] = getExercicioInfo(id);
+    });
+    return newLookup;
+  }, [exercicioIds, getExercicioInfo]);
 
   // Funções
   const temHistorico = useCallback((exercicioNome: string): boolean => {
     return true;
   }, []);
 
+  // Combina os estados de loading
+  const loading = exerciciosLoading || lookupLoading;
 
   // ✅ Botão principal (pausar/continuar)
   const handleBotaoPrincipal = useCallback(() => {
@@ -237,10 +250,17 @@ export const Executor = ({
         // E se não é o último exercício por índice
         const intervaloExercicio = exercicio.intervalo_apos_exercicio || EXERCICIO_CONSTANTS.INTERVALO_PADRAO_EXERCICIO;
         const proximoExercicio = exercicios[exercicioIndex + 1];
+
+        const nomeAtual1 = lookup[exercicio.exercicio_1_id]?.nome || '';
+        const nomeAtual2 = exercicio.exercicio_2_id ? (lookup[exercicio.exercicio_2_id]?.nome || null) : null;
+        const nomeCompletoAtual = nomeAtual2 ? `${nomeAtual1} + ${nomeAtual2}` : nomeAtual1;
+
+        const proximoNome1 = lookup[proximoExercicio.exercicio_1_id]?.nome || '';
+        const proximoNome2 = proximoExercicio.exercicio_2_id ? (lookup[proximoExercicio.exercicio_2_id]?.nome || null) : null;
         setDadosCronometroExercicio({
           intervalo: intervaloExercicio,
-          exercicioAtual: lookup[exercicio.exercicio_1_id]?.nome || '',
-          proximoExercicio: lookup[proximoExercicio.exercicio_1_id]?.nome || ''
+          exercicioAtual: nomeCompletoAtual,
+          proximoExercicio: { nome1: proximoNome1, nome2: proximoNome2 }
         });
         setModalIntervaloExercicio(true);
       } else {
@@ -252,7 +272,7 @@ export const Executor = ({
   }, [exercicios, atualizarSerieExecutada, lookup, finalizarSessao]); // ✅ finalizarSessao nas dependências
 
   // Loading
-  if (loading) {
+  if (loading) { // This will now use the combined loading state
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -348,25 +368,28 @@ export const Executor = ({
                 
                 <div className="space-y-4">
                   {exercicio.series.map((serie, sIndex) => {
-                    if (exercicioUtils.ehSerieCombinada(serie)) {
+                    // ✅ CORREÇÃO: A verificação do tipo de série é feita no objeto 'exercicio' pai.
+                    if (exercicio.exercicio_2_id) {
+                      const info1 = lookup[exercicio.exercicio_1_id];
+                      const info2 = lookup[exercicio.exercicio_2_id];
                       return (
                         <RegistroSerieCombinada
                           key={`serie-combinada-${sIndex}`}
                           numero={serie.numero_serie}
                           exercicio1Nome={nome1}
                           exercicio2Nome={nome2 ?? ''}
-                          repeticoes1={serie.repeticoes_1}
-                          carga1={serie.carga_1}
-                          repeticoes2={serie.repeticoes_2}
-                          carga2={serie.carga_2}
-                          initialReps1={serie.repeticoes_executadas || 0}
-                          initialCarga1={serie.carga_executada || 0}
-                          initialReps2={serie.repeticoes_2 || 0}
-                          initialCarga2={serie.carga_2 || 0}
+                          repeticoes1={serie.repeticoes_1 || 0}
+                          carga1={serie.carga_1 || 0}
+                          repeticoes2={serie.repeticoes_2 || 0}
+                          carga2={serie.carga_2 || 0}
+                          initialReps1={serie.repeticoes_executadas_1 || 0}
+                          initialCarga1={serie.carga_executada_1 || 0}
+                          initialReps2={serie.repeticoes_executadas_2 || 0}
+                          initialCarga2={serie.carga_executada_2 || 0}
                           initialObs={serie.observacoes || ''}
                           executada={serie.executada}
-                          isPesoCorporal1={exercicio.equipamento_1 === 'Peso Corporal'}
-                          isPesoCorporal2={exercicio.equipamento_2 === 'Peso Corporal'}
+                          isPesoCorporal1={info1?.equipamento === 'Peso Corporal'}
+                          isPesoCorporal2={info2?.equipamento === 'Peso Corporal'}
                           onShowHistorico1={() => {
                             setExercicioSelecionado(exercicio.exercicio_1_id);
                             setModalHistoricoVisible(true);
@@ -376,22 +399,19 @@ export const Executor = ({
                             setModalDetalhesVisible(true);
                           }}
                           onShowHistorico2={() => {
-                            setExercicioSelecionado(exercicio.exercicio_2_id ?? '');
+                            if (exercicio.exercicio_2_id) setExercicioSelecionado(exercicio.exercicio_2_id);
                             setModalHistoricoVisible(true);
                           }}
                           onShowDetalhes2={() => {
-                            setExercicioSelecionado(exercicio.exercicio_2_id ?? '');
+                            if (exercicio.exercicio_2_id) setExercicioSelecionado(exercicio.exercicio_2_id);
                             setModalDetalhesVisible(true);
                           }}
                           onSave={(reps1, carga1, reps2, carga2, obs) => {
-                            console.log('🔥 DEBUG - Salvando série combinada:', {
-                              exIndex, sIndex, reps1, carga1, reps2, carga2, obs
-                            });
                             atualizarSerieExecutada(exIndex, sIndex, {
-                              repeticoes_executadas: reps1,
-                              carga_executada: carga1,
-                              repeticoes_2: reps2,
-                              carga_2: carga2,
+                              repeticoes_executadas_1: reps1,
+                              carga_executada_1: carga1,
+                              repeticoes_executadas_2: reps2,
+                              carga_executada_2: carga2,
                               observacoes: obs,
                               executada: true
                             });
@@ -400,29 +420,26 @@ export const Executor = ({
                         />
                       );
                     }
-                    
+                    const info1 = lookup[exercicio.exercicio_1_id];
                     return (
                       <RegistroSerieSimples
                         key={`serie-${sIndex}`}
                         numero={serie.numero_serie}
-                        repeticoes={serie.repeticoes}
-                        carga={serie.carga}
+                        repeticoes={serie.repeticoes || 0}
+                        carga={serie.carga || 0}
                         temDropset={serie.tem_dropset}
-                        cargaDropset={serie.carga_dropset}
-                        initialReps={serie.repeticoes_executadas || 0}
-                        initialCarga={serie.carga_executada || 0}
+                        cargaDropset={serie.carga_dropset || 0}
+                        initialReps={serie.repeticoes_executadas_1 || 0}
+                        initialCarga={serie.carga_executada_1 || 0}
                         initialDropsetReps={0}
                         initialDropsetCarga={serie.carga_dropset_executada || 0}
                         initialObs={serie.observacoes || ''}
                         executada={serie.executada}
-                        isPesoCorporal={exercicio.equipamento_1 === 'Peso Corporal'}
-                        onSave={(reps, carga, dropsetReps, dropsetCarga, obs) => {
-                          console.log('🔥 DEBUG - Salvando série simples:', {
-                            exIndex, sIndex, reps, carga, dropsetReps, dropsetCarga, obs
-                          });
+                        isPesoCorporal={info1?.equipamento === 'Peso Corporal'}
+                        onSave={(reps, carga, dropsetCarga, obs) => {
                           atualizarSerieExecutada(exIndex, sIndex, {
-                            repeticoes_executadas: reps,
-                            carga_executada: carga,
+                            repeticoes_executadas_1: reps,
+                            carga_executada_1: carga,
                             carga_dropset_executada: dropsetCarga,
                             observacoes: obs,
                             executada: true
@@ -507,8 +524,8 @@ export const Executor = ({
           setDadosCronometroExercicio(null);
         }}
         intervaloExercicio={dadosCronometroExercicio?.intervalo || null}
-        exercicioAtual={dadosCronometroExercicio?.exercicioAtual || ''}
-        proximoExercicio={dadosCronometroExercicio?.proximoExercicio || ''}
+        exercicioAtual={dadosCronometroExercicio?.exercicioAtual}
+        proximoExercicio={dadosCronometroExercicio?.proximoExercicio}
       />
 
       <ExercicioDetalhesModal

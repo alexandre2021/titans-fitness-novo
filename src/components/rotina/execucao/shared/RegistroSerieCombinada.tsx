@@ -52,10 +52,10 @@ export const RegistroSerieCombinada = ({
   onShowHistorico2,
   onShowDetalhes2,
 }: Props) => {
-  const [inputReps1, setInputReps1] = useState('');
-  const [inputPeso1, setInputPeso1] = useState('');
-  const [inputReps2, setInputReps2] = useState('');
-  const [inputPeso2, setInputPeso2] = useState('');
+  const [inputReps1, setInputReps1] = useState(initialReps1 > 0 ? initialReps1.toString() : '');
+  const [inputPeso1, setInputPeso1] = useState(initialCarga1 > 0 ? initialCarga1.toString() : '');
+  const [inputReps2, setInputReps2] = useState(initialReps2 > 0 ? initialReps2.toString() : '');
+  const [inputPeso2, setInputPeso2] = useState(initialCarga2 > 0 ? initialCarga2.toString() : '');
   const [obs, setObs] = useState(initialObs);
 
   const handleFinalizarSerie = () => {
@@ -114,9 +114,11 @@ export const RegistroSerieCombinada = ({
             </div>
           </div>
           
-          <p className="text-sm text-primary font-medium mb-3">
-            Meta: {repeticoes1}{isPesoCorporal1 ? 'x PC' : ` x ${carga1}kg`}
-          </p>
+          {repeticoes1 > 0 && (
+            <p className="text-sm text-primary font-medium mb-3">
+              Meta: {repeticoes1}{isPesoCorporal1 ? 'x PC' : carga1 > 0 ? ` x ${carga1}kg` : ' repetições'}
+            </p>
+          )}
           
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -183,9 +185,11 @@ export const RegistroSerieCombinada = ({
             </div>
           </div>
           
-          <p className="text-sm text-primary font-medium mb-3">
-            Meta: {repeticoes2}{isPesoCorporal2 ? 'x PC' : ` x ${carga2}kg`}
-          </p>
+          {repeticoes2 > 0 && (
+            <p className="text-sm text-primary font-medium mb-3">
+              Meta: {repeticoes2}{isPesoCorporal2 ? 'x PC' : carga2 > 0 ? ` x ${carga2}kg` : ' repetições'}
+            </p>
+          )}
           
           <div className="grid grid-cols-2 gap-3">
             <div>

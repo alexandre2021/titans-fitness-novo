@@ -20,7 +20,7 @@ interface Props {
   initialObs?: string;
   executada?: boolean;
   isPesoCorporal?: boolean;
-  onSave: (reps: number, carga: number, dropsetReps?: number, dropsetCarga?: number, obs?: string) => void;
+  onSave: (reps: number, carga: number, dropsetCarga?: number, obs?: string) => void;
 }
 
 export const RegistroSerieSimples = ({ 
@@ -46,10 +46,9 @@ export const RegistroSerieSimples = ({
   const handleFinalizarSerie = () => {
     const reps = parseInt(inputReps) || 0;
     const peso = isPesoCorporal ? 0 : (parseInt(inputCarga) || 0);
-    const dropsetReps = temDropset ? 0 : undefined; // Sempre 0 para dropset
     const dropsetPeso = temDropset ? (parseInt(inputDropsetCarga) || 0) : undefined;
     
-    onSave(reps, peso, dropsetReps, dropsetPeso, obs);
+    onSave(reps, peso, dropsetPeso, obs);
   };
 
   return (
@@ -71,9 +70,11 @@ export const RegistroSerieSimples = ({
             )}
           </div>
           <div className="text-right">
-            <p className="text-sm font-medium text-primary">
-              Meta: {repeticoes}{isPesoCorporal ? 'x PC' : ` x ${carga}kg`}
-            </p>
+            {repeticoes > 0 && (
+              <p className="text-sm font-medium text-primary">
+                Meta: {repeticoes}{isPesoCorporal ? 'x PC' : carga > 0 ? ` x ${carga}kg` : ' repetições'}
+              </p>
+            )}
             {temDropset && (
               <p className="text-xs text-primary font-medium">• DROPSET</p>
             )}

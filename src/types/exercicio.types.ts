@@ -41,12 +41,11 @@ export interface SerieData {
   carga_dropset?: number;
   intervalo_apos_serie?: number;
   // Campos de execução
-  repeticoes_executadas?: number;
-  carga_executada?: number;
+  repeticoes_executadas_1?: number;
+  carga_executada_1?: number;
   // Para séries combinadas (execução do segundo exercício)
   repeticoes_executadas_2?: number;
   carga_executada_2?: number;
-  repeticoes_dropset_executadas?: number;
   carga_dropset_executada?: number;
   observacoes?: string;
   executada?: boolean;
@@ -71,7 +70,7 @@ export interface CronometroSerieData {
 export interface CronometroExercicioData {
   intervalo: number;
   exercicioAtual: string;
-  proximoExercicio: string;
+  proximoExercicio: { nome1: string; nome2?: string | null };
 }
 
 // ✅ INTERFACE PARA INSERÇÃO NO SUPABASE
