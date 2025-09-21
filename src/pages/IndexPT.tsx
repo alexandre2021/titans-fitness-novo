@@ -88,6 +88,7 @@ const IndexPT = () => {
         .select('id, email_convidado, tipo_convite, status, created_at, expires_at')
         .eq('personal_trainer_id', user.id)
         .eq('status', 'pendente')
+        .not('email_convidado', 'is', null) // Apenas convites por email devem ser listados como pendentes
         .order('created_at', { ascending: false })
         .limit(5);
 

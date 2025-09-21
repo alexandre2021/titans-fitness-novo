@@ -81,7 +81,6 @@ Edge Functions (Cloudflare)
 Hooks Existentes
 ├── useAuth (autenticação)
 ├── usePTProfile (dados do PT)
-├── useToast (notificações)
 │
 Componentes UI Base
 ├── Button, Card, Input, Select

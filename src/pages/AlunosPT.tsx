@@ -1,3 +1,11 @@
+/**
+ * @file AlunosPT.tsx
+ * @description Página principal para o Personal Trainer gerenciar seus alunos e convites pendentes.
+ *
+ * @note A limpeza de convites expirados é realizada pelo cron job 'check-inactive-users.ts':
+ *       - Convites de QR Code (sem email) são removidos após 1 dia.
+ *       - Convites por Email são removidos após 7 dias.
+ */
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -57,6 +65,7 @@ const AlunosPT = () => {
         .select('id, email_convidado, tipo_convite, status, created_at, expires_at')
         .eq('personal_trainer_id', user.id)
         .eq('status', 'pendente')
+        .not('email_convidado', 'is', null) // Apenas convites por email devem ser listados como pendentes
         .order('created_at', { ascending: false })
         .limit(10);
 

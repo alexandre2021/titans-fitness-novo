@@ -3,8 +3,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { MENSAGENS, SESSAO_STATUS } from '@/constants/exercicio.constants';
 import { supabase } from '@/integrations/supabase/client';
 import { ExercicioData, SerieData, SessaoData } from '@/types/exercicio.types';
-import { useToast } from '@/hooks/use-toast';
 import { exercicioUtils } from '@/utils/exercicio.utils';
+import { toast } from 'sonner';
 
 // Tipagens para dados do Supabase
 interface ExercicioSupabase {
@@ -79,7 +79,6 @@ export const useExercicioExecucao = (
   const [loading, setLoading] = useState(true);
   const [tempoSessao, setTempoSessao] = useState(0);
   const [sessaoInvalida, setSessaoInvalida] = useState(false);
-  const { toast } = useToast();
 
   // Carregar tempo salvo da sessão pausada
   useEffect(() => {
@@ -111,7 +110,7 @@ export const useExercicioExecucao = (
       // Helper para centralizar o tratamento de erros e redirecionamento
       const handleInvalidSession = (title: string, description: string) => {
         if (cancelado) return;
-        toast({ title, description, variant: "destructive" });
+        toast.error(title, { description });
         setSessaoInvalida(true);
         if (sessaoData) {
           const redirectPath = modoExecucao === 'aluno' ? '/minhas-rotinas' : `/alunos-rotinas/${sessaoData.aluno_id}`;
@@ -318,7 +317,7 @@ export const useExercicioExecucao = (
 
       } catch (error) {
         console.error("Erro ao carregar dados da sessão:", error);
-        toast({ title: "Erro", description: "Não foi possível carregar os dados da sessão.", variant: "destructive" });
+        toast.error("Erro", { description: "Não foi possível carregar os dados da sessão." });
         setSessaoInvalida(true);
       } finally {
         if (!cancelado) {
@@ -329,7 +328,7 @@ export const useExercicioExecucao = (
 
     validarEcarregarExercicios();
     return () => { cancelado = true; };
-  }, [sessaoData, modoExecucao, navigate, toast]);
+  }, [sessaoData, modoExecucao, navigate]);
 
   // Atualizar série executada
   const atualizarSerieExecutada = useCallback((
@@ -786,16 +785,14 @@ export const useExercicioExecucao = (
 
     } catch (error) {
       console.error('❌ Erro ao finalizar sessão:', error);
-      toast({
-        title: "Erro ao Finalizar",
+      toast.error("Erro ao Finalizar", {
         description: "Não foi possível salvar a sessão. Tente novamente.",
-        variant: "destructive"
       });
       return false; // Retorna falha
     } finally {
       setLoading(false);
     }
-  }, [exercicios, sessaoData, tempoSessao, modoExecucao, verificarRotinaCompleta, atualizarStatusRotina, arquivarRotinaCompleta, sessaoInvalida, toast]);
+  }, [exercicios, sessaoData, tempoSessao, modoExecucao, verificarRotinaCompleta, atualizarStatusRotina, arquivarRotinaCompleta, sessaoInvalida]);
 
   return {
     exercicios,

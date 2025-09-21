@@ -10,13 +10,13 @@
  * - Evitar dependências complexas entre contextos diferentes
  */
 
-import React, { useState, useEffect, useRef } from 'react';
-import { X, Search, Link, Dumbbell, Filter, Check, Info, ChevronUp, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { X, Search, Link, Dumbbell, Filter, Check, Info } from 'lucide-react';
 import Modal from 'react-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectScrollUpButton, SelectScrollDownButton } from '@/components/ui/select';
+import CustomSelect from '@/components/ui/CustomSelect';
 import { Badge } from '@/components/ui/badge';
 import { useExercicios } from '@/hooks/useExercicios';
 import { ExercicioDetalhesModal } from '../execucao/shared/ExercicioDetalhesModal';
@@ -69,6 +69,24 @@ export const ExercicioModal: React.FC<Props> = ({
   onAdd,
   gruposMuscularesFiltro
 }) => {
+  const grupoMuscularOptions = useMemo(() => [
+    { value: 'todos', label: 'Todos os grupos' },
+    ...gruposMuscularesFiltro.map((grupo: string) => ({ value: grupo, label: grupo }))
+  ], [gruposMuscularesFiltro]);
+
+  const tipoOptions = [
+    { value: 'todos', label: 'Todos' },
+    { value: 'padrao', label: 'Padrão' },
+    { value: 'personalizado', label: 'Personalizado' }
+  ];
+
+  const equipamentoOptions = useMemo(() => [
+    { value: 'todos', label: 'Todos' },
+    ...EQUIPAMENTOS.sort().map((equipamento: string) => ({ value: equipamento, label: equipamento }))
+  ], []);
+
+  const dificuldadeOptions = [{ value: 'todos', label: 'Todas' }, { value: 'Baixa', label: 'Baixa' }, { value: 'Média', label: 'Média' }, { value: 'Alta', label: 'Alta' }];
+
   const { exerciciosPadrao, exerciciosPersonalizados, loading } = useExercicios();
   
   // Estados de filtros
@@ -342,28 +360,12 @@ export const ExercicioModal: React.FC<Props> = ({
                 {mostrarFiltroGrupo && (
                   <div className="flex-1 space-y-2">
                     <Label className="text-sm font-medium">Grupo Muscular</Label>
-                    <Select
-                      value={filtros.grupo_muscular || 'todos'}
-                      onValueChange={(value) => atualizarFiltro('grupo_muscular', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="z-[70] max-h-[200px]" position="popper" sideOffset={4}>
-                        <SelectScrollUpButton className="flex items-center justify-center h-6 bg-white border-b">
-                          <ChevronUp className="h-4 w-4" />
-                        </SelectScrollUpButton>
-                        <SelectItem value="todos">Todos os grupos</SelectItem>
-                        {gruposMuscularesFiltro.map((grupo: string) => (
-                          <SelectItem key={String(grupo)} value={grupo}>
-                            {grupo}
-                          </SelectItem>
-                        ))}
-                        <SelectScrollDownButton className="flex items-center justify-center h-6 bg-white border-t">
-                          <ChevronDown className="h-4 w-4" />
-                        </SelectScrollDownButton>
-                      </SelectContent>
-                    </Select>
+                    <CustomSelect
+                      inputId="filtro-grupo-muscular"
+                      value={grupoMuscularOptions.find(opt => opt.value === filtros.grupo_muscular)}
+                      onChange={(option) => atualizarFiltro('grupo_muscular', option ? String(option.value) : 'todos')}
+                      options={grupoMuscularOptions}
+                    />
                   </div>
                 )}
 
@@ -371,78 +373,35 @@ export const ExercicioModal: React.FC<Props> = ({
                 {temExerciciosPersonalizados && (
                   <div className="flex-1 space-y-2">
                     <Label className="text-sm font-medium">Tipo</Label>
-                    <Select
-                      value={filtros.tipo}
-                      onValueChange={(value) => atualizarFiltro('tipo', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="z-[70] max-h-[200px]" position="popper" sideOffset={4}>
-                        <SelectScrollUpButton className="flex items-center justify-center h-6 bg-white border-b">
-                          <ChevronUp className="h-4 w-4" />
-                        </SelectScrollUpButton>
-                        <SelectItem value="todos">Todos</SelectItem>
-                        <SelectItem value="padrao">Padrão</SelectItem>
-                        <SelectItem value="personalizado">Personalizado</SelectItem>
-                        <SelectScrollDownButton className="flex items-center justify-center h-6 bg-white border-t">
-                          <ChevronDown className="h-4 w-4" />
-                        </SelectScrollDownButton>
-                      </SelectContent>
-                    </Select>
+                    <CustomSelect
+                      inputId="filtro-tipo"
+                      value={tipoOptions.find(opt => opt.value === filtros.tipo)}
+                      onChange={(option) => atualizarFiltro('tipo', option ? String(option.value) : 'todos')}
+                      options={tipoOptions}
+                    />
                   </div>
                 )}
 
                 {/* Equipamento */}
                 <div className="flex-1 space-y-2">
                   <Label className="text-sm font-medium">Equipamento</Label>
-                  <Select
-                    value={filtros.equipamento}
-                    onValueChange={(value) => atualizarFiltro('equipamento', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="z-[70] max-h-[200px]" position="popper" sideOffset={4}>
-                      <SelectScrollUpButton className="flex items-center justify-center h-6 bg-white border-b">
-                        <ChevronUp className="h-4 w-4" />
-                      </SelectScrollUpButton>
-                      <SelectItem value="todos">Todos</SelectItem>
-                      {EQUIPAMENTOS.sort().map((equipamento: string) => (
-                        <SelectItem key={String(equipamento)} value={equipamento}>
-                          {equipamento}
-                        </SelectItem>
-                      ))}
-                      <SelectScrollDownButton className="flex items-center justify-center h-6 bg-white border-t">
-                        <ChevronDown className="h-4 w-4" />
-                      </SelectScrollDownButton>
-                    </SelectContent>
-                  </Select>
+                  <CustomSelect
+                    inputId="filtro-equipamento"
+                    value={equipamentoOptions.find(opt => opt.value === filtros.equipamento)}
+                    onChange={(option) => atualizarFiltro('equipamento', option ? String(option.value) : 'todos')}
+                    options={equipamentoOptions}
+                  />
                 </div>
 
                 {/* Dificuldade */}
                 <div className="flex-1 space-y-2">
                   <Label className="text-sm font-medium">Dificuldade</Label>
-                  <Select
-                    value={filtros.dificuldade}
-                    onValueChange={(value) => atualizarFiltro('dificuldade', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="z-[70] max-h-[200px]" position="popper" sideOffset={4}>
-                      <SelectScrollUpButton className="flex items-center justify-center h-6 bg-white border-b">
-                        <ChevronUp className="h-4 w-4" />
-                      </SelectScrollUpButton>
-                      <SelectItem value="todos">Todas</SelectItem>
-                      <SelectItem value="Baixa">Baixa</SelectItem>
-                      <SelectItem value="Média">Média</SelectItem>
-                      <SelectItem value="Alta">Alta</SelectItem>
-                      <SelectScrollDownButton className="flex items-center justify-center h-6 bg-white border-t">
-                        <ChevronDown className="h-4 w-4" />
-                      </SelectScrollDownButton>
-                    </SelectContent>
-                  </Select>
+                  <CustomSelect
+                    inputId="filtro-dificuldade"
+                    value={dificuldadeOptions.find(opt => opt.value === filtros.dificuldade)}
+                    onChange={(option) => atualizarFiltro('dificuldade', option ? String(option.value) : 'todos')}
+                    options={dificuldadeOptions}
+                  />
                 </div>
 
                 {/* Botão Limpar */}

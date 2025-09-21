@@ -225,6 +225,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       totalFilesDeleted += deletedCount;
     }
 
+    // --- Processar Convites Expirados (Lógica Inteligente) ---
+    console.log("--- Cron Job: Expired Invites Cleanup Started ---");
+    let deletedQrInvitesCount = 0;
+    let deletedEmailInvitesCount = 0;
+
+    // 1. Deleta convites de QR Code (sem email) com mais de 24 horas.
+    const oneDayAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+    const { data: deletedQrData, error: deleteQrError } = await supabase
+      .from('convites')
+      .delete()
+      .is('email_convidado', null) // Identifica convites de QR Code
+      .lt('created_at', oneDayAgo.toISOString())
+      .select();
+
+    if (deleteQrError) {
+      console.error("Error deleting old QR code invites:", deleteQrError);
+    } else {
+      deletedQrInvitesCount = deletedQrData?.length || 0;
+      console.log(`${deletedQrInvitesCount} old QR code invites (older than 24 hours) deleted.`);
+    }
+
+    // 2. Deleta convites de Email com mais de 7 dias.
+    const eightDaysAgo = new Date(now.getTime() - (8 * 24 * 60 * 60 * 1000));
+    const { data: deletedEmailData, error: deleteEmailError } = await supabase
+      .from('convites')
+      .delete()
+      .not('email_convidado', 'is', null) // Identifica convites por email
+      .lt('created_at', eightDaysAgo.toISOString())
+      .select();
+
+    if (deleteEmailError) {
+      console.error("Error deleting old email invites:", deleteEmailError);
+    } else {
+      deletedEmailInvitesCount = deletedEmailData?.length || 0;
+      console.log(`${deletedEmailInvitesCount} old email invites (older than 7 days) deleted.`);
+    }
+    
+    const totalDeletedInvites = deletedQrInvitesCount + deletedEmailInvitesCount;
+    console.log("--- Cron Job: Expired Invites Cleanup Finished ---");
+
     console.log(`--- Cron Job: Inactive User Processing Finished ---`);
     console.log(`Alunos warned: ${alunosToWarn.length}, deleted: ${alunosToDelete.length}`);
     console.log(`PTs warned: ${ptsToWarn.length}, deleted: ${ptsToDelete.length}`);
@@ -232,10 +272,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(200).json({
       success: true,
-      message: "Inactive user processing completed.",
+      message: "Inactive user and old invites processing completed.",
       usersWarned: alunosToWarn.length + ptsToWarn.length,
       usersDeleted: alunosToDelete.length + ptsToDelete.length,
       filesDeleted: totalFilesDeleted,
+      invitesDeleted: totalDeletedInvites,
     });
 
   } catch (error) {

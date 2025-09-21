@@ -1,4 +1,12 @@
-import { useState, useEffect } from "react";
+/**
+ * @file ConviteAluno.tsx
+ * @description Página para Personal Trainers convidarem novos alunos, seja por email ou por QR Code presencial.
+ *
+ * @note A limpeza de convites expirados é realizada pelo cron job 'check-inactive-users.ts':
+ *       - Convites de QR Code (sem email) são removidos após 1 dia.
+ *       - Convites por Email são removidos após 7 dias.
+ */
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,7 +24,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { ArrowLeft, Mail, AlertCircle, CheckCircle, UserX, QrCode, Copy, X as IconX } from "lucide-react";
+import { ArrowLeft, Mail, AlertCircle, CheckCircle, UserX, QrCode, RefreshCw, Loader2, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -39,9 +47,8 @@ const ConviteAluno = () => {
     mensagem: string;
   } | null>(null);
 
-  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
-  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(true);
  
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -54,13 +61,16 @@ const ConviteAluno = () => {
     },
   });
 
-  const handleGerarQrCode = async () => {
+
+  const gerarNovoConvite = useCallback(async () => {
     if (!user) {
       toast.error("Erro", { description: "Você precisa estar logado para gerar um convite." });
       return;
     }
 
-    setIsGeneratingLink(true);
+    setIsGenerating(true);
+    setQrCodeUrl(null);
+
     try {
       const { data, error } = await supabase.functions.invoke('gerar-convite-link', {
         body: { personal_trainer_id: user.id },
@@ -71,25 +81,27 @@ const ConviteAluno = () => {
       }
 
       setQrCodeUrl(data.url);
-      setIsQrModalOpen(true);
-
     } catch (e) {
       const error = e as Error;
       console.error("Erro ao gerar QR Code:", error);
       toast.error("Erro ao gerar link", { description: error.message });
     } finally {
-      setIsGeneratingLink(false);
+      setIsGenerating(false);
     }
-  };
+  }, [user]);
 
-  const handleCopyLink = () => {
-    if (qrCodeUrl) {
-      navigator.clipboard.writeText(qrCodeUrl);
-      toast.success("Link copiado!", {
-        description: "O link de cadastro foi copiado para a área de transferência."
-      });
-    }
-  };
+  // Gera o primeiro convite ao carregar e configura o timer de 30 minutos
+  useEffect(() => {
+    gerarNovoConvite();
+
+    const intervalId = setInterval(() => {
+      toast.info("QR Code atualizado", { description: "Um novo QR Code de convite foi gerado para sua segurança." });
+      gerarNovoConvite();
+    }, 30 * 60 * 1000); // 30 minutos
+
+    // Limpa o intervalo quando o componente é desmontado
+    return () => clearInterval(intervalId);
+  }, [gerarNovoConvite]);
 
   const handleEnviarConvite = async (data: FormData) => {
     if (!user) {
@@ -207,7 +219,7 @@ const ConviteAluno = () => {
 
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
+    <div className="space-y-6 max-w-5xl mx-auto">
       {/* Cabeçalho da Página (Apenas para Desktop) */}
       <div className="hidden md:flex items-center gap-4">
         <Button
@@ -250,116 +262,104 @@ const ConviteAluno = () => {
         </Alert>
       )}
 
-
-      {/* Formulário ou mensagem de indisponibilidade */}
-      <Card>
-        <CardContent className="pt-6">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleEnviarConvite)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email_aluno"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email do Aluno</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          type="email"
-                          placeholder="Digite o email do aluno"
-                          className="pl-10"
-                          disabled={isLoading}
-                          {...field}
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-
-              <div className="bg-muted/50 rounded-lg p-4 text-sm">
-                <h4 className="font-medium mb-2">Como funciona:</h4>
-                <ul className="space-y-1 text-muted-foreground">
-                  <li>• <strong>Aluno novo:</strong> Receberá um email para criar conta</li>
-                  <li>• <strong>Aluno existente:</strong> Receberá um email para aceitar o vínculo</li>
-                  <li>• <strong>Aluno vinculado a outro personal trainer:</strong> Convite será bloqueado automaticamente</li>
-                </ul>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Cadastro Rápido com QR Code */}
+        <Card className="flex flex-col">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <QrCode className="h-5 w-5" />
+              Presencial
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center justify-center flex-grow p-6">
+            {isGenerating && (
+              <div className="flex flex-col items-center justify-center h-64 gap-4">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Gerando QR Code seguro...</p>
               </div>
+            )}
 
-
-              <div className="flex gap-4 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate("/alunos")}
-                  className="flex-1"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="flex-1"
-                >
-                  {isLoading ? "Enviando..." : "Enviar Convite"}
+            {qrCodeUrl && !isGenerating && (
+              <div className="p-2 bg-white rounded-lg border">
+                <QRCode value={qrCodeUrl} size={220} />
+              </div>
+            )}
+          </CardContent>
+          {qrCodeUrl && !isGenerating && (
+            <div className="px-6 pb-6 pt-0">
+              <div className="flex w-full">
+                <Button onClick={gerarNovoConvite} className="w-full">
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Regerar
                 </Button>
               </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+            </div>
+          )}
+        </Card>
 
-      {/* Divisor */}
-      <div className="relative flex items-center justify-center">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t" />
-        </div>
-        <span className="relative bg-background px-2 text-xs uppercase text-muted-foreground">
-          Ou
-        </span>
+        <Card className="flex flex-col">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Email
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6 flex flex-col flex-grow">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleEnviarConvite)} className="space-y-4 flex flex-col flex-grow">
+                <div className="space-y-4 flex-grow">
+                  <FormField
+                    control={form.control}
+                    name="email_aluno"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email do Aluno</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              type="email"
+                              placeholder="Digite o email do aluno"
+                              disabled={isLoading}
+                              {...field}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+
+                  <div className="bg-muted/50 rounded-lg p-4 text-sm">
+                    <h4 className="font-medium mb-2">Como funciona:</h4>
+                    <ul className="space-y-1 text-muted-foreground">
+                      <li>• <strong>Aluno novo:</strong> Receberá um email para criar conta</li>
+                      <li>• <strong>Aluno existente:</strong> Receberá um email para aceitar o vínculo</li>
+                      <li>• <strong>Aluno vinculado a outro personal trainer:</strong> Convite será bloqueado automaticamente</li>
+                    </ul>
+                  </div>
+                </div>
+
+
+                <div>
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full"
+                  >
+                    {isLoading ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...</>
+                    ) : (
+                      <><Send className="mr-2 h-4 w-4" /> Enviar</>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Cadastro Rápido com QR Code */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <QrCode className="h-5 w-5" />
-            Cadastro Rápido (Presencial)
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-4">
-            Se o aluno estiver com você, gere um QR Code para que ele possa se cadastrar rapidamente usando o próprio celular.
-          </p>
-          <Button onClick={handleGerarQrCode} variant="secondary" className="w-full" disabled={isGeneratingLink}>
-            {isGeneratingLink ? "Gerando..." : "Gerar QR Code de Convite"}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Modal do QR Code */}
-      {isQrModalOpen && qrCodeUrl && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setIsQrModalOpen(false)}>
-          <Card className="w-full max-w-sm text-center" onClick={(e) => e.stopPropagation()}>
-            <CardHeader>
-              <CardTitle>Escaneie para Cadastrar</CardTitle>
-              <p className="text-sm text-muted-foreground">Peça para o aluno escanear este código com a câmera do celular.</p>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center gap-4">
-              <div className="p-4 bg-white rounded-lg">
-                <QRCode value={qrCodeUrl} size={256} />
-              </div>
-              <Button variant="outline" onClick={handleCopyLink} className="w-full">
-                <Copy className="mr-2 h-4 w-4" />
-                Copiar Link
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   );
 };

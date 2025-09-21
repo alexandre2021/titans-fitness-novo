@@ -251,13 +251,9 @@ const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar }: ModeloConfig
 
           {/* Botões de navegação - Mobile */}
           <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 md:hidden z-50">
-            <div className="flex gap-4">
-                <Button type="button" variant="outline" onClick={onCancelar} className="w-1/2" size="lg">
-                    Cancelar
-                </Button>
-                <Button type="submit" size="lg" className="w-1/2">
-                  Avançar
-                </Button>
+            <div className="flex justify-end gap-2">
+                <Button type="button" variant="ghost" onClick={onCancelar} size="lg">Cancelar</Button>
+                <Button type="submit" size="lg">Avançar</Button>
             </div>
           </div>
         </form>
@@ -435,10 +431,12 @@ const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCance
 
           {/* Botões de navegação - Mobile */}
           <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 md:hidden z-50">
-            <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={onVoltar} className="flex-1" size="lg">Voltar</Button>
-                <Button type="button" variant="ghost" onClick={onCancelar} className="flex-1" size="lg">Cancelar</Button>
-                <Button onClick={() => onAvancar(treinos)} disabled={!requisitosAtendidos} className="flex-1" size="lg">Avançar</Button>
+            <div className="flex justify-between items-center">
+                <Button variant="outline" onClick={handleVoltarClick} size="lg">Voltar</Button>
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="ghost" onClick={onCancelar} size="lg">Cancelar</Button>
+                  <Button onClick={() => onAvancar(treinos)} disabled={!requisitosAtendidos} size="lg">Avançar</Button>
+                </div>
             </div>
           </div>
         </div>
@@ -508,7 +506,20 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
           <div className="space-y-4">
             {treinos.map(treino => (
               <Card key={treino.id}>
-                <CardHeader><CardTitle className="text-lg">{treino.nome}</CardTitle><p className="text-sm text-muted-foreground">{treino.grupos_musculares.join(', ')}</p></CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg">{treino.nome}</CardTitle>
+                    <p className="text-sm text-muted-foreground">{treino.grupos_musculares.join(', ')}</p>
+                  </div>
+                  {/* Botão para Mobile: redondo, apenas com ícone */}
+                  <Button type="button" variant="default" onClick={() => handleAbrirModal(treino)} className="md:hidden rounded-full h-10 w-10 p-0 flex-shrink-0 [&_svg]:size-6">
+                    <Plus />
+                  </Button>
+                  {/* Botão para Desktop: com ícone e texto */}
+                  <Button type="button" variant="default" onClick={() => handleAbrirModal(treino)} size="sm" className="hidden md:flex">
+                    <Plus className="h-4 w-4 mr-2" /> Exercício
+                  </Button>
+                </CardHeader>
                 <CardContent>
                   {(exercicios[treino.id] || []).length > 0 ? (
                     <div className="space-y-4">
@@ -533,11 +544,11 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
                       })}
                     </div>
                   ) : (
-                    <div className="text-center py-8"><Dumbbell className="h-10 w-10 mx-auto text-gray-300 mb-4" /><p className="text-muted-foreground">Nenhum exercício adicionado.</p></div>
+                    <div className="text-center py-8">
+                      <Dumbbell className="h-10 w-10 mx-auto text-gray-300 mb-4" />
+                      <p className="text-muted-foreground">Nenhum exercício adicionado.</p>
+                    </div>
                   )}
-                  <div className="mt-6 pt-4 border-t border-dashed">
-                    <Button type="button" variant="outline" onClick={() => handleAbrirModal(treino)} className="w-full"><Plus className="h-4 w-4 mr-2" /> Adicionar Exercício</Button>
-                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -568,16 +579,18 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
 
           {/* Botões de navegação - Mobile */}
           <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 md:hidden z-50">
-            <div className="flex gap-2">
-                <Button variant="outline" onClick={onVoltar} className="flex-1" size="lg" disabled={isSaving}>Voltar</Button>
-                <Button variant="ghost" onClick={onCancelar} className="flex-1" size="lg" disabled={isSaving}>Cancelar</Button>
-                <Button onClick={onFinalizar} disabled={!requisitosAtendidos || isSaving} className="flex-1 bg-green-600 hover:bg-green-700" size="lg">
+            <div className="flex justify-between items-center">
+                <Button variant="outline" onClick={onVoltar} size="lg" disabled={isSaving}>Voltar</Button>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" onClick={onCancelar} size="lg" disabled={isSaving}>Cancelar</Button>
+                  <Button onClick={onFinalizar} disabled={!requisitosAtendidos || isSaving} className="bg-green-600 hover:bg-green-700" size="lg">
                   {isSaving ? (
                     <><Loader2 className="h-4 w-4 animate-spin mr-2" />Salvando...</>
                   ) : (
                     "Salvar"
                   )}
-                </Button>
+                  </Button>
+                </div>
             </div>
           </div>
         </div>

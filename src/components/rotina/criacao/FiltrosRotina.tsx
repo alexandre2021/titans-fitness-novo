@@ -1,14 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Search, X, Filter } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import CustomSelect from '@/components/ui/CustomSelect';
+import { Label } from '@/components/ui/label';
 
 interface FiltrosState {
   busca: string;
@@ -27,6 +22,21 @@ interface FiltrosProps {
 
 export const FiltrosRotina: React.FC<FiltrosProps> = ({ filtros, onFiltrosChange, objetivos, dificuldades, frequencias }) => {
   const [showFiltros, setShowFiltros] = useState(false);
+
+  const objetivoOptions = useMemo(() => [
+    { value: 'todos', label: 'Todos os Objetivos' },
+    ...objetivos.map(o => ({ value: o, label: o }))
+  ], [objetivos]);
+
+  const frequenciaOptions = useMemo(() => [
+    { value: 'todos', label: 'Qualquer Frequência' },
+    ...frequencias.map(f => ({ value: String(f), label: `${f}x / semana` }))
+  ], [frequencias]);
+
+  const dificuldadeOptions = useMemo(() => [
+    { value: 'todos', label: 'Todas as Dificuldades' },
+    ...dificuldades.map(d => ({ value: d, label: d }))
+  ], [dificuldades]);
 
   const limparFiltros = () => {
     onFiltrosChange({ busca: '', objetivo: 'todos', dificuldade: 'todos', frequencia: 'todos' });
@@ -84,34 +94,34 @@ export const FiltrosRotina: React.FC<FiltrosProps> = ({ filtros, onFiltrosChange
         <div className="p-4 border rounded-lg bg-background">
           <div className="flex flex-col sm:flex-row gap-4 items-end">
             <div className="flex-1">
-              <label className="text-sm font-medium mb-2 block">Objetivo</label>
-              <Select value={filtros.objetivo} onValueChange={value => onFiltrosChange({ ...filtros, objetivo: value })}>
-                <SelectTrigger><SelectValue placeholder="Filtrar por objetivo..." /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos os Objetivos</SelectItem>
-                  {objetivos.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Label className="text-sm font-medium mb-2 block">Objetivo</Label>
+              <CustomSelect
+                inputId="filtro-objetivo"
+                value={objetivoOptions.find(opt => opt.value === filtros.objetivo)}
+                onChange={(option) => onFiltrosChange({ ...filtros, objetivo: option ? String(option.value) : 'todos' })}
+                options={objetivoOptions}
+                placeholder="Filtrar por objetivo..."
+              />
             </div>
             <div className="flex-1">
-              <label className="text-sm font-medium mb-2 block">Frequência</label>
-              <Select value={filtros.frequencia} onValueChange={value => onFiltrosChange({ ...filtros, frequencia: value })}>
-                <SelectTrigger><SelectValue placeholder="Treinos por semana..." /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Qualquer Frequência</SelectItem>
-                  {frequencias.map(f => <SelectItem key={f} value={String(f)}>{f}x / semana</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Label className="text-sm font-medium mb-2 block">Frequência</Label>
+              <CustomSelect
+                inputId="filtro-frequencia"
+                value={frequenciaOptions.find(opt => opt.value === filtros.frequencia)}
+                onChange={(option) => onFiltrosChange({ ...filtros, frequencia: option ? String(option.value) : 'todos' })}
+                options={frequenciaOptions}
+                placeholder="Treinos por semana..."
+              />
             </div>
             <div className="flex-1">
-              <label className="text-sm font-medium mb-2 block">Dificuldade</label>
-              <Select value={filtros.dificuldade} onValueChange={value => onFiltrosChange({ ...filtros, dificuldade: value })}>
-                <SelectTrigger><SelectValue placeholder="Filtrar por dificuldade..." /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todas as Dificuldades</SelectItem>
-                  {dificuldades.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Label className="text-sm font-medium mb-2 block">Dificuldade</Label>
+              <CustomSelect
+                inputId="filtro-dificuldade"
+                value={dificuldadeOptions.find(opt => opt.value === filtros.dificuldade)}
+                onChange={(option) => onFiltrosChange({ ...filtros, dificuldade: option ? String(option.value) : 'todos' })}
+                options={dificuldadeOptions}
+                placeholder="Filtrar por dificuldade..."
+              />
             </div>
             {temFiltrosAtivos && (
               <div className="flex-shrink-0">

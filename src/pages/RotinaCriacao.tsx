@@ -236,10 +236,19 @@ const RotinaConfiguracaoStep = ({ onAvancar, initialData, onCancelar, aluno, onU
           {/* Espaçamento para botões fixos */}
           <div className="pb-20 md:pb-6" />
 
-          <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t p-4 flex justify-end items-center z-50 px-6 lg:px-8">
+          {/* Botões de navegação - Desktop */}
+          <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t p-4 hidden md:flex justify-end items-center z-50 px-6 lg:px-8">
             <div className="flex items-center gap-2">
               <Button type="button" variant="ghost" onClick={onCancelar} size="lg">Cancelar</Button>
               <Button type="submit" size="lg">Avançar para Treinos <ChevronRight className="h-4 w-4 ml-2" /></Button>
+            </div>
+          </div>
+
+          {/* Botões de navegação - Mobile */}
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 md:hidden z-50">
+            <div className="flex justify-end gap-2">
+                <Button type="button" variant="ghost" onClick={onCancelar} size="lg">Cancelar</Button>
+                <Button type="submit" size="lg">Avançar</Button>
             </div>
           </div>
         </form>
@@ -438,16 +447,12 @@ const RotinaTreinosStep = ({ onAvancar, onVoltar, initialData, configuracao, onC
 
       {/* Botões de navegação - Mobile */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 md:hidden z-50">
-        <div className="flex gap-2">
-            <Button variant="outline" onClick={handleVoltarClick} className="flex-1" size="lg">
-                Voltar
-            </Button>
-            <Button variant="ghost" onClick={onCancelar} className="flex-1" size="lg">
-                Cancelar
-            </Button>
-            <Button onClick={handleProximo} disabled={!requisitosAtendidos} className="flex-1" size="lg">
-              Avançar
-            </Button>
+        <div className="flex justify-between items-center">
+            <Button variant="outline" onClick={handleVoltarClick} size="lg">Voltar</Button>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" onClick={onCancelar} size="lg">Cancelar</Button>
+              <Button onClick={handleProximo} disabled={!requisitosAtendidos} size="lg">Avançar</Button>
+            </div>
         </div>
       </div>
         </div>
@@ -517,9 +522,19 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, initialData, treinos, onU
         <div className="space-y-4">
         {treinos.map(treino => (
           <Card key={treino.id} className={exercicios[treino.id]?.length > 0 ? "border-green-200" : "border-gray-200"}>
-            <CardHeader>
-              <CardTitle className="text-lg">{treino.nome}</CardTitle>
-              <p className="text-sm text-muted-foreground">{treino.grupos_musculares.join(', ')}</p>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-lg">{treino.nome}</CardTitle>
+                <p className="text-sm text-muted-foreground">{treino.grupos_musculares.join(', ')}</p>
+              </div>
+              {/* Botão para Mobile: redondo, apenas com ícone */}
+              <Button type="button" variant="default" onClick={() => handleAbrirModal(treino)} className="md:hidden rounded-full h-10 w-10 p-0 flex-shrink-0 [&_svg]:size-6">
+                <Plus />
+              </Button>
+              {/* Botão para Desktop: com ícone e texto */}
+              <Button type="button" variant="default" onClick={() => handleAbrirModal(treino)} size="sm" className="hidden md:flex">
+                <Plus className="h-4 w-4 mr-2" /> Exercício
+              </Button>
             </CardHeader>
             <CardContent>
               {(exercicios[treino.id] || []).length > 0 ? (
@@ -551,9 +566,6 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, initialData, treinos, onU
                   <p className="text-muted-foreground">Nenhum exercício adicionado.</p>
                 </div>
               )}
-              <div className="mt-6 pt-4 border-t border-dashed">
-                <Button type="button" variant="outline" onClick={() => handleAbrirModal(treino)} className="w-full"><Plus className="h-4 w-4 mr-2" /> Adicionar Exercício</Button>
-              </div>
             </CardContent>
           </Card>
         ))}
@@ -562,13 +574,27 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, initialData, treinos, onU
         {/* Espaçamento para botões fixos */}
         <div className="pb-20 md:pb-6" />
 
-        <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t p-4 flex justify-between items-center z-50 px-6 lg:px-8">
+        {/* Botões de navegação - Desktop */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t p-4 hidden md:flex justify-between items-center z-50 px-6 lg:px-8">
           <Button variant="outline" onClick={onVoltar} size="lg" disabled={isSaving}><ChevronLeft className="h-4 w-4 mr-2" /> Voltar</Button>
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={onCancelar} size="lg" disabled={isSaving}>Cancelar</Button>
             <Button onClick={onFinalizar} disabled={!requisitosAtendidos || isSaving} size="lg" className="bg-green-600 hover:bg-green-700">
               {isSaving ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Salvando...</> : <><Check className="h-4 w-4 mr-2" />Salvar Rotina</>}
             </Button>
+          </div>
+        </div>
+
+        {/* Botões de navegação - Mobile */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 md:hidden z-50">
+          <div className="flex justify-between items-center">
+              <Button variant="outline" onClick={onVoltar} size="lg" disabled={isSaving}>Voltar</Button>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" onClick={onCancelar} size="lg" disabled={isSaving}>Cancelar</Button>
+                <Button onClick={onFinalizar} disabled={!requisitosAtendidos || isSaving} className="bg-green-600 hover:bg-green-700" size="lg">
+                {isSaving ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Salvando...</> : "Salvar"}
+                </Button>
+              </div>
           </div>
         </div>
         {isModalOpen && <ExercicioModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onAdd={handleAdicionarExercicios} gruposMuscularesFiltro={treinoAtual?.grupos_musculares || []} />}
@@ -1047,9 +1073,7 @@ const RotinaCriacao = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="sm:justify-center gap-2">
-            <AlertDialogAction onClick={confirmarDescarte} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Descartar Alterações
-            </AlertDialogAction>
+            <AlertDialogCancel onClick={confirmarDescarte}>Descartar Alterações</AlertDialogCancel>
             <AlertDialogAction onClick={handleSaveAsDraft}>Salvar como Rascunho</AlertDialogAction>
           </AlertDialogFooter>
           <AlertDialogCancel className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground p-2">

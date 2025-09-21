@@ -3,6 +3,7 @@ import Select, {
   type Props as SelectProps,
   type GroupBase,
   type ClassNamesConfig,
+  type StylesConfig,
 } from 'react-select';
 import { cn } from '@/lib/utils';
 
@@ -43,7 +44,7 @@ function CustomSelectComponent<
       dropdownIndicator: (state) =>
         cn('text-muted-foreground transition-transform', state.selectProps.menuIsOpen && 'rotate-180'),
       menu: () =>
-        'my-2 overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md z-50',
+        'my-2 overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md z-[9999]',
       menuList: () => 'max-h-60 p-1',
       option: (state) =>
         cn(
@@ -57,13 +58,23 @@ function CustomSelectComponent<
     [className]
   );
 
+  const customStyles: StylesConfig<Option, IsMulti, Group> = useMemo(
+    () => ({
+      menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+    }),
+    []
+  );
+
   return (
     <Select
       unstyled
       classNames={classNames}
+      styles={customStyles}
       isSearchable={false}
       blurInputOnSelect={true}
       captureMenuScroll={false}
+      menuPosition="fixed"
+      menuPortalTarget={document.body}
       {...props}
     />
   );
