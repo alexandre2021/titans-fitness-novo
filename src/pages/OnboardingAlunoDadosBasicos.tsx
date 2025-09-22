@@ -8,9 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
-import { useAlunoProfile } from "@/hooks/useAlunoProfile";
-import { formatarTelefone } from "@/utils/formatters";
-import { supabase } from "@/integrations/supabase/client";
+import { useAlunoProfile } from "@/hooks/useAlunoProfile"; // ✅ Hook de perfil do aluno
 import { toast } from "sonner";
 import QuestionarioSaudeModal from "@/components/QuestionarioSaudeModal";
 import CustomSelect from "@/components/ui/CustomSelect";
@@ -27,59 +25,30 @@ const OnboardingAlunoDadosBasicos = () => {
   const { profile, loading, updateProfile } = useAlunoProfile();
   
   const [formData, setFormData] = useState({
-    email: '',
     nome_completo: '',
     genero: '',
     data_nascimento: '',
-    telefone: '',
-    peso: '',
-    altura: '',
     descricao_pessoal: ''
   });
   
   const [isLoading, setIsLoading] = useState(false);
   const [showQuestionarioModal, setShowQuestionarioModal] = useState(false);
 
-  const hoje = new Date().toISOString().split("T")[0]; // Formato YYYY-MM-DD
-
-  // Carregar email do usuário autenticado e dados do profile
+  // Carregar dados do profile
   useEffect(() => {
-    const loadUserData = async () => {
-      try {
-        // Buscar email do usuário autenticado
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (user?.email) {
-          setFormData(prev => ({ ...prev, email: user.email }));
-        }
-
-        // Carregar dados do profile se existirem
-        if (profile) {
-          setFormData(prev => ({
-            ...prev,
-            nome_completo: profile.nome_completo || '',
-            genero: profile.genero || '',
-            data_nascimento: profile.data_nascimento || '',
-            telefone: profile.telefone || '',
-            peso: profile.peso?.toString() || '',
-            altura: profile.altura?.toString() || '',
-            descricao_pessoal: profile.descricao_pessoal || ''
-          }));
-        }
-      } catch (error) {
-        console.error('Erro ao carregar dados do usuário:', error);
-      }
-    };
-
-    loadUserData();
+    if (profile) {
+      setFormData(prev => ({
+        ...prev,
+        nome_completo: profile.nome_completo || '',
+        genero: profile.genero || '',
+        data_nascimento: profile.data_nascimento || '',
+        descricao_pessoal: profile.descricao_pessoal || ''
+      }));
+    }
   }, [profile]);
 
   const handleInputChange = (field: string, value: string) => {
-    if (field === 'telefone') {
-      setFormData(prev => ({ ...prev, [field]: formatarTelefone(value) }));
-    } else {
-      setFormData(prev => ({ ...prev, [field]: value }));
-    }
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const generateAvatar = () => {
@@ -101,6 +70,16 @@ const OnboardingAlunoDadosBasicos = () => {
       return;
     }
 
+    if (!formData.genero) {
+      toast.error("Gênero é obrigatório");
+      return;
+    }
+
+    if (!formData.data_nascimento) {
+      toast.error("Data de nascimento é obrigatória");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -111,9 +90,6 @@ const OnboardingAlunoDadosBasicos = () => {
         nome_completo: formData.nome_completo.trim(),
         genero: formData.genero || null,
         data_nascimento: formData.data_nascimento || null,
-        telefone: formData.telefone || null,
-        peso: formData.peso ? parseFloat(formData.peso) : null,
-        altura: formData.altura ? parseFloat(formData.altura) : null,
         descricao_pessoal: formData.descricao_pessoal.trim() || null,
         ...avatarData
       });
@@ -194,33 +170,9 @@ const OnboardingAlunoDadosBasicos = () => {
                 />
               </div>
 
-              {/* Email e Telefone - mesma linha no desktop */}
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-muted-foreground">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  readOnly
-                  className="bg-gray-100 border-gray-200 text-muted-foreground cursor-not-allowed"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="telefone">Telefone</Label>
-                <Input
-                  id="telefone"
-                  type="tel"
-                  placeholder="(XX) XXXXX-XXXX"
-                  value={formData.telefone}
-                  onChange={(e) => handleInputChange('telefone', e.target.value)}
-                  maxLength={15}
-                />
-              </div>
-              
               {/* Gênero */}
               <div className="space-y-2">
-                <Label htmlFor="genero">Gênero</Label>
+                <Label htmlFor="genero">Gênero *</Label>
                 <CustomSelect
                   inputId="genero"
                   value={GENERO_OPTIONS.find(opt => opt.value === formData.genero)}
@@ -232,7 +184,7 @@ const OnboardingAlunoDadosBasicos = () => {
               
               {/* Data de Nascimento */}
               <div className="space-y-2">
-                <Label htmlFor="data_nascimento">Data de Nascimento</Label>
+                <Label htmlFor="data_nascimento">Data de Nascimento *</Label>
                 <DatePicker
                   value={formData.data_nascimento}
                   onChange={(date) =>
@@ -241,37 +193,9 @@ const OnboardingAlunoDadosBasicos = () => {
                 />
               </div>
               
-              {/* Peso */}
-              <div className="space-y-2">
-                <Label htmlFor="peso">Peso (kg)</Label>
-                <Input
-                  id="peso"
-                  type="number"
-                  placeholder="Ex: 70"
-                  value={formData.peso}
-                  onChange={(e) => handleInputChange('peso', e.target.value)}
-                  step="0.1"
-                  min="0"
-                />
-              </div>
-              
-              {/* Altura */}
-              <div className="space-y-2">
-                <Label htmlFor="altura">Altura (cm)</Label>
-                <Input
-                  id="altura"
-                  type="number"
-                  placeholder="Ex: 175"
-                  value={formData.altura}
-                  onChange={(e) => handleInputChange('altura', e.target.value)}
-                  step="0.1"
-                  min="0"
-                />
-              </div>
-              
               {/* Descrição Pessoal */}
               <div className="md:col-span-2 space-y-2">
-                <Label htmlFor="descricao_pessoal">Descrição Pessoal</Label>
+                <Label htmlFor="descricao_pessoal">Descrição Pessoal (Opcional)</Label>
                 <Textarea
                   id="descricao_pessoal"
                   placeholder="Conte um pouco sobre seus objetivos, experiência com exercícios, preferências de treino, etc."

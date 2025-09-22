@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAlunoProfile } from "@/hooks/useAlunoProfile";
 import { toast } from "sonner";
 
@@ -102,41 +103,24 @@ const OnboardingAlunoQuestionarioSaude = () => {
                       <p className="text-sm font-medium leading-relaxed text-gray-900">
                         {index + 1}. {questao}
                       </p>
-                      <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name={`questao-${index}`}
-                            value="sim"
-                            checked={valorAtual === true}
-                            onChange={() => handleRespostaChange(index, "sim")}
-                            className="w-4 h-4 text-primary focus:ring-primary"
-                          />
-                          <span className="text-sm font-medium text-gray-700">Sim</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name={`questao-${index}`}
-                            value="nao"
-                            checked={valorAtual === false}
-                            onChange={() => handleRespostaChange(index, "nao")}
-                            className="w-4 h-4 text-primary focus:ring-primary"
-                          />
-                          <span className="text-sm font-medium text-gray-700">Não</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name={`questao-${index}`}
-                            value="prefiro_nao_responder"
-                            checked={valorAtual === null}
-                            onChange={() => handleRespostaChange(index, "prefiro_nao_responder")}
-                            className="w-4 h-4 text-primary focus:ring-primary"
-                          />
-                          <span className="text-sm font-medium text-gray-700">Prefiro não responder</span>
-                        </label>
-                      </div>
+                      <RadioGroup
+                        value={valorAtual === true ? "sim" : valorAtual === false ? "nao" : "prefiro_nao_responder"}
+                        onValueChange={(value) => handleRespostaChange(index, value)}
+                        className="flex flex-col sm:flex-row gap-2 sm:gap-4"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="sim" id={`q${index}-sim`} className="text-secondary border-secondary focus:ring-secondary" />
+                          <Label htmlFor={`q${index}-sim`} className="cursor-pointer font-normal">Sim</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="nao" id={`q${index}-nao`} className="text-secondary border-secondary focus:ring-secondary" />
+                          <Label htmlFor={`q${index}-nao`} className="cursor-pointer font-normal">Não</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="prefiro_nao_responder" id={`q${index}-pular`} className="text-secondary border-secondary focus:ring-secondary" />
+                          <Label htmlFor={`q${index}-pular`} className="cursor-pointer font-normal">Prefiro não responder</Label>
+                        </div>
+                      </RadioGroup>
                     </div>
                   );
                 })}

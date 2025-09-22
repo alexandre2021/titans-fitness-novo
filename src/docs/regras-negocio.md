@@ -158,6 +158,38 @@ Esta seção detalha as regras de negócio relacionadas à criação, posse e ci
 
 - **REGRA 4.5 (Limite de Rotinas Arquivadas):** Para otimizar o armazenamento e manter o histórico do aluno focado, um aluno pode ter no máximo 4 rotinas arquivadas. A lógica de controle é implementada na aplicação e funciona no modelo FIFO (First-In, First-Out). Ao concluir uma nova rotina, o sistema verifica se o limite foi atingido. Se sim, a rotina arquivada mais antiga é removida, incluindo seu PDF correspondente no bucket de armazenamento, antes da nova rotina ser arquivada.
 
+### 4.6. Ciclo de Vida da Criação de Rotina
+
+Esta seção detalha as regras que governam o processo de criação de uma nova rotina de treino.
+
+-   **REGRA 4.6.1 (Origem da Criação):** Uma nova rotina pode ser iniciada de duas formas: "Do Zero" (em branco) ou a partir de um "Modelo de Rotina" pré-existente criado pelo Personal Trainer.
+
+-   **REGRA 4.6.2 (Processo em Etapas):** A criação segue um assistente de 3 etapas: **1. Configuração** (dados gerais da rotina), **2. Treinos** (definição dos treinos da semana, ex: A, B, C) e **3. Exercícios** (adição de exercícios a cada treino). O progresso é salvo localmente no `sessionStorage` do navegador para evitar a perda de dados em caso de fechamento acidental da aba.
+
+-   **REGRA 4.6.3 (Rascunho):** A qualquer momento, a rotina em criação pode ser salva com o status "Rascunho". Um aluno pode ter múltiplos rascunhos, permitindo que o PT prepare futuras rotinas com antecedência.
+
+-   **REGRA 4.6.4 (Validação de Treinos):** Para avançar da etapa de Treinos, cada treino definido (ex: Treino A, Treino B) deve ter pelo menos um grupo muscular associado.
+
+-   **REGRA 4.6.5 (Validação de Exercícios):** Para que uma rotina possa ser finalizada e ativada, cada treino deve conter pelo menos um exercício.
+
+-   **REGRA 4.6.6 (Consistência de Exercícios):** Ao editar os grupos musculares de um treino que já possui exercícios, o sistema remove automaticamente os exercícios que não são mais compatíveis com a nova seleção de grupos, garantindo a consistência do treino.
+
+-   **REGRA 4.6.7 (Finalização e Geração de Sessões):** Ao ser finalizada, a rotina muda seu status para "Ativa". Neste momento, o sistema gera e insere automaticamente todas as entradas na tabela `execucoes_sessao` para todo o ciclo de vida da rotina (ex: uma rotina de 4 semanas com 3 treinos/semana resultará na criação de 12 registros de sessão).
+
+### 4.7. Ciclo de Vida da Execução de Rotina
+
+Esta seção detalha as regras que governam a execução de uma rotina ativa.
+
+-   **REGRA 4.7.1 (Seleção de Treino):** O aluno (ou o PT em modo de acompanhamento) visualiza a lista de sessões de treino disponíveis da sua rotina "Ativa", organizadas em ordem.
+
+-   **REGRA 4.7.2 (Status da Sessão):** Cada sessão de treino possui um ciclo de vida controlado pelos status: `em_aberto`, `em_andamento`, `pausada` e `concluida`.
+
+-   **REGRA 4.7.3 (Início e Continuação):** O usuário só pode iniciar uma sessão com status `em_aberto`. Ele pode continuar uma sessão que esteja `em_andamento` ou `pausada`.
+
+-   **REGRA 4.7.4 (Registro de Performance):** Durante a execução, o usuário registra os dados de performance (repetições e carga) para cada série. Esses dados são salvos na tabela `execucoes_series`.
+
+-   **REGRA 4.7.5 (Conclusão da Rotina):** Quando todas as sessões de uma rotina são marcadas como `concluida`, a rotina principal tem seu status automaticamente alterado para "Concluída" e é movida para o histórico (arquivada).
+
 ## 5. Gestão de Contas de Usuário
 
 Esta seção cobre as regras relacionadas ao ciclo de vida das contas dos usuários.

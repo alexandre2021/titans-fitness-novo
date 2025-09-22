@@ -757,7 +757,7 @@ const EditarModelo = () => {
       }
 
       toast.success("Modelo atualizado!", { description: "Suas alterações foram salvas com sucesso." });
-      navigate("/meus-modelos");
+      navigate("/meus-modelos", { replace: true });
 
     } catch (error) {
       console.error("Erro ao salvar alterações:", error);
@@ -865,7 +865,7 @@ const EditarModelo = () => {
   };
 
   const handleCancelar = () => {
-    navigate('/meus-modelos');
+    navigate('/meus-modelos', { replace: true });
   };
 
   const renderEtapa = () => {

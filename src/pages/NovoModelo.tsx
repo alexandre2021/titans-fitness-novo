@@ -800,7 +800,7 @@ const NovoModelo = () => {
 
   const handleCancelar = () => {
     sessionStorage.removeItem(STORAGE_KEY);
-    navigate('/meus-modelos');
+    navigate('/meus-modelos', { replace: true });
   };
 
   const handleFinalizarModelo = async () => {
@@ -892,7 +892,7 @@ const NovoModelo = () => {
 
       toast.success("Modelo Salvo!", { description: "Seu novo modelo de rotina foi salvo com sucesso." });
       sessionStorage.removeItem(STORAGE_KEY);
-      navigate('/meus-modelos');
+      navigate('/meus-modelos', { replace: true });
     } catch (error) {
       console.error("Erro ao salvar modelo:", error);
       toast.error("Erro ao Salvar", { description: error instanceof Error ? error.message : "Não foi possível salvar o modelo. Tente novamente." });

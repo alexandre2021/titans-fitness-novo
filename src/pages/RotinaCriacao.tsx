@@ -758,7 +758,7 @@ const RotinaCriacao = () => {
 
   const confirmarDescarte = () => {
     sessionStorage.removeItem(`${STORAGE_KEY}_${alunoId}`);
-    navigate(`/alunos-rotinas/${alunoId}`);
+    navigate(`/alunos-rotinas/${alunoId}`, { replace: true });
   };
 
   const handleVoltar = () => {
@@ -847,7 +847,7 @@ const RotinaCriacao = () => {
 
       toast.success("Rascunho salvo com sucesso!");
       sessionStorage.removeItem(`${STORAGE_KEY}_${alunoId}`);
-      navigate(`/alunos-rotinas/${alunoId}`);
+      navigate(`/alunos-rotinas/${alunoId}`, { replace: true });
     } catch (error) {
       console.error("Erro ao salvar rascunho:", error);
       toast.error("Erro ao Salvar Rascunho", { description: error instanceof Error ? error.message : "Não foi possível salvar o rascunho." });
@@ -1005,7 +1005,7 @@ const RotinaCriacao = () => {
       // 5. Limpeza e navegação
       toast.success(draftId ? "Rascunho finalizado com sucesso!" : "Rotina criada com sucesso!");
       sessionStorage.removeItem(`${STORAGE_KEY}_${alunoId}`);
-      navigate(`/alunos-rotinas/${alunoId}`);
+      navigate(`/alunos-rotinas/${alunoId}`, { replace: true });
 
     } catch (error) {
       console.error("Erro ao salvar rotina:", error);
