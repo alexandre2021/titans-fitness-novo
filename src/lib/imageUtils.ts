@@ -1,5 +1,6 @@
 // c:\Users\alexa\titans-fitness-novo\src\lib\imageUtils.ts
 
+import imageCompression from 'browser-image-compression';
 import { type Area } from 'react-easy-crop';
 
 // Converte um arquivo para uma string base64 (Data URL)
@@ -100,32 +101,25 @@ export const optimizeAndCropImage = async (
 };
 
 // Redimensiona e otimiza uma imagem a partir de um arquivo, sem corte.
+// Usa a biblioteca browser-image-compression para lidar com EXIF e otimização.
 export const resizeAndOptimizeImage = async (
   file: File,
-  maxWidth: number,
-  quality: number = 0.85
+  maxWidth: number
 ): Promise<File | null> => {
+  const options = {
+    maxSizeMB: 1.5, // Define um alvo de tamanho máximo para o arquivo
+    maxWidthOrHeight: maxWidth, // Redimensiona com base na maior dimensão
+    useWebWorker: true, // Usa Web Worker para não travar a UI
+    initialQuality: 0.85, // Qualidade inicial
+    // A chave para o problema: lê e corrige a orientação da foto
+    exifOrientation: -1,
+  };
+
   try {
-    const imageSrc = await fileToDataURL(file);
-    const image = await createImage(imageSrc);
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Não foi possível obter o contexto 2D do canvas.');
-
-    const ratio = Math.min(maxWidth / image.width, 1); // Não aumenta a imagem, apenas reduz
-    canvas.width = image.width * ratio;
-    canvas.height = image.height * ratio;
-
-    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-
-    return new Promise((resolve) => {
-      canvas.toBlob((blob) => {
-        if (!blob) { resolve(null); return; }
-        resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
-      }, 'image/jpeg', quality);
-    });
+    const compressedFile = await imageCompression(file, options);
+    return compressedFile;
   } catch (error) {
-    console.error('Erro ao redimensionar imagem:', error);
+    console.error('Erro ao comprimir imagem:', error);
     return null;
   }
 };
