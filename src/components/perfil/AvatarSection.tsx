@@ -7,17 +7,25 @@ import { Camera, Loader2, Palette, User as UserIcon, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import Modal from 'react-modal';
 import { Slider } from "@/components/ui/slider";
 import { Button } from '@/components/ui/button';
 import { optimizeAndCropImage } from '@/lib/imageUtils';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 const AVATAR_COLORS = [
   '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
   '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6366F1'
 ];
 
-interface ImageCropDialogProps extends React.PropsWithChildren {
+interface ImageCropDialogProps {
   imageSrc: string | null;
   isUploading: boolean;
   onClose: () => void;
@@ -73,26 +81,24 @@ const ImageCropDialog: React.FC<ImageCropDialogProps> = ({
   );
 
   return (
-    <Modal
-      isOpen={!!imageSrc}
-      onRequestClose={onClose}
-      shouldCloseOnOverlayClick={true}
-      shouldCloseOnEsc={true}
-      className="bg-white rounded-lg max-w-md w-full mx-4 outline-none"
-      overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-    >
-      <div className="flex items-center justify-between p-4 border-b">
-        <h2 className="text-lg font-semibold">Ajustar Imagem</h2>
-        <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
+    <Dialog open={!!imageSrc} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Ajustar Imagem</DialogTitle>
+        </DialogHeader>
         {Content}
-      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 p-4 border-t">
-        <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">Cancelar</Button>
-        <Button onClick={onSave} disabled={isUploading} className="w-full sm:w-auto">{isUploading ? "Salvando..." : "Salvar"}</Button>
-      </div>
-    </Modal>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" variant="outline">
+              Cancelar
+            </Button>
+          </DialogClose>
+          <Button type="button" onClick={onSave} disabled={isUploading}>
+            {isUploading ? "Salvando..." : "Salvar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -336,27 +342,22 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
         </Button>
       </div>
 
-      <Modal
-        isOpen={isColorPickerOpen}
-        onRequestClose={() => setIsColorPickerOpen(false)}
-        shouldCloseOnOverlayClick={true}
-        shouldCloseOnEsc={true}
-        className="bg-white rounded-lg max-w-sm w-full mx-4 outline-none"
-        overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-      >
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-semibold">Escolher Cor</h2>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsColorPickerOpen(false)}
-            className="h-8 w-8 p-0"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-        {ColorPickerContent}
-      </Modal>
+      <Dialog open={isColorPickerOpen} onOpenChange={setIsColorPickerOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Escolher Cor</DialogTitle>
+          </DialogHeader>
+          {ColorPickerContent}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary">
+                Fechar
+              </Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <ImageCropDialog
         imageSrc={imageSrc}
         isUploading={isUploading}
