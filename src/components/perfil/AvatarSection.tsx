@@ -337,10 +337,20 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
               {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
             </button>
           </div>
-          <Button variant="outline" size="sm" onClick={handleRemoveImage}>
-            <UserIcon className="h-4 w-4 mr-2" />
-            Usar Avatar
-          </Button>
+          <div className="flex flex-wrap justify-center items-center gap-2 mt-2">
+            <Button variant="outline" size="sm" onClick={handleFileSelect} disabled={isUploading}>
+              <Camera className="h-4 w-4 mr-2" />
+              Nova Foto
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setImageSrc(profile.avatar_image_url)}>
+              <Crop className="h-4 w-4 mr-2" />
+              Ajustar
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleRemoveImage} className="text-muted-foreground hover:text-destructive">
+              <UserIcon className="h-4 w-4 mr-2" />
+              Letra
+            </Button>
+          </div>
         </div>
         
       </>
