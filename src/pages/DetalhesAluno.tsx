@@ -4,8 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, User, Mail, Phone, Calendar, MapPin, Ruler, Weight } from 'lucide-react'; // Added Ruler, Weight
+import { Badge } from '@/components/ui/badge'; // Added Ruler, Weight
+import { ArrowLeft, User, Mail, Phone, Calendar, MapPin, Ruler, Weight, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { formatters } from '@/utils/formatters';
@@ -41,11 +41,15 @@ const DetalhesAluno = () => {
       if (!id || !user) return;
 
       try {
+        // MUDANÇA: Verificar se o professor tem permissão para ver este aluno (se o aluno o segue)
+        const { data: relacao, error: relacaoError } = await supabase.from('alunos_professores').select('aluno_id').eq('aluno_id', id).eq('professor_id', user.id).single();
+
+        if (relacaoError || !relacao) throw new Error("Você não tem permissão para ver este aluno.");
+
         const { data, error } = await supabase
           .from('alunos')
           .select('*') // Still selecting all, as requested
           .eq('id', id)
-          .eq('personal_trainer_id', user.id)
           .single();
 
         if (error) {
@@ -176,6 +180,7 @@ const DetalhesAluno = () => {
           </div>
 
           {/* Informações Detalhadas */}
+          {/* Desktop: 2 colunas, Mobile: 1 coluna */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div className="flex items-center gap-3">
@@ -203,7 +208,9 @@ const DetalhesAluno = () => {
                   </p>
                 </div>
               </div>
+            </div>
 
+            <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <User className="h-4 w-4 text-muted-foreground" />
                 <div>
@@ -228,8 +235,10 @@ const DetalhesAluno = () => {
                 </div>
               </div>
             </div>
+          </div>
 
-            <div className="space-y-4">
+          {/* Endereço e Descrição Pessoal (ocupam a largura total) */}
+          <div className="space-y-4 pt-6 border-t">
               <div className="flex items-start gap-3">
                 <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
                 <div>
@@ -237,22 +246,23 @@ const DetalhesAluno = () => {
                   <p className="text-sm text-muted-foreground">{displayValue(aluno.endereco)}</p>
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* Descrição Pessoal */}
-          <div className="col-span-full">
-            <label className="text-sm font-medium text-muted-foreground">Descrição Pessoal</label>
-            <p className="text-sm mt-1">
-              {aluno.descricao_pessoal || "Não informado"}
-            </p>
+            <div className="flex items-start gap-3">
+              <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
+              <div>
+                <p className="text-sm font-medium">Descrição Pessoal</p>
+                <p className="text-sm text-muted-foreground">
+                  {aluno.descricao_pessoal || "Não informado"}
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Nota Informativa */}
           <div className="bg-muted/50 p-4 rounded-lg">
             <p className="text-sm text-muted-foreground">
               <strong>Nota:</strong> As edições das informações são realizadas diretamente pelo aluno 
-              através do aplicativo. Como Personal Trainer, você possui acesso apenas para visualização.
+              através do aplicativo. Como Professor, você possui acesso apenas para visualização.
             </p>
           </div>
         </CardContent>

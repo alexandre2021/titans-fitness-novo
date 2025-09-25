@@ -70,7 +70,7 @@
 ```
 Database (Supabase)
 ├── exercicios (tabela principal)
-├── personal_trainers (controle de limite)
+├── professores (controle de limite)
 │
 Edge Functions (Cloudflare)
 ├── upload-media (gera URL pré-assinada para upload)

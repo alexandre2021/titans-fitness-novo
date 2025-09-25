@@ -20,7 +20,7 @@ const UserTypeSelection = () => {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <img
-            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal.png"
+            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal-simples.png"
             alt="Titans.fitness"
             className="h-12"
           />
@@ -52,7 +52,7 @@ const UserTypeSelection = () => {
                 <p className="text-text-secondary mb-8">
                   Gerencie seus alunos, crie treinos personalizados e acompanhe o progresso de cada cliente com nossa IA.
                 </p>
-                <Link to="/cadastro/personal-trainer" className="block">
+                <Link to="/cadastro/professor" className="block">
                   <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
                     Sou Personal Trainer
                   </Button>

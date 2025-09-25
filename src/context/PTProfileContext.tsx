@@ -2,7 +2,7 @@ import React, { createContext, ReactNode } from 'react';
 import { usePTProfile } from '@/hooks/usePTProfile';
 import { Tables } from '@/integrations/supabase/types';
 
-type PTProfile = Tables<"personal_trainers">;
+type PTProfile = Tables<"professores">;
 
 interface PTProfileContextType {
   profile: PTProfile | null;

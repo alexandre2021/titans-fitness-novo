@@ -16,17 +16,25 @@ const getErrorMessage = (errorCode: string | null) => {
         title: "Convite já utilizado", 
         message: "Este convite já foi aceito anteriormente. Se você já está vinculado, pode simplesmente fazer o login."
       };
-    case 'aluno_ja_vinculado':
-      return { 
-        title: "Aluno já tem um Personal Trainer", 
-        message: "Sua conta já está associada a um Personal Trainer. Não é possível aceitar um novo convite."
+    case 'expirado':
+      return {
+        title: "Convite Expirado",
+        message: "Este link de convite expirou. Por favor, solicite um novo ao seu Personal Trainer."
       };
+    case 'aluno_nao_encontrado':
+      return {
+        title: "Aluno não encontrado",
+        message: "Não encontramos uma conta de aluno associada a este convite. Verifique se o email do convite está correto."
+      };
+    case 'falha_ao_verificar':
+    case 'falha_ao_seguir':
     case 'falha_ao_atualizar':
     case 'erro_interno':
       return { 
         title: "Erro no Servidor", 
         message: "Não foi possível processar seu convite devido a um erro interno. Por favor, tente novamente mais tarde."
       };
+    case 'token_ausente':
     default:
       return { 
         title: "Link de Convite Inválido", 

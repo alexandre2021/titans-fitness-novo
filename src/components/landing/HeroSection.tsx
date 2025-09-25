@@ -3,30 +3,22 @@ import { Link } from "react-router-dom";
 
 const HeroSection = () => {
   return (
-    <section className="bg-background py-20">
-      <div className="container mx-auto px-6 text-center">
-        <h1 className="text-5xl font-bold text-text-primary mb-6 leading-tight">
-          Potencialize seus resultados com{" "}
-          <span className="text-primary">inteligência artificial</span>
+    <section className="py-20 md:py-32 bg-background">
+      <div className="container mx-auto px-4 text-center">
+        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tighter">
+          A plataforma completa para <span className="text-primary">Professores</span>
         </h1>
-        
-        <p className="text-xl text-text-secondary mb-8 max-w-3xl mx-auto leading-relaxed">
-          A plataforma completa para Personal Trainers gerenciarem seus alunos 
-          com eficiência e profissionalismo. Treinos personalizados, 
-          acompanhamento inteligente e muito mais.
+        <p className="mt-6 text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
+          Gerencie seus alunos com ferramentas de ponta e compartilhe seu conhecimento com uma comunidade apaixonada por fitness.
         </p>
-        
-        <div className="flex justify-center">
-          <Link to="/cadastro">
-            <Button size="lg" className="bg-primary hover:bg-primary/80 text-primary-foreground px-8 py-4 text-lg">
-              Cadastre-se
-            </Button>
+        <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+          <Link to="/cadastro/professor">
+            <Button size="lg" className="w-full sm:w-auto">Sou Professor</Button>
+          </Link>
+          <Link to="/#comunidade">
+            <Button size="lg" variant="outline" className="w-full sm:w-auto">Explorar Conteúdo</Button>
           </Link>
         </div>
-        
-        <p className="text-text-secondary mt-6 text-sm">
-          ✓ Gratuito para sempre • ✓ Solução completa • ✓ Configuração em 5 minutos
-        </p>
       </div>
     </section>
   );

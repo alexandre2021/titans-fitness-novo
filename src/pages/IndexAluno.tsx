@@ -13,7 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 
-interface PersonalTrainer {
+interface professor {
   nome_completo: string;
   avatar_type: string;
   avatar_image_url?: string;
@@ -56,7 +56,7 @@ const IndexAluno = () => {
   const [progresso, setProgresso] = useState({ concluidas: 0, pausadas: 0, total: 0 });
   const [ultimaAtividade, setUltimaAtividade] = useState<UltimaAtividade | null>(null);
   const [treinos7dias, setTreinos7dias] = useState(0);
-  const [personalTrainer, setPersonalTrainer] = useState<PersonalTrainer | null>(null);
+  const [professor, setprofessor] = useState<professor | null>(null);
   const [stats, setStats] = useState({ rotinas: 0, avaliacoes: 0 });
 
   const ModoExecucaoBadge = ({ modo }: { modo: 'pt' | 'aluno' | null }) => {
@@ -107,17 +107,30 @@ const IndexAluno = () => {
     if (!user || !alunoProfile) return;
 
     const fetchData = async () => {
-      setLoading(true);
       try {
-        // 1. Fetch PT info
-        if (alunoProfile.personal_trainer_id) {
+        // 1. MUDANÇA: Buscar o primeiro professor que o aluno segue
+        const { data: relacaoData, error: relacaoError } = await supabase
+          .from('alunos_professores')
+          .select('professor_id')
+          .eq('aluno_id', user.id)
+          .limit(1)
+          .single();
+
+        if (relacaoData && !relacaoError) {
           const { data: ptData, error: ptError } = await supabase
-            .from('personal_trainers')
+            .from('professores')
             .select('nome_completo, avatar_type, avatar_image_url, avatar_letter, avatar_color')
-            .eq('id', alunoProfile.personal_trainer_id)
+            .eq('id', relacaoData.professor_id)
             .single();
           if (ptError) throw ptError;
-          setPersonalTrainer(ptData);
+
+          // Constrói a URL pública do avatar do professor
+          if (ptData && ptData.avatar_image_url && !ptData.avatar_image_url.startsWith('http')) {
+            const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(ptData.avatar_image_url);
+            ptData.avatar_image_url = urlData.publicUrl;
+          }
+
+          setprofessor(ptData);
         }
 
         // 2. Fetch active routine and its stats
@@ -353,22 +366,22 @@ const IndexAluno = () => {
           </CardContent>
         </Card>
 
-        {personalTrainer && (
+        {professor && (
           <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg"><User className="h-5 w-5" />Meu Personal</CardTitle>
             </CardHeader>
             <CardContent className="flex items-center gap-3">
               <Avatar>
-                {personalTrainer.avatar_type === 'image' ? (
-                  <AvatarImage src={personalTrainer.avatar_image_url} />
+                {professor.avatar_type === 'image' ? (
+                  <AvatarImage src={professor.avatar_image_url} />
                 ) : (
-                  <AvatarFallback style={{ backgroundColor: personalTrainer.avatar_color }}>
-                    {personalTrainer.avatar_letter}
+                  <AvatarFallback style={{ backgroundColor: professor.avatar_color }}>
+                    {professor.avatar_letter}
                   </AvatarFallback>
                 )}
               </Avatar>
-              <p className="font-semibold">{personalTrainer.nome_completo}</p>
+              <p className="font-semibold">{professor.nome_completo}</p>
             </CardContent>
           </Card>
         )}

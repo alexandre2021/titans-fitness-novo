@@ -78,7 +78,7 @@ export const EditRedesSociaisForm = ({ profile, onSave }: EditRedesSociaisFormPr
       if (!user) throw new Error('Usuário não autenticado');
 
       const { error } = await supabase
-        .from('personal_trainers')
+        .from('professores')
         .update({
           instagram: values.instagram || null,
           facebook: values.facebook || null,

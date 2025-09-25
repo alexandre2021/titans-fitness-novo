@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
@@ -34,6 +35,7 @@ const formSchema = z.object({
   anosExperiencia: z.string().optional(),
   especializacoes: z.array(z.string()).optional(),
   bio: z.string().optional(),
+  cref: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -58,14 +60,48 @@ const OnboardingPTExperienciaProfissional = () => {
     register,
     handleSubmit,
     formState: { errors },
+    reset,
     setValue,
     watch,
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       especializacoes: especializacoesSelecionadas,
+      cref: "",
     }
   });
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (user) {
+        try {
+          const { data, error } = await supabase
+            .from('professores')
+            .select('anos_experiencia, especializacoes, bio, cref')
+            .eq('id', user.id)
+            .single();
+
+          if (error) throw error;
+
+          if (data) {
+            reset({
+              anosExperiencia: data.anos_experiencia || '',
+              especializacoes: data.especializacoes || [],
+              bio: data.bio || '',
+              cref: data.cref || '',
+            });
+            if (data.especializacoes) {
+              setEspecializacoesSelecionadas(data.especializacoes);
+            }
+          }
+        } catch (err) {
+          console.error("Erro ao buscar perfil profissional:", err);
+          toast.error("Erro ao carregar seus dados.");
+        }
+      }
+    };
+    fetchProfile();
+  }, [user, reset]);
 
   const anosExperiencia = watch("anosExperiencia");
   const bio = watch("bio");
@@ -91,11 +127,12 @@ const OnboardingPTExperienciaProfissional = () => {
     
     try {
       const { error } = await supabase
-        .from('personal_trainers')
+        .from('professores')
         .update({
           anos_experiencia: data.anosExperiencia || null,
           especializacoes: data.especializacoes || [],
           bio: data.bio || null,
+          cref: data.cref || null,
         })
         .eq('id', user.id);
 
@@ -120,19 +157,31 @@ const OnboardingPTExperienciaProfissional = () => {
       <Card className="w-full max-w-2xl border-border">
         <CardHeader className="text-center">
           <div className="mb-4">
-            <Progress value={66} className="w-full" />
-            <p className="text-sm text-text-secondary mt-2">Etapa 2 de 3</p>
+            <Progress value={50} className="w-full" />
+            <p className="text-sm text-text-secondary mt-2">Etapa 1 de 2</p>
           </div>
           <CardTitle className="text-2xl text-text-primary">
-            Experiência Profissional
+            Informações Profissionais
           </CardTitle>
           <p className="text-text-secondary">
-            Conte-nos sobre sua experiência e especializações (opcional)
+            Conte-nos sobre sua experiência profissional
           </p>
         </CardHeader>
         
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="anosExperiencia" className="text-text-primary">
+                CREF
+              </Label>
+              <Input
+                id="cref"
+                placeholder="000000-G/SP"
+                {...register("cref")}
+                className="border-border focus:ring-primary"
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="anosExperiencia" className="text-text-primary">
                 Anos de Experiência
@@ -203,18 +252,10 @@ const OnboardingPTExperienciaProfissional = () => {
               )}
             </div>
             
-            <div className="flex gap-4 pt-4">
-              <Button 
-                type="button"
-                variant="outline"
-                onClick={() => navigate("/onboarding-pt/informacoes-basicas")}
-                className="flex-1"
-              >
-                Voltar
-              </Button>
+            <div className="pt-4">
               <Button 
                 type="submit" 
-                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                 disabled={isLoading}
               >
                 {isLoading ? "Salvando..." : "Continuar"}

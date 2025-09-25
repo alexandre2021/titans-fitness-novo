@@ -8,13 +8,13 @@ const LandingFooter = () => {
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center mb-4">
               <img 
-                src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets//TitansFitnessLogo.png" 
+                src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal-simples.png" 
                 alt="Titans.fitness" 
-                className="h-14"
+                className="h-10 w-auto"
               />
             </div>
             <p className="text-gray-600 mb-4 max-w-md">
-              A plataforma completa para Personal Trainers que querem 
+              A plataforma completa para Professores que querem 
               profissionalizar seu trabalho e potencializar os resultados dos seus alunos.
             </p>
             <div className="flex space-x-4">
@@ -56,7 +56,7 @@ const LandingFooter = () => {
             © 2025 Titans.fitness. Todos os direitos reservados.
           </p>
           <p className="text-gray-600 text-sm mt-4 md:mt-0">
-            Feito com ❤️ para Personal Trainers
+            Feito com ❤️ para você
           </p>
         </div>
       </div>

@@ -104,12 +104,16 @@ const AlunosRotinaDetalhes = () => {
       if (!alunoId || !rotinaId || !user) return;
 
       try {
+        // MUDANÇA: Verificar se o professor tem permissão para ver este aluno (se o aluno o segue)
+        const { data: relacao, error: relacaoError } = await supabase.from('alunos_professores').select('aluno_id').eq('aluno_id', alunoId).eq('professor_id', user.id).single();
+
+        if (relacaoError || !relacao) throw new Error("Você não tem permissão para ver este aluno.");
+
         // Buscar informações do aluno
         const { data: alunoData, error: alunoError } = await supabase
           .from('alunos')
           .select('id, nome_completo, avatar_type, avatar_image_url, avatar_letter, avatar_color')
           .eq('id', alunoId)
-          .eq('personal_trainer_id', user.id)
           .single();
 
         if (alunoError) {
@@ -129,7 +133,7 @@ const AlunosRotinaDetalhes = () => {
           .select('*')
           .eq('id', rotinaId)
           .eq('aluno_id', alunoId)
-          .eq('personal_trainer_id', user.id)
+          .eq('professor_id', user.id)
           .single();
 
         if (rotinaError) {

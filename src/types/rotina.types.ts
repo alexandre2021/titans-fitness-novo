@@ -20,7 +20,7 @@ export type Treino = Tables<'treinos'>;
 export type ExercicioRotina = Tables<'exercicios_rotina'>;
 export type Serie = Tables<'series'>;
 export type Aluno = Tables<'alunos'>;
-export type PersonalTrainer = Tables<'personal_trainers'>;
+export type professor = Tables<'professores'>;
 
 // Constantes do sistema
 export const OBJETIVOS = [

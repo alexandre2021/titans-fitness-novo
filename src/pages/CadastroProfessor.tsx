@@ -26,7 +26,7 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-const CadastroPersonalTrainer = () => {
+const Cadastroprofessor = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -70,7 +70,7 @@ const CadastroPersonalTrainer = () => {
         .from('user_profiles')
         .insert({
           id: authData.user.id,
-          user_type: 'personal_trainer'
+          user_type: 'professor'
         });
 
       if (profileError) {
@@ -79,7 +79,7 @@ const CadastroPersonalTrainer = () => {
 
       // Criar perfil específico do PT
       const { error: ptError } = await supabase
-        .from('personal_trainers')
+        .from('professores')
         .insert({
           id: authData.user.id,
           nome_completo: data.nomeCompleto,
@@ -116,7 +116,7 @@ const CadastroPersonalTrainer = () => {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <img
-            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal.png"
+            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal-simples.png"
             alt="Titans.fitness"
             className="h-12"
           />
@@ -274,4 +274,4 @@ const CadastroPersonalTrainer = () => {
   );
 };
 
-export default CadastroPersonalTrainer;
+export default Cadastroprofessor;

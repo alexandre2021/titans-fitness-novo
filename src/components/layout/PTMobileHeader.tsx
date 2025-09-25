@@ -10,32 +10,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, Settings, ArrowLeft, BookCopy } from "lucide-react";
+import { LogOut, User, Settings, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
-
-type PTProfile = Tables<'personal_trainers'>;
+import { useProfessorProfile } from "@/hooks/useProfessorProfile";
 
 const PTMobileHeader = () => {
   const { user, signOut } = useAuth();
+  const { profile } = useProfessorProfile();
   const location = useLocation();
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<PTProfile | null>(null);
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user) return;
-      try {
-        const { data, error } = await supabase.from('personal_trainers').select('*').eq('id', user.id).single();
-        if (error) throw error;
-        setProfile(data);
-      } catch (error) {
-        console.error("Erro ao buscar perfil do PT no header mobile:", error);
-      }
-    };
-    if (user) fetchProfile();
-  }, [user]);
 
   const getPageConfig = (): { title: React.ReactNode; subtitle?: string; showBackButton: boolean; backPath?: string } => {
     const path = location.pathname;
@@ -63,6 +46,10 @@ const PTMobileHeader = () => {
     if (path.startsWith('/alunos-parq/')) {
       return { title: 'PAR-Q do Aluno', showBackButton: true, backPath: '/alunos' };
     }
+
+    // ✅ Adicionando lógica para os posts
+    if (path.startsWith('/posts/novo')) return { title: 'Novo Post', showBackButton: true };
+    if (path.startsWith('/posts/editar/')) return { title: 'Editar Post', showBackButton: true };
     
     if (path.startsWith('/detalhes-aluno/')) return { title: 'Detalhes do Aluno', showBackButton: true };
     if (path.startsWith('/convite-aluno')) return { title: 'Convidar Aluno', showBackButton: true };
@@ -72,10 +59,11 @@ const PTMobileHeader = () => {
 
     // Páginas Principais (sem botão de voltar)
     const mainPages: { [key: string]: { title: string; subtitle?: string } } = {
-      "/index-pt": { title: "Inicial", subtitle: `Bem-vindo, ${profile?.nome_completo?.split(' ')[0] || 'Personal'}!` },
+      "/index-professor": { title: "Inicial", subtitle: `Bem-vindo, ${profile?.nome_completo?.split(' ')[0] || 'Professor(a)'}!` },
       "/alunos": { title: "Alunos", subtitle: "Gerencie seus alunos e acompanhe seu progresso" },
       "/exercicios-pt": { title: "Exercícios", subtitle: "Gerencie seus exercícios padrão e personalizados" },
       "/meus-modelos": { title: "Meus Modelos", subtitle: "Gerencie seus modelos de rotina" },
+      "/mais": { title: "Mais Opções", subtitle: "Navegue por outras seções e configurações" },
       "/agenda-pt": { title: "Agenda" },
       "/mensagens-pt": { title: "Mensagens" },
       "/perfil-pt": { title: "Meu Perfil" },

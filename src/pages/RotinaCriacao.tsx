@@ -788,7 +788,7 @@ const RotinaCriacao = () => {
         .from('rotinas')
         .insert({
           aluno_id: alunoId,
-          personal_trainer_id: user.id,
+          professor_id: user.id,
           nome: configuracao.nome || `Rascunho - ${new Date().toLocaleDateString()}`,
           objetivo: configuracao.objetivo || null,
           dificuldade: configuracao.dificuldade || null, // Permite nulo, conforme alteração no DB
@@ -873,6 +873,33 @@ const RotinaCriacao = () => {
     }
 
     try {
+      // 1. VERIFICA SE JÁ EXISTE ROTINA ATIVA (NOVA REGRA DE NEGÓCIO)
+      // A verificação só é necessária se NÃO estivermos finalizando um rascunho,
+      // pois a finalização de um rascunho é uma atualização, não uma criação de conflito.
+      if (!draftId) {
+        const { data: rotinaAtivaExistente, error: checkError } = await supabase
+          .from('rotinas')
+          .select('id, professores(nome_completo)')
+          .eq('aluno_id', alunoId)
+          .eq('status', 'Ativa')
+          .maybeSingle(); // Usar maybeSingle para não dar erro se não encontrar nada
+
+        // Ignora o erro se for 'PGRST116' (nenhuma linha encontrada), que é o cenário esperado.
+        if (checkError && checkError.code !== 'PGRST116') {
+          throw new Error(`Erro ao verificar rotina ativa: ${checkError.message}`);
+        }
+
+        if (rotinaAtivaExistente) {
+          const nomeProfessor = rotinaAtivaExistente.professores?.nome_completo || 'outro professor';
+          toast.error("Não é possível criar a rotina", {
+            description: `Este aluno já possui uma rotina ativa criada por ${nomeProfessor}. Peça para o aluno cancelar a rotina atual antes de criar uma nova.`,
+            duration: 6000,
+          });
+          setIsSaving(false);
+          return;
+        }
+      }
+
       let rotinaId: string;
 
       if (draftId) {
@@ -919,7 +946,7 @@ const RotinaCriacao = () => {
           .from('rotinas')
           .insert({
             aluno_id: alunoId,
-            personal_trainer_id: user.id,
+            professor_id: user.id,
             nome: configuracao.nome,
             objetivo: configuracao.objetivo,
             dificuldade: configuracao.dificuldade,
@@ -995,6 +1022,7 @@ const RotinaCriacao = () => {
           aluno_id: alunoId,
           sessao_numero: i + 1,
           status: 'em_aberto',
+          modo_execucao: null, // Garante que o modo de execução seja nulo na criação
         });
       }
       if (sessoesParaInserir.length > 0) {

@@ -28,8 +28,8 @@ import {
   FilePlus,
   BookCopy,
   Loader2,
-  AlertTriangle,
-  X
+  X,
+  User
 } from 'lucide-react';
 import { BicepsFlexed } from 'lucide-react';
 import {
@@ -106,6 +106,11 @@ interface Rotina {
   valor_total: number;
   forma_pagamento: string;
   created_at: string;
+  professor_id: string;
+  professores: {
+    id: string;
+    nome_completo: string;
+  } | null;
 }
 
 interface RotinaArquivada {
@@ -180,7 +185,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         const { count, error } = await supabase
             .from('modelos_rotina')
             .select('*', { count: 'exact', head: true })
-            .eq('personal_trainer_id', user.id);
+            .eq('professor_id', user.id);
 
         if (error) throw error;
         setTemModelos((count || 0) > 0);
@@ -294,7 +299,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         // Otimização: Buscar todos os dados em paralelo
         const [alunoResult, rotinasResult, arquivadasResult] = await Promise.all([
           supabase.from('alunos').select('id, nome_completo, email, avatar_type, avatar_image_url, avatar_letter, avatar_color').eq('id', alunoId).single(),
-          supabase.from('rotinas').select('*').eq('aluno_id', alunoId).order('created_at', { ascending: false }),
+          supabase.from('rotinas').select('*, professores(id, nome_completo)').eq('aluno_id', alunoId).order('created_at', { ascending: false }),
           supabase.from('rotinas_arquivadas').select('*').eq('aluno_id', alunoId).order('created_at', { ascending: false })
         ]);
 
@@ -311,8 +316,9 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         setAluno(alunoResult.data);
         
         // ✅ Separar rotinas por status
-        setRotinasAtivas((rotinasResult.data || []).filter(r => r.status === 'Ativa' || r.status === 'Bloqueada' || r.status === 'Cancelada'));
-        setRotinasRascunho((rotinasResult.data || []).filter(r => r.status === 'Rascunho'));
+        const rotinasDoAluno = (rotinasResult.data as Rotina[] || []);
+        setRotinasAtivas(rotinasDoAluno.filter(r => r.status === 'Ativa' || r.status === 'Bloqueada' || r.status === 'Cancelada'));
+        setRotinasRascunho(rotinasDoAluno.filter(r => r.status === 'Rascunho' && r.professor_id === user.id));
         setRotinasArquivadas((arquivadasResult.data as RotinaArquivada[]) || []);
 
       } catch (error) {
@@ -464,7 +470,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         .from('rotinas')
         .update({ status: novoStatus })
         .eq('id', rotina.id)
-        .eq('personal_trainer_id', user?.id);
+        .eq('professor_id', user?.id);
   
       if (error) {
         console.error(`Erro ao alterar status para ${novoStatus}:`, error);
@@ -512,7 +518,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         .from('rotinas')
         .delete()
         .eq('id', selectedRotina.id)
-        .eq('personal_trainer_id', user?.id);
+        .eq('professor_id', user?.id);
 
       if (error) {
         throw error;
@@ -596,9 +602,9 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => handleVerDetalhes(rotina.id)}>
             <Eye className="mr-2 h-5 w-5" />
-            <span className="text-base">Detalhes</span>
+            <span className="text-base">Ver Detalhes</span>
           </DropdownMenuItem>
-          {rotina.status === 'Ativa' && modo === 'personal' && (
+          {rotina.status === 'Ativa' && modo === 'personal' && rotina.professor_id === user?.id && (
             <>
               <DropdownMenuItem onClick={() => handleTreinar(rotina.id)}>
                 <Play className="mr-2 h-5 w-5" />
@@ -628,7 +634,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
           {rotina.status === 'Bloqueada' && modo === 'aluno' && (
             <DropdownMenuItem disabled><span className="text-base">Rotina Bloqueada</span></DropdownMenuItem>
           )}
-          {rotina.status === 'Bloqueada' && modo === 'personal' && (
+          {rotina.status === 'Bloqueada' && modo === 'personal' && rotina.professor_id === user?.id && (
             <>
               <DropdownMenuItem onClick={() => handleUpdateRotinaStatus(rotina, 'Ativa')}>
                 <Activity className="mr-2 h-5 w-5" />
@@ -801,7 +807,18 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
                         {/* Header da rotina */}
                         <div className="flex items-start justify-between mb-4">
                           <div>
-                            <h4 className="text-lg font-semibold mb-2">{rotina.nome}</h4>
+                            <h4 className="text-lg font-semibold">{rotina.nome}</h4>
+                            {/* Exibe o criador da rotina para ambos os modos */}
+                            {rotina.professores && (
+                              <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1 mb-2">
+                                <User className="h-3 w-3" />
+                                <span>
+                                  {modo === 'personal' && rotina.professor_id === user?.id
+                                    ? 'Criada por você'
+                                    : `Criada por ${rotina.professores.nome_completo}`}
+                                </span>
+                              </div>
+                            )}
                             <div className="flex items-center gap-2 mb-2">
                               {getStatusBadge(rotina.status)}
                             </div>
@@ -1108,7 +1125,6 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
 >
   <div className="flex items-center gap-2 mb-4">
-    <AlertTriangle className="h-5 w-5 text-red-500" />
     <h2 className="text-lg font-semibold">Excluir Rotina</h2>
   </div>
   

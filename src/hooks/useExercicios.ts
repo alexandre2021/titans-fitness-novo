@@ -16,98 +16,42 @@ export const useExercicios = () => {
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [totalPersonalizados, setTotalPersonalizados] = useState(0);
 
-  // Buscar exercícios padrão
-  const fetchExerciciosPadrao = useCallback(async () => {
+  const fetchExercicios = useCallback(async () => {
+    setLoading(true);
     try {
-      console.log('🔍 Iniciando busca de exercícios padrão...');
-      
-      const { data, error } = await supabase
+      // Fetch Padrão
+      const { data: padrao, error: padraoError } = await supabase
         .from('exercicios')
         .select('*')
         .eq('is_ativo', true)
         .eq('tipo', 'padrao')
         .order('nome', { ascending: true });
 
-      if (error) {
-        console.error('❌ Erro na query de exercícios padrão:', error);
-        throw error;
+      if (padraoError) throw padraoError;
+      setExerciciosPadrao(padrao || []);
+
+      // Fetch Personalizados
+      if (user) {
+        const { data: personalizados, error: personalizadosError } = await supabase
+          .from('exercicios')
+          .select('*')
+          .eq('is_ativo', true)
+          .eq('tipo', 'personalizado')
+          .eq('professor_id', user.id) // CORREÇÃO: Usando professor_id
+          .order('created_at', { ascending: false });
+
+        if (personalizadosError) throw personalizadosError;
+        setExerciciosPersonalizados(personalizados || []);
+        setTotalPersonalizados(personalizados?.length || 0);
       }
-      
-      console.log('📊 Dados retornados:', data);
-      console.log(`✅ ${data?.length || 0} exercícios padrão encontrados`);
-      
-      setExerciciosPadrao(data || []);
-      
     } catch (error) {
-      console.error('❌ Erro ao buscar exercícios padrão:', error);
-      toast.error("Erro ao buscar exercícios", { description: "Não foi possível carregar os exercícios padrão." });
-    }
-  }, []);
-
-  // Buscar exercícios personalizados do PT
-  const fetchExerciciosPersonalizados = useCallback(async () => {
-    if (!user) {
-      console.log('⚠️ Usuário não encontrado, pulando busca de exercícios personalizados');
-      return;
-    }
-
-    try {
-      console.log('=== DEBUG EXERCÍCIOS PERSONALIZADOS ===');
-      console.log('🔍 User ID:', user.id);
-      console.log('📧 User Email:', user.email);
-      
-      // PRIMEIRO: Vamos buscar TODOS os exercícios personalizados (sem filtro de PT)
-      const { data: todosPersonalizados, error: errorTodos } = await supabase
-        .from('exercicios')
-        .select('*')
-        .eq('tipo', 'personalizado');
-
-      console.log('🔬 TODOS os exercícios personalizados no banco:', todosPersonalizados);
-      console.log('🔬 Total personalizados no sistema:', todosPersonalizados?.length || 0);
-      
-      if (todosPersonalizados && todosPersonalizados.length > 0) {
-        console.log('🔬 Primeiro exercício personalizado:', todosPersonalizados[0]);
-        console.log('🔬 PT IDs encontrados:', [...new Set(todosPersonalizados.map(ex => ex.pt_id))]);
-      }
-
-      // SEGUNDO: Buscar apenas os do PT atual
-      const { data, error } = await supabase
-        .from('exercicios')
-        .select('*')
-        .eq('is_ativo', true)
-        .eq('tipo', 'personalizado')
-        .eq('pt_id', user.id)
-        .order('created_at', { ascending: false });
-
-      console.log('🔍 Query executada com filtros:');
-      console.log('   - is_ativo: true');
-      console.log('   - tipo: personalizado');
-      console.log('   - pt_id:', user.id);
-
-      if (error) {
-        console.error('❌ Erro na query de exercícios personalizados:', error);
-        throw error;
-      }
-      
-      console.log('📊 Exercícios personalizados DO PT:', data);
-      console.log(`✅ ${data?.length || 0} exercícios personalizados carregados para este PT`);
-      
-      // TERCEIRO: Verificar se existe algum com pt_id diferente
-      if (data?.length === 0 && todosPersonalizados && todosPersonalizados.length > 0) {
-        console.log('⚠️ ATENÇÃO: Existem exercícios personalizados no banco, mas nenhum para este PT!');
-        console.log('🔍 Verificando se algum tem pt_id similar...');
-        
-        todosPersonalizados.forEach((ex, index) => {
-          console.log(`   ${index + 1}. ID: ${ex.id}, PT_ID: ${ex.pt_id}, Nome: ${ex.nome}, Ativo: ${ex.is_ativo}`);
-        });
-      }
-      
-      setExerciciosPersonalizados(data || []);
-      setTotalPersonalizados(data?.length || 0);
-      
-    } catch (error) {
-      console.error('❌ Erro ao buscar exercícios personalizados:', error);
-      toast.error("Erro ao buscar exercícios", { description: "Não foi possível carregar os exercícios personalizados." });
+      console.error("Erro ao buscar exercícios:", error);
+      toast.error("Erro ao buscar exercício", {
+        description: "Não foi possível carregar os exercícios personalizados."
+      });
+    } finally {
+      setLoading(false);
+      setInitialLoadComplete(true);
     }
   }, [user]);
 
@@ -160,7 +104,7 @@ export const useExercicios = () => {
         .from('exercicios')
         .select('*')
         .eq('id', exercicioId)
-        .eq('pt_id', user.id)
+        .eq('professor_id', user.id)
         .single();
 
       if (fetchError) throw fetchError;
@@ -194,7 +138,7 @@ export const useExercicios = () => {
         .from('exercicios')
         .delete()
         .eq('id', exercicioId)
-        .eq('pt_id', user.id);
+        .eq('professor_id', user.id);
 
       if (deleteError) throw deleteError;
 
@@ -216,45 +160,13 @@ export const useExercicios = () => {
 
   // Recarregar dados
   const refetch = useCallback(async () => {
-    console.log('🔄 Recarregando dados...');
-    setLoading(true);
-    await Promise.all([
-      fetchExerciciosPadrao(),
-      fetchExerciciosPersonalizados()
-    ]);
-    setLoading(false);
-  }, [fetchExerciciosPadrao, fetchExerciciosPersonalizados]);
+    fetchExercicios();
+  }, [fetchExercicios]);
 
   // Carregar dados iniciais
   useEffect(() => {
-    if (user) {
-      const loadData = async () => {
-        console.log('🚀 =========================');
-        console.log('🚀 INICIANDO DEBUG DETALHADO');
-        console.log('🚀 =========================');
-        console.log('👤 User object completo:', user);
-        console.log('👤 User ID:', user?.id);
-        console.log('👤 User Email:', user?.email);
-        
-        // Carregar dados
-        await Promise.all([
-          fetchExerciciosPadrao(),
-          fetchExerciciosPersonalizados()
-        ]);
-        
-        setLoading(false);
-        setInitialLoadComplete(true);
-        console.log('✅ =========================');
-        console.log('✅ DEBUG CONCLUÍDO');
-        console.log('✅ =========================');
-      };
-      loadData();
-    } else {
-      console.log('⚠️ Aguardando usuário ser carregado...');
-      setLoading(false);
-      setInitialLoadComplete(true); // Evita spinner infinito no logout
-    }
-  }, [user, fetchExerciciosPadrao, fetchExerciciosPersonalizados]);
+    fetchExercicios();
+  }, [user, fetchExercicios]);
 
   return {
     exerciciosPadrao,

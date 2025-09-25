@@ -111,7 +111,7 @@ export const EditProfissionalForm = ({ profile, onSave }: EditProfissionalFormPr
       if (!user) throw new Error('Usuário não autenticado');
 
       const { error } = await supabase
-        .from('personal_trainers')
+        .from('professores')
         .update({
           cref: values.cref || null,
           anos_experiencia: values.anos_experiencia || null,

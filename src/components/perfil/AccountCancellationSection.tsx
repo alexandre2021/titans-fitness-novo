@@ -45,8 +45,8 @@ const ResponsiveModal = ({ open, onOpenChange, title, description, children }: R
 };
 
 // Configurações por tipo de usuário
-const getCancellationConfig = (userType: 'personal_trainer' | 'aluno') => {
-  if (userType === 'personal_trainer') {
+const getCancellationConfig = (userType: 'professor' | 'aluno') => {
+  if (userType === 'professor') {
     return {
       warningText: "Todos os alunos vinculados a você serão automaticamente desvinculados, mas suas contas e históricos serão preservados.",
       consequences: [
@@ -75,7 +75,7 @@ const getCancellationConfig = (userType: 'personal_trainer' | 'aluno') => {
 };
 
 interface AccountCancellationSectionProps {
-  userType: 'personal_trainer' | 'aluno';
+  userType: 'professor' | 'aluno';
 }
 
 export const AccountCancellationSection = ({ userType }: AccountCancellationSectionProps) => {

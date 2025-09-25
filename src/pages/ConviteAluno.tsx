@@ -41,7 +41,7 @@ type FormData = z.infer<typeof formSchema>;
 const ConviteAluno = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [resultado, setResultado] = useState<{
-    tipo: 'sucesso' | 'erro' | 'aluno_com_pt' | 'convite_duplicado';
+    tipo: 'sucesso' | 'erro' | 'aluno_ja_segue' | 'convite_duplicado';
     cenario?: string;
     titulo: string;
     mensagem: string;
@@ -73,7 +73,7 @@ const ConviteAluno = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke('gerar-convite-link', {
-        body: { personal_trainer_id: user.id },
+        body: { professor_id: user.id },
       });
 
       if (error || !data?.success) {
@@ -117,9 +117,9 @@ const ConviteAluno = () => {
 
 
     try {
-      // Buscar nome na tabela personal_trainers para garantir que temos o nome mais atualizado.
+      // Buscar nome na tabela professores para garantir que temos o nome mais atualizado.
       const { data: ptData } = await supabase
-        .from('personal_trainers')
+        .from('professores')
         .select('nome_completo')
         .eq('id', user.id)
         .single();
@@ -131,8 +131,8 @@ const ConviteAluno = () => {
       const { data: responseData, error } = await supabase.functions.invoke('enviar-convite', {
         body: {
           email_aluno: data.email_aluno,
-          personal_trainer_id: user.id,
-          nome_personal: nomePersonal,
+          professor_id: user.id,
+          nome_professor: nomePersonal,
         },
       });
 
@@ -163,11 +163,11 @@ const ConviteAluno = () => {
             titulo: 'Convite já enviado',
             mensagem: 'Já existe um convite pendente para este aluno. Aguarde a resposta ou cancele o convite anterior.'
           });
-        } else if (responseData.error_type === 'ALUNO_JA_TEM_PT') {
+        } else if (responseData.error_type === 'ALUNO_JA_SEGUE') {
           setResultado({
-            tipo: 'aluno_com_pt',
-            titulo: 'Aluno já possui Personal Trainer',
-            mensagem: 'Este aluno já está vinculado a outro profissional. Não é possível enviar o convite.'
+            tipo: 'aluno_ja_segue',
+            titulo: 'Aluno já segue você',
+            mensagem: 'Este aluno já está na sua lista de seguidores. Não é necessário enviar um novo convite.'
           });
         } else {
           setResultado({
@@ -201,8 +201,8 @@ const ConviteAluno = () => {
   const getAlertIcon = (tipo: string) => {
     switch (tipo) {
       case 'sucesso': return <CheckCircle className="h-4 w-4" />;
-      case 'aluno_com_pt': return <UserX className="h-4 w-4" />;
       case 'convite_duplicado': return <AlertCircle className="h-4 w-4" />;
+      case 'aluno_ja_segue': return <AlertCircle className="h-4 w-4" />;
       default: return <AlertCircle className="h-4 w-4" />;
     }
   };
@@ -211,8 +211,8 @@ const ConviteAluno = () => {
   const getAlertVariant = (tipo: string): "default" | "destructive" => {
     switch (tipo) {
       case 'sucesso': return 'default';
-      case 'aluno_com_pt': return 'destructive';
       case 'convite_duplicado': return 'default';
+      case 'aluno_ja_segue': return 'default';
       default: return 'destructive';
     }
   };
@@ -333,9 +333,8 @@ const ConviteAluno = () => {
                   <div className="bg-muted/50 rounded-lg p-4 text-sm">
                     <h4 className="font-medium mb-2">Como funciona:</h4>
                     <ul className="space-y-1 text-muted-foreground">
-                      <li>• <strong>Aluno novo:</strong> Receberá um email para criar conta</li>
-                      <li>• <strong>Aluno existente:</strong> Receberá um email para aceitar o vínculo</li>
-                      <li>• <strong>Aluno vinculado a outro personal trainer:</strong> Convite será bloqueado automaticamente</li>
+                      <li>• <strong>Aluno sem cadastro:</strong> Receberá um email para criar conta.</li>
+                      <li>• <strong>Aluno com cadastro:</strong> Receberá um email para aceitar o convite.</li>
                     </ul>
                   </div>
                 </div>

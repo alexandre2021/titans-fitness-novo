@@ -162,12 +162,16 @@ const AlunosAvaliacaoNova = () => {
       if (!id || !user) return;
 
       try {
+        // MUDANÇA: Verificar se o professor tem permissão para ver este aluno (se o aluno o segue)
+        const { data: relacao, error: relacaoError } = await supabase.from('alunos_professores').select('aluno_id').eq('aluno_id', id).eq('professor_id', user.id).single();
+
+        if (relacaoError || !relacao) throw new Error("Você não tem permissão para ver este aluno.");
+
         // Buscar informações do aluno
         const { data: alunoData, error: alunoError } = await supabase
           .from('alunos')
           .select('id, nome_completo, email, avatar_type, avatar_image_url, avatar_letter, avatar_color')
           .eq('id', id)
-          .eq('personal_trainer_id', user.id)
           .single();
 
         if (alunoError) {
@@ -338,6 +342,7 @@ const AlunosAvaliacaoNova = () => {
       const { error } = await supabase
         .from('avaliacoes_fisicas')
         .insert([{
+          professor_id: user?.id,
           aluno_id: id,
           data_avaliacao: hoje,
           peso: data.peso,

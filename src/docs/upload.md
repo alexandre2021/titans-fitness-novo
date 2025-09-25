@@ -1,17 +1,19 @@
 # Arquitetura de Upload de Mídia (Cliente Inteligente + Upload Direto para R2)
 
-Este documento descreve a arquitetura para upload de mídias (imagens e vídeos), que combina processamento no cliente com uploads diretos para o Cloudflare R2, evitando gargalos no backend.
+Este documento descreve a arquitetura para upload de mídias, que combina processamento no cliente com uploads diretos para o Cloudflare R2, evitando gargalos no backend.
 
 ---
 
-## 1. Princípio Central: Cliente Inteligente, Backend como Porteiro
+## Capítulo 1: Upload de Mídia para Exercícios
+
+### 1.1. Princípio Central: Cliente Inteligente, Backend como Porteiro
 
 -   **O Problema:** Enviar arquivos grandes (imagens/vídeos) através de uma Edge Function do Supabase consome rapidamente a cota de transferência de dados (50MB/mês no plano gratuito), tornando a aplicação não escalável.
 -   **A Solução:** O frontend é responsável por **capturar, redimensionar e comprimir** a mídia. Em vez de enviar o arquivo para a função, ele pede uma **permissão de upload** (URL pré-assinada) e envia o arquivo pesado **diretamente para o Cloudflare R2**. O backend atua apenas como um "porteiro" que autoriza a operação, sem lidar com o tráfego pesado.
 
 ---
 
-## 2. Fluxo de Imagens: Otimização no Cliente via Canvas
+### 1.2. Fluxo de Imagens de Exercícios: Otimização no Cliente via Canvas
 
 A interface se adapta ao dispositivo para uma melhor experiência do usuário.
 
@@ -38,7 +40,7 @@ A interface se adapta ao dispositivo para uma melhor experiência do usuário.
 
 ---
 
-## 3. Fluxo de Vídeos: Gravação e Compressão no Cliente
+### 1.3. Fluxo de Vídeos de Exercícios: Gravação e Compressão no Cliente
 
 A lógica também se adapta ao dispositivo, priorizando a gravação em celulares.
 
@@ -57,7 +59,7 @@ A lógica também se adapta ao dispositivo, priorizando a gravação em celulare
 
 ---
 
-## 4. Backend como Porteiro
+### 1.4. Backend como Porteiro (Função Compartilhada)
 
 A complexidade de processamento de mídia no backend é eliminada. As funções têm papéis claros de controle de acesso.
 
@@ -73,7 +75,7 @@ A complexidade de processamento de mídia no backend é eliminada. As funções 
 
 ---
 
-## 5. Vantagens da Nova Arquitetura
+### 1.5. Vantagens da Arquitetura
 
 -   **Escalabilidade:** Resolve o gargalo de 50MB/mês de transferência do Supabase, permitindo uploads ilimitados (dentro dos limites do Cloudflare R2).
 -   **Segurança:** O acesso para escrita e exclusão no bucket R2 é controlado pelas Edge Functions, que validam a autenticação do usuário. As chaves secretas nunca são expostas no frontend.
@@ -83,7 +85,7 @@ A complexidade de processamento de mídia no backend é eliminada. As funções 
 
 ---
 
-## 6. Validação Robusta de Dispositivo e UX
+### 1.6. Validação Robusta de Dispositivo e UX (Exercícios)
 
 Para garantir que a experiência "mobile-first" seja segura e funcional, implementamos validações adicionais.
 
@@ -96,3 +98,42 @@ Para garantir que a experiência "mobile-first" seja segura e funcional, impleme
 -   **O Problema:** Na interface de gravação de vídeo, o botão "Iniciar Gravação" era empurrado para fora da tela assim que o stream da câmera era ativado.
 -   **A Solução:** Foi criado um novo componente dedicado, `VideoRecorder.tsx`, com um layout robusto que utiliza posicionamento absoluto para os controles (botão e cronômetro).
 -   **Resultado:** A interface de gravação agora é estável, e os controles permanecem visíveis e acessíveis durante todo o processo, corrigindo o bug de layout.
+
+---
+
+## Capítulo 2: Upload de Mídia para Posts
+
+O sistema de posts utiliza a mesma arquitetura de "cliente inteligente", mas com um fluxo adaptado para gerenciar duas imagens de capa distintas: uma para desktop e outra para mobile.
+
+### 2.1. Objetivo
+
+-   **Desktop:** Uma imagem na proporção **16:9**, otimizada para uma largura máxima de **1200px**.
+-   **Mobile:** Uma imagem na proporção **1:1** (quadrada), otimizada para uma largura máxima de **640px**.
+
+Essa separação garante que a imagem de capa seja sempre exibida da melhor forma, sem cortes inesperados ou perda de qualidade, independentemente do dispositivo do usuário.
+
+### 2.2. Fluxo de Upload (para cada imagem)
+
+O processo é executado individualmente para a imagem de desktop e para a de mobile.
+
+1.  **Seleção da Imagem:** O usuário clica em "Selecionar Imagem" para a versão desejada (desktop ou mobile).
+
+2.  **Ajuste e Corte no Cliente (`react-easy-crop`):**
+    -   A imagem selecionada é carregada em um modal que contém o componente `Cropper`.
+    -   O `Cropper` é configurado com a proporção correta (`16/9` para desktop, `1/1` para mobile).
+    -   O usuário pode dar zoom e reposicionar a imagem para definir a área de corte ideal.
+
+3.  **Otimização com Canvas (`imageUtils.ts`):**
+    -   Ao salvar o corte, a função `optimizeAndCropImage` é chamada.
+    -   Ela desenha a área cortada em um `<canvas>` e redimensiona a imagem para a largura máxima correspondente (1200px ou 640px).
+    -   A imagem é exportada do canvas como um `File` JPEG comprimido com **85% de qualidade**, pronta para o upload.
+
+4.  **Pedido de Permissão de Upload:**
+    -   O frontend chama a Edge Function `upload-media`, especificando o `bucket_type: 'posts'`.
+
+5.  **Upload Direto para o R2:**
+    -   O arquivo otimizado é enviado diretamente para a URL pré-assinada do bucket `posts` no Cloudflare R2.
+
+6.  **Confirmação no Banco de Dados:**
+    -   Ao salvar o post (seja como rascunho ou publicado), os nomes dos arquivos gerados são salvos nas colunas `cover_image_desktop_url` e `cover_image_mobile_url` da tabela `posts`.
+    -   Se uma imagem for substituída, a função `delete-media` é chamada para remover o arquivo antigo do R2, mantendo o bucket limpo.

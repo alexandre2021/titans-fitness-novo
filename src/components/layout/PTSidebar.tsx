@@ -1,11 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Home, Users, Dumbbell, LogOut, User, Settings, BookCopy } from "lucide-react";
+import { Home, Users, Dumbbell, LogOut, User, Settings, BookCopy, Newspaper } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,42 +12,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-type PTProfile = Tables<'personal_trainers'>;
+import { useProfessorProfile } from "@/hooks/useProfessorProfile";
 
 const PTSidebar = () => {
   const { user, signOut } = useAuth();
+  const { profile } = useProfessorProfile();
   const location = useLocation();
   const navigate = useNavigate();
-
-  const [profile, setProfile] = useState<PTProfile | null>(null);
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user) return;
-      try {
-        const { data, error } = await supabase
-          .from('personal_trainers')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (error) throw error;
-        setProfile(data);
-      } catch (error) {
-        console.error("Erro ao buscar perfil do PT na sidebar:", error);
-      }
-    };
-
-    if (user) {
-      fetchProfile();
-    }
-  }, [user]);
 
   const navigationItems = [
     {
       title: "Inicial",
-      href: "/index-pt",
+      href: "/index-professor",
       icon: Home,
     },
     {
@@ -58,7 +32,7 @@ const PTSidebar = () => {
       icon: Dumbbell,
     },
     {
-      title: "Modelos",
+      title: "Meus Modelos",
       href: "/meus-modelos",
       icon: BookCopy,
     },
@@ -66,6 +40,11 @@ const PTSidebar = () => {
       title: "Alunos",
       href: "/alunos",
       icon: Users,
+    },
+    {
+      title: "Comunidade",
+      href: "/",
+      icon: Newspaper,
     },
   ];
 
@@ -101,7 +80,7 @@ const PTSidebar = () => {
             className="h-28 w-auto"
           />
         </div>
-        <p className="text-sm text-muted-foreground text-center">Personal Trainer</p>
+        <p className="text-sm text-muted-foreground text-center">Professor</p>
       </div>
 
       <nav className="flex-1 space-y-1 px-3">
@@ -132,7 +111,7 @@ const PTSidebar = () => {
               </Avatar>
               <div className="flex flex-col items-start text-sm">
                 <span className="font-medium">
-                  {profile?.nome_completo || user?.user_metadata?.full_name || 'Personal Trainer'}
+                  {profile?.nome_completo || user?.user_metadata?.full_name || 'Professor(a)'}
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {user?.email}

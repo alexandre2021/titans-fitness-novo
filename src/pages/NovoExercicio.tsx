@@ -362,7 +362,7 @@ const NovoExercicio = () => {
           video_url: video_url_final,
           youtube_url: midias.youtube_url as string || null,
           tipo: 'personalizado',
-          pt_id: user.id,
+          professor_id: user.id,
           is_ativo: true,
           status_midia: 'concluido'
         })

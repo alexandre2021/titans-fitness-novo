@@ -9,8 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { useAlunoProfile } from "@/hooks/useAlunoProfile"; // ✅ Hook de perfil do aluno
-import { toast } from "sonner";
-import QuestionarioSaudeModal from "@/components/QuestionarioSaudeModal";
+import { toast } from "sonner"; 
+import OnboardingContinuarModal from "@/components/OnboardingContinuarModal";
 import CustomSelect from "@/components/ui/CustomSelect";
 
 const GENERO_OPTIONS = [
@@ -220,11 +220,15 @@ const OnboardingAlunoDadosBasicos = () => {
         </Card>
       )}
 
-      <QuestionarioSaudeModal
+      <OnboardingContinuarModal
         open={showQuestionarioModal}
         onOpenChange={setShowQuestionarioModal}
         onResponse={handleQuestionarioResponse}
         isLoading={isLoading}
+        title="Questionário de Saúde (PAR-Q)"
+        description="Para garantir sua segurança, recomendamos fortemente que você responda a um breve questionário de saúde. Deseja fazer isso agora?"
+        confirmText="Sim, responder agora"
+        cancelText="Não, pular por enquanto"
       />
     </div>
   );

@@ -1,11 +1,11 @@
 import { NavLink } from "react-router-dom";
-import { Home, Dumbbell, Users, BookCopy } from "lucide-react";
+import { Home, Users, Dumbbell, MoreHorizontal } from "lucide-react";
 
 const PTBottomNav = () => {
   const navigationItems = [
     {
       title: "Inicial",
-      href: "/index-pt",
+      href: "/index-professor",
       icon: Home,
     },
     {
@@ -14,14 +14,14 @@ const PTBottomNav = () => {
       icon: Dumbbell,
     },
     {
-      title: "Modelos",
-      href: "/meus-modelos",
-      icon: BookCopy,
-    },
-    {
       title: "Alunos",
       href: "/alunos",
       icon: Users,
+    },
+    {
+      title: "Mais",
+      href: "/mais",
+      icon: MoreHorizontal,
     },
   ];
 

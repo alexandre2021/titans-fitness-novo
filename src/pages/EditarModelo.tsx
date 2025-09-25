@@ -621,7 +621,7 @@ const EditarModelo = () => {
       }
 
       try {
-        const { data: rotina, error: rotinaError } = await supabase.from("modelos_rotina").select("*").eq("id", modeloId).eq("personal_trainer_id", user.id).single();
+        const { data: rotina, error: rotinaError } = await supabase.from("modelos_rotina").select("*").eq("id", modeloId).eq("professor_id", user.id).single();
         if (rotinaError || !rotina) throw new Error("Modelo de rotina não encontrado ou você não tem permissão para editá-lo.");
 
         const { data: treinos, error: treinosError } = await supabase.from("modelos_treino").select("*").eq("modelo_rotina_id", modeloId).order("ordem");

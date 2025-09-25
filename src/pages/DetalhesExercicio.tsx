@@ -156,7 +156,7 @@ const DetalhesExercicio = () => {
         if (!exercicio) throw new Error('Exercício não encontrado');
 
         // Verificar se é exercício personalizado e se pertence ao PT
-        if (exercicio.tipo === 'personalizado' && exercicio.pt_id !== user?.id) {
+        if (exercicio.tipo === 'personalizado' && exercicio.professor_id !== user?.id) {
           throw new Error('Você não tem permissão para ver este exercício');
         }
 

@@ -55,7 +55,7 @@ const MeusModelos = () => {
         const { data, error } = await supabase
           .from('modelos_rotina')
           .select('*')
-          .eq('personal_trainer_id', user.id)
+          .eq('professor_id', user.id)
           .order('created_at', { ascending: false });
 
         if (error) {

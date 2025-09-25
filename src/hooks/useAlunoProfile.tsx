@@ -19,7 +19,6 @@ interface AlunoProfile {
   avatar_image_url?: string;
   avatar_letter?: string;
   avatar_color: string;
-  personal_trainer_id?: string;
 }
 
 export const useAlunoProfile = () => {
@@ -44,6 +43,11 @@ export const useAlunoProfile = () => {
         if (error) {
           console.error('Error fetching aluno profile:', error);
         } else {
+          // Adiciona a lógica para construir a URL pública do avatar
+          if (data && data.avatar_image_url && !data.avatar_image_url.startsWith('http')) {
+            const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(data.avatar_image_url);
+            data.avatar_image_url = urlData.publicUrl;
+          }
           setProfile(data);
         }
       } catch (error) {

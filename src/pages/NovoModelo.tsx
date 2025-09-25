@@ -824,7 +824,7 @@ const NovoModelo = () => {
       const { data: modeloCriado, error: erroModelo } = await supabase
         .from('modelos_rotina')
         .insert({
-          personal_trainer_id: user.id,
+          professor_id: user.id,
           nome: configuracao.nome,
           objetivo: configuracao.objetivo,
           dificuldade: configuracao.dificuldade,

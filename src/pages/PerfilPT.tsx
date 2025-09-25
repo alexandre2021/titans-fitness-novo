@@ -8,7 +8,7 @@ import { Tables } from "@/integrations/supabase/types";
 import { AvatarSection } from "@/components/perfil/AvatarSection";
 import { PerfilTabs } from "@/components/perfil/PerfilTabs";
 
-type PTProfile = Tables<'personal_trainers'>;
+type PTProfile = Tables<'professores'>;
 
 const PerfilPT = () => {
   const navigate = useNavigate();
@@ -22,7 +22,7 @@ const PerfilPT = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('personal_trainers')
+        .from('professores')
         .select('*')
         .eq('id', user.id)
         .single();
@@ -64,7 +64,7 @@ const PerfilPT = () => {
         <div className="flex items-center space-x-4">
           <Button
             variant="ghost"
-            onClick={() => navigate('/index-pt')}
+            onClick={() => navigate('/index-professor')}
             className="h-10 w-10 p-0"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -81,15 +81,14 @@ const PerfilPT = () => {
       <div className="flex items-center space-x-4">
         <Button
           variant="ghost"
-          onClick={() => navigate('/index-pt')}
+          onClick={() => navigate('/index-professor')}
           className="h-10 w-10 p-0"
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
-  <h1 className="text-2xl font-normal">Perfil de treinador</h1>
+        <h1 className="text-2xl font-normal">Perfil de treinador</h1>
       </div>
-
-      <AvatarSection profile={profile} onProfileUpdate={handleProfileUpdate} userType="personal_trainer" />
+      <AvatarSection profile={profile} onProfileUpdate={handleProfileUpdate} userType="professor" />
       
       <PerfilTabs profile={profile} onProfileUpdate={handleProfileUpdate} />
     </div>

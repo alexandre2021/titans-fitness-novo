@@ -23,7 +23,7 @@ export interface SessaoData {
 }
 
 export interface UserProfile {
-  user_type: 'personal_trainer' | 'aluno';
+  user_type: 'professor' | 'aluno';
   id: string;
   nome_completo: string;
 }
@@ -113,7 +113,7 @@ export interface UltimaSessao {
   dias_desde_execucao: number;
   sessao_numero: number;
   status: string;
-  modo_execucao?: 'pt' | 'aluno' | null;
+  modo_execucao?: 'professor' | 'aluno' | null;
 }
 
 export interface AlunoData {

@@ -13,23 +13,22 @@ import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import OnboardingContinuarModal from "@/components/OnboardingContinuarModal";
 import CustomSelect from "@/components/ui/CustomSelect";
 
 const formSchema = z.object({
   nomeCompleto: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
-  genero: z.string().optional(),
-  dataNascimento: z.string().optional(),
-  telefone: z.string().optional(),
-  cref: z.string().optional(),
+  genero: z.string().min(1, "Gênero é obrigatório"),
+  dataNascimento: z.string().min(1, "Data de nascimento é obrigatória"),
 });
 
 type FormData = z.infer<typeof formSchema>;
 
 const GENERO_OPTIONS = [
-  { value: 'Masculino', label: 'Masculino' },
-  { value: 'Feminino', label: 'Feminino' },
-  { value: 'Outro', label: 'Outro' },
-  { value: 'Prefiro não informar', label: 'Prefiro não informar' },
+  { value: 'masculino', label: 'Masculino' },
+  { value: 'feminino', label: 'Feminino' },
+  { value: 'outro', label: 'Outro' },
+  { value: 'prefiro_nao_dizer', label: 'Prefiro não dizer' },
 ];
 
 const OnboardingPTInformacoesBasicas = () => {
@@ -37,6 +36,7 @@ const OnboardingPTInformacoesBasicas = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  const [showContinuarModal, setShowContinuarModal] = useState(false);
   const {
     register,
     handleSubmit,
@@ -50,8 +50,6 @@ const OnboardingPTInformacoesBasicas = () => {
       nomeCompleto: "",
       genero: "",
       dataNascimento: "",
-      telefone: "",
-      cref: "",
     },
   });
 
@@ -62,7 +60,7 @@ const OnboardingPTInformacoesBasicas = () => {
       if (user) {
         try {
           const { data, error } = await supabase
-            .from('personal_trainers')
+            .from('professores')
             .select('*')
             .eq('id', user.id)
             .single();
@@ -77,8 +75,6 @@ const OnboardingPTInformacoesBasicas = () => {
               nomeCompleto: data.nome_completo || "",
               genero: data.genero || "",
               dataNascimento: data.data_nascimento || "",
-              telefone: data.telefone || "",
-              cref: data.cref || "",
             });
           }
         } catch (err) {
@@ -90,20 +86,33 @@ const OnboardingPTInformacoesBasicas = () => {
     fetchProfile();
   }, [user, reset]);
 
+  const generateAvatar = (nome: string) => {
+    const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    const letter = nome?.charAt(0).toUpperCase() || 'P';
+    
+    return {
+      avatar_type: 'letter',
+      avatar_letter: letter,
+      avatar_color: randomColor
+    };
+  };
+
   const onSubmit = async (data: FormData) => {
     if (!user) return;
     
     setIsLoading(true);
     
     try {
+      const avatarData = generateAvatar(data.nomeCompleto);
+
       const { error } = await supabase
-        .from('personal_trainers')
+        .from('professores')
         .update({
           nome_completo: data.nomeCompleto,
           genero: data.genero || null,
           data_nascimento: data.dataNascimento || null,
-          telefone: data.telefone || null,
-          cref: data.cref || null,
+          ...avatarData
         })
         .eq('id', user.id);
 
@@ -111,8 +120,10 @@ const OnboardingPTInformacoesBasicas = () => {
         toast.error(`Erro ao salvar dados: ${error.message}`);
         return;
       }
+      
+      // Em vez de navegar, abre o modal
+      setShowContinuarModal(true);
 
-      navigate("/onboarding-pt/experiencia-profissional");
     } catch (error) {
       toast.error("Erro inesperado");
       console.error("Erro:", error);
@@ -121,16 +132,37 @@ const OnboardingPTInformacoesBasicas = () => {
     }
   };
 
+  const handleModalResponse = async (continuar: boolean) => {
+    setShowContinuarModal(false);
+    if (continuar) {
+      navigate("/onboarding-pt/experiencia-profissional");
+    } else {
+      // Finaliza o onboarding aqui se o usuário escolher não continuar
+      setIsLoading(true);
+      try {
+        const { error } = await supabase
+          .from('professores')
+          .update({ onboarding_completo: true })
+          .eq('id', user?.id);
+
+        if (error) throw error;
+
+        toast.success("Perfil básico salvo!", { description: "Você pode completar o restante depois."});
+        navigate("/index-professor");
+      } catch (error) {
+        toast.error("Erro ao finalizar", { description: "Não foi possível finalizar seu onboarding."});
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-6 py-12">
       <Card className="w-full max-w-2xl border-border">
-        <CardHeader className="text-center">
-          <div className="mb-4">
-            <Progress value={33} className="w-full" />
-            <p className="text-sm text-text-secondary mt-2">Etapa 1 de 3</p>
-          </div>
+        <CardHeader className="text-center pt-10">
           <CardTitle className="text-2xl text-text-primary">
-            Informações Básicas
+            Bem-vindo(a) ao Titans!
           </CardTitle>
           <p className="text-text-secondary">
             Vamos começar coletando suas informações pessoais
@@ -155,7 +187,7 @@ const OnboardingPTInformacoesBasicas = () => {
             
             <div className="space-y-2">
               <Label htmlFor="genero" className="text-text-primary">
-                Gênero
+                Gênero *
               </Label>
               <Controller
                 name="genero"
@@ -180,7 +212,7 @@ const OnboardingPTInformacoesBasicas = () => {
             
             <div className="space-y-2">
               <Label htmlFor="dataNascimento" className="text-text-primary">
-                Data de Nascimento
+                Data de Nascimento *
               </Label>
               <Controller
                 name="dataNascimento"
@@ -197,48 +229,29 @@ const OnboardingPTInformacoesBasicas = () => {
               )}
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="telefone" className="text-text-primary">
-                Telefone
-              </Label>
-              <Controller
-                name="telefone"
-                control={control}
-                render={({ field }) => (
-                  <PhoneInput
-                    id="telefone"
-                    value={field.value}
-                    onChange={field.onChange}
-                    className="border-border focus:ring-primary"
-                  />
-                )}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="cref" className="text-text-primary">
-                CREF
-              </Label>
-              <Input
-                id="cref"
-                placeholder="000000-G/SP"
-                {...register("cref")}
-                className="border-border focus:ring-primary"
-              />
-            </div>
-            
             <div className="pt-4">
               <Button 
                 type="submit" 
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                 disabled={isLoading}
               >
-                {isLoading ? "Salvando..." : "Continuar"}
+                {isLoading ? "Salvando..." : "Salvar"}
               </Button>
             </div>
           </form>
         </CardContent>
       </Card>
+
+      <OnboardingContinuarModal
+        open={showContinuarModal}
+        onOpenChange={setShowContinuarModal}
+        onResponse={handleModalResponse}
+        isLoading={isLoading}
+        title="Continuar Configuração?"
+        description="Deseja adicionar suas informações profissionais e redes sociais agora para um perfil mais completo?"
+        confirmText="Sim, continuar"
+        cancelText="Não, ir para o início"
+      />
     </div>
   );
 };

@@ -41,25 +41,14 @@ const OnboardingPTRedesSociais = () => {
     setIsLoading(true);
     
     try {
-      // Gerar avatar de letra baseado no nome
-      const { data: ptData } = await supabase
-        .from('personal_trainers')
-        .select('nome_completo')
-        .eq('id', user.id)
-        .single();
-
-      const primeiraLetra = ptData?.nome_completo?.charAt(0).toUpperCase() || 'P';
-      
       const { error } = await supabase
-        .from('personal_trainers')
+        .from('professores')
         .update({
           instagram: data.instagram || null,
           facebook: data.facebook || null,
           linkedin: data.linkedin || null,
           website: data.website || null,
           onboarding_completo: true,
-          avatar_letter: primeiraLetra,
-          avatar_type: 'letter',
         })
         .eq('id', user.id);
 
@@ -69,7 +58,7 @@ const OnboardingPTRedesSociais = () => {
       }
 
       toast.success("Onboarding concluído com sucesso!");
-      navigate("/index-pt");
+      navigate("/index-professor");
     } catch (error) {
       toast.error("Erro inesperado");
       console.error("Erro:", error);
@@ -84,7 +73,7 @@ const OnboardingPTRedesSociais = () => {
         <CardHeader className="text-center">
           <div className="mb-4">
             <Progress value={100} className="w-full" />
-            <p className="text-sm text-text-secondary mt-2">Etapa 3 de 3</p>
+            <p className="text-sm text-text-secondary mt-2">Etapa 2 de 2</p>
           </div>
           <CardTitle className="text-2xl text-text-primary">
             Redes Sociais

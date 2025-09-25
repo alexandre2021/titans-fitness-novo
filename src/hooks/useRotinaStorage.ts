@@ -526,7 +526,7 @@ export const useRotinaStorage = (alunoId: string) => {
 
       const rotinaData = {
         aluno_id: alunoId,
-        personal_trainer_id: user.id,
+        professor_id: user.id,
         status: 'Rascunho' as const,
         nome: configuracao.nome || 'Rascunho de Rotina',
         objetivo: configuracao.objetivo,

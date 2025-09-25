@@ -292,7 +292,7 @@ const EditarExercicio = () => {
       try {
         const { data, error } = await supabase.from('exercicios').select('*').eq('id', id).single();
         if (error || !data) throw new Error('Exercício não encontrado ou erro ao buscar.');
-        if (data.tipo !== 'personalizado' || data.pt_id !== user.id) {
+        if (data.tipo !== 'personalizado' || data.professor_id !== user.id) {
           toast.error("Acesso Negado", { description: "Você não pode editar este exercício." });
           navigate('/exercicios-pt');
           return;
@@ -417,7 +417,7 @@ const EditarExercicio = () => {
         grupos_musculares_secundarios: formData.grupos_musculares_secundarios.trim() || null,
         ...finalMediaUrls,
         youtube_url: midias.youtube_url as string || null,
-      }).eq('id', id).eq('pt_id', user.id);
+      }).eq('id', id).eq('professor_id', user.id);
 
       if (error) throw error;
 

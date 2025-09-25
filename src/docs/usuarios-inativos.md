@@ -46,7 +46,7 @@ O fluxo é orquestrado por um conjunto de ferramentas que garantem a execução 
     2.  **Busca e Filtragem de Usuários:**
         - Ela se conecta ao Supabase e busca todos os usuários registrados na tabela `auth.users`.
         - **Importante:** Usuários com e-mails na lista de `PROTECTED_EMAILS` são **ignorados** para evitar exclusões acidentais.
-        - Para cada usuário, verifica-se sua existência e tipo na tabela `user_profiles` (aluno ou personal_trainer).
+        - Para cada usuário, verifica-se sua existência e tipo na tabela `user_profiles` (aluno ou professor).
     3.  **Análise de Inatividade:** Para cada usuário elegível, a função verifica a data do `last_sign_in_at` (último login) ou `created_at` (se nunca logou).
         - Se o último login/criação foi entre 60 e 89 dias atrás, o usuário é adicionado a uma lista de "aviso".
         - Se o último login/criação foi há 90 dias ou mais, o usuário é adicionado a uma lista de "exclusão".
@@ -60,7 +60,7 @@ O fluxo é orquestrado por um conjunto de ferramentas que garantem a execução 
     - Para cada usuário na lista de "aviso", a função `check-inactive-users` utiliza a API do **Brevo (antigo Sendinblue)** para enviar um email.
     - O email informa ao usuário que sua conta será excluída em 30 dias se ele não fizer login.
     - O template do email segue a identidade visual da Titans Fitness para garantir consistência.
-    - Após o envio, o campo `last_warning_email_sent_at` é atualizado na tabela correspondente (`alunos` ou `personal_trainers`) para evitar spam de avisos.
+    - Após o envio, o campo `last_warning_email_sent_at` é atualizado na tabela correspondente (`alunos` ou `professores`) para evitar spam de avisos.
 
 
 ### 4. Processo de Exclusão (90 dias)
@@ -94,7 +94,7 @@ A função coleta e remove todos os arquivos pessoais do aluno dos seus respecti
 ##### Etapa 1: Exclusão de Arquivos
 
 1.  **Avatar do Personal Trainer** (bucket: `avatars` no Supabase Storage)
-    -   Busca na tabela `personal_trainers` os campos `avatar_type` e `avatar_image_url`.
+    -   Busca na tabela `professores` os campos `avatar_type` e `avatar_image_url`.
     -   Se `avatar_type = 'image'`, o arquivo é removido do Supabase Storage.
 
 2.  **Mídias de exercícios** (bucket: `exercicios` no Cloudflare R2)
@@ -102,14 +102,14 @@ A função coleta e remove todos os arquivos pessoais do aluno dos seus respecti
     -   Remove todas as mídias associadas aos exercícios criados pelo PT.
 
 ##### Etapa 2: Desvinculação de Alunos
-- Atualiza a tabela `alunos` definindo `personal_trainer_id = null` para todos os alunos vinculados
+- Atualiza a tabela `alunos` definindo `professor_id = null` para todos os alunos vinculados
 - Isso preserva os dados dos alunos enquanto remove apenas a vinculação com o PT
 
 
 ##### Etapa 3: Exclusão do Usuário
 - Remove o registro do usuário do `auth.users`
-- As políticas `ON DELETE CASCADE` removem automaticamente os dados do PT (como `personal_trainers` e `user_profiles`).
-- **Importante**: Rotinas associadas ao PT não são excluídas; o campo `personal_trainer_id` na tabela `rotinas` é definido como `NULL` (`ON DELETE SET NULL`).
+- As políticas `ON DELETE CASCADE` removem automaticamente os dados do PT (como `professores` e `user_profiles`).
+- **Importante**: Rotinas associadas ao PT não são excluídas; o campo `professor_id` na tabela `rotinas` é definido como `NULL` (`ON DELETE SET NULL`).
 - **Importante**: Exercícios que usam exercícios do PT como base (`exercicio_padrao_id`) terão essa referência definida como `NULL` (`ON DELETE SET NULL`).
 
 #### Processo de Exclusão de Arquivos

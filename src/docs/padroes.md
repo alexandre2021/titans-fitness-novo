@@ -236,7 +236,7 @@ rotinas → treinos → exercicios_rotina → series → execucoes_sessao
 ```
 
 ### **Campos Obrigatórios:**
-- **rotinas**: `nome`, `objetivo`, `aluno_id`, `personal_trainer_id`, `status`
+- **rotinas**: `nome`, `objetivo`, `aluno_id`, `professor_id`, `status`
 - **treinos**: `rotina_id`, `nome`, `grupos_musculares`, `ordem`
 - **execucoes_sessao**: `rotina_id`, `treino_id`, `sessao_numero`, `status`
 

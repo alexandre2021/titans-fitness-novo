@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge'; 
-import { useMediaQuery } from "@/hooks/use-media-query";
-import { ArrowLeft, BarChart3, TrendingUp, Calendar, Plus, Eye, MoreVertical, Trash2, AlertTriangle, Info, ChevronDown } from 'lucide-react';
+import { useMediaQuery } from '@/hooks/use-media-query';
+import { ArrowLeft, BarChart3, TrendingUp, Calendar, Plus, Eye, MoreVertical, Trash2, AlertTriangle, Info, ChevronDown, User } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -44,6 +44,11 @@ interface AvaliacaoFisica {
   foto_frente_url?: string;
   foto_lado_url?: string;
   foto_costas_url?: string;
+  professor_id?: string;
+  professores: {
+    id: string;
+    nome_completo: string;
+  } | null;
 }
 
 const AlunosAvaliacoes = () => {
@@ -62,6 +67,16 @@ const AlunosAvaliacoes = () => {
 
   const handleConfirmarExclusao = async () => {
     if (!avaliacaoParaExcluir) return;
+
+    // Adicionando verificação de permissão no frontend
+    if (avaliacaoParaExcluir.professor_id !== user?.id) {
+      toast.error("Permissão negada", {
+        description: "Você só pode excluir avaliações que você mesmo criou.",
+      });
+      setShowDeleteDialog(false);
+      return;
+    }
+
     setIsDeleting(true);
     try {
       // 1. Buscar URLs das imagens antes de excluir o registro
@@ -114,8 +129,9 @@ const AlunosAvaliacoes = () => {
       const { error } = await supabase
         .from('avaliacoes_fisicas')
         .delete()
-        .eq('id', avaliacaoParaExcluir.id)
-        .eq('aluno_id', id); // Garante que apenas o PT do aluno pode excluir
+        .eq('id', avaliacaoParaExcluir.id);
+        // A segurança de quem pode excluir é garantida pela RLS no Supabase
+        // que deve verificar se o `professor_id` da avaliação é o mesmo do `auth.uid()`
 
       if (error) {
         toast.error('Erro', {
@@ -165,12 +181,16 @@ const AlunosAvaliacoes = () => {
       if (!id || !user) return;
 
       try {
+        // MUDANÇA: Verificar se o professor tem permissão para ver este aluno (se o aluno o segue)
+        const { data: relacao, error: relacaoError } = await supabase.from('alunos_professores').select('aluno_id').eq('aluno_id', id).eq('professor_id', user.id).single();
+
+        if (relacaoError || !relacao) throw new Error("Você não tem permissão para ver este aluno.");
+
         // Buscar informações do aluno
         const { data: alunoData, error: alunoError } = await supabase
           .from('alunos')
           .select('id, nome_completo, email, avatar_type, avatar_image_url, avatar_letter, avatar_color')
           .eq('id', id)
-          .eq('personal_trainer_id', user.id)
           .single();
 
         if (alunoError) {
@@ -187,14 +207,14 @@ const AlunosAvaliacoes = () => {
         // Buscar avaliações físicas
         const { data: avaliacoesData, error: avaliacoesError } = await supabase
           .from('avaliacoes_fisicas')
-          .select('*')
+          .select('*, professores(id, nome_completo)')
           .eq('aluno_id', id)
           .order('created_at', { ascending: false }); // Ordenar por created_at (mais recente primeiro)
 
         if (avaliacoesError) {
           console.error('Erro ao buscar avaliações:', avaliacoesError);
         } else {
-          setAvaliacoes(avaliacoesData || []);
+          setAvaliacoes((avaliacoesData as unknown as AvaliacaoFisica[]) || []);
         }
 
       } catch (error) {
@@ -381,7 +401,7 @@ const AlunosAvaliacoes = () => {
               <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">Nenhuma avaliação</h3>
               <p className="text-muted-foreground mb-4">
-                As avaliações físicas realizadas aparecerão aqui. Recomendamos um intervalo mínimo de 30 dias entre avaliações para resultados mais precisos.
+                Recomendamos um intervalo mínimo de 30 dias entre avaliações para resultados mais precisos.
               </p>
             </div>
           ) : (
@@ -391,10 +411,14 @@ const AlunosAvaliacoes = () => {
                 return (
                   <div key={avaliacao.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
                     <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{avaliacao.data_avaliacao.split('-').reverse().join('/')}</span>
-                      </div>
+                      {avaliacao.professores ? (
+                        <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                          <User className="h-3 w-3" />
+                          <span>
+                            Realizada por {user?.id === avaliacao.professor_id ? 'você' : avaliacao.professores.nome_completo}
+                          </span>
+                        </div>
+                      ) : <div />} {/* Empty div to keep alignment */}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           {isDesktop ? (
@@ -409,18 +433,26 @@ const AlunosAvaliacoes = () => {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleVerDetalhes(avaliacao.id)}>
-                            <Eye className="mr-2 h-5 w-5" />
-                            <span className="text-base">Detalhes</span>
+                            <Eye className="mr-2 h-4 w-4" />
+                            Detalhes
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleExcluirAvaliacao(avaliacao)} className="text-destructive focus:text-destructive">
-                            <Trash2 className="mr-2 h-5 w-5" />
-                            <span className="text-base">Excluir</span>
+                          <DropdownMenuItem 
+                            onClick={() => handleExcluirAvaliacao(avaliacao)} 
+                            className="text-destructive focus:text-destructive"
+                            disabled={user?.id !== avaliacao.professor_id}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Excluir
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
                     
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Data</p>
+                        <p className="font-semibold">{avaliacao.data_avaliacao.split('-').reverse().join('/')}</p>
+                      </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Peso</p>
                         <p className="font-semibold">{avaliacao.peso} kg</p>
@@ -438,7 +470,6 @@ const AlunosAvaliacoes = () => {
                           </Badge>
                         </div>
                       </div>
-                      {/* Medidas removidas */}
                     </div>
 
                     {/* Fotos disponíveis removidas */}

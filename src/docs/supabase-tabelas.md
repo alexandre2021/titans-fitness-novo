@@ -1,6 +1,6 @@
-# Documentação das Tabelas do Supabase
+# Documentação das Tabelas do Supabase - Modelo de Professores
 
-Este documento descreve a estrutura completa das tabelas do banco de dados, incluindo colunas, tipos de dados, restrições e relacionamentos.
+Este documento descreve a estrutura completa das tabelas do banco de dados no novo modelo, onde alunos podem seguir múltiplos professores, incluindo colunas, tipos de dados, restrições e relacionamentos.
 
 ## 1. Tabelas do Schema Public
 
@@ -30,16 +30,16 @@ Este documento descreve a estrutura completa das tabelas do banco de dados, incl
 | `created_at` | 3 | `timestamp with time zone` | True | `now()` | `` | `` |  |
 | `updated_at` | 4 | `timestamp with time zone` | True | `now()` | `` | `` |  |
 
-**Tipos de Usuário**: aluno, personal_trainer, admin
+**Tipos de Usuário**: aluno, professor, admin
 
 ---
 
-### Tabela: `public.personal_trainers`
-**Descrição**: Dados dos personal trainers, incluindo informações profissionais e planos de assinatura.
+### Tabela: `public.professores`
+**Descrição**: Dados dos professores, incluindo informações profissionais e planos de assinatura.
 
 | Coluna | Posição | Tipo de Dado | Nulável | Padrão | Tipo de Restrição | Nome da Restrição | Chave Estrangeira |
 |---|---|---|---|---|---|---|---|
-| `id` | 1 | `uuid` | False | `` | `PRIMARY KEY` | `personal_trainers_pkey` |  |
+| `id` | 1 | `uuid` | False | `` | `PRIMARY KEY` | `professores_pkey` |  |
 | `nome_completo` | 2 | `text` | False | `` | `` | `` |  |
 | `created_at` | 3 | `timestamp with time zone` | True | `now()` | `` | `` |  |
 | `updated_at` | 4 | `timestamp with time zone` | True | `now()` | `` | `` |  |
@@ -62,24 +62,25 @@ Este documento descreve a estrutura completa das tabelas do banco de dados, incl
 | `avatar_color` | 21 | `character varying` | True | `'#3B82F6'::character varying` | `` | `` |  |
 | `avatar_image_url` | 22 | `text` | True | `` | `` | `` |  |
 | `avatar_type` | 23 | `character varying` | True | `'letter'::character varying` | `` | `` |  |
-| `limite_alunos` | 24 | `integer` | True | `3` | `` | `` |  |
-| `limite_exercicios` | 25 | `integer` | True | `3` | `` | `` |  |
+| `limite_exercicios` | 24 | `integer` | True | `3` | `` | `` |  |
 
-**Tipos de Plano**: gratuito, basico, premium, profissional
+**Tipos de Plano**: gratuito, basico, premium, profissional  
+**MUDANÇA**: Removido `limite_alunos` - aplicativo gratuito sem limite de seguidores
 
 ---
 
 ### Tabela: `public.planos`
-**Descrição**: Definição dos planos de assinatura disponíveis para personal trainers.
+**Descrição**: Definição dos planos de assinatura disponíveis para professores.
 
 | Coluna | Posição | Tipo de Dado | Nulável | Padrão | Tipo de Restrição | Nome da Restrição | Chave Estrangeira |
 |---|---|---|---|---|---|---|---|
 | `id` | 1 | `text` | False | `` | `PRIMARY KEY` | `planos_pkey` |  |
 | `nome` | 2 | `text` | False | `` | `` | `` |  |
 | `preco` | 3 | `numeric` | False | `` | `` | `` |  |
-| `limite_alunos` | 4 | `integer` | True | `` | `` | `` |  |
-| `limite_exercicios` | 5 | `integer` | True | `` | `` | `` |  |
-| `ativo` | 6 | `boolean` | True | `true` | `` | `` |  |
+| `limite_exercicios` | 4 | `integer` | True | `` | `` | `` |  |
+| `ativo` | 5 | `boolean` | True | `true` | `` | `` |  |
+
+**MUDANÇA**: Removido `limite_alunos` - não há mais limite de seguidores
 
 ---
 
@@ -91,7 +92,7 @@ Este documento descreve a estrutura completa das tabelas do banco de dados, incl
 | `id` | 1 | `uuid` | False | `` | `PRIMARY KEY` | `alunos_pkey` | `public.user_profiles(id)` |
 | `id` | 1 | `uuid` | False | `` | `FOREIGN KEY` | `fk_alunos_user_profiles` | `public.user_profiles(id)` |
 | `nome_completo` | 2 | `text` | False | `` | `` | `` |  |
-| `personal_trainer_id` | 3 | `uuid` | True | `` | `` | `` |  |
+| `professor_id` | 3 | `uuid` | True | `` | `FOREIGN KEY` | `alunos_professor_id_fkey` | `public.professores(id)` |
 | `created_at` | 4 | `timestamp with time zone` | True | `now()` | `` | `` |  |
 | `updated_at` | 5 | `timestamp with time zone` | True | `now()` | `` | `` |  |
 | `email` | 6 | `text` | False | `''::text` | `` | `` |  |
@@ -114,17 +115,32 @@ Este documento descreve a estrutura completa das tabelas do banco de dados, incl
 | `descricao_pessoal` | 23 | `text` | True | `` | `` | `` |  |
 | `last_warning_email_sent_at` | 24 | `timestamp with time zone` | True | `` | `` | `` |  |
 
-**Status Possíveis**: pendente, ativo, inativo, suspenso
+**Status Possíveis**: pendente, ativo, inativo, suspenso  
+**MUDANÇA CRÍTICA**: `professor_id` agora representa apenas o professor da rotina ativa atual. Pode ser NULL se aluno não tem rotina ativa.
+
+---
+
+### Tabela: `public.alunos_professores` ⭐ NOVA
+**Descrição**: Relacionamento N:N entre alunos e professores (sistema de "seguir"). A segurança (RLS) está ativada para garantir que cada usuário só veja seus próprios vínculos.
+
+| Coluna | Posição | Tipo de Dado | Nulável | Padrão | Tipo de Restrição | Nome da Restrição | Chave Estrangeira |
+|---|---|---|---|---|---|---|---|
+| `aluno_id` | 1 | `uuid` | False | `` | `PRIMARY KEY, FOREIGN KEY` | `alunos_professores_pkey, alunos_professores_aluno_id_fkey` | `public.alunos(id)` |
+| `professor_id` | 2 | `uuid` | False | `` | `PRIMARY KEY, FOREIGN KEY` | `alunos_professores_pkey, alunos_professores_professor_id_fkey` | `public.professores(id)` |
+| `data_seguindo` | 3 | `timestamp without time zone` | True | `now()` | `` | `` |  |
+
+**CONSTRAINT ÚNICA**: `UNIQUE(aluno_id, professor_id)` - Evita que aluno siga mesmo professor duas vezes  
+**DELETE CASCADE**: Quando aluno ou professor é deletado, remove relacionamento automaticamente
 
 ---
 
 ### Tabela: `public.convites`
-**Descrição**: Sistema de convites para cadastro de alunos e vínculo com personal trainers.
+**Descrição**: Sistema de convites para cadastro de alunos e início de relacionamento com professores.
 
 | Coluna | Posição | Tipo de Dado | Nulável | Padrão | Tipo de Restrição | Nome da Restrição | Chave Estrangeira |
 |---|---|---|---|---|---|---|---|
 | `id` | 1 | `uuid` | False | `gen_random_uuid()` | `PRIMARY KEY` | `convites_pkey` |  |
-| `personal_trainer_id` | 2 | `uuid` | False | `` | `FOREIGN KEY` | `convites_personal_trainer_id_fkey` | `public.personal_trainers(id)` |
+| `professor_id` | 2 | `uuid` | False | `` | `FOREIGN KEY` | `convites_professor_id_fkey` | `public.professores(id)` |
 | `email_convidado` | 3 | `text` | False | `` | `` | `` |  |
 | `token_convite` | 4 | `uuid` | False | `gen_random_uuid()` | `UNIQUE` | `convites_token_convite_key` |  |
 | `tipo_convite` | 5 | `character varying` | False | `` | `CHECK` | `convites_tipo_convite_check` |  |
@@ -135,7 +151,8 @@ Este documento descreve a estrutura completa das tabelas do banco de dados, incl
 | `updated_at` | 10 | `timestamp with time zone` | True | `now()` | `` | `` |  |
 
 **Tipos de Convite**: cadastro, vinculo  
-**Status Possíveis**: pendente, aceito, cancelado, expirado
+**Status Possíveis**: pendente, aceito, cancelado, expirado  
+**MUDANÇA**: Convite agora significa "começar a seguir" ao invés de "vincular exclusivamente"
 
 ---
 
@@ -152,7 +169,7 @@ Este documento descreve a estrutura completa das tabelas do banco de dados, incl
 | `instrucoes` | 6 | `text` | True | `` | `` | `` |  |
 | `created_at` | 7 | `timestamp with time zone` | True | `now()` | `` | `` |  |
 | `tipo` | 8 | `character varying` | True | `'padrao'::character varying` | `CHECK` | `exercicios_tipo_check` |  |
-| `pt_id` | 9 | `uuid` | True | `` | `FOREIGN KEY` | `exercicios_pt_id_fkey` |  |
+| `professor_id` | 9 | `uuid` | True | `` | `FOREIGN KEY` | `exercicios_professor_id_fkey` | `public.professores(id)` |
 | `exercicio_padrao_id` | 10 | `uuid` | True | `` | `FOREIGN KEY` | `exercicios_exercicio_base_id_fkey` | `public.exercicios(id)` |
 | `video_url` | 11 | `text` | True | `` | `` | `` |  |
 | `imagem_1_url` | 12 | `text` | True | `` | `` | `` |  |
@@ -165,12 +182,13 @@ Este documento descreve a estrutura completa das tabelas do banco de dados, incl
 | `grupos_musculares_secundarios` | 19 | `character varying` | True | `` | `` | `` |  |
 
 **Tipos de Exercício**: padrao, personalizado  
-**Níveis de Dificuldade**: Iniciante, Intermediário, Avançado
+**Níveis de Dificuldade**: Iniciante, Intermediário, Avançado  
+**MUDANÇA**: `pt_id` renomeado para `professor_id`
 
 ---
 
 ### Tabela: `public.rotinas`
-**Descrição**: Rotinas de treino criadas pelos personal trainers para seus alunos.
+**Descrição**: Rotinas de treino criadas pelos professores para seus seguidores.
 
 | Coluna | Posição | Tipo de Dado | Nulável | Padrão | Tipo de Restrição | Nome da Restrição | Chave Estrangeira |
 |---|---|---|---|---|---|---|---|
@@ -178,7 +196,7 @@ Este documento descreve a estrutura completa das tabelas do banco de dados, incl
 | `nome` | 2 | `character varying` | False | `` | `` | `` |  |
 | `descricao` | 3 | `text` | True | `` | `` | `` |  |
 | `aluno_id` | 4 | `uuid` | False | `` | `FOREIGN KEY` | `fk_rotinas_aluno` | `public.alunos(id)` |
-| `personal_trainer_id` | 5 | `uuid` | True | `` | `FOREIGN KEY (ON DELETE SET NULL)` | `fk_rotinas_personal` | `public.personal_trainers(id)` |
+| `professor_id` | 5 | `uuid` | True | `` | `FOREIGN KEY (ON DELETE SET NULL)` | `rotinas_professor_id_fkey` | `public.professores(id)` |
 | `treinos_por_semana` | 6 | `integer` | False | `` | `` | `` |  |
 | `dificuldade` | 7 | `character varying` | False | `` | `` | `` |  |
 | `duracao_semanas` | 8 | `integer` | False | `` | `` | `` |  |
@@ -194,7 +212,8 @@ Este documento descreve a estrutura completa das tabelas do banco de dados, incl
 | `observacoes_rotina` | 18 | `text` | True | `` | `` | `` |  |
 
 **Status Possíveis**: Rascunho, Ativa, Bloqueada, Concluída, Cancelada  
-**Objetivos Comuns**: Emagrecimento, Ganho de Massa, Condicionamento, Reabilitação
+**Objetivos Comuns**: Emagrecimento, Ganho de Massa, Condicionamento, Reabilitação  
+**MUDANÇA**: Professor pode criar rotina para qualquer aluno que o segue
 
 ---
 
@@ -273,7 +292,7 @@ Este documento descreve a estrutura completa das tabelas do banco de dados, incl
 | `tempo_decorrido` | 12 | `integer` | True | `0` | `` | `` |  |
 
 **Status Possíveis**: em_aberto, em_andamento, pausada, concluida, cancelada  
-**Modos de Execução**: pt (personal trainer), aluno
+**Modos de Execução**: professor, aluno
 
 ---
 
@@ -297,6 +316,27 @@ Este documento descreve a estrutura completa das tabelas do banco de dados, incl
 **Constraint Única**: `execucoes_series_unique` (execucao_sessao_id, exercicio_rotina_id, serie_numero)
 
 ---
+
+### Tabela: `public.posts` ⭐ NOVA
+**Descrição**: Armazena os posts do blog e conteúdo da comunidade criados por professores. A segurança (RLS) está ativada.
+
+| Coluna | Posição | Tipo de Dado | Nulável | Padrão | Tipo de Restrição | Nome da Restrição | Chave Estrangeira |
+|---|---|---|---|---|---|---|---|
+| `id` | 1 | `uuid` | False | `gen_random_uuid()` | `PRIMARY KEY` | `posts_pkey` | |
+| `author_id` | 2 | `uuid` | True | | `FOREIGN KEY (ON DELETE SET NULL)` | `posts_author_id_fkey` | `public.professores(id)` |
+| `title` | 3 | `text` | False | | | | |
+| `slug` | 4 | `text` | False | | `UNIQUE` | `posts_slug_key` | |
+| `content` | 5 | `jsonb` | True | | | | |
+| `cover_image_url` | 6 | `text` | True | | | | |
+| `status` | 7 | `text` | False | `'draft'::text` | `CHECK` | `posts_status_check` | |
+| `created_at` | 8 | `timestamp with time zone` | False | `now()` | | | |
+| `updated_at` | 9 | `timestamp with time zone` | False | `now()` | | | |
+
+**Status Possíveis**: published, draft, archived
+**Políticas de Segurança (RLS)**:
+- Público pode ler posts publicados.
+- Autores podem gerenciar (criar, ler, atualizar, deletar) seus próprios posts.
+- Administradores (`contato@titans.fitness`) têm acesso total.
 
 ### Tabela: `public.avaliacoes_fisicas`
 **Descrição**: Avaliações físicas dos alunos com medidas antropométricas e fotos de progresso.
@@ -327,8 +367,6 @@ Este documento descreve a estrutura completa das tabelas do banco de dados, incl
 | `created_at` | 22 | `timestamp with time zone` | True | `now()` | `` | `` |  |
 | `updated_at` | 23 | `timestamp with time zone` | True | `now()` | `` | `` |  |
 
----
-
 ### Tabela: `public.rotinas_arquivadas`
 **Descrição**: Arquivo de rotinas finalizadas com PDFs gerados para histórico.
 
@@ -347,17 +385,13 @@ Este documento descreve a estrutura completa das tabelas do banco de dados, incl
 
 ---
 
-## 2. Tabelas de Modelos de Rotina
-
-Este conjunto de tabelas armazena os **modelos (templates)** de rotinas criados pelos Personal Trainers. Eles são independentes das rotinas atribuídas aos alunos e servem como base para novas criações.
-
 ### Tabela: `public.modelos_rotina`
-**Descrição**: Armazena os modelos de rotina (templates) criados pelos Personal Trainers.
+**Descrição**: Armazena os modelos de rotina (templates) criados pelos Professores.
 
 | Coluna | Posição | Tipo de Dado | Nulável | Padrão | Tipo de Restrição | Nome da Restrição | Chave Estrangeira |
 |---|---|---|---|---|---|---|---|
 | `id` | 1 | `uuid` | False | `gen_random_uuid()` | `PRIMARY KEY` | `modelos_rotina_pkey` | |
-| `personal_trainer_id` | 2 | `uuid` | False | | `FOREIGN KEY (ON DELETE CASCADE)` | `modelos_rotina_personal_trainer_id_fkey` | `public.personal_trainers(id)` |
+| `professor_id` | 2 | `uuid` | False | | `FOREIGN KEY (ON DELETE CASCADE)` | `modelos_rotina_professor_id_fkey` | `public.professores(id)` |
 | `nome` | 3 | `character varying` | False | | | | |
 | `descricao` | 4 | `text` | True | | | | |
 | `objetivo` | 5 | `character varying` | True | | | | |
@@ -423,130 +457,40 @@ Este conjunto de tabelas armazena os **modelos (templates)** de rotinas criados 
 
 ---
 
-## 2. Tipos Personalizados (ENUMs)
+## Continuação - Regras de Negócio Atualizadas
 
-### `plano_tipo`
-- `gratuito`
-- `basico` 
-- `premium`
-- `profissional`
+### Sistema de "Seguir"
+- **Aluno pode seguir N professores**: Relacionamento N:N na tabela `alunos_professores`
+- **Professor é único gerador de conteúdo**: Cria rotinas, exercícios e modelos
+- **Convite significa "começar a seguir"**: Não mais vínculo exclusivo
 
----
+### Rotina Ativa
+- **Apenas 1 rotina ativa por aluno**: Campo `alunos.professor_id`
+- **Pode ser de qualquer professor seguido**: Não precisa ser do primeiro professor
+- **Nova rotina substitui anterior**: Automaticamente bloqueia/arquiva anterior
 
-## 3. Índices Importantes
+### Queries Essenciais
 
-### Índices de Performance
-- **`idx_alunos_personal_trainer`**: Otimiza consultas de alunos por personal trainer
-- **`idx_alunos_status`**: Acelera filtros por status dos alunos
-- **`idx_alunos_onboarding`**: Facilita consultas de onboarding
-- **`idx_convites_pt_status`**: Otimiza consultas de convites por PT e status
-- **`idx_personal_trainers_plano`**: Acelera consultas por tipo de plano
-- **`idx_exercicios_dificuldade`**: Facilita filtros por dificuldade dos exercícios
-
-### Índices Únicos
-- **`exercicios_slug_key`**: Garante slugs únicos para exercícios
-- **`convites_token_convite_key`**: Tokens únicos para convites
-- **`execucoes_series_unique`**: Evita duplicação de execuções de séries
-
----
-
-## 4. Constraints e Validações
-
-### Check Constraints Importantes
-
-**Convites**:
-- `convites_tipo_convite_check`: Permite apenas 'cadastro' ou 'vinculo'
-- `convites_status_check`: Status válidos: 'pendente', 'aceito', 'cancelado', 'expirado'
-
-**Exercícios**:
-- `exercicios_tipo_check`: Tipos válidos: 'padrao', 'personalizado'
-
-**Execuções de Sessão**:
-- `execucoes_sessao_modo_execucao_check`: Modos válidos: 'pt', 'aluno'
-
----
-
-## 5. Sistema de Relacionamentos
-
-### Hierarquia Principal
-```
-auth.users → user_profiles → alunos/personal_trainers
+#### Seguidores de um Professor
+```sql
+SELECT a.*, ap.data_seguindo,
+       CASE WHEN a.professor_id = $professor_id 
+            THEN 'ATIVA' ELSE 'SEGUINDO' END as status_relacao
+FROM alunos a
+JOIN alunos_professores ap ON a.id = ap.aluno_id  
+WHERE ap.professor_id = $professor_id
+ORDER BY status_relacao DESC, ap.data_seguindo DESC
 ```
 
-### Fluxo de Rotinas
+#### Verificar se Pode Criar Rotina
+```sql
+-- Verifica se aluno segue o professor
+SELECT 1 FROM alunos_professores 
+WHERE aluno_id = $aluno_id AND professor_id = $professor_id
+
+-- Verifica se aluno já tem rotina ativa
+SELECT p.nome_completo as professor_conflito
+FROM alunos a
+JOIN professores p ON a.professor_id = p.id  
+WHERE a.id = $aluno_id AND a.professor_id IS NOT NULL
 ```
-personal_trainers → rotinas → treinos → exercicios_rotina → series
-                         ↓
-                    execucoes_sessao → execucoes_series
-```
-
-### Sistema de Convites
-```
-personal_trainers → convites → alunos (vinculação)
-```
-
----
-
-## 6. Gerenciamento de Dados e Exclusão em Cascata
-
-### Corrente de Exclusão
-Para que a exclusão total funcione, a seguinte cadeia de dependências foi configurada com a regra `ON DELETE CASCADE`:
-
-```
-auth.users CASCADE→ user_profiles CASCADE→ alunos CASCADE→ [rotinas, rotinas_arquivadas, avaliacoes_fisicas]
-```
-
-### Níveis de Cascade
-1. **Nível 1**: `auth.users` → `user_profiles`
-2. **Nível 2**: `user_profiles` → `alunos`
-3. **Nível 3**: `alunos` → `rotinas`
-4. **Nível 4**: `alunos` → `rotinas_arquivadas`
-5. **Nível 5**: `alunos` → `avaliacoes_fisicas`
-
-### Relacionamentos de Execução
-- `rotinas` → `execucoes_sessao` → `execucoes_series`
-- `treinos` → `exercicios_rotina` → `series`
-- `exercicios_rotina` → `execucoes_series`
-
----
-
-## 7. Regras de Negócio Implementadas
-
-### Limites por Plano
-- **Gratuito**: 3 alunos, 3 exercícios personalizados
-- **Outros planos**: Definidos na tabela `planos`
-
-### Sistema de Avatar
-- Suporte a avatars por letra (`avatar_letter`) ou imagem (`avatar_image_url`)
-- Cores personalizáveis para avatars
-
-### Convites com Expiração
-- Convites expiram em 7 dias por padrão
-- Sistema de tokens únicos para segurança
-
-### Supersets
-- Suporte a exercícios em superset através de `exercicio_2_id`
-- Permite combinação de dois exercícios em sequência
-
-### Execução Flexível
-- Treinos podem ser executados pelo PT ou pelo aluno
-- Registro detalhado de cargas e repetições executadas
-- Suporte a dropsets com cargas específicas
-
----
-
-## 8. Considerações de Segurança
-
-### Row Level Security (RLS)
-- Implementar políticas RLS para isolamento de dados por personal trainer
-- Alunos só acessam seus próprios dados
-- Personal trainers só acessam dados de seus alunos
-
-### Tokens e Autenticação
-- Tokens de convite com UUID para segurança
-- Integração com sistema de autenticação Supabase
-
-### Validação de Dados
-- Check constraints garantem integridade referencial
-- Campos obrigatórios bem definidos
-- Validação de tipos de dados e valores aceitos

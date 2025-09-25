@@ -14,9 +14,8 @@ export default tseslint.config(
   // Configuração para a aplicação React (com checagem de tipos)
   {
     files: ["src/**/*.{ts,tsx}", "*.{ts,tsx}"],
-    // A linha 'extends' abaixo foi comentada para tornar as regras menos rigorosas
-    // e fazer os novos erros desaparecerem. Se quiser reativar a verificação
-    // mais forte, basta remover os caracteres de comentário (//).
+    // A linha 'extends' abaixo deve permanecer comentada por enquanto
+    // para evitar a avalanche de erros.
     // extends: [...tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       parserOptions: {
@@ -43,7 +42,7 @@ export default tseslint.config(
   // Configuração para a API (com checagem de tipos)
   {
     files: ["api/**/*.ts"],
-    // A linha abaixo também foi comentada.
+    // Esta linha também deve permanecer comentada.
     // extends: [...tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       parserOptions: {

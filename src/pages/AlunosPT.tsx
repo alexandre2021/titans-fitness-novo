@@ -49,7 +49,7 @@ const GENERO_OPTIONS = [
 const AlunosPT = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { alunos, loading, filtros, setFiltros, desvincularAluno } = useAlunos();
+  const { alunos, loading, filtros, setFiltros, desvincularAluno, totalAlunos } = useAlunos();
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [convitesPendentes, setConvitesPendentes] = useState<ConvitePendente[]>([]);
   const [convitesCollapsed, setConvitesCollapsed] = useState(true);
@@ -63,7 +63,7 @@ const AlunosPT = () => {
       const { data: convites } = await supabase
         .from('convites')
         .select('id, email_convidado, tipo_convite, status, created_at, expires_at')
-        .eq('personal_trainer_id', user.id)
+        .eq('professor_id', user.id)
         .eq('status', 'pendente')
         .not('email_convidado', 'is', null) // Apenas convites por email devem ser listados como pendentes
         .order('created_at', { ascending: false })
@@ -346,7 +346,13 @@ const AlunosPT = () => {
 
           {/* Estatísticas */}
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span>{alunos.length} aluno(s) encontrado(s)</span>
+            {temFiltrosAtivos ? (
+              <span>
+                {alunos.length} de {totalAlunos} aluno(s) encontrado(s)
+              </span>
+            ) : (
+              <span>{totalAlunos} aluno(s) no total</span>
+            )}
           </div>
 
           {/* Lista de alunos */}

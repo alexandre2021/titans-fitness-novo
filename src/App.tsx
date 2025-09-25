@@ -6,13 +6,13 @@ import DetalhesExercicio from "./pages/DetalhesExercicio";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createBrowserRouter, RouterProvider, Outlet } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Outlet, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthProvider";
 import AuthGuard from "@/components/AuthGuard";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import UserTypeSelection from "./pages/UserTypeSelection";
-import CadastroPersonalTrainer from "./pages/CadastroPersonalTrainer";
+import CadastroProfessor from "./pages/CadastroProfessor";
 import CadastroAluno from "./pages/CadastroAluno";
 import ConfirmacaoEmail from "./pages/ConfirmacaoEmail";
 import Login from "./pages/Login";
@@ -27,8 +27,8 @@ import PerfilAluno from "./pages/PerfilAluno";
 import OnboardingPTInformacoesBasicas from "./pages/OnboardingPTInformacoesBasicas";
 import OnboardingPTExperienciaProfissional from "./pages/OnboardingPTExperienciaProfissional";
 import OnboardingPTRedesSociais from "./pages/OnboardingPTRedesSociais";
-import ProtectedRoutes from "./components/layout/ProtectedRoutes"; // ✅ Importa o novo componente
-import IndexPT from "./pages/IndexPT";
+import ProtectedRoutes from "./components/layout/ProtectedRoutes";
+import IndexProfessor from "./pages/IndexProfessor";
 import AlunosPT from "./pages/AlunosPT";
 import ConviteAluno from "./pages/ConviteAluno";
 import ExerciciosPT from "./pages/ExerciciosPT";
@@ -38,24 +38,29 @@ import PerfilPT from "./pages/PerfilPT";
 import ConfiguracoesPT from "./pages/ConfiguracoesPT";
 import DetalhesAluno from "./pages/DetalhesAluno";
 import AlunosParQ from "./pages/AlunosParQ";
-import PaginaRotinas from "./pages/PaginaRotinas"; // ✅ Importa o novo componente de rotinas
+import PaginaRotinas from "./pages/PaginaRotinas";
 import AlunosAvaliacoes from "./pages/AlunosAvaliacoes";
 import AlunosAvaliacaoNova from "./pages/AlunosAvaliacaoNova";
 import AlunosAvaliacaoDetalhes from "./pages/AlunosAvaliacaoDetalhes"; 
 import AlunosRotinaDetalhes from "./pages/AlunosRotinaDetalhes"; 
-import RotinaCriacao from "./pages/RotinaCriacao"; // ✅ Importa a nova página única
+import RotinaCriacao from "./pages/RotinaCriacao";
 import MeusModelos from "./pages/MeusModelos";
 import NovoModelo from "./pages/NovoModelo";
 import EditarModelo from "./pages/EditarModelo";
 import EsqueciSenha from "./pages/EsqueciSenha";
+import Mais from "./pages/Mais";
 import NovoModeloSelecao from "./pages/NovoModeloSelecao";
 import ResetarSenha from "./pages/ResetarSenha";
+import Aplicativo from "./pages/Aplicativo";
+import NovoPost from "./pages/NovoPost";
+import EditarPost from "./pages/EditarPost";
+import PostPage from "./pages/Post";
 
-// ✅ NOVAS IMPORTAÇÕES PARA EXECUÇÃO
+// NOVAS IMPORTAÇÕES PARA EXECUÇÃO
 import ExecucaoSelecionarTreino from "./pages/ExecucaoSelecionarTreino";
 import ExecucaoExecutarTreino from "./pages/ExecucaoExecutarTreino";
 
-// ✅ IMPORTAÇÃO PARA PWA
+// IMPORTAÇÃO PARA PWA
 import PwaInstallPrompt from "@/components/pwa/PwaInstallPrompt";
 import PwaUpdateNotification from "@/components/pwa/PwaUpdateNotification";
 
@@ -66,8 +71,9 @@ const router = createBrowserRouter([
     path: "/",
     element: <Index />,
   },
+  { path: "/aplicativo", element: <Aplicativo /> },
   { path: "/cadastro", element: <UserTypeSelection /> },
-  { path: "/cadastro/personal-trainer", element: <CadastroPersonalTrainer /> },
+  { path: "/cadastro/professor", element: <CadastroProfessor /> },
   { path: "/cadastro/aluno", element: <CadastroAluno /> },
   { path: "/confirmacao-email", element: <ConfirmacaoEmail /> },
   { path: "/login", element: <Login /> },
@@ -76,6 +82,7 @@ const router = createBrowserRouter([
   { path: "/convite-invalido", element: <ConviteInvalido /> },
   { path: "/esqueci-senha", element: <EsqueciSenha /> },
   { path: "/resetar-senha", element: <ResetarSenha /> },
+  { path: "/blog/:slug", element: <PostPage /> },
   {
     element: <AuthGuard><Outlet /></AuthGuard>,
     children: [
@@ -88,14 +95,16 @@ const router = createBrowserRouter([
       // Rotas de criação de modelo e rotina (sem layout principal para modo de foco)
       { path: "/modelos/novo", element: <NovoModelo /> },
       { path: "/modelos/editar/:modeloId", element: <EditarModelo /> },
-      { path: "/rotinas-criar/:alunoId", element: <RotinaCriacao /> }, // ✅ Rota única para criação
+      { path: "/rotinas-criar/:alunoId", element: <RotinaCriacao /> },
       { path: "/selecionar-modelo", element: <NovoModeloSelecao /> },
       // Rotas protegidas com layout (PT e Aluno)
       {
         element: <ProtectedRoutes />,
         children: [
           // Rotas do PT
-          { path: "/index-pt", element: <IndexPT /> },
+          // Adicionado redirecionamento da rota antiga para a nova
+          { path: "/index-pt", element: <Navigate to="/index-professor" replace /> },
+          { path: "/index-professor", element: <IndexProfessor /> },
           { path: "/alunos", element: <AlunosPT /> },
           { path: "/convite-aluno", element: <ConviteAluno /> },
           { path: "/exercicios-pt", element: <ExerciciosPT /> },
@@ -104,10 +113,14 @@ const router = createBrowserRouter([
           { path: "/exercicios-pt/editar/:id", element: <EditarExercicio /> },
           { path: "/exercicios-pt/detalhes/:id", element: <DetalhesExercicio /> },
           { path: "/agenda-pt", element: <AgendaPT /> },
+          { path: "/posts/novo", element: <NovoPost /> },
+          { path: "/posts/editar/:slug", element: <EditarPost /> },
           { path: "/mensagens-pt", element: <MensagensPT /> },
           { path: "/perfil-pt", element: <PerfilPT /> },
           { path: "/meus-modelos", element: <MeusModelos /> },
           { path: "/configuracoes-pt", element: <ConfiguracoesPT /> },
+          // Rota para a nova página "Mais"
+          { path: "/mais", element: <Mais /> },
           { path: "/detalhes-aluno/:id", element: <DetalhesAluno /> },
           { path: "/alunos-parq/:id", element: <AlunosParQ /> },
           { path: "/alunos-rotinas/:id", element: <PaginaRotinas modo="personal" /> },

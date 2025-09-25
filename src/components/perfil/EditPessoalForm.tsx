@@ -88,7 +88,7 @@ export const EditPessoalForm = ({ profile, onSave }: EditPessoalFormProps) => {
       if (!user) throw new Error('Usuário não autenticado');
 
       const { error } = await supabase
-        .from('personal_trainers')
+        .from('professores')
         .update({
           nome_completo: values.nome_completo,
           telefone: values.telefone || null,

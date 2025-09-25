@@ -10,57 +10,7 @@ import { toast } from 'sonner';
 import Modal from 'react-modal';
 import { Slider } from "@/components/ui/slider";
 import { Button } from '@/components/ui/button';
-
-/**
- * Cria um elemento de imagem a partir de uma URL.
- */
-const createImage = (url: string): Promise<HTMLImageElement> =>
-  new Promise((resolve, reject) => {
-    const image = new Image();
-    image.addEventListener('load', () => resolve(image));
-    image.addEventListener('error', (error) => reject(error));
-    image.setAttribute('crossOrigin', 'anonymous');
-    image.src = url;
-  });
-
-/**
- * Corta uma imagem com base nos pixels de corte.
- */
-async function getCroppedImg(
-  imageSrc: string,
-  pixelCrop: Area
-): Promise<Blob | null> {
-  const image = await createImage(imageSrc);
-  const canvas = document.createElement('canvas');
-  canvas.width = pixelCrop.width;
-  canvas.height = pixelCrop.height;
-  const ctx = canvas.getContext('2d');
-
-  if (!ctx) {
-    return null;
-  }
-
-  ctx.drawImage(
-    image,
-    pixelCrop.x,
-    pixelCrop.y,
-    pixelCrop.width,
-    pixelCrop.height,
-    0,
-    0,
-    pixelCrop.width,
-    pixelCrop.height
-  );
-
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (!blob) {
-        return reject(new Error('Canvas is empty'));
-      }
-      resolve(blob);
-    }, 'image/webp', 0.8);
-  });
-};
+import { optimizeAndCropImage } from '@/lib/imageUtils';
 
 const AVATAR_COLORS = [
   '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
@@ -156,11 +106,11 @@ interface AvatarSectionProps {
     avatar_color?: string | null;
   } | null;
   onProfileUpdate: () => void;
-  userType: 'personal_trainer' | 'aluno';
+  userType: 'professor' | 'aluno';
 }
 
 export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfileUpdate, userType }) => {
-  const tableName = userType === 'personal_trainer' ? 'personal_trainers' : 'alunos'; // Corrigido para usar a tabela correta
+  const tableName = userType === 'professor' ? 'professores' : 'alunos'; // Corrigido para usar a tabela correta
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -200,11 +150,10 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
 
     setIsUploading(true);
     try {
-      const croppedImageBlob = await getCroppedImg(imageSrc, croppedAreaPixels);
-      if (!croppedImageBlob) throw new Error('Falha ao cortar a imagem');
-
-      const file = new File([croppedImageBlob], `avatar_${user.id}.webp`, { type: 'image/webp' });
-
+      // Usa a função otimizada do nosso utilitário, definindo uma largura máxima de 256px para avatares.
+      const file = await optimizeAndCropImage(imageSrc, croppedAreaPixels, 256);
+      if (!file) throw new Error('Falha ao cortar e otimizar a imagem');
+      
       const filePath = `${user.id}/${file.name}`;
       
       const { error: uploadError } = await supabase.storage

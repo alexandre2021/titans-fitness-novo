@@ -43,7 +43,7 @@ const FeaturesSection = () => {
             Funcionalidades que fazem a diferença
           </h2>
           <p className="text-xl text-text-secondary max-w-3xl mx-auto">
-            Tudo que você precisa para profissionalizar seu trabalho como Personal Trainer
+            Tudo que você precisa para profissionalizar seu trabalho como Professor
             e oferecer a melhor experiência para seus alunos.
           </p>
         </div>

@@ -57,7 +57,6 @@ export type Database = {
           nome_completo: string
           onboarding_completo: boolean | null
           par_q_respostas: Json | null
-          personal_trainer_id: string | null
           peso: number | null
           status: string | null
           telefone: string | null
@@ -82,7 +81,6 @@ export type Database = {
           nome_completo: string
           onboarding_completo?: boolean | null
           par_q_respostas?: Json | null
-          personal_trainer_id?: string | null
           peso?: number | null
           status?: string | null
           telefone?: string | null
@@ -107,7 +105,6 @@ export type Database = {
           nome_completo?: string
           onboarding_completo?: boolean | null
           par_q_respostas?: Json | null
-          personal_trainer_id?: string | null
           peso?: number | null
           status?: string | null
           telefone?: string | null
@@ -120,6 +117,39 @@ export type Database = {
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      alunos_professores: {
+        Row: {
+          aluno_id: string
+          created_at: string
+          professor_id: string
+        }
+        Insert: {
+          aluno_id: string
+          created_at?: string
+          professor_id: string
+        }
+        Update: {
+          aluno_id?: string
+          created_at?: string
+          professor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alunos_professores_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alunos_professores_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "professores"
             referencedColumns: ["id"]
           },
         ]
@@ -198,11 +228,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      },
+      }
       convites: {
         Row: {
           id: string
-          personal_trainer_id: string
+          professor_id: string
           email_convidado: string
           token_convite: string
           tipo_convite: string
@@ -214,7 +244,7 @@ export type Database = {
         }
         Insert: {
           id?: string
-          personal_trainer_id: string
+          professor_id: string
           email_convidado: string
           token_convite?: string
           tipo_convite: string
@@ -226,7 +256,7 @@ export type Database = {
         }
         Update: {
           id?: string
-          personal_trainer_id?: string
+          professor_id?: string
           email_convidado?: string
           token_convite?: string
           tipo_convite?: string
@@ -238,12 +268,12 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "convites_personal_trainer_id_fkey"
-            columns: ["personal_trainer_id"]
+            foreignKeyName: "convites_professor_id_fkey"
+            columns: ["professor_id"]
             isOneToOne: false
-            referencedRelation: "personal_trainers"
+            referencedRelation: "professores"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       execucoes_series: {
@@ -379,7 +409,7 @@ export type Database = {
           instrucoes: string | null
           is_ativo: boolean | null
           nome: string
-          pt_id: string | null
+          professor_id: string | null
           slug: string | null
           tipo: string | null
           video_url: string | null
@@ -400,7 +430,7 @@ export type Database = {
           instrucoes?: string | null
           is_ativo?: boolean | null
           nome: string
-          pt_id?: string | null
+          professor_id?: string | null
           slug?: string | null
           tipo?: string | null
           video_url?: string | null
@@ -421,7 +451,7 @@ export type Database = {
           instrucoes?: string | null
           is_ativo?: boolean | null
           nome?: string
-          pt_id?: string | null
+          professor_id?: string | null
           slug?: string | null
           tipo?: string | null
           video_url?: string | null
@@ -433,6 +463,13 @@ export type Database = {
             columns: ["exercicio_padrao_id"]
             isOneToOne: false
             referencedRelation: "exercicios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercicios_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "professores"
             referencedColumns: ["id"]
           },
         ]
@@ -491,7 +528,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      },
+      }
       modelos_exercicio: {
         Row: {
           id: string
@@ -546,11 +583,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      },
+      }
       modelos_rotina: {
         Row: {
           id: string
-          personal_trainer_id: string
+          professor_id: string
           nome: string
           objetivo: string
           dificuldade: string
@@ -562,7 +599,7 @@ export type Database = {
         }
         Insert: {
           id?: string
-          personal_trainer_id: string
+          professor_id: string
           nome: string
           objetivo: string
           dificuldade: string
@@ -574,7 +611,7 @@ export type Database = {
         }
         Update: {
           id?: string
-          personal_trainer_id?: string
+          professor_id?: string
           nome?: string
           objetivo?: string
           dificuldade?: string
@@ -586,14 +623,14 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "modelos_rotina_personal_trainer_id_fkey"
-            columns: ["personal_trainer_id"]
+            foreignKeyName: "modelos_rotina_professor_id_fkey"
+            columns: ["professor_id"]
             isOneToOne: false
-            referencedRelation: "personal_trainers"
+            referencedRelation: "professores"
             referencedColumns: ["id"]
           },
         ]
-      },
+      }
       modelos_serie: {
         Row: {
           id: string
@@ -649,7 +686,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      },
+      }
       modelos_treino: {
         Row: {
           id: string
@@ -690,8 +727,82 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      },
-      personal_trainers: {
+      }
+      planos: {
+        Row: {
+          ativo: boolean | null
+          id: string
+          limite_alunos: number | null
+          limite_exercicios: number | null
+          nome: string
+          preco: number
+        }
+        Insert: {
+          ativo?: boolean | null
+          id: string
+          limite_alunos?: number | null
+          limite_exercicios?: number | null
+          nome: string
+          preco: number
+        }
+        Update: {
+          ativo?: boolean | null
+          id?: string
+          limite_alunos?: number | null
+          limite_exercicios?: number | null
+          nome?: string
+          preco?: number
+        }
+        Relationships: []
+      }
+      posts: {
+        Row: {
+          author_id: string
+          content: Json | null
+          created_at: string
+          id: string
+          slug: string
+          status: "draft" | "published" | "archived"
+          title: string
+          updated_at: string | null
+          cover_image_desktop_url: string | null
+          cover_image_mobile_url: string | null
+        }
+        Insert: {
+          author_id: string
+          content?: Json | null
+          created_at?: string
+          id?: string
+          slug: string
+          status?: "draft" | "published" | "archived"
+          title: string
+          updated_at?: string | null
+          cover_image_desktop_url?: string | null
+          cover_image_mobile_url?: string | null
+        }
+        Update: {
+          author_id?: string
+          content?: Json | null
+          created_at?: string
+          id?: string
+          slug?: string
+          status?: "draft" | "published" | "archived"
+          title?: string
+          updated_at?: string | null
+          cover_image_desktop_url?: string | null
+          cover_image_mobile_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "professores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professores: {
         Row: {
           anos_experiencia: string | null
           avatar_color: string | null
@@ -778,33 +889,6 @@ export type Database = {
         }
         Relationships: []
       }
-      planos: {
-        Row: {
-          ativo: boolean | null
-          id: string
-          limite_alunos: number | null
-          limite_exercicios: number | null
-          nome: string
-          preco: number
-        }
-        Insert: {
-          ativo?: boolean | null
-          id: string
-          limite_alunos?: number | null
-          limite_exercicios?: number | null
-          nome: string
-          preco: number
-        }
-        Update: {
-          ativo?: boolean | null
-          id?: string
-          limite_alunos?: number | null
-          limite_exercicios?: number | null
-          nome?: string
-          preco?: number
-        }
-        Relationships: []
-      }
       rotinas: {
         Row: {
           aluno_id: string
@@ -820,7 +904,7 @@ export type Database = {
           observacoes_pagamento: string | null
           pdf_email_enviado: boolean | null
           permite_execucao_aluno: boolean | null
-          personal_trainer_id: string
+          professor_id: string
           status: string | null
           treinos_por_semana: number
           valor_total: number
@@ -839,7 +923,7 @@ export type Database = {
           observacoes_pagamento?: string | null
           pdf_email_enviado?: boolean | null
           permite_execucao_aluno?: boolean | null
-          personal_trainer_id: string
+          professor_id: string
           status?: string | null
           treinos_por_semana: number
           valor_total: number
@@ -858,7 +942,7 @@ export type Database = {
           observacoes_pagamento?: string | null
           pdf_email_enviado?: boolean | null
           permite_execucao_aluno?: boolean | null
-          personal_trainer_id?: string
+          professor_id?: string
           status?: string | null
           treinos_por_semana?: number
           valor_total?: number
@@ -873,9 +957,9 @@ export type Database = {
           },
           {
             foreignKeyName: "fk_rotinas_personal"
-            columns: ["personal_trainer_id"]
+            columns: ["professor_id"]
             isOneToOne: false
-            referencedRelation: "personal_trainers"
+            referencedRelation: "professores"
             referencedColumns: ["id"]
           },
         ]

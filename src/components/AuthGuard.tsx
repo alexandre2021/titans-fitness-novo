@@ -21,7 +21,7 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
 
       // Páginas que não precisam de autenticação
       const publicRoutes = [
-        '/', '/cadastro', '/cadastro/personal-trainer', '/cadastro/aluno', 
+        '/', '/cadastro', '/cadastro/professor', '/cadastro/aluno', 
         '/login', '/termos', '/privacidade', '/confirmacao-email'
       ];
 
@@ -36,7 +36,7 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
               .eq('id', user.id)
               .single();
 
-            if (userProfile?.user_type === 'personal_trainer') {
+            if (userProfile?.user_type === 'professor') {
               navigate('/index-pt');
             } else if (userProfile?.user_type === 'aluno') {
               navigate('/index-aluno');
@@ -80,9 +80,9 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
         const userType = userProfile.user_type;
 
         // Verificar se é PT e precisa fazer onboarding
-        if (userType === 'personal_trainer') {
+        if (userType === 'professor') {
           const { data: ptData } = await supabase
-            .from('personal_trainers')
+            .from('professores')
             .select('onboarding_completo')
             .eq('id', user.id)
             .single();

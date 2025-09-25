@@ -44,7 +44,7 @@ export default function CadastroAluno() {
       id: string;
       token_convite: string;
       email_convidado: string;
-      personal_trainer_id: string;
+      professor_id: string;
       pt_nome: string;
     };
   }>({status: 'idle'});
@@ -90,7 +90,7 @@ export default function CadastroAluno() {
             id: data.convite.id,
             token_convite: data.convite.token_convite,
             email_convidado: data.convite.email_convidado,
-            personal_trainer_id: data.convite.personal_trainer_id,
+            professor_id: data.convite.professor_id,
             pt_nome: data.convite.pt_nome
           }
         });
@@ -184,7 +184,7 @@ export default function CadastroAluno() {
           // Dados do convite
           convite_id: tokenValidation.conviteData.id,
           token_convite: tokenValidation.conviteData.token_convite,
-          personal_trainer_id: tokenValidation.conviteData.personal_trainer_id,
+          professor_id: tokenValidation.conviteData.professor_id,
           
           // Metadados para configuração do avatar
           avatar_letter: data.nome_completo.charAt(0).toUpperCase(),
@@ -226,7 +226,7 @@ export default function CadastroAluno() {
       console.log("Cadastro realizado com sucesso!");
       
       toast.success("Sucesso!", {
-        description: `Cadastro realizado com sucesso! Agora você treina com ${tokenValidation.ptName}. Faça login para começar.`,
+        description: `Cadastro realizado com sucesso! Agora você segue ${tokenValidation.ptName}. Faça login para começar.`,
         duration: 5000
       })
 
@@ -256,7 +256,7 @@ export default function CadastroAluno() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <img
-            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal.png"
+            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal-simples.png"
             alt="Titans.fitness"
             className="h-12"
           />
@@ -288,7 +288,7 @@ export default function CadastroAluno() {
               <Alert className="mb-6 border-green-200 bg-green-50">
                 <CheckCircle className="h-4 w-4 text-green-600" />
                 <AlertDescription className="text-green-700">
-                  <strong>Convite válido!</strong> Você será aluno de <strong>{tokenValidation.ptName}</strong>
+                  <strong>Convite válido!</strong> Ao se cadastrar, você seguirá <strong>{tokenValidation.ptName}</strong>.
                 </AlertDescription>
               </Alert>
             )}

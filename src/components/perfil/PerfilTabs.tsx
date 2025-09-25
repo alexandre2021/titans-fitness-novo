@@ -84,7 +84,7 @@ export const PerfilTabs = ({ profile, onProfileUpdate }: PerfilTabsProps) => {
       </TabsContent>
 
       <TabsContent value="conta">
-        <AccountCancellationSection userType="personal_trainer" />
+        <AccountCancellationSection userType="professor" />
       </TabsContent>
     </Tabs>
   );

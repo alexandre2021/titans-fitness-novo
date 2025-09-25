@@ -100,9 +100,9 @@ export default function ExecucaoExecutarTreino() {
 
       const { user_type } = profile;
 
-      if (user_type === 'personal_trainer') {
+      if (user_type === 'professor') {
         const { data: ptData, error: ptError } = await supabase
-          .from('personal_trainers')
+          .from('professores')
           .select('id, nome_completo')
           .eq('id', userId)
           .single();
@@ -112,7 +112,7 @@ export default function ExecucaoExecutarTreino() {
         }
         
         setUserProfile({
-          user_type: 'personal_trainer',
+          user_type: 'professor',
           id: ptData.id,
           nome_completo: ptData.nome_completo
         });
@@ -313,7 +313,7 @@ export default function ExecucaoExecutarTreino() {
     if (hasNavigated.current) return;
     hasNavigated.current = true;
     
-    if (userProfile?.user_type === 'personal_trainer') {
+    if (userProfile?.user_type === 'professor') {
       navigate(`/alunos-rotinas/${sessaoData?.aluno_id}`);
     } else {
       navigate('/index-aluno');

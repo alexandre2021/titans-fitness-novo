@@ -487,7 +487,7 @@ export const useExercicioExecucao = (
         .select(`
           *,
           alunos (nome_completo, email),
-          personal_trainers (nome_completo),
+          professores (nome_completo),
           treinos (
             *,
             exercicios_rotina (

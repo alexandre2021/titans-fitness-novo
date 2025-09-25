@@ -76,7 +76,11 @@ const ProtectedRoutes = () => {
     return null;
   }
 
-  const isFocusedMode = location.pathname.startsWith('/rotinas-criar/') || location.pathname.startsWith('/execucao-rotina/executar-treino/');
+  const isFocusedMode = 
+    location.pathname.startsWith('/rotinas-criar/') || 
+    location.pathname.startsWith('/execucao-rotina/executar-treino/');
+
+  const isMaisPage = location.pathname === '/mais';
 
   let Sidebar, MobileHeader, BottomNav;
 
@@ -86,7 +90,7 @@ const ProtectedRoutes = () => {
       MobileHeader = AlunoMobileHeader;
       BottomNav = AlunoBottomNav;
       break;
-    case 'personal_trainer':
+    case 'professor':
       Sidebar = PTSidebar;
       MobileHeader = PTMobileHeader;
       BottomNav = PTBottomNav;
@@ -101,17 +105,20 @@ const ProtectedRoutes = () => {
   if (isMobile) {
     return (
       <div className="min-h-screen bg-background">
+        {/* Oculta o header apenas no modo de foco */}
         {!isFocusedMode && <MobileHeader />}
         <main className={`p-4 ${isFocusedMode ? 'pt-6' : 'pt-24 pb-16'}`}>
           <Outlet />
         </main>
-        {!isFocusedMode && <BottomNav />}
+        {/* Oculta o BottomNav apenas no modo de foco */}
+        {!isFocusedMode && <BottomNav />} 
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
+      {/* No desktop, a sidebar com o logo já é exibida. */}
       {!isFocusedMode && <Sidebar />}
       <main className={`flex-1 p-6 ${!isFocusedMode ? 'pl-72' : ''}`}>
         <Outlet />

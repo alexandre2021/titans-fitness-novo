@@ -167,7 +167,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { data: alunosData, error: alunosError } = await supabase.from('alunos').select('id, email, last_warning_email_sent_at, avatar_type, avatar_image_url');
     if (alunosError) throw new Error("Falha ao buscar perfis de alunos.");
 
-    const { data: ptsData, error: ptsError } = await supabase.from('personal_trainers').select('id, email, last_warning_email_sent_at, nome_completo, avatar_type, avatar_image_url');
+    const { data: ptsData, error: ptsError } = await supabase.from('professores').select('id, email, last_warning_email_sent_at, nome_completo, avatar_type, avatar_image_url');
     if (ptsError) throw new Error("Falha ao buscar perfis de PTs.");
 
     const alunosMap = new Map(alunosData.map(a => [a.id, a]));
@@ -208,7 +208,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     for (const user of ptsToWarn) {
       await sendWarningEmail(user);
-      await supabase.from('personal_trainers').update({ last_warning_email_sent_at: new Date().toISOString() }).eq('id', user.id);
+      await supabase.from('professores').update({ last_warning_email_sent_at: new Date().toISOString() }).eq('id', user.id);
       console.log(`Warning email sent to PT: ${user.email}`);
     }
 
@@ -351,7 +351,7 @@ async function processPTDeletion(user: UserProfile): Promise<number> {
   const { data: rotinasData } = await supabase
     .from('rotinas')
     .select('id')
-    .eq('personal_trainer_id', user.id);
+    .eq('professor_id', user.id);
 
   const rotinaIds = rotinasData?.map(r => r.id) || [];
 
@@ -377,7 +377,7 @@ async function processPTDeletion(user: UserProfile): Promise<number> {
   const { data: rotinasParaArquivar, error: fetchRotinasError } = await supabase
     .from('rotinas')
     .select('*') // Seleciona todos os dados necessários para o arquivamento
-    .eq('personal_trainer_id', user.id)
+    .eq('professor_id', user.id)
     .in('status', ['Ativa', 'Bloqueada']);
 
   if (fetchRotinasError) {
@@ -456,7 +456,7 @@ async function processPTDeletion(user: UserProfile): Promise<number> {
   const { data: exerciciosData } = await supabase
         .from('exercicios')
         .select('imagem_1_url, imagem_2_url, video_url')
-        .eq('pt_id', user.id);
+        .eq('professor_id', user.id);
 
       if (exerciciosData) {
         exerciciosData.forEach(ex => {
@@ -467,11 +467,11 @@ async function processPTDeletion(user: UserProfile): Promise<number> {
   const results = await Promise.allSettled(fileDeletionPromises);
   filesDeletedCount += results.filter(r => r.status === 'fulfilled' && r.value).length;
 
-  // 5. Desvincular Alunos
+  // 5. Desvincular Alunos (N:N) - Remove a relação da tabela de junção
   const { error: desvinculaError } = await supabase
-        .from('alunos')
-        .update({ personal_trainer_id: null })
-        .eq('personal_trainer_id', user.id);
+        .from('alunos_professores')
+        .delete()
+        .eq('professor_id', user.id);
 
       if (desvinculaError) {
         console.error(`Error unlinking students from PT ${user.id}:`, desvinculaError);

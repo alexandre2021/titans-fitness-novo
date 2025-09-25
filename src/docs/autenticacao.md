@@ -136,7 +136,7 @@ const { user, session, loading, signOut } = useAuth();
 3. Busca tipo de usuário na tabela user_profiles
    ↓
 4. Redirecionamento baseado no tipo:
-   • personal_trainer → /index-pt
+   • professor → /index-pt
    • aluno → /index-aluno
    • default → /
 ```
@@ -236,7 +236,7 @@ const { user, session, loading, signOut } = useAuth();
 ### Personal Trainer
 - **Páginas principais**: `/index-pt`, `/alunos`, `/exercicios-pt`
 - **Onboarding**: 3 etapas (informações básicas, experiência, redes sociais)
-- **Verificação**: Tabela `personal_trainers.onboarding_completo`
+- **Verificação**: Tabela `professores.onboarding_completo`
 
 
 ### Aluno  

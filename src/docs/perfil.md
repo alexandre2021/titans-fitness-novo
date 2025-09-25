@@ -30,7 +30,7 @@ src/
 │   └── usePTProfile.ts                # 🎣 Hook para dados do perfil do PT
 │
 └── types/
-    └── ...                            # Tipos de dados (Aluno, PersonalTrainer)
+    └── ...                            # Tipos de dados (Aluno, professor)
 ```
 
 ---
@@ -84,7 +84,7 @@ const EditPessoalModal = ({ open, onOpenChange, ... }) => {
 A busca e atualização dos dados de perfil são centralizadas em hooks customizados para cada tipo de usuário.
 
 -   **`usePTProfile.ts`**:
-    -   Busca os dados do Personal Trainer logado na tabela `personal_trainers`.
+    -   Busca os dados do Personal Trainer logado na tabela `professores`.
     -   Fornece funções para atualizar as informações (pessoais, profissionais, redes sociais).
     -   Gerencia os estados de `loading` e `error`.
 
