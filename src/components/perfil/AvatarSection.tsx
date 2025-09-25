@@ -181,7 +181,7 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
     input.capture = 'user'; // Prioriza a câmera no mobile
 
     input.onchange = async (e) => {
-      const target = e.target as HTMLInputElement;      
+      const target = e.target as HTMLInputElement;
       if (target.files && target.files.length > 0) {
         const file = target.files[0];
         await handleImageUpload(file);
@@ -323,13 +323,29 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
         <div className="flex flex-col items-center gap-4 mx-auto">
           <div className="relative w-24 h-24">
             <Avatar className="w-full h-full text-4xl border-2 border-background">
-              <AvatarImage src={profile.avatar_image_url!} alt="Avatar do Usuário" crossOrigin="anonymous" />
+              <AvatarImage src={profile.avatar_image_url!} alt="Avatar do Usuário" />
               <AvatarFallback style={{ backgroundColor: profile.avatar_color || '#3B82F6' }} className="text-white font-semibold">
                 {letter}
               </AvatarFallback>
             </Avatar>
+            <button
+              type="button"
+              disabled={isUploading}
+              onClick={handleFileSelect}
+              className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full p-2 border-2 border-background hover:bg-primary/90 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            >
+              {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
+            </button>
           </div>
+          <Button variant="outline" size="sm" onClick={handleRemoveImage}>
+            <UserIcon className="h-4 w-4 mr-2" />
+            Usar Avatar
+          </Button>
           <div className="flex flex-wrap justify-center items-center gap-2 mt-2">
+            <Button variant="outline" size="sm" onClick={handleFileSelect} disabled={isUploading}>
+              <Camera className="h-4 w-4 mr-2" />
+              Nova Foto
+            </Button>
             <Button variant="outline" size="sm" onClick={() => setImageSrc(profile.avatar_image_url)}>
               <Crop className="h-4 w-4 mr-2" />
               Ajustar
