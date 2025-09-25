@@ -100,35 +100,32 @@ export const optimizeAndCropImage = async (
 };
 
 // Redimensiona e otimiza uma imagem a partir de um arquivo, sem corte.
-export const resizeAndOptimizeImage = (
+export const resizeAndOptimizeImage = async (
   file: File,
   maxWidth: number,
   quality: number = 0.85
 ): Promise<File | null> => {
-  return new Promise((resolve) => {
-    fileToDataURL(file)
-      .then(createImage)
-      .then((image) => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          throw new Error('Não foi possível obter o contexto 2D do canvas.');
-        }
+  try {
+    const imageSrc = await fileToDataURL(file);
+    const image = await createImage(imageSrc);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Não foi possível obter o contexto 2D do canvas.');
 
-        const ratio = Math.min(maxWidth / image.width, maxWidth / image.height);
-        canvas.width = image.width * ratio;
-        canvas.height = image.height * ratio;
+    const ratio = Math.min(maxWidth / image.width, 1); // Não aumenta a imagem, apenas reduz
+    canvas.width = image.width * ratio;
+    canvas.height = image.height * ratio;
 
-        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-        canvas.toBlob((blob) => {
-          if (!blob) { resolve(null); return; }
-          resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
-        }, 'image/jpeg', quality);
-      })
-      .catch((error) => {
-        console.error('Erro ao redimensionar imagem:', error);
-        resolve(null);
-      });
-  });
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        if (!blob) { resolve(null); return; }
+        resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
+      }, 'image/jpeg', quality);
+    });
+  } catch (error) {
+    console.error('Erro ao redimensionar imagem:', error);
+    return null;
+  }
 };
