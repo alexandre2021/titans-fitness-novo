@@ -131,17 +131,20 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
     );
   }
 
-  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
       const reader = new FileReader();
-      reader.addEventListener('load', () => setImageSrc(reader.result as string));
+      reader.addEventListener('load', () => {
+        setImageSrc(reader.result as string);
+        // Limpa o valor do input APÓS a imagem ser carregada para evitar race conditions
+        // em navegadores mobile, onde o objeto File pode ser invalidado.
+        if (e.target) {
+          e.target.value = '';
+        }
+      });
       reader.readAsDataURL(file);
       setIsMenuOpen(false);
-      // Limpa o valor do input para permitir que o evento onChange seja disparado
-      // novamente se o usuário selecionar o mesmo arquivo (ou a câmera retornar um
-      // arquivo com o mesmo nome), um problema comum em dispositivos móveis.
-      e.target.value = '';
     }
   };
 

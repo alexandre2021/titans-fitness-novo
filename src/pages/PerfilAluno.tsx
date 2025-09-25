@@ -66,20 +66,10 @@ const PerfilAluno = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto p-6">
+    <div className="space-y-6">
       {isDesktop && (
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/index-aluno')}
-            className="h-10 w-10 p-0"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-2xl font-normal">Meu Perfil</h1>
-        </div>
+        <h1 className="text-3xl font-bold">Meu Perfil</h1>
       )}
-
       <AvatarSection profile={profile} onProfileUpdate={handleProfileUpdate} userType="aluno" />
       
       <AlunoPerfilTabs profile={profile} onProfileUpdate={handleProfileUpdate} />

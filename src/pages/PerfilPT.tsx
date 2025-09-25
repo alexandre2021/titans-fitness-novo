@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
 import { AvatarSection } from "@/components/perfil/AvatarSection";
 import { PerfilTabs } from "@/components/perfil/PerfilTabs";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 type PTProfile = Tables<'professores'>;
 
@@ -16,6 +17,7 @@ const PerfilPT = () => {
   const [profile, setProfile] = useState<PTProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchTrigger, setFetchTrigger] = useState(0);
+  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const fetchProfile = useCallback(async () => {
     if (!user) return;
@@ -77,17 +79,10 @@ const PerfilPT = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto p-6">
-      <div className="flex items-center space-x-4">
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/index-professor')}
-          className="h-10 w-10 p-0"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <h1 className="text-2xl font-normal">Perfil de treinador</h1>
-      </div>
+    <div className="space-y-6">
+      {isDesktop && (
+        <h1 className="text-3xl font-bold">Meu Perfil</h1>
+      )}
       <AvatarSection profile={profile} onProfileUpdate={handleProfileUpdate} userType="professor" />
       
       <PerfilTabs profile={profile} onProfileUpdate={handleProfileUpdate} />

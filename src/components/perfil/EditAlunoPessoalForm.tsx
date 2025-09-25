@@ -102,6 +102,13 @@ export const EditAlunoPessoalForm = ({ profile, onSave }: EditAlunoPessoalFormPr
 
       if (error) throw error;
 
+      // Atualiza os metadados do usuário no Supabase Auth para refletir o novo nome
+      const { error: userUpdateError } = await supabase.auth.updateUser({
+        data: { full_name: values.nome_completo }
+      });
+
+      if (userUpdateError) throw userUpdateError;
+
       toast.success("Perfil atualizado", {
         description: "Suas informações foram atualizadas com sucesso."
       })
