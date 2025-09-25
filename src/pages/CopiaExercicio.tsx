@@ -222,13 +222,26 @@ const CopiaExercicio = () => {
 
       const processUrl = async (key: 'imagem_1_url' | 'imagem_2_url' | 'video_url'): Promise<string | undefined> => {
         const urlValue = midias[key];
+        console.log(`🔍 [processUrl] Processando ${key}:`, urlValue);
+        console.log(`🔍 [processUrl] Tipo de ${key}:`, urlValue instanceof File ? 'File' : typeof urlValue);
+
         if (urlValue instanceof File) {
-          return URL.createObjectURL(urlValue);
+          console.log(`📁 [processUrl] Criando Object URL para ${key}...`);
+          try {
+            const objectUrl = URL.createObjectURL(urlValue);
+            console.log(`✅ [processUrl] Object URL criada para ${key}:`, objectUrl);
+            return objectUrl;
+          } catch (error) {
+            console.error(`❌ [processUrl] Erro ao criar Object URL para ${key}:`, error);
+            return undefined;
+          }
         }
         if (typeof urlValue === 'string' && urlValue) {
           // Para mídias do exercício padrão, busca a URL via Edge Function
+          console.log(`🌐 [processUrl] String URL para ${key}, buscando via Edge Function...`);
           return await getMediaUrl(urlValue, 'padrao');
         }
+        console.log(`⚪ [processUrl] ${key} está vazio/inválido`);
         return undefined;
       };
 
@@ -238,7 +251,10 @@ const CopiaExercicio = () => {
         processUrl('video_url')
       ]);
 
-      setSignedUrls({ imagem1: img1, imagem2: img2, video: vid });
+      const finalUrls = { imagem1: img1, imagem2: img2, video: vid };
+      console.log('🔍 [loadSignedUrls] URLs processadas individualmente:', { img1, img2, vid });
+      console.log('✅ [loadSignedUrls] Objeto final a ser setado:', finalUrls);
+      setSignedUrls(finalUrls);
       console.log('✅ [loadSignedUrls] Estado `signedUrls` atualizado:', { imagem1: img1, imagem2: img2, video: vid });
     } catch (error) {
       console.error('❌ [loadSignedUrls] Erro geral:', error);
