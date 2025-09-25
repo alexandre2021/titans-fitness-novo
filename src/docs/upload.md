@@ -1,139 +1,94 @@
-# Arquitetura de Upload de Mídia (Cliente Inteligente + Upload Direto para R2)
+# Arquitetura de Upload de Mídia
 
-Este documento descreve a arquitetura para upload de mídias, que combina processamento no cliente com uploads diretos para o Cloudflare R2, evitando gargalos no backend.
-
----
-
-## Capítulo 1: Upload de Mídia para Exercícios
-
-### 1.1. Princípio Central: Cliente Inteligente, Backend como Porteiro
-
--   **O Problema:** Enviar arquivos grandes (imagens/vídeos) através de uma Edge Function do Supabase consome rapidamente a cota de transferência de dados (50MB/mês no plano gratuito), tornando a aplicação não escalável.
--   **A Solução:** O frontend é responsável por **capturar, redimensionar e comprimir** a mídia. Em vez de enviar o arquivo para a função, ele pede uma **permissão de upload** (URL pré-assinada) e envia o arquivo pesado **diretamente para o Cloudflare R2**. O backend atua apenas como um "porteiro" que autoriza a operação, sem lidar com o tráfego pesado.
+Este documento descreve a arquitetura para upload de mídias (imagens e vídeos). O princípio central é o **"Cliente Inteligente"**: o frontend (navegador) é responsável por todo o processamento pesado (corte, redimensionamento, compressão) antes do upload. O backend atua apenas como um "porteiro", autorizando o envio direto para o serviço de armazenamento (Cloudflare R2 ou Supabase Storage), o que economiza recursos e custos.
 
 ---
 
-### 1.2. Fluxo de Imagens de Exercícios: Otimização no Cliente via Canvas
+## Capítulo 1: Caixa de Ferramentas (`imageUtils.ts`)
 
-A interface se adapta ao dispositivo para uma melhor experiência do usuário.
+O arquivo `src/lib/imageUtils.ts` é o nosso módulo central de utilitários para manipulação de imagens. Ele não é um componente visual, mas uma "caixa de ferramentas" com funções que os componentes utilizam para processar imagens no cliente.
 
-1.  **Captura de Mídia:**
-    -   **Mobile:** A interface prioriza a captura direta pela câmera (`<input type="file" capture="user">`).
-    -   **Desktop:** A interface abre o seletor de arquivos padrão.
+### 1.1. Ferramentas Disponíveis
 
-2.  **Processamento no Cliente (A Mágica do Canvas):**
-    -   A foto tirada (que pode ser um arquivo grande) **não é enviada diretamente**.
-    -   Ela é carregada em um elemento `<canvas>` HTML, que fica oculto na tela.
-    -   O método `context.drawImage()` é usado para desenhar a imagem no canvas, forçando as dimensões para um padrão (ex: **largura máxima de 640 pixels**). Isso garante o redimensionamento.
-    -   Em seguida, o método `canvas.toDataURL('image/jpeg', 0.85)` exporta a imagem do canvas como uma string **base64**, já comprimida em formato JPEG com 85% de qualidade.
-
-3.  **Pedido de Permissão de Upload:**
-    -   O frontend chama a Edge Function `upload-media` com os metadados do arquivo (nome, tipo).
-    -   A função valida a autenticação do usuário e gera uma **URL de upload pré-assinada** para o Cloudflare R2, válida por um curto período.
-
-4.  **Upload Direto para o Cloudflare R2:**
-    -   O frontend usa a URL pré-assinada recebida para enviar o objeto `File` (a imagem otimizada) diretamente para o bucket do Cloudflare R2, usando o método `PUT`.
-    -   O tráfego pesado **não passa pelo Supabase**.
-
-5.  **Confirmação no Banco de Dados:**
-    -   Após o upload ser bem-sucedido, o frontend atualiza a tabela `exercicios` no Supabase com o caminho do novo arquivo.
+-   **`validateImageFile`**: Valida um arquivo de imagem, verificando se o tipo (`jpeg`, `png`, `webp`) e o tamanho (máx. 10MB) são permitidos.
+-   **`fileToDataURL`**: Converte um `File` em uma string `base64` (Data URL), usada para exibir uma pré-visualização instantânea da imagem para o usuário.
+-   **`resizeAndOptimizeImage`**: **Redimensiona e otimiza** uma imagem.
+    -   **Uso:** Exercícios personalizados.
+    -   **Processo:** Recebe um `File`, redimensiona para uma largura máxima (ex: 640px) mantendo a proporção e exporta como um `File` JPEG com 85% de qualidade. Não realiza corte.
+-   **`optimizeAndCropImage`**: **Corta e otimiza** uma imagem.
+    -   **Uso:** Posts e Avatares de perfil.
+    -   **Processo:** Recebe uma imagem (Data URL) e as coordenadas de corte (`pixelCrop` do `react-easy-crop`). Desenha a área cortada em um `<canvas>`, redimensiona para a largura máxima especificada e exporta como um `File` JPEG com 85% de qualidade.
 
 ---
 
-### 1.3. Fluxo de Vídeos de Exercícios: Gravação e Compressão no Cliente
+## Capítulo 2: Exercícios Personalizados
 
-A lógica também se adapta ao dispositivo, priorizando a gravação em celulares.
+O upload de mídias para exercícios personalizados utiliza o princípio de "cliente inteligente" para otimizar imagens e vídeos antes de enviá-los diretamente para o **Cloudflare R2**.
 
-1.  **Captura de Vídeo:**
-    -   **Mobile:** A interface oferece a opção de **"Gravar Vídeo"**.
-    -   **Desktop:** A interface permite **"Selecionar Vídeo"** do sistema de arquivos.
+### 2.1. Fluxo de Imagens
 
-2.  **Gravação Controlada (Mobile):**
-    -   Um modal informa o usuário: "O vídeo terá duração máxima de **12 segundos** e será salvo **sem áudio**."
-    -   O PWA usa `navigator.mediaDevices.getUserMedia({ video: true, audio: false })` para acessar a câmera.
-    -   A gravação é iniciada com o `MediaRecorder` e parada automaticamente após 12 segundos.
-    -   **Ponto Chave (Compressão):** A compressão é forçada no cliente ao instanciar o `MediaRecorder` com `videoBitsPerSecond: 500000` (500 kbps). Isso garante um arquivo final com cerca de **750 KB**.
+1.  **Captura:** O usuário seleciona uma imagem ou tira uma foto.
+2.  **Otimização no Cliente:** A função `resizeAndOptimizeImage` de `imageUtils.ts` é chamada.
+    -   A imagem é redimensionada para uma **largura máxima de 640px**.
+    -   É comprimida para o formato **JPEG com 85% de qualidade**.
+3.  **Upload para R2:** O arquivo otimizado é enviado para o bucket `exercicios` no Cloudflare R2 através de uma URL pré-assinada, gerada pela Edge Function `upload-media`.
 
-3.  **Upload para o Backend:**
-    -   O fluxo é idêntico ao de imagens: o frontend pede uma URL pré-assinada para a função `upload-media` e envia o `Blob` ou `File` de vídeo diretamente para o Cloudflare R2.
+### 2.2. Fluxo de Vídeos
 
----
-
-### 1.4. Backend como Porteiro (Função Compartilhada)
-
-A complexidade de processamento de mídia no backend é eliminada. As funções têm papéis claros de controle de acesso.
-
--   **Edge Function `upload-media`:**
-    1.  Recebe uma requisição do frontend com uma `action` (`generate_upload_url`).
-    2.  Valida o token de autenticação do usuário.
-    3.  Gera e retorna uma URL pré-assinada de `PUT` para o Cloudflare R2.
-
--   **Edge Function `delete-media`:**
-    -   Recebe uma requisição para deletar um arquivo específico.
-    -   Valida a permissão do usuário.
-    -   Executa a exclusão do arquivo no Cloudflare R2.
+1.  **Gravação:** O componente `VideoRecorder.tsx` utiliza a API `MediaRecorder` do navegador.
+2.  **Compressão no Cliente:** A gravação é configurada para ter no máximo **12 segundos**, **sem áudio** e com um bitrate baixo (`500 kbps`), resultando em um arquivo leve (aprox. 750 KB).
+3.  **Upload para R2:** O fluxo de upload é idêntico ao das imagens, usando a Edge Function `upload-media`.
 
 ---
 
-### 1.5. Vantagens da Arquitetura
+## Capítulo 3: Avatar do Perfil
 
--   **Escalabilidade:** Resolve o gargalo de 50MB/mês de transferência do Supabase, permitindo uploads ilimitados (dentro dos limites do Cloudflare R2).
--   **Segurança:** O acesso para escrita e exclusão no bucket R2 é controlado pelas Edge Functions, que validam a autenticação do usuário. As chaves secretas nunca são expostas no frontend.
--   **Performance Superior:** Uploads quase instantâneos para o usuário, mesmo em redes de academia (3G/4G).
--   **Redução de Custos:** Evita custos de transferência de dados no Supabase e utiliza o armazenamento de baixo custo do R2.
--   **Padronização:** Todas as mídias são padronizadas em formato e tamanho no cliente, garantindo consistência visual no app.
+O upload do avatar de perfil também processa a imagem no cliente, mas o armazenamento é feito diretamente no **Supabase Storage**, não no Cloudflare R2.
 
----
+### 3.1. Fluxo de Upload
 
-### 1.6. Validação Robusta de Dispositivo e UX (Exercícios)
+1.  **Seleção da Imagem:** O usuário seleciona uma imagem.
+2.  **Corte no Cliente:** Um modal com `react-easy-crop` é aberto.
+    -   A proporção é travada em **1:1 (quadrada)**.
+    -   O usuário ajusta o zoom e a posição.
+3.  **Otimização com Canvas:** A função `optimizeAndCropImage` de `imageUtils.ts` é chamada.
+    -   A imagem é cortada e redimensionada para uma **largura máxima de 256px**.
+    -   É comprimida para o formato **JPEG com 85% de qualidade**.
+4.  **Upload para Supabase Storage:** O arquivo otimizado é enviado diretamente para o bucket `avatars` usando a função `supabase.storage.from('avatars').upload()`.
+5.  **Confirmação no Banco de Dados:** A URL pública do avatar é salva na tabela `alunos` ou `professores`.
 
-Para garantir que a experiência "mobile-first" seja segura e funcional, implementamos validações adicionais.
-
-### 6.1. Detecção de Câmera (Anti-Fraude)
--   **O Problema:** Um usuário em um desktop poderia usar as ferramentas de desenvolvedor (F12) para emular um dispositivo móvel e, ao clicar em "Tirar Foto", o sistema abriria o seletor de arquivos do computador, quebrando a regra de negócio.
--   **A Solução:** Antes de acionar o `<input>`, a aplicação agora verifica ativamente se o dispositivo possui uma câmera de vídeo disponível através de `navigator.mediaDevices.enumerateDevices()`.
--   **Resultado:** Se nenhuma câmera for detectada, a ação é bloqueada e uma mensagem de erro é exibida. Isso fecha a brecha e garante que apenas dispositivos com câmera possam usar a funcionalidade de captura.
-
-### 6.2. Experiência de Gravação de Vídeo
--   **O Problema:** Na interface de gravação de vídeo, o botão "Iniciar Gravação" era empurrado para fora da tela assim que o stream da câmera era ativado.
--   **A Solução:** Foi criado um novo componente dedicado, `VideoRecorder.tsx`, com um layout robusto que utiliza posicionamento absoluto para os controles (botão e cronômetro).
--   **Resultado:** A interface de gravação agora é estável, e os controles permanecem visíveis e acessíveis durante todo o processo, corrigindo o bug de layout.
+> **Nota Arquitetural:** Diferente de outras mídias, os avatares são armazenados no Supabase Storage para simplificar o acesso público e a integração com o `user_metadata` do Supabase Auth, que exibe o avatar em todo o sistema.
 
 ---
 
-## Capítulo 2: Upload de Mídia para Posts
+## Capítulo 4: Posts
 
 O sistema de posts utiliza a mesma arquitetura de "cliente inteligente", mas com um fluxo adaptado para gerenciar duas imagens de capa distintas: uma para desktop e outra para mobile.
 
-### 2.1. Objetivo
+### 4.1. Objetivo
 
 -   **Desktop:** Uma imagem na proporção **16:9**, otimizada para uma largura máxima de **1200px**.
 -   **Mobile:** Uma imagem na proporção **1:1** (quadrada), otimizada para uma largura máxima de **640px**.
 
 Essa separação garante que a imagem de capa seja sempre exibida da melhor forma, sem cortes inesperados ou perda de qualidade, independentemente do dispositivo do usuário.
 
-### 2.2. Fluxo de Upload (para cada imagem)
+### 4.2. Fluxo de Upload (para cada imagem)
 
 O processo é executado individualmente para a imagem de desktop e para a de mobile.
 
 1.  **Seleção da Imagem:** O usuário clica em "Selecionar Imagem" para a versão desejada (desktop ou mobile).
 
-2.  **Ajuste e Corte no Cliente (`react-easy-crop`):**
-    -   A imagem selecionada é carregada em um modal que contém o componente `Cropper`.
-    -   O `Cropper` é configurado com a proporção correta (`16/9` para desktop, `1/1` para mobile).
+2.  **Corte no Cliente:** Um modal com `react-easy-crop` é aberto.
+    -   A proporção é travada (`16/9` para desktop, `1/1` para mobile).
     -   O usuário pode dar zoom e reposicionar a imagem para definir a área de corte ideal.
 
-3.  **Otimização com Canvas (`imageUtils.ts`):**
+3.  **Otimização com Canvas:** A função `optimizeAndCropImage` de `imageUtils.ts` é chamada.
     -   Ao salvar o corte, a função `optimizeAndCropImage` é chamada.
     -   Ela desenha a área cortada em um `<canvas>` e redimensiona a imagem para a largura máxima correspondente (1200px ou 640px).
     -   A imagem é exportada do canvas como um `File` JPEG comprimido com **85% de qualidade**, pronta para o upload.
 
-4.  **Pedido de Permissão de Upload:**
-    -   O frontend chama a Edge Function `upload-media`, especificando o `bucket_type: 'posts'`.
+4.  **Upload para R2:** O arquivo otimizado é enviado para o bucket `posts` no Cloudflare R2 através de uma URL pré-assinada, gerada pela Edge Function `upload-media`.
 
-5.  **Upload Direto para o R2:**
-    -   O arquivo otimizado é enviado diretamente para a URL pré-assinada do bucket `posts` no Cloudflare R2.
-
-6.  **Confirmação no Banco de Dados:**
+5.  **Confirmação no Banco de Dados:**
     -   Ao salvar o post (seja como rascunho ou publicado), os nomes dos arquivos gerados são salvos nas colunas `cover_image_desktop_url` e `cover_image_mobile_url` da tabela `posts`.
     -   Se uma imagem for substituída, a função `delete-media` é chamada para remover o arquivo antigo do R2, mantendo o bucket limpo.

@@ -14,6 +14,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from "@/hooks/useAuth";
 import { VideoRecorder } from '@/components/media/VideoRecorder';
 import { Tables } from "@/integrations/supabase/types";
+import { resizeAndOptimizeImage, validateImageFile } from '@/lib/imageUtils';
 import CustomSelect from "@/components/ui/CustomSelect";
 
 type Exercicio = Tables<"exercicios">;
@@ -165,22 +166,6 @@ const EditarExercicio = () => {
     );
   };
 
-  const resizeImageFile = (file: File, maxWidth = 640): Promise<File> => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d')!;
-      const img = new Image();
-      img.onload = () => {
-        const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
-        canvas.width = img.width * ratio;
-        canvas.height = img.height * ratio;
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob((blob) => resolve(new File([blob!], file.name, { type: 'image/jpeg', lastModified: Date.now() })), 'image/jpeg', 0.85);
-      };
-      img.src = URL.createObjectURL(file);
-    });
-  };
-
   const getSignedImageUrl = useCallback(async (filename: string): Promise<string> => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -255,15 +240,28 @@ const EditarExercicio = () => {
       const file = (event.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
-      const maxSize = type === 'video' ? 20 * 1024 * 1024 : 5 * 1024 * 1024;
-      if (file.size > maxSize) {
-        toast.error("Arquivo muito grande", { description: `Máximo: ${type === 'video' ? '20MB' : '5MB'}` });
-        return;
+      if (type.startsWith('imagem')) {
+        const validation = validateImageFile(file);
+        if (!validation.isValid) {
+          toast.error("Arquivo de imagem inválido", { description: validation.error });
+          return;
+        }
+      } else if (type === 'video') {
+        const maxSize = 20 * 1024 * 1024; // 20MB
+        if (file.size > maxSize) {
+          toast.error("Arquivo de vídeo muito grande", { description: "O tamanho máximo para vídeos é 20MB." });
+          return;
+        }
       }
 
       let finalFile = file;
       if (type === 'imagem1' || type === 'imagem2') {
-        finalFile = await resizeImageFile(file, 640);
+        const resized = await resizeAndOptimizeImage(file, 640);
+        if (!resized) {
+          toast.error("Erro ao processar imagem.");
+          return;
+        }
+        finalFile = resized;
       }
 
       const key = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'video_url';
@@ -287,14 +285,14 @@ const EditarExercicio = () => {
 
   useEffect(() => {
     const fetchExercicio = async () => {
-      if (!id || !user) { navigate('/exercicios-pt'); return; }
+      if (!id || !user) { navigate('/exercicios-pt', { state: { activeTab: 'personalizados' } }); return; }
 
       try {
         const { data, error } = await supabase.from('exercicios').select('*').eq('id', id).single();
         if (error || !data) throw new Error('Exercício não encontrado ou erro ao buscar.');
         if (data.tipo !== 'personalizado' || data.professor_id !== user.id) {
           toast.error("Acesso Negado", { description: "Você não pode editar este exercício." });
-          navigate('/exercicios-pt');
+          navigate('/exercicios-pt', { state: { activeTab: 'personalizados' } });
           return;
         }
 
@@ -324,7 +322,7 @@ const EditarExercicio = () => {
       } catch (error) {
         console.error('Erro ao carregar exercício:', error);
         toast.error("Erro", { description: "Não foi possível carregar o exercício." });
-        navigate('/exercicios-pt');
+        navigate('/exercicios-pt', { state: { activeTab: 'personalizados' } });
       } finally {
         setLoading(false);
       }
@@ -356,14 +354,20 @@ const EditarExercicio = () => {
     }
   };
 
-  const deleteFiles = async (filenames: string[]) => {
-    if (filenames.length === 0) return;
+  const deleteFile = async (fileUrl: string) => {
+    if (!fileUrl) return;
     try {
-      await supabase.functions.invoke('upload-media', {
-        body: { action: 'delete_files', filenames, bucket_type: 'exercicios' }
+      // Extrai o nome do arquivo da URL, seja ela completa ou apenas o caminho
+      const filename = fileUrl.split('?')[0].split('/').pop();
+      if (!filename) return;
+
+      // A função de exclusão espera um 'filename', não 'filenames'
+      await supabase.functions.invoke('delete-media', {
+        body: { filename, bucket_type: 'exercicios' }
       });
     } catch (error) {
-      console.error("Erro ao deletar arquivos antigos:", error);
+      console.error(`Erro ao deletar arquivo antigo (${fileUrl}):`, error);
+      // Não notificamos o usuário aqui para não interromper o fluxo de salvamento.
     }
   };
   const validateForm = () => {
@@ -386,7 +390,6 @@ const EditarExercicio = () => {
     try {
       toast.info("Processando", { description: "Salvando e otimizando mídias..." });
 
-      const filesToDelete: string[] = [];
       const finalMediaUrls: { [key: string]: string | null } = {};
 
       for (const key of ['imagem_1_url', 'imagem_2_url', 'video_url']) {
@@ -395,18 +398,20 @@ const EditarExercicio = () => {
 
         if (currentValue instanceof File) {
           finalMediaUrls[key] = await uploadFile(currentValue);
-          if (initialValue) filesToDelete.push(initialValue);
+          if (initialValue) {
+            await deleteFile(initialValue);
+          }
         } else if (currentValue === null && initialValue) {
           finalMediaUrls[key] = null;
-          filesToDelete.push(initialValue);
+          await deleteFile(initialValue);
         } else {
           finalMediaUrls[key] = currentValue as string | null;
         }
       }
 
-      await deleteFiles(filesToDelete);
-
-      const { error } = await supabase.from('exercicios').update({
+      const { error } = await supabase
+        .from('exercicios')
+        .update({
         nome: formData.nome.trim(),
         descricao: formData.descricao.trim(),
         grupo_muscular: formData.grupo_muscular,
@@ -417,12 +422,14 @@ const EditarExercicio = () => {
         grupos_musculares_secundarios: formData.grupos_musculares_secundarios.trim() || null,
         ...finalMediaUrls,
         youtube_url: midias.youtube_url as string || null,
-      }).eq('id', id).eq('professor_id', user.id);
+      })
+      .eq('id', id)
+      .eq('professor_id', user.id);
 
       if (error) throw error;
 
       toast.success("Sucesso", { description: "Exercício atualizado com sucesso!" });
-      navigate('/exercicios-pt');
+      navigate('/exercicios-pt', { state: { activeTab: 'personalizados' } });
     } catch (error) {
       console.error('Erro ao salvar alterações:', error);
       toast.error("Erro", { description: "Não foi possível salvar as alterações." });
@@ -447,7 +454,7 @@ const EditarExercicio = () => {
         {/* Layout Desktop */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" onClick={() => navigate('/exercicios-pt')} className="h-10 w-10 p-0">
+              <Button variant="ghost" onClick={() => navigate('/exercicios-pt', { state: { activeTab: 'personalizados' } })} className="h-10 w-10 p-0">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
               <div className="flex-1">

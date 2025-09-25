@@ -1,79 +1,48 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-swc";
-import path from "path";
-import { componentTagger } from "lovable-tagger";
-import { VitePWA } from "vite-plugin-pwa";
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react-swc'
+import { VitePWA } from 'vite-plugin-pwa'
+import path from 'path'
 
-// https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  server: {
-    host: "::",
-    port: 8080,
-  },
+export default defineConfig({
   plugins: [
     react(),
-    mode === 'development' &&
-    componentTagger(),
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
-        skipWaiting: true,
-        clientsClaim: true,
+        // Aumenta o limite de tamanho do arquivo para o precache do service worker.
+        // O padrão é 2MB, mas nosso chunk principal está um pouco maior.
+        // Aumentamos para 5MB para evitar falhas no build.
+        maximumFileSizeToCacheInBytes: 5000000,
       },
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
       manifest: {
         name: 'Titans Fitness',
-        short_name: 'TitansFit',
-        description: 'Sua plataforma completa para gestão de treinos e alunos.',
+        short_name: 'Titans',
+        description: 'Aplicativo de gestão de treinos para personal trainers e alunos.',
         theme_color: '#ffffff',
-        background_color: '#ffffff',
-        display: 'standalone',
-        scope: '/',
-        start_url: '/',
         icons: [
           {
             src: 'pwa-192x192.png',
             sizes: '192x192',
             type: 'image/png',
-            purpose: 'any'
-          },
-          {
-            src: 'pwa-256x256.png',
-            sizes: '256x256',
-            type: 'image/png',
-            purpose: 'any'
           },
           {
             src: 'pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any'
           },
           {
-            src: 'pwa-maskable-192x192.png',
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'maskable'
-          },
-          {
-            src: 'pwa-maskable-512x512.png',
+            src: 'pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'maskable'
+            purpose: 'any maskable',
           },
-          {
-            src: 'apple-touch-icon.png',
-            sizes: '180x180',
-            type: 'image/png',
-            purpose: 'any'
-          }
-        ]
-      }
-    })
-  ].filter(Boolean),
+        ],
+      },
+    }),
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
-}));
+})

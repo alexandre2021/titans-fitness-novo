@@ -19,7 +19,7 @@ const DetalhesExercicio = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isMobile = useIsMobile();
-  
+
   const [loading, setLoading] = useState(true);
   const [exercicio, setExercicio] = useState<Exercicio | null>(null);
   const [nomeExercicioPadrao, setNomeExercicioPadrao] = useState<string>('');
@@ -140,6 +140,7 @@ const DetalhesExercicio = () => {
   useEffect(() => {
     const fetchExercicio = async () => {
       if (!id || !user) {
+        // Se não houver ID, volta para a lista sem estado específico
         navigate('/exercicios-pt');
         return;
       }
@@ -185,7 +186,7 @@ const DetalhesExercicio = () => {
         toast.error("Erro", {
           description: "Não foi possível carregar os detalhes do exercício."
         })
-        navigate('/exercicios-pt');
+        navigate('/exercicios-pt'); // Em caso de erro, volta sem estado
       } finally {
         setLoading(false);
       }
@@ -193,6 +194,12 @@ const DetalhesExercicio = () => {
 
     fetchExercicio();
   }, [id, user, navigate, loadSignedUrls]);
+
+  const handleVoltar = () => {
+    // Determina para qual aba voltar com base no tipo do exercício
+    const abaDeOrigem = exercicio?.tipo === 'personalizado' ? 'personalizados' : 'padrao';
+    navigate('/exercicios-pt', { state: { activeTab: abaDeOrigem } });
+  };
 
   const handleCriarCopia = () => {
     if (!exercicio) return;
@@ -229,7 +236,7 @@ const DetalhesExercicio = () => {
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
-            onClick={() => navigate('/exercicios-pt')}
+              onClick={() => navigate('/exercicios-pt')}
             className="h-10 w-10 p-0"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -251,7 +258,7 @@ const DetalhesExercicio = () => {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              onClick={() => navigate('/exercicios-pt')}
+              onClick={handleVoltar}
               className="h-10 w-10 p-0"
             >
               <ArrowLeft className="h-4 w-4" />

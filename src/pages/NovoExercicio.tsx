@@ -15,6 +15,7 @@ import { toast as sonnerToast } from "sonner";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from "@/hooks/useAuth";
 import { VideoRecorder } from '@/components/media/VideoRecorder';
+import { resizeAndOptimizeImage, validateImageFile } from '@/lib/imageUtils';
 import CustomSelect from "@/components/ui/CustomSelect";
 
 const NovoExercicio = () => {
@@ -170,32 +171,6 @@ const NovoExercicio = () => {
     );
   };
 
-  const resizeImageFile = (file: File, maxWidth = 640): Promise<File> => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d')!;
-      const img = new Image();
-      
-      img.onload = () => {
-        const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
-        canvas.width = img.width * ratio;
-        canvas.height = img.height * ratio;
-        
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        
-        canvas.toBlob((blob) => {
-          const resizedFile = new File([blob!], file.name, {
-            type: 'image/jpeg',
-            lastModified: Date.now()
-          });
-          resolve(resizedFile);
-        }, 'image/jpeg', 0.85);
-      };
-      
-      img.src = URL.createObjectURL(file);
-    });
-  };
-
   const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -210,17 +185,28 @@ const NovoExercicio = () => {
       const file = (event.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
-      const maxSize = type === 'video' ? 20 * 1024 * 1024 : 5 * 1024 * 1024;
-      if (file.size > maxSize) {
-        toast.error("Arquivo muito grande", {
-          description: `Máximo: ${type === 'video' ? '20MB' : '5MB'}`,
-        });
-        return;
+      if (type.startsWith('imagem')) {
+        const validation = validateImageFile(file);
+        if (!validation.isValid) {
+          toast.error("Arquivo de imagem inválido", { description: validation.error });
+          return;
+        }
+      } else if (type === 'video') {
+        const maxSize = 20 * 1024 * 1024; // 20MB
+        if (file.size > maxSize) {
+          toast.error("Arquivo de vídeo muito grande", { description: "O tamanho máximo para vídeos é 20MB." });
+          return;
+        }
       }
 
       let finalFile = file;
       if (type === 'imagem1' || type === 'imagem2') {
-        finalFile = await resizeImageFile(file, 640);
+        const resized = await resizeAndOptimizeImage(file, 640);
+        if (!resized) {
+          toast.error("Erro ao processar imagem.");
+          return;
+        }
+        finalFile = resized;
       }
 
       const key = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'video_url';

@@ -13,7 +13,6 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
     const checkAuthAndRedirect = async () => {
@@ -43,23 +42,19 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
             } else {
               navigate('/');
             }
-            setIsChecking(false);
             return;
           } catch (error) {
             console.error('Erro ao verificar tipo de usuário:', error);
             navigate('/');
-            setIsChecking(false);
             return;
           }
         }
         
-        setIsChecking(false);
         return;
       }
 
       if (!user) {
-        navigate('/login');
-        setIsChecking(false);
+        navigate('/login', { replace: true });
         return;
       }
 
@@ -72,8 +67,7 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
           .single();
 
         if (!userProfile) {
-          navigate('/login');
-          setIsChecking(false);
+          navigate('/login', { replace: true });
           return;
         }
 
@@ -97,7 +91,6 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
 
             if (!onboardingRoutes.includes(location.pathname)) {
               navigate('/onboarding-pt/informacoes-basicas');
-              setIsChecking(false);
               return;
             }
           } else {
@@ -110,7 +103,6 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
 
             if (onboardingRoutes.includes(location.pathname)) {
               navigate('/index-pt');
-              setIsChecking(false);
               return;
             }
           }
@@ -133,7 +125,6 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
 
             if (!onboardingRoutes.includes(location.pathname)) {
               navigate('/onboarding-aluno/dados-basicos');
-              setIsChecking(false);
               return;
             }
           } else {
@@ -145,24 +136,23 @@ const AuthGuard = ({ children }: AuthGuardProps) => {
 
             if (onboardingRoutes.includes(location.pathname)) {
               navigate('/index-aluno');
-              setIsChecking(false);
               return;
             }
           }
         }
 
-        setIsChecking(false);
       } catch (error) {
         console.error('Erro ao verificar autenticação:', error);
-        navigate('/login');
-        setIsChecking(false);
+        navigate('/login', { replace: true });
       }
     };
 
     checkAuthAndRedirect();
   }, [user, loading, location.pathname, navigate]);
 
-  if (loading || isChecking) {
+  // Mostra o loader apenas enquanto a sessão do usuário está sendo carregada.
+  // A lógica de redirecionamento dentro do useEffect cuida do resto.
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">

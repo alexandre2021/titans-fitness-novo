@@ -98,3 +98,37 @@ export const optimizeAndCropImage = async (
     return null;
   }
 };
+
+// Redimensiona e otimiza uma imagem a partir de um arquivo, sem corte.
+export const resizeAndOptimizeImage = (
+  file: File,
+  maxWidth: number,
+  quality: number = 0.85
+): Promise<File | null> => {
+  return new Promise((resolve) => {
+    fileToDataURL(file)
+      .then(createImage)
+      .then((image) => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          throw new Error('Não foi possível obter o contexto 2D do canvas.');
+        }
+
+        const ratio = Math.min(maxWidth / image.width, maxWidth / image.height);
+        canvas.width = image.width * ratio;
+        canvas.height = image.height * ratio;
+
+        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob((blob) => {
+          if (!blob) { resolve(null); return; }
+          resolve(new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() }));
+        }, 'image/jpeg', quality);
+      })
+      .catch((error) => {
+        console.error('Erro ao redimensionar imagem:', error);
+        resolve(null);
+      });
+  });
+};
