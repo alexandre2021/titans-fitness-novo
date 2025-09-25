@@ -7,18 +7,25 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // Mudar para 'prompt' é mais seguro. Ele notifica o usuário sobre a atualização
+      // em vez de aplicá-la automaticamente, evitando que uma versão quebrada trave o app.
+      registerType: 'prompt',
       workbox: {
         // Aumenta o limite de tamanho do arquivo para o precache do service worker.
         // O padrão é 2MB, mas nosso chunk principal está um pouco maior.
         // Aumentamos para 5MB para evitar falhas no build.
         maximumFileSizeToCacheInBytes: 5000000,
+        // Garante que caches de versões antigas sejam removidos, evitando a "tela branca".
+        cleanupOutdatedCaches: true,
       },
       manifest: {
         name: 'Titans Fitness',
         short_name: 'Titans',
         description: 'Aplicativo de gestão de treinos para personal trainers e alunos.',
-        theme_color: '#ffffff',
+        theme_color: '#AA1808',
+        background_color: '#ffffff',
+        start_url: '/',
+        display: 'standalone',
         icons: [
           {
             src: 'pwa-192x192.png',
@@ -44,5 +51,8 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+  },
+  build: {
+    chunkSizeWarningLimit: 1600,
   },
 })
