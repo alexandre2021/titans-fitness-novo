@@ -1,5 +1,5 @@
 // pages/NovoExercicio.tsx
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -172,6 +172,7 @@ const NovoExercicio = () => {
   };
 
   const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
+    console.log('🔍 [handleSelectMedia] Iniciado para tipo:', type);
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = type === 'video' ? 'video/*' : 'image/jpeg, image/png, image/webp';
@@ -184,12 +185,14 @@ const NovoExercicio = () => {
     const handleFileSelection = async (event: Event) => {
       const target = event.target as HTMLInputElement;
       const file = target.files?.[0];
+      console.log('🔍 [handleSelectMedia] Arquivo selecionado:', file ? { name: file.name, size: file.size, type: file.type } : 'Nenhum arquivo');
       if (!file) {
         target.value = '';
         return;
       }
 
       if (type.startsWith('imagem')) {
+        console.log('🔍 [handleSelectMedia] Validando imagem...');
         const validation = validateImageFile(file);
         if (!validation.isValid) {
           toast.error("Arquivo de imagem inválido", { description: validation.error });
@@ -197,6 +200,7 @@ const NovoExercicio = () => {
           return;
         }
       } else if (type === 'video') {
+        console.log('🔍 [handleSelectMedia] Validando vídeo...');
         const maxSize = 20 * 1024 * 1024; // 20MB
         if (file.size > maxSize) {
           toast.error("Arquivo de vídeo muito grande", { description: "O tamanho máximo para vídeos é 20MB." });
@@ -206,16 +210,20 @@ const NovoExercicio = () => {
       }
 
       if (type === 'imagem1' || type === 'imagem2') {
+        console.log('🔍 [handleSelectMedia] Chamando resizeAndOptimizeImage...');
         const resized = await resizeAndOptimizeImage(file, 640);
         if (!resized) {
+          console.error('❌ [handleSelectMedia] resizeAndOptimizeImage retornou nulo.');
           toast.error("Erro ao processar imagem.");
           target.value = '';
           return;
         }
+        console.log('✅ [handleSelectMedia] Imagem processada. Atualizando estado `midias`.');
         const key = type === 'imagem1' ? 'imagem_1_url' : 'imagem_2_url';
         setMidias(prev => ({ ...prev, [key]: resized }));
       } else if (type === 'video') {
         setMidias(prev => ({ ...prev, video_url: file }));
+        console.log('✅ [handleSelectMedia] Vídeo selecionado. Atualizando estado `midias`.');
       }
 
       // Limpa o input para permitir a seleção do mesmo arquivo novamente
@@ -225,6 +233,38 @@ const NovoExercicio = () => {
     input.addEventListener('change', handleFileSelection);
     input.click();
   };
+
+  // Este useEffect é responsável por criar as URLs de preview
+  useEffect(() => {
+    console.log('🔍 [useEffect midias] Disparado. Estado `midias` mudou:', midias);
+
+    const loadPreviews = () => {
+      const newSignedUrls: { imagem1?: string; imagem2?: string; video?: string; } = {};
+      let hasNewFile = false;
+
+      Object.keys(midias).forEach(key => {
+        const mediaFile = midias[key];
+        if (mediaFile instanceof File) {
+          hasNewFile = true;
+          const urlKey = key === 'imagem_1_url' ? 'imagem1' : key === 'imagem_2_url' ? 'imagem2' : 'video';
+          try {
+            const objectURL = URL.createObjectURL(mediaFile);
+            newSignedUrls[urlKey as keyof typeof newSignedUrls] = objectURL;
+            console.log(`✅ [useEffect midias] URL de preview criada para ${key}:`, objectURL);
+          } catch (error) {
+            console.error(`❌ [useEffect midias] Erro ao criar ObjectURL para ${key}:`, error);
+          }
+        }
+      });
+
+      if (hasNewFile) {
+        console.log('🔍 [useEffect midias] Atualizando estado `signedUrls` com:', newSignedUrls);
+        setSignedUrls(prev => ({ ...prev, ...newSignedUrls }));
+      }
+    };
+
+    loadPreviews();
+  }, [midias]);
 
   const handleRecordingComplete = (videoBlob: Blob) => {
     const videoFile = new File([videoBlob], `gravacao_${Date.now()}.webm`, { type: 'video/webm' });

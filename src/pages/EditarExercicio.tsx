@@ -193,11 +193,13 @@ const EditarExercicio = () => {
   }, []);
 
   const loadSignedUrls = useCallback(async () => {
+    console.log('🔍 [loadSignedUrls] Iniciado. Estado `midias` atual:', midias);
     if (!Object.values(midias).some(v => v)) return;
 
     setSignedUrls({});
     try {
       const urls: { imagem1?: string; imagem2?: string; video?: string } = {};
+      console.log('🔍 [loadSignedUrls] Processando URLs...');
 
       const processUrl = async (urlValue: string | File | null) => {
         if (typeof urlValue === 'string' && urlValue) {
@@ -205,7 +207,14 @@ const EditarExercicio = () => {
           return getSignedImageUrl(filename);
         }
         if (urlValue instanceof File) {
-          return URL.createObjectURL(urlValue);
+          try {
+            const objectURL = URL.createObjectURL(urlValue);
+            console.log('✅ [loadSignedUrls] URL de preview criada para arquivo:', objectURL);
+            return objectURL;
+          } catch (error) {
+            console.error('❌ [loadSignedUrls] Erro ao criar ObjectURL:', error);
+            return undefined;
+          }
         }
         return undefined;
       };
@@ -221,12 +230,14 @@ const EditarExercicio = () => {
       if (urlVideo) urls.video = urlVideo;
 
       setSignedUrls(urls);
+      console.log('✅ [loadSignedUrls] Estado `signedUrls` atualizado:', urls);
     } catch (error) {
-      console.error('Erro:', error);
+      console.error('❌ [loadSignedUrls] Erro geral:', error);
     }
   }, [midias, getSignedImageUrl]);
 
   const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
+    console.log('🔍 [handleSelectMedia] Iniciado para tipo:', type);
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = type === 'video' ? 'video/*' : 'image/jpeg, image/png, image/webp';
@@ -239,12 +250,14 @@ const EditarExercicio = () => {
     const handleFileSelection = async (event: Event) => {
       const target = event.target as HTMLInputElement;
       const file = target.files?.[0];
+      console.log('🔍 [handleSelectMedia] Arquivo selecionado:', file ? { name: file.name, size: file.size, type: file.type } : 'Nenhum arquivo');
       if (!file) {
         target.value = '';
         return;
       }
 
       if (type.startsWith('imagem')) {
+        console.log('🔍 [handleSelectMedia] Validando imagem...');
         const validation = validateImageFile(file);
         if (!validation.isValid) {
           toast.error("Arquivo de imagem inválido", { description: validation.error });
@@ -252,6 +265,7 @@ const EditarExercicio = () => {
           return;
         }
       } else if (type === 'video') {
+        console.log('🔍 [handleSelectMedia] Validando vídeo...');
         const maxSize = 20 * 1024 * 1024; // 20MB
         if (file.size > maxSize) {
           toast.error("Arquivo de vídeo muito grande", { description: "O tamanho máximo para vídeos é 20MB." });
@@ -261,16 +275,20 @@ const EditarExercicio = () => {
       }
 
       if (type === 'imagem1' || type === 'imagem2') {
+        console.log('🔍 [handleSelectMedia] Chamando resizeAndOptimizeImage...');
         const resized = await resizeAndOptimizeImage(file, 640);
         if (!resized) {
+          console.error('❌ [handleSelectMedia] resizeAndOptimizeImage retornou nulo.');
           toast.error("Erro ao processar imagem.");
           target.value = '';
           return;
         }
+        console.log('✅ [handleSelectMedia] Imagem processada. Atualizando estado `midias`.');
         const key = type === 'imagem1' ? 'imagem_1_url' : 'imagem_2_url';
         setMidias(prev => ({ ...prev, [key]: resized }));
       } else if (type === 'video') {
         setMidias(prev => ({ ...prev, video_url: file }));
+        console.log('✅ [handleSelectMedia] Vídeo selecionado. Atualizando estado `midias`.');
       }
 
       // Limpa o input para permitir a seleção do mesmo arquivo novamente

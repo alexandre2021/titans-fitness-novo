@@ -106,6 +106,7 @@ export const resizeAndOptimizeImage = async (
   file: File,
   maxWidth: number
 ): Promise<File | null> => {
+  console.log('🔍 [resizeAndOptimizeImage] Iniciado com arquivo:', { name: file.name, size: file.size, type: file.type });
   const options = {
     maxSizeMB: 1.5, // Define um alvo de tamanho máximo para o arquivo
     maxWidthOrHeight: maxWidth, // Redimensiona com base na maior dimensão
@@ -115,11 +116,15 @@ export const resizeAndOptimizeImage = async (
     exifOrientation: -1,
   };
 
+  console.log('🔍 [resizeAndOptimizeImage] Opções de compressão:', options);
+
   try {
+    console.log('🔍 [resizeAndOptimizeImage] Iniciando compressão...');
     const compressedFile = await imageCompression(file, options);
+    console.log('✅ [resizeAndOptimizeImage] Sucesso! Arquivo comprimido:', { name: compressedFile.name, size: compressedFile.size, type: compressedFile.type });
     return compressedFile;
   } catch (error) {
-    console.error('Erro ao comprimir imagem:', error);
+    console.error('❌ [resizeAndOptimizeImage] Erro durante a compressão:', error);
     return null;
   }
 };
