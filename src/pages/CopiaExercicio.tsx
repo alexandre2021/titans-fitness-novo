@@ -207,60 +207,74 @@ const CopiaExercicio = () => {
 
   // ✅ FUNÇÃO ATUALIZADA: Carrega as URLs das mídias para preview de forma robusta
   const loadSignedUrls = useCallback(async () => {
-    console.log('🔍 [loadSignedUrls] Iniciado. Estado `midias` atual:', midias);
-    const temMidiaParaProcessar = Object.values(midias).some(v => v);
-    if (!temMidiaParaProcessar) {
-      setSignedUrls({});
-      return;
-    }
-    setLoadingImages(true);
+  console.log('🔍 [loadSignedUrls] Iniciado. Estado `midias` atual:', midias);
+  
+  const temMidiaParaProcessar = Object.values(midias).some(v => v);
+  if (!temMidiaParaProcessar) {
+    console.log('⚪ [loadSignedUrls] Nenhuma mídia para processar');
     setSignedUrls({});
+    return;
+  }
+  
+  setLoadingImages(true);
+  setSignedUrls({});
 
-    try {
-      const urls: { imagem1?: string; imagem2?: string; video?: string } = {};
-      console.log('🔍 [loadSignedUrls] Processando URLs...');
-
-      const processUrl = async (key: 'imagem_1_url' | 'imagem_2_url' | 'video_url'): Promise<string | undefined> => {
-        const urlValue = midias[key];
-        console.log(`🔍 [processUrl] Processando ${key}:`, urlValue);
-        console.log(`🔍 [processUrl] Tipo de ${key}:`, urlValue instanceof File ? 'File' : typeof urlValue);
-
-        if (urlValue instanceof File) {
-          console.log(`📁 [processUrl] Criando Object URL para ${key}...`);
-          try {
-            const objectUrl = URL.createObjectURL(urlValue);
-            console.log(`✅ [processUrl] Object URL criada para ${key}:`, objectUrl);
-            return objectUrl;
-          } catch (error) {
-            console.error(`❌ [processUrl] Erro ao criar Object URL para ${key}:`, error);
-            return undefined;
-          }
-        }
-        if (typeof urlValue === 'string' && urlValue) {
-          // Para mídias do exercício padrão, busca a URL via Edge Function
-          console.log(`🌐 [processUrl] String URL para ${key}, buscando via Edge Function...`);
-          return await getMediaUrl(urlValue, 'padrao');
-        }
-        console.log(`⚪ [processUrl] ${key} está vazio/inválido`);
-        return undefined;
-      };
-
-      const [img1, img2, vid] = await Promise.all([
-        processUrl('imagem_1_url'),
-        processUrl('imagem_2_url'),
-        processUrl('video_url')
-      ]);
-
-      const finalUrls = { imagem1: img1, imagem2: img2, video: vid };
-      console.log('🔍 [loadSignedUrls] URLs processadas individualmente:', { img1, img2, vid });
-      console.log('✅ [loadSignedUrls] Objeto final a ser setado:', finalUrls);
-      setSignedUrls(finalUrls);
-      console.log('✅ [loadSignedUrls] Estado `signedUrls` atualizado:', { imagem1: img1, imagem2: img2, video: vid });
-    } catch (error) {
-      console.error('❌ [loadSignedUrls] Erro geral:', error);
-    } finally {
-      setLoadingImages(false);
+  try {
+    // Executa sequencialmente para garantir logs
+    console.log('🔄 [loadSignedUrls] Processando imagem_1_url...');
+    let img1: string | undefined;
+    if (midias.imagem_1_url instanceof File) {
+      console.log('📁 Criando Object URL para imagem_1_url...');
+      img1 = URL.createObjectURL(midias.imagem_1_url);
+      console.log('✅ Object URL criada para imagem_1_url:', img1);
+    } else if (typeof midias.imagem_1_url === 'string' && midias.imagem_1_url) {
+      console.log('🌐 Buscando URL via Edge Function para imagem_1_url...');
+      img1 = await getMediaUrl(midias.imagem_1_url, 'padrao');
+      console.log('✅ URL obtida para imagem_1_url:', img1);
+    } else {
+      console.log('⚪ imagem_1_url está vazio/inválido');
     }
+
+    console.log('🔄 [loadSignedUrls] Processando imagem_2_url...');
+    let img2: string | undefined;
+    if (midias.imagem_2_url instanceof File) {
+      console.log('📁 Criando Object URL para imagem_2_url...');
+      img2 = URL.createObjectURL(midias.imagem_2_url);
+      console.log('✅ Object URL criada para imagem_2_url:', img2);
+    } else if (typeof midias.imagem_2_url === 'string' && midias.imagem_2_url) {
+      console.log('🌐 Buscando URL via Edge Function para imagem_2_url...');
+      img2 = await getMediaUrl(midias.imagem_2_url, 'padrao');
+      console.log('✅ URL obtida para imagem_2_url:', img2);
+    } else {
+      console.log('⚪ imagem_2_url está vazio/inválido');
+    }
+
+    console.log('🔄 [loadSignedUrls] Processando video_url...');
+    let vid: string | undefined;
+    if (midias.video_url instanceof File) {
+      console.log('📁 Criando Object URL para video_url...');
+      vid = URL.createObjectURL(midias.video_url);
+      console.log('✅ Object URL criada para video_url:', vid);
+    } else if (typeof midias.video_url === 'string' && midias.video_url) {
+      console.log('🌐 Buscando URL via Edge Function para video_url...');
+      vid = await getMediaUrl(midias.video_url, 'padrao');
+      console.log('✅ URL obtida para video_url:', vid);
+    } else {
+      console.log('⚪ video_url está vazio/inválido');
+    }
+
+    const finalUrls = { imagem1: img1, imagem2: img2, video: vid };
+    console.log('🔍 [loadSignedUrls] URLs processadas individualmente:', { img1, img2, vid });
+    console.log('✅ [loadSignedUrls] Objeto final a ser setado:', finalUrls);
+    
+    setSignedUrls(finalUrls);
+    
+  } catch (error) {
+    console.error('❌ [loadSignedUrls] Erro geral ao carregar previews de mídia:', error);
+  } finally {
+    setLoadingImages(false);
+    console.log('🔚 [loadSignedUrls] Finalizado');
+  }
   }, [midias, getMediaUrl]);
 
   // Função para seleção de mídia (adaptada para desktop)

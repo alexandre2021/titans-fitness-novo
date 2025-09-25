@@ -122,7 +122,11 @@ export const resizeAndOptimizeImage = async (
     console.log('🔍 [resizeAndOptimizeImage] Iniciando compressão...');
     const compressedFile = await imageCompression(file, options);
     console.log('✅ [resizeAndOptimizeImage] Sucesso! Arquivo comprimido:', { name: compressedFile.name, size: compressedFile.size, type: compressedFile.type });
-    return compressedFile;
+    
+    // Garante que o retorno seja sempre um objeto File com um nome, resolvendo a ambiguidade File/Blob.
+    // A biblioteca pode retornar um Blob sem nome em alguns casos, o que quebra a lógica de upload.
+    const finalFile = new File([compressedFile], compressedFile.name || `image_${Date.now()}.jpg`, { type: compressedFile.type });
+    return finalFile;
   } catch (error) {
     console.error('❌ [resizeAndOptimizeImage] Erro durante a compressão:', error);
     return null;
