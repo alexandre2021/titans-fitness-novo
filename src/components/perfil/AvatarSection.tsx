@@ -1,15 +1,15 @@
 // src/components/perfil/AvatarSection.tsx
 
 import React, { useState, useCallback } from 'react';
-import Cropper, { Area } from 'react-easy-crop';
+import Cropper, { type Area } from 'react-easy-crop';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Camera, Loader2, Palette, User as UserIcon, X } from 'lucide-react';
+import { Camera, Crop, Loader2, Palette, User as UserIcon, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Slider } from "@/components/ui/slider";
 import { Button } from '@/components/ui/button';
-import { optimizeAndCropImage } from '@/lib/imageUtils';
+import { optimizeAndCropImage, resizeAndOptimizeImage } from '@/lib/imageUtils';
 import {
   Dialog,
   DialogContent,
@@ -135,21 +135,56 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
     );
   }
 
+  const handleImageUpload = async (file: File) => {
+    if (!user) return;
+
+    setIsUploading(true);
+    try {
+      // Otimiza a imagem para um tamanho razoável antes de enviar
+      const optimizedFile = await resizeAndOptimizeImage(file, 512);
+      if (!optimizedFile) throw new Error('Falha ao otimizar a imagem');
+
+      const filePath = `${user.id}/${optimizedFile.name}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, optimizedFile, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      const finalUrl = `${publicUrl}?t=${new Date().getTime()}`;
+
+      const { error: updateError } = await supabase
+        .from(tableName)
+        .update({ avatar_type: 'image', avatar_image_url: finalUrl })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      await supabase.auth.updateUser({ data: { avatar_url: finalUrl } });
+
+      onProfileUpdate();
+      toast.success("Nova foto de perfil enviada!");
+    } catch (error) {
+      console.error("Erro ao enviar nova foto:", error);
+      toast.error("Erro", { description: "Não foi possível enviar a nova foto." });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleFileSelect = () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
     input.capture = 'user'; // Prioriza a câmera no mobile
 
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
       const target = e.target as HTMLInputElement;
       if (target.files && target.files.length > 0) {
         const file = target.files[0];
-        const reader = new FileReader();
-        reader.addEventListener('load', () => {
-          setImageSrc(reader.result as string);
-        });
-        reader.readAsDataURL(file);
+        await handleImageUpload(file);
       }
     };
 
@@ -158,7 +193,6 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
 
   const handleUploadCroppedImage = async () => {
     if (!imageSrc || !croppedAreaPixels || !user) return;
-
     setIsUploading(true);
     try {
       // Usa a função otimizada do nosso utilitário, definindo uma largura máxima de 256px para avatares.
