@@ -288,8 +288,10 @@ const CopiaExercicio = () => {
         }
         const key = type === 'imagem1' ? 'imagem_1_url' : 'imagem_2_url';
         setMidias(prev => ({ ...prev, [key]: resized }));
+        setSignedUrls(prev => ({ ...prev, [type]: URL.createObjectURL(resized) }));
       } else if (type === 'video') {
         setMidias(prev => ({ ...prev, video_url: file }));
+        setSignedUrls(prev => ({ ...prev, video: URL.createObjectURL(file) }));
       }
 
       // Limpa o input para permitir a seleção do mesmo arquivo novamente
