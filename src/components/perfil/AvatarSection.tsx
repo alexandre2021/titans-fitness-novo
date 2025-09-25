@@ -1,19 +1,100 @@
 // src/components/perfil/AvatarSection.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
+import Cropper, { Area } from 'react-easy-crop';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Camera, Loader2, Palette, User as UserIcon, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import Modal from 'react-modal';
+import { Slider } from "@/components/ui/slider";
 import { Button } from '@/components/ui/button';
-import { resizeAndOptimizeImage } from '@/lib/imageUtils';
+import { optimizeAndCropImage } from '@/lib/imageUtils';
 
 const AVATAR_COLORS = [
   '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
   '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6366F1'
 ];
+
+interface ImageCropDialogProps extends React.PropsWithChildren {
+  imageSrc: string | null;
+  isUploading: boolean;
+  onClose: () => void;
+  onSave: () => void;
+  setCroppedAreaPixels: (pixels: Area | null) => void;
+}
+
+const ImageCropDialog: React.FC<ImageCropDialogProps> = ({
+  imageSrc,
+  isUploading,
+  onClose,
+  onSave,
+  setCroppedAreaPixels,
+}) => {
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+
+  const onCropComplete = useCallback(
+    (_croppedArea: Area, croppedAreaPixels: Area) => {
+      setCroppedAreaPixels(croppedAreaPixels);
+    },
+    [setCroppedAreaPixels]
+  );
+
+  if (!imageSrc) return null;
+
+  const Content = (
+    <div className="p-4">
+      <div className="relative h-64 w-full bg-muted" data-vaul-no-drag>
+        <Cropper
+          image={imageSrc}
+          crop={crop}
+          zoom={zoom}
+          aspect={1}
+          onCropChange={setCrop}
+          onZoomChange={setZoom}
+          onCropComplete={onCropComplete}
+          cropShape="round"
+          showGrid={false}
+        />
+      </div>
+      <div className="space-y-2 p-4">
+        <label className="text-sm font-medium">Zoom</label>
+        <Slider
+          value={[zoom]}
+          min={1}
+          max={3}
+          step={0.1}
+          onValueChange={(value) => setZoom(value[0])}
+        />
+      </div>
+    </div>
+  );
+
+  return (
+    <Modal
+      isOpen={!!imageSrc}
+      onRequestClose={onClose}
+      shouldCloseOnOverlayClick={true}
+      shouldCloseOnEsc={true}
+      className="bg-white rounded-lg max-w-md w-full mx-4 outline-none"
+      overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+    >
+      <div className="flex items-center justify-between p-4 border-b">
+        <h2 className="text-lg font-semibold">Ajustar Imagem</h2>
+        <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+        {Content}
+      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 p-4 border-t">
+        <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">Cancelar</Button>
+        <Button onClick={onSave} disabled={isUploading} className="w-full sm:w-auto">{isUploading ? "Salvando..." : "Salvar"}</Button>
+      </div>
+    </Modal>
+  );
+};
 
 interface AvatarSectionProps {
   profile: {
@@ -33,6 +114,8 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
   const { user } = useAuth();
   const [isUploading, setIsUploading] = useState(false);
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
+  const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
 
   // Defensive check for when userProfile is still loading
   if (!profile) {
@@ -46,28 +129,41 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
     );
   }
 
-  const handleFileUpload = async (file: File) => {
-    if (!user) return;
+  const handleFileSelect = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'user'; // Prioriza a câmera no mobile
+
+    input.onchange = (e) => {
+      const target = e.target as HTMLInputElement;
+      if (target.files && target.files.length > 0) {
+        const file = target.files[0];
+        const reader = new FileReader();
+        reader.addEventListener('load', () => {
+          setImageSrc(reader.result as string);
+        });
+        reader.readAsDataURL(file);
+      }
+    };
+
+    input.click();
+  };
+
+  const handleUploadCroppedImage = async () => {
+    if (!imageSrc || !croppedAreaPixels || !user) return;
 
     setIsUploading(true);
     try {
-      const optimizedFile = await resizeAndOptimizeImage(file, 256);
-      if (!optimizedFile) throw new Error('Falha ao otimizar a imagem');
-
-      const filePath = `${user.id}/${optimizedFile.name}`;
-
-      // Se já existe uma imagem, remove a antiga antes de enviar a nova
-      if (profile.avatar_image_url) {
-        const oldUrl = new URL(profile.avatar_image_url);
-        const oldPath = oldUrl.pathname.split('/avatars/')[1];
-        if (oldPath) {
-          await supabase.storage.from('avatars').remove([oldPath]);
-        }
-      }
-
+      // Usa a função otimizada do nosso utilitário, definindo uma largura máxima de 256px para avatares.
+      const file = await optimizeAndCropImage(imageSrc, croppedAreaPixels, 256);
+      if (!file) throw new Error('Falha ao cortar e otimizar a imagem');
+      
+      const filePath = `${user.id}/${file.name}`;
+      
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, optimizedFile, {
+        .upload(filePath, file, {
           cacheControl: '3600',
           upsert: true,
         });
@@ -81,16 +177,24 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
 
       const { error: updateError } = await supabase
         .from(tableName)
-        .update({ avatar_type: 'image', avatar_image_url: finalUrl })
+        .update({
+          avatar_type: 'image',
+          avatar_image_url: finalUrl,
+        })
         .eq('id', user.id);
 
       if (updateError) throw updateError;
 
+      // 5. Atualizar user_metadata no Supabase Auth para propagar a mudança globalmente
       const { error: userUpdateError } = await supabase.auth.updateUser({
-        data: { avatar_url: finalUrl }
+        data: { 
+          avatar_url: finalUrl 
+        }
       });
 
-      if (userUpdateError) console.error("Erro ao atualizar metadados do usuário no Auth:", userUpdateError);
+      if (userUpdateError) {
+        console.error("Erro ao atualizar metadados do usuário no Auth:", userUpdateError);
+      }
 
       onProfileUpdate();
       toast.success("Avatar atualizado com sucesso!");
@@ -99,24 +203,8 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
       toast.error("Erro", { description: "Não foi possível atualizar seu avatar." });
     } finally {
       setIsUploading(false);
+      setImageSrc(null);
     }
-  };
-
-  const handleFileSelect = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.capture = 'user'; // Prioriza a câmera no mobile
-
-    input.onchange = (e) => {
-      const target = e.target as HTMLInputElement;
-      if (target.files && target.files.length > 0) {
-        const file = target.files[0];
-        handleFileUpload(file);
-      }
-    };
-
-    input.click();
   };
 
   const handleRemoveImage = async () => {
@@ -269,8 +357,13 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
         </div>
         {ColorPickerContent}
       </Modal>
+      <ImageCropDialog
+        imageSrc={imageSrc}
+        isUploading={isUploading}
+        onClose={() => setImageSrc(null)}
+        onSave={handleUploadCroppedImage}
+        setCroppedAreaPixels={setCroppedAreaPixels}
+      />
     </>
   );
 };
-
-export default AvatarSection;
