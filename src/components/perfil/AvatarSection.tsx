@@ -17,7 +17,7 @@ const AVATAR_COLORS = [
   '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6366F1'
 ];
 
-interface ImageCropDialogProps {
+interface ImageCropDialogProps extends React.PropsWithChildren {
   imageSrc: string | null;
   isUploading: boolean;
   onClose: () => void;
@@ -131,25 +131,31 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
     );
   }
 
-  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.addEventListener('load', () => {
-        setImageSrc(reader.result as string);
-        // Limpa o valor do input APÓS a imagem ser carregada para evitar race conditions
-        // em navegadores mobile, onde o objeto File pode ser invalidado.
-        if (e.target) {
-          e.target.value = '';
-        }
-      });
-      reader.readAsDataURL(file);
-      setIsMenuOpen(false);
-    }
+  const handleFileSelect = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'user'; // Prioriza a câmera no mobile
+
+    input.onchange = (e) => {
+      const target = e.target as HTMLInputElement;
+      if (target.files && target.files.length > 0) {
+        const file = target.files[0];
+        const reader = new FileReader();
+        reader.addEventListener('load', () => {
+          setImageSrc(reader.result as string);
+        });
+        reader.readAsDataURL(file);
+        setIsMenuOpen(false);
+      }
+    };
+
+    input.click();
   };
 
   const handleUploadCroppedImage = async () => {
     if (!imageSrc || !croppedAreaPixels || !user) return;
+    if (fileInputRef.current) fileInputRef.current.value = "";
 
     setIsUploading(true);
     try {
@@ -296,7 +302,7 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
             <button
               type="button"
               disabled={isUploading}
-              onClick={() => fileInputRef.current?.click()}
+              onClick={handleFileSelect}
               className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full p-2 border-2 border-background hover:bg-primary/90 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             >
               {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
@@ -308,7 +314,6 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
           </Button>
         </div>
         
-          <input type="file" accept="image/*" capture="user" ref={fileInputRef} onChange={onFileChange} style={{ display: 'none' }} />
         <ImageCropDialog
           imageSrc={imageSrc}
           isUploading={isUploading}
@@ -330,7 +335,7 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
       </Avatar>
       <button
         type="button"
-        onClick={() => fileInputRef.current?.click()}
+        onClick={handleFileSelect}
         disabled={isUploading}
         className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full p-2 border-2 border-background hover:bg-primary/90 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
       >
@@ -347,7 +352,6 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
           <Palette className="h-4 w-4 mr-2" />
           Alterar Cor
         </Button>
-        <input type="file" accept="image/*" capture="user" ref={fileInputRef} onChange={onFileChange} style={{ display: 'none' }} />
       </div>
 
       <Modal
