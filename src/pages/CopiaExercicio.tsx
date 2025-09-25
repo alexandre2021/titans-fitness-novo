@@ -332,7 +332,6 @@ const CopiaExercicio = () => {
         setMidias(prev => ({ ...prev, video_url: file }));
         console.log('✅ [handleSelectMedia] Vídeo selecionado. Atualizando estado `midias`.');
       }
-
       // Limpa o input para permitir a seleção do mesmo arquivo novamente
       target.value = '';
     };
@@ -634,7 +633,7 @@ const CopiaExercicio = () => {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
         {/* Cabeçalho Responsivo */}
         {!isMobile && (
           <div className="space-y-4">
@@ -823,12 +822,12 @@ const CopiaExercicio = () => {
                           <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
                             <span className="text-sm text-muted-foreground">Carregando...</span>
                           </div>
-                        ) : signedUrls.imagem1 ? (
-                          <img 
-                            src={signedUrls.imagem1} 
-                            alt="Sua primeira imagem" 
-                            className="max-w-40 max-h-40 object-contain rounded-lg border shadow-sm bg-muted"
-                          />
+                      ) : signedUrls.imagem1 ? (
+                        <img 
+                          src={signedUrls.imagem1} 
+                          alt="Sua primeira imagem" 
+                          className="max-w-40 max-h-40 object-contain rounded-lg border shadow-sm bg-muted"
+                        />
                         ) : (
                           <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
                             <span className="text-sm text-muted-foreground">Erro ao carregar</span>
@@ -904,12 +903,12 @@ const CopiaExercicio = () => {
                           <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
                             <span className="text-sm text-muted-foreground">Carregando...</span>
                           </div>
-                        ) : signedUrls.imagem2 ? (
-                          <img 
-                            src={signedUrls.imagem2} 
-                            alt="Sua segunda imagem" 
-                            className="max-w-40 max-h-40 object-contain rounded-lg border shadow-sm bg-muted"
-                          />
+                      ) : signedUrls.imagem2 ? (
+                        <img 
+                          src={signedUrls.imagem2} 
+                          alt="Sua segunda imagem" 
+                          className="max-w-40 max-h-40 object-contain rounded-lg border shadow-sm bg-muted"
+                        />
                         ) : (
                           <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
                             <span className="text-sm text-muted-foreground">Erro ao carregar</span>

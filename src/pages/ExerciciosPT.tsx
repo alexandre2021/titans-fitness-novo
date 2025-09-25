@@ -334,7 +334,7 @@ const ExerciciosPT = () => {
               {exerciciosFiltrados.map((exercicio) => {
                 const corGrupo = exercicio.grupo_muscular ? GRUPO_CORES[exercicio.grupo_muscular] || 'bg-gray-100 text-black' : 'bg-gray-100 text-black';
                 return (
-                  <Card key={exercicio.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/exercicios-pt/detalhes/${exercicio.id}`)}>
+                  <Card key={exercicio.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/exercicios-pt/detalhes/${exercicio.id}`, { state: { fromTab: 'padrao' } })}>
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0 pr-1 md:pr-4">
@@ -353,7 +353,7 @@ const ExerciciosPT = () => {
                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}><MoreVertical className="h-4 w-4" /></Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/exercicios-pt/detalhes/${exercicio.id}`); }}>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/exercicios-pt/detalhes/${exercicio.id}`, { state: { fromTab: 'padrao' } }); }}>
                               <Eye className="mr-2 h-4 w-4" /><span>Ver Detalhes</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCriarCopia(exercicio.id); }}>
@@ -498,7 +498,7 @@ const ExerciciosPT = () => {
                   {exerciciosFiltrados.map((exercicio) => {
                     const corGrupo = exercicio.grupo_muscular ? GRUPO_CORES[exercicio.grupo_muscular] || 'bg-gray-100 text-black' : 'bg-gray-100 text-black';
                     return (
-                      <Card key={exercicio.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/exercicios-pt/detalhes/${exercicio.id}`)}>
+                      <Card key={exercicio.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/exercicios-pt/detalhes/${exercicio.id}`, { state: { fromTab: 'personalizados' } })}>
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 min-w-0 pr-1 md:pr-4">
@@ -517,7 +517,7 @@ const ExerciciosPT = () => {
                                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}><MoreVertical className="h-4 w-4" /></Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/exercicios-pt/detalhes/${exercicio.id}`); }}>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/exercicios-pt/detalhes/${exercicio.id}`, { state: { fromTab: 'personalizados' } }); }}>
                                   <Eye className="mr-2 h-4 w-4" /><span>Ver Detalhes</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/exercicios-pt/editar/${exercicio.id}`); }}>

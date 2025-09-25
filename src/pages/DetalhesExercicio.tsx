@@ -1,7 +1,7 @@
 // pages/DetalhesExercicio.tsx
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,7 @@ type Exercicio = Tables<"exercicios">;
 const DetalhesExercicio = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const isMobile = useIsMobile();
 
@@ -196,9 +197,10 @@ const DetalhesExercicio = () => {
   }, [id, user, navigate, loadSignedUrls]);
 
   const handleVoltar = () => {
-    // Determina para qual aba voltar com base no tipo do exercício
-    const abaDeOrigem = exercicio?.tipo === 'personalizado' ? 'personalizados' : 'padrao';
-    navigate('/exercicios-pt', { state: { activeTab: abaDeOrigem } });
+    // Usa o estado da navegação para saber de qual aba veio.
+    // Se não houver estado, usa o tipo do exercício como fallback.
+    const abaDeOrigem = location.state?.fromTab || (exercicio?.tipo === 'personalizado' ? 'personalizados' : 'padrao');
+    navigate('/exercicios-pt', { state: { activeTab: abaDeOrigem }});
   };
 
   const handleCriarCopia = () => {
@@ -251,7 +253,7 @@ const DetalhesExercicio = () => {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Cabeçalho */}
       {!isMobile && (
         <div className="flex items-center justify-between">
