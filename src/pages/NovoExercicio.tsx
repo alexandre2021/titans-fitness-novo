@@ -181,39 +181,50 @@ const NovoExercicio = () => {
       input.capture = type === 'video' ? 'user' : 'environment';
     }
 
-    input.onchange = async (event) => {
-      const file = (event.target as HTMLInputElement).files?.[0];
-      if (!file) return;
+    const handleFileSelection = async (event: Event) => {
+      const target = event.target as HTMLInputElement;
+      const file = target.files?.[0];
+      if (!file) {
+        target.value = '';
+        return;
+      }
 
       if (type.startsWith('imagem')) {
         const validation = validateImageFile(file);
         if (!validation.isValid) {
           toast.error("Arquivo de imagem inválido", { description: validation.error });
+          target.value = '';
           return;
         }
       } else if (type === 'video') {
         const maxSize = 20 * 1024 * 1024; // 20MB
         if (file.size > maxSize) {
           toast.error("Arquivo de vídeo muito grande", { description: "O tamanho máximo para vídeos é 20MB." });
+          target.value = '';
           return;
         }
       }
 
-      let finalFile = file;
       if (type === 'imagem1' || type === 'imagem2') {
         const resized = await resizeAndOptimizeImage(file, 640);
         if (!resized) {
           toast.error("Erro ao processar imagem.");
+          target.value = '';
           return;
         }
-        finalFile = resized;
+        const key = type === 'imagem1' ? 'imagem_1_url' : 'imagem_2_url';
+        setMidias(prev => ({ ...prev, [key]: resized }));
+        setSignedUrls(prev => ({ ...prev, [type]: URL.createObjectURL(resized) }));
+      } else if (type === 'video') {
+        setMidias(prev => ({ ...prev, video_url: file }));
+        setSignedUrls(prev => ({ ...prev, video: URL.createObjectURL(file) }));
       }
 
-      const key = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'video_url';
-      setMidias(prev => ({ ...prev, [key]: finalFile }));
-      setSignedUrls(prev => ({ ...prev, [type === 'video' ? 'video' : type]: URL.createObjectURL(finalFile) }));
+      // Limpa o input para permitir a seleção do mesmo arquivo novamente
+      target.value = '';
     };
 
+    input.addEventListener('change', handleFileSelection);
     input.click();
   };
 
