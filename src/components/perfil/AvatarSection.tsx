@@ -9,16 +9,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Slider } from "@/components/ui/slider";
 import { Button } from '@/components/ui/button';
-import { optimizeAndCropImage, resizeAndOptimizeImage } from '@/lib/imageUtils';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { fileToDataURL, optimizeAndCropImage } from '@/lib/imageUtils';
+import Modal from 'react-modal';
 
 const AVATAR_COLORS = [
   '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
@@ -29,8 +21,7 @@ interface ImageCropDialogProps {
   imageSrc: string | null;
   isUploading: boolean;
   onClose: () => void;
-  onSave: () => void;
-  setCroppedAreaPixels: (pixels: Area | null) => void;
+  onSave: (croppedAreaPixels: Area) => void;
 }
 
 const ImageCropDialog: React.FC<ImageCropDialogProps> = ({
@@ -38,67 +29,48 @@ const ImageCropDialog: React.FC<ImageCropDialogProps> = ({
   isUploading,
   onClose,
   onSave,
-  setCroppedAreaPixels,
 }) => {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
 
   const onCropComplete = useCallback(
     (_croppedArea: Area, croppedAreaPixels: Area) => {
       setCroppedAreaPixels(croppedAreaPixels);
     },
-    [setCroppedAreaPixels]
+    []
   );
 
   if (!imageSrc) return null;
 
-  const Content = (
-    <div className="p-4">
-      <div className="relative h-64 w-full bg-muted" data-vaul-no-drag>
-        <Cropper
-          image={imageSrc}
-          crop={crop}
-          zoom={zoom}
-          aspect={1}
-          onCropChange={setCrop}
-          onZoomChange={setZoom}
-          onCropComplete={onCropComplete}
-          cropShape="round"
-          showGrid={false}
-        />
-      </div>
-      <div className="space-y-2 p-4">
-        <label className="text-sm font-medium">Zoom</label>
-        <Slider
-          value={[zoom]}
-          min={1}
-          max={3}
-          step={0.1}
-          onValueChange={(value) => setZoom(value[0])}
-        />
-      </div>
-    </div>
-  );
-
   return (
-    <Dialog open={!!imageSrc} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Ajustar Imagem</DialogTitle>
-        </DialogHeader>
-        {Content}
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button type="button" variant="outline">
-              Cancelar
-            </Button>
-          </DialogClose>
-          <Button type="button" onClick={onSave} disabled={isUploading}>
-            {isUploading ? "Salvando..." : "Salvar"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <Modal
+      isOpen={!!imageSrc}
+      onRequestClose={onClose}
+      shouldCloseOnOverlayClick={!isUploading}
+      className="bg-white rounded-lg max-w-md w-full mx-4 outline-none flex flex-col max-h-[90vh]"
+      overlayClassName="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+    >
+      <div className="flex items-center justify-between p-4 border-b">
+        <h2 className="text-lg font-semibold">Ajustar Imagem</h2>
+        <Button variant="ghost" size="icon" onClick={onClose} disabled={isUploading}><X className="h-4 w-4" /></Button>
+      </div>
+      <div className="p-4 overflow-y-auto">
+        <div className="relative h-64 md:h-80 w-full bg-muted">
+          <Cropper image={imageSrc} crop={crop} zoom={zoom} aspect={1} onCropChange={setCrop} onZoomChange={setZoom} onCropComplete={onCropComplete} cropShape="round" showGrid={false} />
+        </div>
+        <div className="space-y-2 pt-4">
+          <label className="text-sm font-medium">Zoom</label>
+          <Slider value={[zoom]} min={1} max={3} step={0.1} onValueChange={(value) => setZoom(value[0])} />
+        </div>
+      </div>
+      <div className="flex justify-end gap-2 p-4 border-t">
+        <Button type="button" variant="outline" onClick={onClose} disabled={isUploading}>Cancelar</Button>
+        <Button type="button" onClick={() => croppedAreaPixels && onSave(croppedAreaPixels)} disabled={isUploading || !croppedAreaPixels}>
+          {isUploading ? "Salvando..." : "Salvar"}
+        </Button>
+      </div>
+    </Modal>
   );
 };
 
@@ -121,7 +93,6 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
   const [isUploading, setIsUploading] = useState(false);
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
   const [imageSrc, setImageSrc] = useState<string | null>(null);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
 
   // Defensive check for when userProfile is still loading
   if (!profile) {
@@ -135,20 +106,34 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
     );
   }
 
-  const handleImageUpload = async (file: File) => {
-    if (!user) return;
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
+    try {
+      const dataUrl = await fileToDataURL(file);
+      setImageSrc(dataUrl);
+    } catch (error) {
+      toast.error('Erro ao processar imagem.');
+    }
+    e.target.value = ''; // Permite selecionar o mesmo arquivo novamente
+  };
+
+  const handleUploadCroppedImage = async (pixels: Area) => {
+    if (!imageSrc || !user) return;
     setIsUploading(true);
     try {
-      // Otimiza a imagem para um tamanho razoável antes de enviar
-      const optimizedFile = await resizeAndOptimizeImage(file, 512);
-      if (!optimizedFile) throw new Error('Falha ao otimizar a imagem');
-
-      const filePath = `${user.id}/${optimizedFile.name}`;
-
+      const file = await optimizeAndCropImage(imageSrc, pixels, 256);
+      if (!file) throw new Error('Falha ao cortar e otimizar a imagem');
+      
+      const filePath = `${user.id}/${file.name}`;
+      
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, optimizedFile, { upsert: true });
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true,
+        });
 
       if (uploadError) throw uploadError;
 
@@ -163,78 +148,6 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
       if (updateError) throw updateError;
 
       await supabase.auth.updateUser({ data: { avatar_url: finalUrl } });
-
-      onProfileUpdate();
-      toast.success("Nova foto de perfil enviada!");
-    } catch (error) {
-      console.error("Erro ao enviar nova foto:", error);
-      toast.error("Erro", { description: "Não foi possível enviar a nova foto." });
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleFileSelect = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.capture = 'user'; // Prioriza a câmera no mobile
-
-    input.onchange = async (e) => {
-      const target = e.target as HTMLInputElement;
-      if (target.files && target.files.length > 0) {
-        const file = target.files[0];
-        await handleImageUpload(file);
-      }
-    };
-
-    input.click();
-  };
-
-  const handleUploadCroppedImage = async () => {
-    if (!imageSrc || !croppedAreaPixels || !user) return;
-    setIsUploading(true);
-    try {
-      // Usa a função otimizada do nosso utilitário, definindo uma largura máxima de 256px para avatares.
-      const file = await optimizeAndCropImage(imageSrc, croppedAreaPixels, 256);
-      if (!file) throw new Error('Falha ao cortar e otimizar a imagem');
-      
-      const filePath = `${user.id}/${file.name}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true,
-        });
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-      const finalUrl = `${publicUrl}?t=${new Date().getTime()}`;
-
-      const { error: updateError } = await supabase
-        .from(tableName)
-        .update({
-          avatar_type: 'image',
-          avatar_image_url: finalUrl,
-        })
-        .eq('id', user.id);
-
-      if (updateError) throw updateError;
-
-      // 5. Atualizar user_metadata no Supabase Auth para propagar a mudança globalmente
-      const { error: userUpdateError } = await supabase.auth.updateUser({
-        data: { 
-          avatar_url: finalUrl 
-        }
-      });
-
-      if (userUpdateError) {
-        console.error("Erro ao atualizar metadados do usuário no Auth:", userUpdateError);
-      }
 
       onProfileUpdate();
       toast.success("Avatar atualizado com sucesso!");
@@ -303,6 +216,17 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
   const hasImage = !!profile.avatar_image_url;
 
 
+  const fileInputId = `avatar-input-${profile.id}`;
+  const FileInput = (
+    <input
+      id={fileInputId}
+      type="file"
+      accept="image/*"
+      onChange={handleFileSelect}
+      className="hidden"
+    />
+  );
+
   const ColorPickerContent = (
     <div className="grid grid-cols-5 gap-3 p-4 sm:py-4">
       {AVATAR_COLORS.map((color) => (
@@ -320,6 +244,7 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
   if (hasImage) {
     return (
       <>
+        {FileInput}
         <div className="flex flex-col items-center gap-4 mx-auto">
           <div className="relative w-24 h-24">
             <Avatar className="w-full h-full text-4xl border-2 border-background">
@@ -331,31 +256,30 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
             <button
               type="button"
               disabled={isUploading}
-              onClick={handleFileSelect}
+              onClick={() => document.getElementById(fileInputId)?.click()}
               className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full p-2 border-2 border-background hover:bg-primary/90 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             >
               {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
             </button>
           </div>
-          <Button variant="outline" size="sm" onClick={handleRemoveImage}>
-            <UserIcon className="h-4 w-4 mr-2" />
-            Usar Avatar
-          </Button>
           <div className="flex flex-wrap justify-center items-center gap-2 mt-2">
-            <Button variant="outline" size="sm" onClick={handleFileSelect} disabled={isUploading}>
-              <Camera className="h-4 w-4 mr-2" />
-              Nova Foto
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setImageSrc(profile.avatar_image_url)}>
+            <Button variant="outline" size="sm" onClick={() => profile.avatar_image_url && setImageSrc(profile.avatar_image_url)}>
               <Crop className="h-4 w-4 mr-2" />
               Ajustar
             </Button>
-            <Button variant="ghost" size="sm" onClick={handleRemoveImage} className="text-muted-foreground hover:text-destructive">
+            <Button variant="outline" size="sm" onClick={handleRemoveImage} className="text-muted-foreground hover:text-destructive">
               <UserIcon className="h-4 w-4 mr-2" />
-              Letra
+              Usar Letra
             </Button>
           </div>
         </div>
+
+        <ImageCropDialog
+          imageSrc={imageSrc}
+          isUploading={isUploading}
+          onClose={() => setImageSrc(null)}
+          onSave={handleUploadCroppedImage}
+        />
         
       </>
     );
@@ -371,7 +295,7 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
       </Avatar>
       <button
         type="button"
-        onClick={handleFileSelect}
+        onClick={() => document.getElementById(fileInputId)?.click()}
         disabled={isUploading}
         className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full p-2 border-2 border-background hover:bg-primary/90 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
       >
@@ -380,8 +304,27 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
     </div>
   );
 
+  const ColorPickerDialog = (
+    <Modal
+      isOpen={isColorPickerOpen}
+      onRequestClose={() => setIsColorPickerOpen(false)}
+      shouldCloseOnOverlayClick={true}
+      className="bg-white rounded-lg max-w-xs w-full mx-4 outline-none"
+      overlayClassName="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+    >
+      <div className="flex items-center justify-between p-4 border-b">
+        <h2 className="text-lg font-semibold">Escolher Cor</h2>
+        <Button variant="ghost" size="icon" onClick={() => setIsColorPickerOpen(false)}><X className="h-4 w-4" /></Button>
+      </div>
+      <div className="p-4">
+          {ColorPickerContent}
+      </div>
+    </Modal>
+  );
+
   return (
     <>
+      {FileInput}
       <div className="flex flex-col items-center gap-4 mx-auto">
         {AvatarWithLetter}
         <Button variant="outline" size="sm" onClick={() => setIsColorPickerOpen(true)}>
@@ -390,28 +333,13 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
         </Button>
       </div>
 
-      <Dialog open={isColorPickerOpen} onOpenChange={setIsColorPickerOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Escolher Cor</DialogTitle>
-          </DialogHeader>
-          {ColorPickerContent}
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="secondary">
-                Fechar
-              </Button>
-            </DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {ColorPickerDialog}
 
       <ImageCropDialog
         imageSrc={imageSrc}
         isUploading={isUploading}
         onClose={() => setImageSrc(null)}
         onSave={handleUploadCroppedImage}
-        setCroppedAreaPixels={setCroppedAreaPixels}
       />
     </>
   );

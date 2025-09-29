@@ -10,12 +10,12 @@ const PTBottomNav = () => {
     },
     {
       title: "Exercícios",
-      href: "/exercicios",
+      href: "/exercicios-pt",
       icon: Dumbbell,
     },
     {
       title: "Alunos",
-      href: "/alunos-pt",
+      href: "/alunos",
       icon: Users,
     },
     {
