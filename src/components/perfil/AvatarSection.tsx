@@ -56,7 +56,7 @@ const ImageCropDialog: React.FC<ImageCropDialogProps> = ({
         <Button variant="ghost" size="icon" onClick={onClose} disabled={isUploading}><X className="h-4 w-4" /></Button>
       </div>
       <div className="p-4 overflow-y-auto">
-        <div className="relative h-64 md:h-80 w-full bg-muted">
+        <div className="relative h-64 md:h-80 w-full bg-white">
           <Cropper image={imageSrc} crop={crop} zoom={zoom} aspect={1} onCropChange={setCrop} onZoomChange={setZoom} onCropComplete={onCropComplete} cropShape="round" showGrid={false} />
         </div>
         <div className="space-y-2 pt-4">
