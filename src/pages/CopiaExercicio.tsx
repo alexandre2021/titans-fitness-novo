@@ -67,6 +67,12 @@ const CopiaExercicio = () => {
     imagem2?: string;
     video?: string;
   }>({});
+  const [initialMediaUrls, setInitialMediaUrls] = useState({
+    imagem_1_url: null as string | null,
+    imagem_2_url: null as string | null,
+    video_url: null as string | null,
+  });
+
   const [loadingImages, setLoadingImages] = useState(false);
 
   const gruposMusculares = [
@@ -206,76 +212,55 @@ const CopiaExercicio = () => {
   }, []);
 
   // ✅ FUNÇÃO ATUALIZADA: Carrega as URLs das mídias para preview de forma robusta
-  const loadSignedUrls = useCallback(async () => {
-  console.log('🔍 [loadSignedUrls] Iniciado. Estado `midias` atual:', midias);
-  
-  const temMidiaParaProcessar = Object.values(midias).some(v => v);
-  if (!temMidiaParaProcessar) {
-    console.log('⚪ [loadSignedUrls] Nenhuma mídia para processar');
-    setSignedUrls({});
-    return;
-  }
-  
-  setLoadingImages(true);
-  setSignedUrls({});
+  const loadSignedUrls = useCallback(async (tipoExercicioOriginal: 'padrao' | 'personalizado') => {
+    console.log('🔍 [loadSignedUrls] Iniciado. Estado `midias` atual:', midias);
 
-  try {
-    // Executa sequencialmente para garantir logs
-    console.log('🔄 [loadSignedUrls] Processando imagem_1_url...');
-    let img1: string | undefined;
-    if (midias.imagem_1_url instanceof File) {
-      console.log('📁 Criando Object URL para imagem_1_url...');
-      img1 = URL.createObjectURL(midias.imagem_1_url);
-      console.log('✅ Object URL criada para imagem_1_url:', img1);
-    } else if (typeof midias.imagem_1_url === 'string' && midias.imagem_1_url) {
-      console.log('🌐 Buscando URL via Edge Function para imagem_1_url...');
-      img1 = await getMediaUrl(midias.imagem_1_url, 'padrao');
-      console.log('✅ URL obtida para imagem_1_url:', img1);
-    } else {
-      console.log('⚪ imagem_1_url está vazio/inválido');
+    const processMedia = async (
+      mediaKey: 'imagem_1_url' | 'imagem_2_url' | 'video_url',
+      signedUrlKey: 'imagem1' | 'imagem2' | 'video'
+    ) => {
+      const mediaValue = midias[mediaKey];
+      const initialValue = initialMediaUrls[mediaKey];
+
+      if (mediaValue === initialValue && signedUrls[signedUrlKey]) {
+        return null;
+      }
+
+      if (mediaValue instanceof File) {
+        const objectURL = URL.createObjectURL(mediaValue);
+        return { [signedUrlKey]: objectURL };
+      } else if (typeof mediaValue === 'string' && mediaValue) {
+        try {
+          const signedUrl = await getMediaUrl(mediaValue, tipoExercicioOriginal);
+          return { [signedUrlKey]: signedUrl };
+        } catch (error) {
+          console.error(`Erro ao obter URL para ${mediaKey}:`, error);
+          return { [signedUrlKey]: undefined };
+        }
+      } else {
+        return { [signedUrlKey]: undefined };
+      }
+    };
+
+    try {
+      const [img1Result, img2Result, videoResult] = await Promise.all([
+        processMedia('imagem_1_url', 'imagem1'),
+        processMedia('imagem_2_url', 'imagem2'),
+        processMedia('video_url', 'video'),
+      ]);
+
+      const updates = { ...img1Result, ...img2Result, ...videoResult };
+
+      if (Object.keys(updates).length > 0) {
+        setSignedUrls(prev => ({ ...prev, ...updates }));
+      }
+    } catch (error) {
+      console.error('❌ [loadSignedUrls] Erro geral ao carregar previews de mídia:', error);
+    } finally {
+      setLoadingImages(false);
+      console.log('🔚 [loadSignedUrls] Finalizado');
     }
-
-    console.log('🔄 [loadSignedUrls] Processando imagem_2_url...');
-    let img2: string | undefined;
-    if (midias.imagem_2_url instanceof File) {
-      console.log('📁 Criando Object URL para imagem_2_url...');
-      img2 = URL.createObjectURL(midias.imagem_2_url);
-      console.log('✅ Object URL criada para imagem_2_url:', img2);
-    } else if (typeof midias.imagem_2_url === 'string' && midias.imagem_2_url) {
-      console.log('🌐 Buscando URL via Edge Function para imagem_2_url...');
-      img2 = await getMediaUrl(midias.imagem_2_url, 'padrao');
-      console.log('✅ URL obtida para imagem_2_url:', img2);
-    } else {
-      console.log('⚪ imagem_2_url está vazio/inválido');
-    }
-
-    console.log('🔄 [loadSignedUrls] Processando video_url...');
-    let vid: string | undefined;
-    if (midias.video_url instanceof File) {
-      console.log('📁 Criando Object URL para video_url...');
-      vid = URL.createObjectURL(midias.video_url);
-      console.log('✅ Object URL criada para video_url:', vid);
-    } else if (typeof midias.video_url === 'string' && midias.video_url) {
-      console.log('🌐 Buscando URL via Edge Function para video_url...');
-      vid = await getMediaUrl(midias.video_url, 'padrao');
-      console.log('✅ URL obtida para video_url:', vid);
-    } else {
-      console.log('⚪ video_url está vazio/inválido');
-    }
-
-    const finalUrls = { imagem1: img1, imagem2: img2, video: vid };
-    console.log('🔍 [loadSignedUrls] URLs processadas individualmente:', { img1, img2, vid });
-    console.log('✅ [loadSignedUrls] Objeto final a ser setado:', finalUrls);
-    
-    setSignedUrls(finalUrls);
-    
-  } catch (error) {
-    console.error('❌ [loadSignedUrls] Erro geral ao carregar previews de mídia:', error);
-  } finally {
-    setLoadingImages(false);
-    console.log('🔚 [loadSignedUrls] Finalizado');
-  }
-  }, [midias, getMediaUrl]);
+  }, [midias, getMediaUrl, initialMediaUrls, signedUrls]);
 
   // Função para seleção de mídia (adaptada para desktop)
   const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
@@ -419,6 +404,11 @@ const CopiaExercicio = () => {
           video_url: exercicio.video_url || null,
           youtube_url: exercicio.youtube_url || null,
         });
+        setInitialMediaUrls({
+          imagem_1_url: exercicio.imagem_1_url,
+          imagem_2_url: exercicio.imagem_2_url,
+          video_url: exercicio.video_url,
+        });
 
         console.log('✅ Exercício original carregado:', exercicio);
       } catch (error) {
@@ -439,7 +429,7 @@ const CopiaExercicio = () => {
   useEffect(() => {
     if (exercicioOriginal) {
       console.log('🔄 Recarregando URLs assinadas...');
-      loadSignedUrls();
+      loadSignedUrls(exercicioOriginal.tipo as 'padrao' | 'personalizado');
     }
   }, [exercicioOriginal, midias, loadSignedUrls]);
 

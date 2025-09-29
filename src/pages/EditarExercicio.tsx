@@ -194,47 +194,54 @@ const EditarExercicio = () => {
 
   const loadSignedUrls = useCallback(async () => {
     console.log('🔍 [loadSignedUrls] Iniciado. Estado `midias` atual:', midias);
-    if (!Object.values(midias).some(v => v)) return;
+  
+    const processMedia = async (
+      mediaKey: 'imagem_1_url' | 'imagem_2_url' | 'video_url',
+      signedUrlKey: 'imagem1' | 'imagem2' | 'video'
+    ) => {
+      const mediaValue = midias[mediaKey];
+      const initialValue = initialMediaUrls[mediaKey];
 
-    setSignedUrls({});
+      // Se o valor não mudou E a URL já existe, não faz nada.
+      // Isso permite o carregamento inicial e evita reprocessamento.
+      if (mediaValue === initialValue && signedUrls[signedUrlKey]) {
+        return null;
+      }
+
+      if (mediaValue instanceof File) {
+        const objectURL = URL.createObjectURL(mediaValue);
+        console.log(`✅ [processMedia] Criou ObjectURL para ${mediaKey}`);
+        return { [signedUrlKey]: objectURL };
+      } else if (typeof mediaValue === 'string' && mediaValue) {
+        try {
+          const signedUrl = await getSignedImageUrl(mediaValue);
+          return { [signedUrlKey]: signedUrl };
+        } catch (error) {
+          console.error(`Erro ao obter URL para ${mediaKey}:`, error);
+          return { [signedUrlKey]: undefined };
+        }
+      } else {
+        return { [signedUrlKey]: undefined };
+      }
+    };
+  
     try {
-      const urls: { imagem1?: string; imagem2?: string; video?: string } = {};
-      console.log('🔍 [loadSignedUrls] Processando URLs...');
-
-      const processUrl = async (urlValue: string | File | null) => {
-        if (typeof urlValue === 'string' && urlValue) {
-          const filename = urlValue.split('/').pop()?.split('?')[0] || urlValue;
-          return getSignedImageUrl(filename);
-        }
-        if (urlValue instanceof File) {
-          try {
-            const objectURL = URL.createObjectURL(urlValue);
-            console.log('✅ [loadSignedUrls] URL de preview criada para arquivo:', objectURL);
-            return objectURL;
-          } catch (error) {
-            console.error('❌ [loadSignedUrls] Erro ao criar ObjectURL:', error);
-            return undefined;
-          }
-        }
-        return undefined;
-      };
-
-      const [url1, url2, urlVideo] = await Promise.all([
-        processUrl(midias.imagem_1_url),
-        processUrl(midias.imagem_2_url),
-        processUrl(midias.video_url),
+      const [img1Result, img2Result, videoResult] = await Promise.all([
+        processMedia('imagem_1_url', 'imagem1'),
+        processMedia('imagem_2_url', 'imagem2'),
+        processMedia('video_url', 'video'),
       ]);
 
-      if (url1) urls.imagem1 = url1;
-      if (url2) urls.imagem2 = url2;
-      if (urlVideo) urls.video = urlVideo;
+      // Só atualiza URLs que realmente mudaram
+      const updates = { ...img1Result, ...img2Result, ...videoResult };
 
-      setSignedUrls(urls);
-      console.log('✅ [loadSignedUrls] Estado `signedUrls` atualizado:', urls);
+      if (Object.keys(updates).length > 0) {
+        setSignedUrls(prev => ({ ...prev, ...updates }));
+      }
     } catch (error) {
       console.error('❌ [loadSignedUrls] Erro geral:', error);
     }
-  }, [midias, getSignedImageUrl]);
+  }, [midias, getSignedImageUrl, initialMediaUrls, signedUrls]);
 
   const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
     console.log('🔍 [handleSelectMedia] Iniciado para tipo:', type);
@@ -359,12 +366,6 @@ const EditarExercicio = () => {
     fetchExercicio();
   }, [id, user, navigate, toast]);
 
-  useEffect(() => {
-    if (exercicio) {
-      loadSignedUrls();
-    }
-  }, [exercicio, midias, loadSignedUrls]);
-
   const uploadFile = async (file: File | string | null): Promise<string | null> => {
     if (!file || !(file instanceof File)) return null;
     try {
@@ -382,6 +383,13 @@ const EditarExercicio = () => {
       throw error;
     }
   };
+
+  useEffect(() => {
+    if (exercicio) {
+      loadSignedUrls();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exercicio, midias]);
 
   const deleteFile = async (fileUrl: string) => {
     if (!fileUrl) return;
@@ -412,7 +420,12 @@ const EditarExercicio = () => {
 
   const handleSave = async () => {
     const instrucoesFinal = instrucoesList.filter(i => i.trim()).join('#');
-    if (!validateForm()) { toast.error("Erro de Validação", { description: "Por favor, preencha todos os campos obrigatórios." }); return; }
+    if (!validateForm()) {
+      toast.error("Erro de Validação", {
+        description: "Por favor, preencha todos os campos obrigatórios antes de salvar.",
+      });
+      return;
+    }
     if (!id || !user) return;
 
     setSaving(true);

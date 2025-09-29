@@ -4,11 +4,12 @@ import ReactQuill from 'react-quill';
 import { supabase } from '@/integrations/supabase/client';
 import 'react-quill/dist/quill.bubble.css'; // Adicione esta linha
 import type { Tables } from '@/integrations/supabase/types';
+import { toast } from 'sonner';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Calendar, Loader2 } from 'lucide-react';
-import { useMediaQuery } from '@/hooks/use-media-query';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, Calendar, Loader2, Share2, Utensils, Dumbbell, HeartPulse, BrainCircuit, Zap, Stethoscope, FlaskConical, TrendingUp, ShieldCheck } from 'lucide-react';
 
 type PostWithAuthor = Tables<'posts'> & {
   professores: {
@@ -19,10 +20,23 @@ type PostWithAuthor = Tables<'posts'> & {
   } | null;
 };
 
+const categoryStyles = {
+  Nutrição: { icon: Utensils, color: 'text-emerald-500', badge: 'bg-emerald-100 text-emerald-800' },
+  Exercícios: { icon: Dumbbell, color: 'text-blue-500', badge: 'bg-blue-100 text-blue-800' },
+  'Planos de Treino': { icon: Dumbbell, color: 'text-sky-500', badge: 'bg-sky-100 text-sky-800' },
+  'Bem-estar': { icon: HeartPulse, color: 'text-rose-500', badge: 'bg-rose-100 text-rose-800' },
+  'Saúde mental': { icon: BrainCircuit, color: 'text-purple-500', badge: 'bg-purple-100 text-purple-800' },
+  Suplementação: { icon: Stethoscope, color: 'text-cyan-500', badge: 'bg-cyan-100 text-cyan-800' },
+  Recuperação: { icon: ShieldCheck, color: 'text-indigo-500', badge: 'bg-indigo-100 text-indigo-800' },
+  Tendências: { icon: TrendingUp, color: 'text-orange-500', badge: 'bg-orange-100 text-orange-800' },
+  Ciência: { icon: FlaskConical, color: 'text-pink-500', badge: 'bg-pink-100 text-pink-800' },
+  Performance: { icon: Zap, color: 'text-yellow-500', badge: 'bg-yellow-100 text-yellow-800' },
+  default: { icon: Dumbbell, color: 'text-gray-500', badge: 'bg-gray-100 text-gray-800' },
+};
+
 const PostPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const isMobile = useMediaQuery('(max-width: 768px)');
 
   const [post, setPost] = useState<PostWithAuthor | null>(null);
   const [loading, setLoading] = useState(true);
@@ -94,6 +108,27 @@ const PostPage = () => {
     }).format(new Date(post.created_at));
   }, [post?.created_at]);
 
+  const handleShare = async () => {
+    if (!post) return;
+
+    const shareData = {
+      title: post.title,
+      text: post.excerpt || `Confira este post incrível da Titans Fitness: ${post.title}`,
+      url: window.location.href,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        console.error('Erro ao compartilhar:', err);
+      }
+    } else {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success('Link copiado!', { description: 'O link do post foi copiado para sua área de transferência.' });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -112,15 +147,25 @@ const PostPage = () => {
     );
   }
 
+  const styles = categoryStyles[post.category as keyof typeof categoryStyles] || categoryStyles.default;
+  const Icon = styles.icon;
+
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-8">
-      <Button variant="ghost" onClick={() => navigate(-1)} className="mb-6">
-        <ArrowLeft className="h-4 w-4 mr-2" />
-        Voltar
-      </Button>
+      <div className="flex justify-between items-center mb-6">
+        <Button variant="ghost" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Voltar
+        </Button>
+        <Button variant="outline" onClick={handleShare}>
+          <Share2 className="h-4 w-4 mr-2" />
+          Compartilhar
+        </Button>
+      </div>
 
       <article className="space-y-8">
         <header className="space-y-4">
+          <div className="flex items-center gap-2"><Icon className={`h-5 w-5 ${styles.color}`} /><Badge variant="outline" className={`text-sm font-semibold ${styles.badge}`}>{post.category}</Badge></div>
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight">{post.title}</h1>
           <div className="flex items-center gap-4">
             <Avatar className="h-12 w-12">

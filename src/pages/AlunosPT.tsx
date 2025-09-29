@@ -255,10 +255,6 @@ const AlunosPT = () => {
             <p className="text-green-600 text-lg text-center mb-6">
               ✓ Agendar sessões.
             </p>
-            <Button onClick={handleConvidarAluno} size="lg" className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5" />
-              Convidar Aluno
-            </Button>
           </CardContent>
         </Card>
       ) : (alunos.length === 0 && convitesPendentes.length > 0 && filtros.busca === '' && filtros.situacao === 'todos' && filtros.genero === 'todos') ? (

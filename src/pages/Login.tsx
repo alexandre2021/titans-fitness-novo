@@ -108,6 +108,16 @@ const Login = () => {
     }
   };
 
+  // Se o usuário já está logado, não renderiza o formulário e aguarda o redirecionamento.
+  // Isso evita a "piscada" da tela de login.
+  if (authLoading || user) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}

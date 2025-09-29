@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Home, Users, Dumbbell, LogOut, User, Settings, BookCopy, Newspaper } from "lucide-react";
+import { Home, Users, Dumbbell, LogOut, User, Settings, BookCopy, Newspaper, SquarePen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,6 +15,8 @@ import {
 import { useProfessorProfile } from "@/hooks/useProfessorProfile";
 
 const PTSidebar = () => {
+  const ADMIN_EMAIL = 'contato@titans.fitness';
+
   const { user, signOut } = useAuth();
   const { profile } = useProfessorProfile();
   const location = useLocation();
@@ -32,21 +34,29 @@ const PTSidebar = () => {
       icon: Dumbbell,
     },
     {
-      title: "Meus Modelos",
-      href: "/meus-modelos",
-      icon: BookCopy,
-    },
-    {
       title: "Alunos",
       href: "/alunos",
       icon: Users,
     },
     {
-      title: "Comunidade",
+      title: "Meus Modelos",
+      href: "/meus-modelos",
+      icon: BookCopy,
+    },
+    {
+      title: "Nosso Conteúdo",
       href: "/",
       icon: Newspaper,
     },
   ];
+
+  if (user?.email === ADMIN_EMAIL) {
+    navigationItems.push({
+      title: "Meus Posts",
+      href: "/meus-posts",
+      icon: SquarePen,
+    });
+  }
 
   const isActive = (path: string) => location.pathname === path;
 

@@ -234,37 +234,37 @@ const NovoExercicio = () => {
     input.click();
   };
 
-  // Este useEffect é responsável por criar as URLs de preview
-  useEffect(() => {
-    console.log('🔍 [useEffect midias] Disparado. Estado `midias` mudou:', midias);
+  const loadSignedUrls = useCallback(() => {
+    const processMedia = (
+      mediaKey: 'imagem_1_url' | 'imagem_2_url' | 'video_url',
+      signedUrlKey: 'imagem1' | 'imagem2' | 'video'
+    ) => {
+      const mediaValue = midias[mediaKey];
 
-    const loadPreviews = () => {
-      const newSignedUrls: { imagem1?: string; imagem2?: string; video?: string; } = {};
-      let hasNewFile = false;
+      // Se a URL já existe e o valor não é um novo arquivo, não faz nada.
+      if (signedUrls[signedUrlKey] && !(mediaValue instanceof File)) {
+        return null;
+      }
 
-      Object.keys(midias).forEach(key => {
-        const mediaFile = midias[key];
-        if (mediaFile instanceof File) {
-          hasNewFile = true;
-          const urlKey = key === 'imagem_1_url' ? 'imagem1' : key === 'imagem_2_url' ? 'imagem2' : 'video';
-          try {
-            const objectURL = URL.createObjectURL(mediaFile);
-            newSignedUrls[urlKey as keyof typeof newSignedUrls] = objectURL;
-            console.log(`✅ [useEffect midias] URL de preview criada para ${key}:`, objectURL);
-          } catch (error) {
-            console.error(`❌ [useEffect midias] Erro ao criar ObjectURL para ${key}:`, error);
-          }
-        }
-      });
-
-      if (hasNewFile) {
-        console.log('🔍 [useEffect midias] Atualizando estado `signedUrls` com:', newSignedUrls);
-        setSignedUrls(prev => ({ ...prev, ...newSignedUrls }));
+      if (mediaValue instanceof File) {
+        const objectURL = URL.createObjectURL(mediaValue);
+        return { [signedUrlKey]: objectURL };
+      } else {
+        // Se o valor for null (mídia removida), limpa a URL.
+        return { [signedUrlKey]: undefined };
       }
     };
 
-    loadPreviews();
-  }, [midias]);
+    const updates = {
+      ...processMedia('imagem_1_url', 'imagem1'),
+      ...processMedia('imagem_2_url', 'imagem2'),
+      ...processMedia('video_url', 'video'),
+    };
+
+    if (Object.keys(updates).length > 0) {
+      setSignedUrls(prev => ({ ...prev, ...updates }));
+    }
+  }, [midias, signedUrls]);
 
   const handleRecordingComplete = (videoBlob: Blob) => {
     const videoFile = new File([videoBlob], `gravacao_${Date.now()}.webm`, { type: 'video/webm' });
@@ -284,6 +284,10 @@ const NovoExercicio = () => {
       toast.error("Erro ao excluir mídia.");
     }
   };
+
+  useEffect(() => {
+    loadSignedUrls();
+  }, [loadSignedUrls]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -460,7 +464,7 @@ const NovoExercicio = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="nome" className="text-sm font-medium text-muted-foreground">Nome</Label>
+              <Label htmlFor="nome" className="text-sm font-medium text-muted-foreground">Nome *</Label>
               <Input
                 id="nome"
                 value={formData.nome}
@@ -474,7 +478,7 @@ const NovoExercicio = () => {
             </div>
             
             <div>
-              <Label htmlFor="descricao" className="text-sm font-medium text-muted-foreground">Descrição</Label>
+              <Label htmlFor="descricao" className="text-sm font-medium text-muted-foreground">Descrição *</Label>
               <Textarea
                 id="descricao"
                 value={formData.descricao}
@@ -491,7 +495,7 @@ const NovoExercicio = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="grupo_muscular" className="text-sm font-medium text-muted-foreground">Grupo Muscular</Label>
+                <Label htmlFor="grupo_muscular" className="text-sm font-medium text-muted-foreground">Grupo Muscular *</Label>
                 <CustomSelect
                   inputId="grupo_muscular"
                   value={GRUPOS_MUSCULARES_OPTIONS.find(opt => opt.value === formData.grupo_muscular)}
@@ -504,7 +508,7 @@ const NovoExercicio = () => {
                 )}
               </div>
               <div>
-                <Label htmlFor="equipamento" className="text-sm font-medium text-muted-foreground">Equipamento</Label>
+                <Label htmlFor="equipamento" className="text-sm font-medium text-muted-foreground">Equipamento *</Label>
                 <CustomSelect
                   inputId="equipamento"
                   value={EQUIPAMENTOS_OPTIONS.find(opt => opt.value === formData.equipamento)}
@@ -554,7 +558,7 @@ const NovoExercicio = () => {
         {/* 2. Instruções de Execução - Sistema dinâmico igual ao CopiaExercicio */}
         <Card>
           <CardHeader>
-            <CardTitle>Instruções de execução</CardTitle>
+            <CardTitle>Instruções de execução *</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">

@@ -1,13 +1,13 @@
 import LandingHeader from "@/components/landing/LandingHeader";
 import LandingFooter from "@/components/landing/LandingFooter";
-import CommunityFeedSection from "@/components/landing/CommunityFeedSection";
+import BlogFeedSection from "@/components/landing/BlogFeedSection";
 
 const Landing = () => {
   return (
     <div className="min-h-screen bg-background">
       <LandingHeader />
       <main>
-        <CommunityFeedSection />
+        <BlogFeedSection />
       </main>
       <LandingFooter />
     </div>

@@ -55,6 +55,8 @@ import Aplicativo from "./pages/Aplicativo";
 import NovoPost from "./pages/NovoPost";
 import EditarPost from "./pages/EditarPost";
 import PostPage from "./pages/Post";
+import MeusPosts from "./pages/MeusPosts";
+import AdminPostGuard from "./components/auth/AdminPostGuard.tsx";
 
 // NOVAS IMPORTAÇÕES PARA EXECUÇÃO
 import ExecucaoSelecionarTreino from "./pages/ExecucaoSelecionarTreino";
@@ -113,8 +115,15 @@ const router = createBrowserRouter([
           { path: "/exercicios-pt/editar/:id", element: <EditarExercicio /> },
           { path: "/exercicios-pt/detalhes/:id", element: <DetalhesExercicio /> },
           { path: "/agenda-pt", element: <AgendaPT /> },
-          { path: "/posts/novo", element: <NovoPost /> },
-          { path: "/posts/editar/:slug", element: <EditarPost /> },
+          // Rotas de Posts protegidas para o admin
+          {
+            element: <AdminPostGuard />,
+            children: [
+              { path: "/meus-posts", element: <MeusPosts /> },
+              { path: "/posts/novo", element: <NovoPost /> },
+              { path: "/posts/editar/:slug", element: <EditarPost /> },
+            ],
+          },
           { path: "/mensagens-pt", element: <MensagensPT /> },
           { path: "/perfil-pt", element: <PerfilPT /> },
           { path: "/meus-modelos", element: <MeusModelos /> },

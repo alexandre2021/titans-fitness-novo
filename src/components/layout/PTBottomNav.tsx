@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Home, Users, Dumbbell, MoreHorizontal } from "lucide-react";
+import { Home, Users, Dumbbell, MoreHorizontal, BookCopy } from "lucide-react";
 
 const PTBottomNav = () => {
   const navigationItems = [
@@ -10,12 +10,12 @@ const PTBottomNav = () => {
     },
     {
       title: "Exercícios",
-      href: "/exercicios-pt",
+      href: "/exercicios",
       icon: Dumbbell,
     },
     {
       title: "Alunos",
-      href: "/alunos",
+      href: "/alunos-pt",
       icon: Users,
     },
     {

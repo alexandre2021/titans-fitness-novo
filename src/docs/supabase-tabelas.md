@@ -325,12 +325,15 @@ Este documento descreve a estrutura completa das tabelas do banco de dados no no
 | `id` | 1 | `uuid` | False | `gen_random_uuid()` | `PRIMARY KEY` | `posts_pkey` | |
 | `author_id` | 2 | `uuid` | True | | `FOREIGN KEY (ON DELETE SET NULL)` | `posts_author_id_fkey` | `public.professores(id)` |
 | `title` | 3 | `text` | False | | | | |
-| `slug` | 4 | `text` | False | | `UNIQUE` | `posts_slug_key` | |
-| `content` | 5 | `jsonb` | True | | | | |
-| `cover_image_url` | 6 | `text` | True | | | | |
-| `status` | 7 | `text` | False | `'draft'::text` | `CHECK` | `posts_status_check` | |
-| `created_at` | 8 | `timestamp with time zone` | False | `now()` | | | |
-| `updated_at` | 9 | `timestamp with time zone` | False | `now()` | | | |
+| `category` | 4 | `text` | True | | | | |
+| `slug` | 5 | `text` | False | | `UNIQUE` | `posts_slug_key` | |
+| `excerpt` | 6 | `text` | True | | | | |
+| `content` | 7 | `jsonb` | True | | | | |
+| `cover_image_desktop_url` | 8 | `text` | True | | | | |
+| `cover_image_mobile_url` | 9 | `text` | True | | | | |
+| `status` | 10 | `text` | False | `'draft'::text` | `CHECK` | `posts_status_check` | |
+| `created_at` | 11 | `timestamp with time zone` | False | `now()` | | | |
+| `updated_at` | 12 | `timestamp with time zone` | False | `now()` | | | |
 
 **Status Possíveis**: published, draft, archived
 **Políticas de Segurança (RLS)**:

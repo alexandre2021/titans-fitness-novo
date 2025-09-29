@@ -1,7 +1,11 @@
+// src/pages/Mais.tsx
+// Esta página funciona como a tela "Mais" do aplicativo, geralmente acessada
+// por um ícone na barra de navegação principal (especialmente no mobile).
+// Ela serve para agrupar links de navegação adicionais que não cabem no menu principal.
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from "@/hooks/useAuth";
 import { Link } from 'react-router-dom';
-import { ChevronRight, Newspaper, User, BookCopy } from 'lucide-react';
+import { ChevronRight, Newspaper, BookCopy, SquarePen } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const Mais = () => {
@@ -36,10 +40,16 @@ const Mais = () => {
     determineUserType();
   }, [user, authLoading]);
 
-  const professorLinks = [
-    { href: '/meus-modelos', label: 'Meus Modelos', icon: BookCopy },
-    { href: '/', label: 'Comunidade', icon: Newspaper },
+  const baseProfessorLinks = [
+    { href: "/meus-modelos", label: "Meus Modelos", icon: BookCopy },
+    { href: "/", label: "Nosso Conteúdo", icon: Newspaper },
   ];
+
+  if (user?.email === 'contato@titans.fitness') {
+    baseProfessorLinks.push({ href: "/meus-posts", label: "Meus Posts", icon: SquarePen });
+  }
+
+  const professorLinks = baseProfessorLinks;
 
   const alunoLinks = [
     { href: '/', label: 'Comunidade', icon: Newspaper },

@@ -1,9 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import Cropper, { type Area } from 'react-easy-crop';
 import ReactQuill from 'react-quill';
 import Modal from 'react-modal';
-import 'react-quill/dist/quill.snow.css'; // Adiciona o CSS do editor
+import 'react-quill/dist/quill.snow.css';
 import { toast } from 'sonner';
 
 import { supabase } from '@/integrations/supabase/client';
@@ -17,12 +20,26 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Save, Send, Loader2, Upload, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Save, Send, Loader2, Upload, Trash2, X, RefreshCw } from 'lucide-react';
 import { useMediaQuery } from '@/hooks/use-media-query';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
 type Post = Tables<'posts'>;
 type ImageState = { file: File | string; previewUrl: string } | null;
 type CropType = 'desktop' | 'mobile';
+
+const postCategories = ["Exercícios", "Planos de Treino", "Nutrição", "Suplementação", "Recuperação", "Bem-estar", "Saúde mental", "Tendências", "Ciência", "Performance"];
+
+const postSchema = z.object({
+  title: z.string().min(5, 'O título deve ter pelo menos 5 caracteres.'),
+  slug: z.string().min(3, 'O slug deve ter pelo menos 3 caracteres.').regex(/^[a-z0-9-]+$/, 'Slug deve conter apenas letras minúsculas, números e hifens.'),
+  content: z.string().min(10, 'O conteúdo é muito curto.'),
+  excerpt: z.string().max(200, 'O resumo não pode ter mais de 200 caracteres.').optional(),
+  category: z.string().min(1, 'A categoria é obrigatória.'),
+});
+
+type PostFormData = z.infer<typeof postSchema>;
 
 const EditarPost = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -30,23 +47,22 @@ const EditarPost = () => {
   const { user } = useAuth();
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
-  // Estados do formulário
   const [post, setPost] = useState<Post | null>(null);
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
   const [desktopImage, setDesktopImage] = useState<ImageState>(null);
   const [mobileImage, setMobileImage] = useState<ImageState>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Estados do Cropper/Modal
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
   const [activeCropper, setActiveCropper] = useState<CropType | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
 
-  // Carrega os dados do post
+  const { register, handleSubmit, formState: { errors }, setValue, watch, reset, control } = useForm<PostFormData>({
+    resolver: zodResolver(postSchema),
+  });
+
   useEffect(() => {
     const fetchPost = async () => {
       if (!slug || !user) return;
@@ -56,8 +72,13 @@ const EditarPost = () => {
         if (error) throw error;
 
         setPost(data);
-        setTitle(data.title);
-        setContent(data.content as string || '');
+        reset({
+          title: data.title,
+          slug: data.slug,
+          content: data.content as string || '',
+          excerpt: data.excerpt || '',
+          category: data.category || '',
+        });
 
         const getImageUrl = async (filename: string | null) => {
           if (!filename) return null;
@@ -84,7 +105,7 @@ const EditarPost = () => {
     };
 
     void fetchPost();
-  }, [slug, user, navigate]);
+  }, [slug, user, navigate, reset]);
 
   const onCropComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
     setCroppedAreaPixels(croppedAreaPixels);
@@ -145,15 +166,18 @@ const EditarPost = () => {
     }
   };
 
-  const handleSave = async (status: 'draft' | 'published') => {
+  const handleSave = async (data: PostFormData, status: 'draft' | 'published') => {
     if (!post || !user) return;
     setIsSaving(true);
 
     try {
       const updateData: Partial<Post> & { updated_at: string } = {
-        title: title.trim(),
-        content: content,
+        title: data.title,
+        slug: data.slug,
+        content: data.content,
         status: status,
+        excerpt: data.excerpt,
+        category: data.category,
         updated_at: new Date().toISOString(),
       };
 
@@ -172,7 +196,6 @@ const EditarPost = () => {
         await supabase.functions.invoke('delete-media', { body: { filename, bucket_type: 'posts' } });
       };
 
-      // Lógica para imagem de desktop
       if (desktopImage?.file instanceof File) {
         updateData.cover_image_desktop_url = await uploadImage(desktopImage.file, 'desktop');
         if (post.cover_image_desktop_url) await deleteImage(post.cover_image_desktop_url);
@@ -181,7 +204,6 @@ const EditarPost = () => {
         updateData.cover_image_desktop_url = null;
       }
 
-      // Lógica para imagem de mobile
       if (mobileImage?.file instanceof File) {
         updateData.cover_image_mobile_url = await uploadImage(mobileImage.file, 'mobile');
         if (post.cover_image_mobile_url) await deleteImage(post.cover_image_mobile_url);
@@ -194,12 +216,20 @@ const EditarPost = () => {
       if (error) throw error;
 
       toast.success(`Post ${status === 'published' ? 'atualizado' : 'salvo como rascunho'}!`);
-      navigate('/index-professor');
+      navigate('/meus-posts');
     } catch (error: unknown) {
       toast.error('Erro ao salvar post', { description: (error as Error).message });
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const onFormSubmit = (data: PostFormData) => {
+    handleSave(data, 'published');
+  };
+
+  const onSaveDraft = () => {
+    handleSave(watch(), 'draft');
   };
 
   const renderImageUploader = (type: CropType) => {
@@ -265,49 +295,96 @@ const EditarPost = () => {
         <CardHeader>
           <CardTitle>Conteúdo do Post</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-8">
-          <div className="space-y-6">
-            {renderImageUploader('desktop')}
+        <form onSubmit={handleSubmit(onFormSubmit)}>
+          <CardContent className="space-y-8">
+            <div className="space-y-6">
+              {renderImageUploader('desktop')}
+              <Separator />
+              {renderImageUploader('mobile')}
+            </div>
+
             <Separator />
-            {renderImageUploader('mobile')}
-          </div>
 
-          <Separator />
+            <div className="space-y-2">
+              <Label htmlFor="title">Título do Post</Label>
+              <Input id="title" {...register('title')} />
+              {errors.title && <p className="text-destructive text-sm mt-1">{errors.title.message}</p>}
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="title">Título do Post</Label>
-            <Input
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              disabled={isSaving}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="slug">URL (slug)</Label>
+              <Input id="slug" {...register('slug')} />
+              {errors.slug && <p className="text-destructive text-sm mt-1">{errors.slug.message}</p>}
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="content">Conteúdo</Label>
-            <ReactQuill
-              theme="snow"
-              value={content}
-              onChange={setContent}
-              readOnly={isSaving}
-              className="bg-white [&>.ql-container_.ql-editor]:min-h-[300px] [&>.ql-container_.ql-editor]:resize-y [&>.ql-container_.ql-editor]:overflow-auto"
-            />
-          </div>
-        </CardContent>
+            <div className="space-y-2">
+              <Label htmlFor="category">Categoria</Label>
+              <Controller
+                name="category"
+                control={control}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger id="category"><SelectValue placeholder="Selecione uma categoria" /></SelectTrigger>
+                    <SelectContent>{postCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.category && <p className="text-destructive text-sm mt-1">{errors.category.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="excerpt">Resumo (até 200 caracteres)</Label>
+              <Textarea id="excerpt" {...register('excerpt')} />
+              {errors.excerpt && <p className="text-destructive text-sm mt-1">{errors.excerpt.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="content">Conteúdo</Label>
+              <Controller
+                name="content"
+                control={control}
+                render={({ field }) => (
+                  <ReactQuill
+                    theme="snow"
+                    value={field.value}
+                    onChange={field.onChange}
+                    readOnly={isSaving}
+                    modules={{
+                      toolbar: [
+                        [{ 'header': [2, 3, false] }],
+                        ['bold', 'italic', 'underline'],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        [{ 'indent': '-1'}, { 'indent': '+1' }],
+                        ['link'],
+                        ['clean']
+                      ],
+                    }}
+                    formats={[
+                      'header',
+                      'bold', 'italic', 'underline',
+                      'list', 'bullet', 'indent',
+                      'link'
+                    ]}
+                    className="bg-white [&>.ql-container_.ql-editor]:min-h-[300px]"
+                  />
+                )}
+              />
+              {errors.content && <p className="text-destructive text-sm mt-1">{errors.content.message}</p>}
+            </div>
+          </CardContent>
+        </form>
         <CardFooter className="flex justify-end gap-4">
-          <Button variant="outline" onClick={() => handleSave('draft')} disabled={isSaving}>
-            {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+          <Button variant="outline" onClick={onSaveDraft} disabled={isSaving}>
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
             {post?.status === 'published' ? 'Reverter para Rascunho' : 'Salvar Rascunho'}
           </Button>
-          <Button onClick={() => handleSave('published')} disabled={isSaving}>
+          <Button onClick={handleSubmit(onFormSubmit)} disabled={isSaving}>
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
             {isDesktop && post?.status === 'published' ? 'Atualizar Publicação' : 'Publicar'}
           </Button>
         </CardFooter>
       </Card>
 
-      {/* Modal do Cropper */}
       <Modal
         isOpen={!!activeCropper}
         onRequestClose={() => !isSaving && setActiveCropper(null)}

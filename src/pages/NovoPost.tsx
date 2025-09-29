@@ -1,15 +1,18 @@
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback } from "react";
 import { useNavigate } from 'react-router-dom';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import Cropper, { type Area } from 'react-easy-crop';
 import ReactQuill from 'react-quill';
 import Modal from 'react-modal';
-import 'react-quill/dist/quill.snow.css'; // Adiciona o CSS do editor
+import 'react-quill/dist/quill.snow.css';
 import { toast } from 'sonner';
 
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { slugify } from '@/utils/slugify';
-import { fileToDataURL, optimizeAndCropImage, validateImageFile } from '@/lib/imageUtils';
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { slugify } from "@/utils/slugify";
+import { fileToDataURL, optimizeAndCropImage, validateImageFile } from "@/lib/imageUtils";
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -19,28 +22,49 @@ import { Slider } from '@/components/ui/slider';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Save, Send, Loader2, Upload, Trash2, X } from 'lucide-react';
 import { useMediaQuery } from '@/hooks/use-media-query';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
 type ImageState = { file: File; previewUrl: string } | null;
 type CropType = 'desktop' | 'mobile';
+
+const postCategories = ["Exercícios", "Planos de Treino", "Nutrição", "Suplementação", "Recuperação", "Bem-estar", "Saúde mental", "Tendências", "Ciência", "Performance"];
+
+const postSchema = z.object({
+  title: z.string().min(5, 'O título deve ter pelo menos 5 caracteres.'),
+  slug: z.string().min(3, 'O slug deve ter pelo menos 3 caracteres.').regex(/^[a-z0-9-]+$/, 'Slug deve conter apenas letras minúsculas, números e hifens.'),
+  content: z.string().min(10, 'O conteúdo é muito curto.'),
+  excerpt: z.string().max(200, 'O resumo não pode ter mais de 200 caracteres.').optional(),
+  category: z.string().min(1, 'A categoria é obrigatória.'),
+});
+
+type PostFormData = z.infer<typeof postSchema>;
 
 const NovoPost = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
-  // Estados do formulário
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
   const [desktopImage, setDesktopImage] = useState<ImageState>(null);
   const [mobileImage, setMobileImage] = useState<ImageState>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Estados do Cropper/Modal
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
   const [activeCropper, setActiveCropper] = useState<CropType | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+
+  const { register, handleSubmit, formState: { errors }, setValue, watch, control } = useForm<PostFormData>({
+    resolver: zodResolver(postSchema),
+    defaultValues: {
+      title: '',
+      slug: '',
+      content: '',
+      excerpt: '',
+      category: '',
+    }
+  });
 
   const onCropComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
     setCroppedAreaPixels(croppedAreaPixels);
@@ -91,7 +115,6 @@ const NovoPost = () => {
         setMobileImage(newImage);
       }
 
-      // Reset e fecha o modal
       setActiveCropper(null);
       setImageToCrop(null);
     } catch (error) {
@@ -109,9 +132,8 @@ const NovoPost = () => {
     }
   };
 
-  const handleSave = async (status: 'draft' | 'published') => {
+  const handleSave = async (data: PostFormData, status: 'draft' | 'published') => {
     if (!user) { toast.error('Você precisa estar logado.'); return; }
-    if (!title.trim()) { toast.error('O título é obrigatório.'); return; }
 
     setIsSaving(true);
 
@@ -139,9 +161,11 @@ const NovoPost = () => {
 
       const { error } = await supabase.from('posts').insert({
         author_id: user.id,
-        title: title.trim(),
-        slug: `${slugify(title.trim())}-${Date.now()}`,
-        content: content,
+        title: data.title,
+        slug: data.slug,
+        content: data.content,
+        excerpt: data.excerpt,
+        category: data.category,
         status: status,
         cover_image_desktop_url: desktopFileName,
         cover_image_mobile_url: mobileFileName,
@@ -157,6 +181,21 @@ const NovoPost = () => {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const onFormSubmit = (data: PostFormData) => {
+    handleSave(data, 'published');
+  };
+
+  const onSaveDraft = () => {
+    const values = { 
+      title: watch('title'), 
+      slug: watch('slug'), 
+      content: watch('content'), 
+      excerpt: watch('excerpt'), 
+      category: watch('category') 
+    };
+    handleSave(values, 'draft');
   };
 
   const renderImageUploader = (type: CropType) => {
@@ -218,50 +257,96 @@ const NovoPost = () => {
         <CardHeader>
           <CardTitle>Conteúdo do Post</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-8">
-          <div className="space-y-6">
-            {renderImageUploader('desktop')}
+        <form onSubmit={handleSubmit(onFormSubmit)}>
+          <CardContent className="space-y-8">
+            <div className="space-y-6">
+              {renderImageUploader('desktop')}
+              <Separator />
+              {renderImageUploader('mobile')}
+            </div>
+
             <Separator />
-            {renderImageUploader('mobile')}
-          </div>
 
-          <Separator />
+            <div className="space-y-2">
+              <Label htmlFor="title">Título do Post</Label>
+              <Input id="title" placeholder="5 dicas para melhorar sua postura" {...register('title')} />
+              {errors.title && <p className="text-destructive text-sm mt-1">{errors.title.message}</p>}
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="title">Título do Post</Label>
-            <Input
-              id="title"
-              placeholder="5 dicas para melhorar sua postura"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              disabled={isSaving}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="slug">URL (slug)</Label>
+              <Input id="slug" placeholder="5-dicas-postura" {...register('slug')} />
+              {errors.slug && <p className="text-destructive text-sm mt-1">{errors.slug.message}</p>}
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="content">Conteúdo</Label>
-            <ReactQuill
-              theme="snow"
-              value={content}
-              onChange={setContent}
-              readOnly={isSaving}
-              className="bg-white [&>.ql-container_.ql-editor]:min-h-[300px] [&>.ql-container_.ql-editor]:resize-y [&>.ql-container_.ql-editor]:overflow-auto"
-            />
-          </div>
-        </CardContent>
+            <div className="space-y-2">
+              <Label htmlFor="category">Categoria</Label>
+              <Controller
+                name="category"
+                control={control}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <SelectTrigger id="category"><SelectValue placeholder="Selecione uma categoria" /></SelectTrigger>
+                    <SelectContent>{postCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.category && <p className="text-destructive text-sm mt-1">{errors.category.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="excerpt">Resumo (até 200 caracteres)</Label>
+              <Textarea id="excerpt" placeholder="Um resumo conciso do seu post..." {...register('excerpt')} />
+              {errors.excerpt && <p className="text-destructive text-sm mt-1">{errors.excerpt.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="content">Conteúdo</Label>
+              <Controller
+                name="content"
+                control={control}
+                render={({ field }) => (
+                  <ReactQuill
+                    theme="snow"
+                    value={field.value}
+                    onChange={field.onChange}
+                    readOnly={isSaving}
+                    modules={{
+                      toolbar: [
+                        [{ 'header': [2, 3, false] }],
+                        ['bold', 'italic', 'underline'],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        [{ 'indent': '-1'}, { 'indent': '+1' }],
+                        ['link'],
+                        ['clean']
+                      ],
+                    }}
+                    formats={[
+                      'header',
+                      'bold', 'italic', 'underline',
+                      'list', 'bullet', 'indent',
+                      'link'
+                    ]}
+                    className="bg-white [&>.ql-container_.ql-editor]:min-h-[300px]"
+                  />
+                )}
+              />
+              {errors.content && <p className="text-destructive text-sm mt-1">{errors.content.message}</p>}
+            </div>
+          </CardContent>
+        </form>
         <CardFooter className="flex justify-end gap-4">
-          <Button variant="outline" onClick={() => handleSave('draft')} disabled={isSaving}>
+          <Button variant="outline" onClick={onSaveDraft} disabled={isSaving}>
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
             Salvar Rascunho
           </Button>
-          <Button onClick={() => handleSave('published')} disabled={isSaving}>
+          <Button onClick={handleSubmit(onFormSubmit)} disabled={isSaving}>
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
             Publicar
           </Button>
         </CardFooter>
       </Card>
 
-      {/* Modal do Cropper */}
       <Modal
         isOpen={!!activeCropper}
         onRequestClose={() => !isSaving && setActiveCropper(null)}

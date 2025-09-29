@@ -758,6 +758,7 @@ export type Database = {
       posts: {
         Row: {
           author_id: string
+          category: string | null
           content: Json | null
           created_at: string
           id: string
@@ -767,11 +768,14 @@ export type Database = {
           updated_at: string | null
           cover_image_desktop_url: string | null
           cover_image_mobile_url: string | null
+          excerpt: string | null
         }
         Insert: {
           author_id: string
+          category?: string | null
           content?: Json | null
           created_at?: string
+          excerpt?: string | null
           id?: string
           slug: string
           status?: "draft" | "published" | "archived"
@@ -782,8 +786,10 @@ export type Database = {
         }
         Update: {
           author_id?: string
+          category?: string | null
           content?: Json | null
           created_at?: string
+          excerpt?: string | null
           id?: string
           slug?: string
           status?: "draft" | "published" | "archived"
