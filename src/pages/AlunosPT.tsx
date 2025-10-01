@@ -363,7 +363,7 @@ const AlunosPT = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 pb-20 md:pb-0">
               {alunos.map((aluno) => (
                 <AlunoCard 
                   key={aluno.id} 

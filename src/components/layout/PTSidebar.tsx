@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Home, Users, Dumbbell, LogOut, User, Settings, BookCopy, Newspaper, SquarePen } from "lucide-react";
+import { LayoutDashboard, Users, Dumbbell, LogOut, User, Settings, BookCopy, SquarePen, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
@@ -24,9 +24,9 @@ const PTSidebar = () => {
 
   const navigationItems = [
     {
-      title: "Inicial",
+      title: "Painel",
       href: "/index-professor",
-      icon: Home,
+      icon: LayoutDashboard,
     },
     {
       title: "Exercícios",
@@ -44,9 +44,9 @@ const PTSidebar = () => {
       icon: BookCopy,
     },
     {
-      title: "Nosso Conteúdo",
+      title: "Home",
       href: "/",
-      icon: Newspaper,
+      icon: Home,
     },
   ];
 

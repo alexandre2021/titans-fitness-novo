@@ -81,3 +81,19 @@ Conclusão:
 Não vale a pena criar um sitema de posts para Professores. Ideia inicial era usar o modelo Gemini 2.5 Flash-Lite para gerar a lista de temas de post, usar o meta-llama/llama-4-scout-17b-16e-instruct para gerar os posts e as ferrametas Google Perspective e Hugging Face para moderar. Esse modelo permitiria criar até 1.000 posts por dia, tendo a necessidade de expandir o caminho seria partir para o modelo com servidor VCPU na nuvem.
 
 
+
+Categorias:
+
+Exercícios
+Planos de Treino
+Nutrição
+Suplementação
+Recuperação
+Bem-estar
+Saúde mental
+Tendências
+Ciência
+Performance
+
+
+

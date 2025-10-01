@@ -51,7 +51,7 @@ import EsqueciSenha from "./pages/EsqueciSenha";
 import Mais from "./pages/Mais";
 import NovoModeloSelecao from "./pages/NovoModeloSelecao";
 import ResetarSenha from "./pages/ResetarSenha";
-import Aplicativo from "./pages/Aplicativo";
+import Funcionalidades from "./pages/Funcionalidades.tsx";
 import NovoPost from "./pages/NovoPost";
 import EditarPost from "./pages/EditarPost";
 import PostPage from "./pages/Post";
@@ -73,7 +73,7 @@ const router = createBrowserRouter([
     path: "/",
     element: <Index />,
   },
-  { path: "/aplicativo", element: <Aplicativo /> },
+  { path: "/funcionalidades", element: <Funcionalidades /> },
   { path: "/cadastro", element: <UserTypeSelection /> },
   { path: "/cadastro/professor", element: <CadastroProfessor /> },
   { path: "/cadastro/aluno", element: <CadastroAluno /> },
@@ -132,7 +132,7 @@ const router = createBrowserRouter([
           { path: "/mais", element: <Mais /> },
           { path: "/detalhes-aluno/:id", element: <DetalhesAluno /> },
           { path: "/alunos-parq/:id", element: <AlunosParQ /> },
-          { path: "/alunos-rotinas/:id", element: <PaginaRotinas modo="personal" /> },
+          { path: "/alunos-rotinas/:id", element: <PaginaRotinas modo="professor" /> },
           { path: "/alunos-avaliacoes/:id", element: <AlunosAvaliacoes /> },
           { path: "/alunos-avaliacoes/:id/nova", element: <AlunosAvaliacaoNova /> },
           { path: "/alunos-avaliacoes/:id/:avaliacaoId", element: <AlunosAvaliacaoDetalhes /> },

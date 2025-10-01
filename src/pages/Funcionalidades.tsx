@@ -1,5 +1,4 @@
 import LandingHeader from "@/components/landing/LandingHeader";
-import LandingFooter from "@/components/landing/LandingFooter";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +22,7 @@ const featuresAluno = [
   "Acesso a uma comunidade de conhecimento",
 ];
 
-const Aplicativo = () => {
+const Funcionalidades = () => {
   return (
     <div className="min-h-screen bg-background">
       <LandingHeader />
@@ -117,9 +116,8 @@ const Aplicativo = () => {
           </div>
         </section>
       </main>
-      <LandingFooter />
     </div>
   );
 };
 
-export default Aplicativo;
+export default Funcionalidades;

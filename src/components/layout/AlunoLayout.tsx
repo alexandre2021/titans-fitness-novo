@@ -1,8 +1,10 @@
-// src/components/layout/AlunoLayout.tsx (Exemplo hipotético)
 import { Outlet } from "react-router-dom";
 import React, { useEffect, useState } from "react";
-import AlunoBottomNav from "./AlunoBottomNav"; // Componente hipotético
-import AlunoMobileHeader from "./AlunoMobileHeader"; // Componente hipotético
+import AlunoBottomNav from "./AlunoBottomNav";
+import AlunoMobileHeader from "./AlunoMobileHeader";
+import MessagesButton from "@/components/messages/MessageButton";
+import MessagesDrawer from "@/components/messages/MessageDrawer";
+import { useConversas } from "@/hooks/useConversas";
 
 interface AlunoLayoutProps {
   isFocusedMode?: boolean;
@@ -10,6 +12,8 @@ interface AlunoLayoutProps {
 
 const AlunoLayout: React.FC<AlunoLayoutProps> = ({ isFocusedMode = false }) => {
   const [isMobile, setIsMobile] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const { unreadCount } = useConversas();
 
   useEffect(() => {
     const checkIsMobile = () => {
@@ -22,8 +26,6 @@ const AlunoLayout: React.FC<AlunoLayoutProps> = ({ isFocusedMode = false }) => {
     return () => window.removeEventListener("resize", checkIsMobile);
   }, []);
 
-  // Para o aluno, o layout focado se aplica principalmente no mobile.
-  // O layout desktop do aluno pode não ter um sidebar, então o ajuste é mais simples.
   if (isMobile) {
     return (
       <div className="min-h-screen bg-background">
@@ -32,12 +34,41 @@ const AlunoLayout: React.FC<AlunoLayoutProps> = ({ isFocusedMode = false }) => {
           <Outlet />
         </main>
         {!isFocusedMode && <AlunoBottomNav />}
+        {!isFocusedMode && (
+          <>
+            <MessagesButton 
+              onClick={() => setIsDrawerOpen(true)} 
+              unreadCount={unreadCount}
+              position="bottom-left"
+            />
+            <MessagesDrawer 
+              isOpen={isDrawerOpen} 
+              onClose={() => setIsDrawerOpen(false)} 
+            />
+          </>
+        )}
       </div>
     );
   }
 
-  // Layout desktop do aluno (pode não ter sidebar, então apenas renderiza o conteúdo)
-  return <main className="p-6"><Outlet /></main>;
+  return (
+    <div className="min-h-screen bg-background">
+      <main className="p-6">
+        <Outlet />
+      </main>
+      <>
+        <MessagesButton 
+          onClick={() => setIsDrawerOpen(true)} 
+          unreadCount={unreadCount}
+          position="top-right"
+        />
+        <MessagesDrawer 
+          isOpen={isDrawerOpen} 
+          onClose={() => setIsDrawerOpen(false)} 
+        />
+      </>
+    </div>
+  );
 };
 
 export default AlunoLayout;

@@ -267,6 +267,9 @@ const DetalhesAluno = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Espaçador para botões flutuantes no mobile */}
+      <div className="h-20 md:hidden" />
     </div>
   );
 };

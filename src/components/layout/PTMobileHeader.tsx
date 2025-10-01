@@ -59,7 +59,7 @@ const PTMobileHeader = () => {
 
     // Páginas Principais (sem botão de voltar)
     const mainPages: { [key: string]: { title: string; subtitle?: string } } = {
-      "/index-professor": { title: "Inicial", subtitle: `Bem-vindo, ${profile?.nome_completo?.split(' ')[0] || 'Professor(a)'}!` },
+      "/index-professor": { title: "Painel", subtitle: `Bem-vindo, ${profile?.nome_completo?.split(' ')[0] || 'Professor(a)'}!` },
       "/alunos": { title: "Alunos", subtitle: "Gerencie seus alunos e acompanhe seu progresso" },
       "/exercicios-pt": { title: "Exercícios", subtitle: "Gerencie seus exercícios padrão e personalizados" },
       "/meus-modelos": { title: "Meus Modelos", subtitle: "Gerencie seus modelos de rotina" },

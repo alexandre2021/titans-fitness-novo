@@ -129,7 +129,7 @@ interface RotinaArquivada {
 }
 
 interface PaginaRotinasProps {
-  modo: 'personal' | 'aluno';
+  modo: 'professor' | 'aluno';
 }
 
 const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
@@ -141,7 +141,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   
   // Deriva o alunoId do contexto de rota (para PT) ou de autenticação (para Aluno)
   // O 'id' do useParams corresponde ao :id na rota /alunos-rotinas/:id
-  const alunoId = modo === 'personal' ? params.id : user?.id;
+  const alunoId = modo === 'professor' ? params.id : user?.id;
 
   // Estados permanecem os mesmos
   const [aluno, setAluno] = useState<AlunoInfo | null>(null);
@@ -405,7 +405,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   const handleVerDetalhes = (rotinaId: string) => {
     const rotinaSelecionada = rotinasAtivas.find(r => r.id === rotinaId);
     setSelectedRotina(rotinaSelecionada || null);
-    if (modo === 'personal') {
+    if (modo === 'professor') {
       // Para o PT, "Detalhes" leva à página de gerenciamento da rotina.
       navigate(`/alunos-rotinas/${alunoId}/${rotinaId}`);
     } else {
@@ -602,9 +602,9 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => handleVerDetalhes(rotina.id)}>
             <Eye className="mr-2 h-5 w-5" />
-            <span className="text-base">Ver Detalhes</span>
+          <span className="text-base">Detalhes</span>
           </DropdownMenuItem>
-          {rotina.status === 'Ativa' && modo === 'personal' && rotina.professor_id === user?.id && (
+        {rotina.status === 'Ativa' && modo === 'professor' && rotina.professor_id === user?.id && (
             <>
               <DropdownMenuItem onClick={() => handleTreinar(rotina.id)}>
                 <Play className="mr-2 h-5 w-5" />
@@ -634,7 +634,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
           {rotina.status === 'Bloqueada' && modo === 'aluno' && (
             <DropdownMenuItem disabled><span className="text-base">Rotina Bloqueada</span></DropdownMenuItem>
           )}
-          {rotina.status === 'Bloqueada' && modo === 'personal' && rotina.professor_id === user?.id && (
+        {rotina.status === 'Bloqueada' && modo === 'professor' && rotina.professor_id === user?.id && (
             <>
               <DropdownMenuItem onClick={() => handleUpdateRotinaStatus(rotina, 'Ativa')}>
                 <Activity className="mr-2 h-5 w-5" />
@@ -689,7 +689,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
           <div className="flex items-center gap-4">
             <Button 
               variant="ghost" 
-              onClick={() => navigate(modo === 'personal' ? '/alunos' : '/index-aluno')}
+            onClick={() => navigate(modo === 'professor' ? '/alunos' : '/index-aluno')}
               className="h-10 w-10 p-0"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -716,23 +716,23 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         {isDesktop && (
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button 
-                variant="ghost" 
-                onClick={() => navigate(modo === 'personal' ? '/alunos' : '/index-aluno')}
+              <Button
+                variant="ghost"
+                onClick={() => navigate(modo === 'professor' ? '/alunos' : '/index-aluno')}
                 className="h-10 w-10 p-0"
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
               <div>
                 <h1 className="text-3xl font-bold">Rotinas</h1>
-                <p className="text-muted-foreground">{modo === 'personal' ? `Gerencie as rotinas de ${aluno.nome_completo}` : 'Suas rotinas de treino'}</p>
+                <p className="text-muted-foreground">{modo === 'professor' ? `Gerencie as rotinas de ${aluno.nome_completo}` : 'Suas rotinas de treino'}</p>
               </div>
             </div>
           </div>
         )}
 
         {/* Informações do Aluno */}
-        {modo === 'personal' && <Card>
+        {modo === 'professor' && <Card>
           <CardHeader>
             <div className="flex items-center gap-4">
               <Avatar className="h-12 w-12">
@@ -748,14 +748,14 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "atual" | "rascunho" | "encerradas")}>
-          <TabsList className={`grid w-full ${modo === 'personal' ? 'grid-cols-3' : 'grid-cols-2'}`}>
+          <TabsList className={`grid w-full ${modo === 'professor' ? 'grid-cols-3' : 'grid-cols-2'}`}>
             <TabsTrigger 
               value="atual"
               onClick={() => console.log('📌 Clicou tab Atual')}
             >
               Atual ({rotinasAtivas.length})
             </TabsTrigger>
-            {modo === 'personal' && (
+            {modo === 'professor' && (
               <TabsTrigger 
                 value="rascunho"
                 onClick={() => console.log('📌 Clicou tab Rascunho')}
@@ -778,7 +778,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
                 <CardTitle className="flex items-center gap-3">
                   <Dumbbell className="h-5 w-5" />
                   Rotina Atual
-                  {modo === 'personal' && (
+                  {modo === 'professor' && (
                     <Button 
                       variant="ghost" 
                       size="sm"
@@ -797,11 +797,11 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
                     <Dumbbell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                     <h3 className="text-lg font-semibold mb-2">Nenhuma rotina</h3>
                     <p className="text-muted-foreground mb-6">
-                      {modo === 'personal' ? 'Este aluno não possui nenhuma rotina no momento. Crie uma nova rotina personalizada.' : 'Você ainda não tem uma rotina. Fale com seu Personal Trainer.'}
+                      {modo === 'professor' ? 'Este aluno não possui nenhuma rotina no momento. Crie uma nova rotina personalizada.' : 'Você ainda não tem uma rotina. Fale com seu Personal Trainer.'}
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-4 pb-20 md:pb-0">
                     {rotinasAtivas.map((rotina) => (
                       <div key={rotina.id} className="border rounded-lg p-6 hover:bg-muted/50 transition-colors">
                         {/* Header da rotina */}
@@ -813,7 +813,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
                               <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1 mb-2">
                                 <User className="h-3 w-3" />
                                 <span>
-                                  {modo === 'personal' && rotina.professor_id === user?.id
+                                  {modo === 'professor' && rotina.professor_id === user?.id
                                     ? 'Criada por você'
                                     : `Criada por ${rotina.professores.nome_completo}`}
                                 </span>
@@ -880,7 +880,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
           </TabsContent>
 
           {/* ✅ NOVA ABA: Rascunho */}
-          {modo === 'personal' && (
+          {modo === 'professor' && (
             <TabsContent value="rascunho" className="space-y-4">
               <Card>
                 <CardHeader>
@@ -899,7 +899,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-4 pb-20 md:pb-0">
                       {rotinasRascunho.map((rotina) => (
                         <Card key={rotina.id}>
                           <CardContent className="p-4 flex items-center justify-between">
@@ -959,7 +959,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-4 pb-20 md:pb-0">
                     {rotinasArquivadas.map((rotina) => (
                       <div key={rotina.id} className="border rounded-lg p-4 md:p-6 hover:bg-muted/50 transition-colors">
                         {/* Header da rotina com título e badge de conclusão */}
@@ -1170,7 +1170,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
 </Modal>
 
       {/* Botão Flutuante para Nova Rotina (Apenas para Personal) */}
-      {modo === 'personal' && activeTab === 'atual' && (
+      {modo === 'professor' && activeTab === 'atual' && (
         <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
           {/* Mobile: Round floating button */}
           <Button onClick={handleNovaRotinaClick}

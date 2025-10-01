@@ -20,7 +20,7 @@ interface SessaoParaLista {
   data_execucao: string;
   sessao_numero: number;
   status: string;
-  modo_execucao: 'pt' | 'aluno' | null;
+  modo_execucao: 'professor' | 'aluno' | null;
   treinos: {
     nome: string;
   };
@@ -38,9 +38,6 @@ export default function ExecucaoSelecionarTreino() {
   const [aluno, setAluno] = useState<AlunoData | null>(null);
   const [ultimaSessao, setUltimaSessao] = useState<UltimaSessao | null>(null);
   const [sessoes, setSessoes] = useState<SessaoParaLista[]>([]);
-
-  // ✅ MODO DE EXECUÇÃO (aluno ou pt)
-  const modo = location.state?.modo || 'aluno';
 
   // ✅ FUNÇÕES UTILITÁRIAS MIGRADAS
   const calcularDiasDesde = useCallback((dataStr: string): number => {
@@ -82,7 +79,7 @@ export default function ExecucaoSelecionarTreino() {
         dias_desde_execucao: calcularDiasDesde(ultimaExecucao.data_execucao),
         sessao_numero: ultimaExecucao.sessao_numero,
         status: ultimaExecucao.status,
-        modo_execucao: ultimaExecucao.modo_execucao as 'pt' | 'aluno' | null,
+        modo_execucao: ultimaExecucao.modo_execucao as 'professor' | 'aluno' | null,
       };
       setUltimaSessao(ultimaSessaoData);
       return ultimaSessaoData.treino_nome;
@@ -236,10 +233,10 @@ export default function ExecucaoSelecionarTreino() {
     }
   };
 
-  const ModoExecucaoBadge = ({ modo }: { modo: 'pt' | 'aluno' | null }) => {
+  const ModoExecucaoBadge = ({ modo }: { modo: 'professor' | 'aluno' | null }) => {
     if (!modo) return null;
   
-    const isAssistido = modo === 'pt';
+    const isAssistido = modo === 'professor';
     const Icon = isAssistido ? Shield : User;
     const text = isAssistido ? 'Modo Assistido' : 'Modo Aluno';
     const colorClasses = 'bg-slate-200 text-slate-800 border-slate-300';
@@ -292,9 +289,9 @@ export default function ExecucaoSelecionarTreino() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => navigate(modo === 'personal' ? `/alunos-rotinas/${rotina.aluno_id}` : '/minhas-rotinas')}
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate(-1)}
               className="text-primary hover:text-primary/80"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -352,63 +349,65 @@ export default function ExecucaoSelecionarTreino() {
             <span>Sessões de Treino</span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {sessoes.map((sessao) => {
-            const statusInfo = getStatusBadge(sessao.status, sessao.data_execucao);
-            const isConcluida = sessao.status === 'concluida';
-            const isPausada = sessao.status === 'pausada';
-            return (
-              <Card
-                key={sessao.id}
-                className={`transition-all duration-200 ${isConcluida ? 'bg-muted/50' : 'hover:bg-accent'}`}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">
-                        Sessão {sessao.sessao_numero}/{sessoes.length}
-                      </p>
-                      <h3 className={`text-lg font-semibold ${isConcluida ? 'text-muted-foreground' : 'text-foreground'}`}>
-                        {sessao.treinos.nome}
-                      </h3>
-                      {isConcluida || isPausada ? (
-                        <div className="flex flex-col items-start gap-1.5 pt-1">
-                          <ModoExecucaoBadge modo={sessao.modo_execucao} />
-                          <Badge className={statusInfo.cor}>{statusInfo.texto}</Badge>
-                        </div>
-                      ) : (
-                        <div className="pt-1">
-                          <Badge className={statusInfo.cor}>{statusInfo.texto}</Badge>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="ml-4">
-                      <Button
-                        size={isDesktop ? "sm" : "icon"}
-                        onClick={() => handleIniciarSessao(sessao)}
-                        disabled={isConcluida}
-                        className={`${isConcluida ? 'bg-muted text-muted-foreground' : ''} ${!isDesktop ? 'rounded-full' : ''}`}
-                        aria-label={sessao.status === 'em_andamento' || sessao.status === 'pausada' ? 'Continuar' : 'Treinar'}
-                      >
-                        {isDesktop ? (
-                          <>
-                            {sessao.status === 'em_andamento' || sessao.status === 'pausada' ? 'Continuar' : 'Treinar'}
-                            {!isConcluida && <Play className="h-4 w-4 ml-2" />}
-                            {isConcluida && <CheckCircle className="h-4 w-4 ml-2" />}
-                          </>
+        <CardContent>
+          <div className="space-y-4 pb-20 md:pb-0">
+            {sessoes.map((sessao) => {
+              const statusInfo = getStatusBadge(sessao.status, sessao.data_execucao);
+              const isConcluida = sessao.status === 'concluida';
+              const isPausada = sessao.status === 'pausada';
+              return (
+                <Card
+                  key={sessao.id}
+                  className={`transition-all duration-200 ${isConcluida ? 'bg-muted/50' : 'hover:bg-accent'}`}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex-1 space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground">
+                          Sessão {sessao.sessao_numero}/{sessoes.length}
+                        </p>
+                        <h3 className={`text-lg font-semibold ${isConcluida ? 'text-muted-foreground' : 'text-foreground'}`}>
+                          {sessao.treinos.nome}
+                        </h3>
+                        {isConcluida || isPausada ? (
+                          <div className="flex flex-col items-start gap-1.5 pt-1">
+                            <ModoExecucaoBadge modo={sessao.modo_execucao} />
+                            <Badge className={statusInfo.cor}>{statusInfo.texto}</Badge>
+                          </div>
                         ) : (
-                          isConcluida 
-                            ? <CheckCircle className="h-5 w-5" /> 
-                            : <Play className="h-5 w-5" />
+                          <div className="pt-1">
+                            <Badge className={statusInfo.cor}>{statusInfo.texto}</Badge>
+                          </div>
                         )}
-                      </Button>
+                      </div>
+
+                      <div className="ml-4">
+                        <Button
+                          size={isDesktop ? "sm" : "icon"}
+                          onClick={() => handleIniciarSessao(sessao)}
+                          disabled={isConcluida}
+                          className={`${isConcluida ? 'bg-muted text-muted-foreground' : ''} ${!isDesktop ? 'rounded-full' : ''}`}
+                          aria-label={sessao.status === 'em_andamento' || sessao.status === 'pausada' ? 'Continuar' : 'Treinar'}
+                        >
+                          {isDesktop ? (
+                            <>
+                              {sessao.status === 'em_andamento' || sessao.status === 'pausada' ? 'Continuar' : 'Treinar'}
+                              {!isConcluida && <Play className="h-4 w-4 ml-2" />}
+                              {isConcluida && <CheckCircle className="h-4 w-4 ml-2" />}
+                            </>
+                          ) : (
+                            isConcluida 
+                              ? <CheckCircle className="h-5 w-5" /> 
+                              : <Play className="h-5 w-5" />
+                          )}
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
     </div>

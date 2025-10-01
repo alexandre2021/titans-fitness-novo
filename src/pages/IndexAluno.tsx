@@ -33,7 +33,7 @@ interface UltimaAtividade {
   data_execucao: string;
   status: string;
   sessao_numero: number;
-  modo_execucao?: 'pt' | 'aluno' | null;
+  modo_execucao?: 'professor' | 'aluno' | null;
 }
 
 interface CustomizedLabelProps {
@@ -59,10 +59,10 @@ const IndexAluno = () => {
   const [professor, setprofessor] = useState<professor | null>(null);
   const [stats, setStats] = useState({ rotinas: 0, avaliacoes: 0 });
 
-  const ModoExecucaoBadge = ({ modo }: { modo: 'pt' | 'aluno' | null }) => {
+  const ModoExecucaoBadge = ({ modo }: { modo: 'professor' | 'aluno' | null }) => {
     if (!modo) return null;
   
-    const isAssistido = modo === 'pt';
+    const isAssistido = modo === 'professor';
     const Icon = isAssistido ? Shield : User;
     const text = isAssistido ? 'Modo Assistido' : 'Modo Aluno';
     const colorClasses = 'bg-slate-200 text-slate-800 border-slate-300';
@@ -176,7 +176,7 @@ const IndexAluno = () => {
                 data_execucao: ultimaAtividadeSessao.data_execucao,
                 status: ultimaAtividadeSessao.status,
                 sessao_numero: ultimaAtividadeSessao.sessao_numero,
-                modo_execucao: ultimaAtividadeSessao.modo_execucao as 'pt' | 'aluno' | null,
+                modo_execucao: ultimaAtividadeSessao.modo_execucao as 'professor' | 'aluno' | null,
               });
             }
 

@@ -1,1 +1,4 @@
 project_id = "prvfvlyzfyprjliqniki"
+
+[db]
+major_version = 15

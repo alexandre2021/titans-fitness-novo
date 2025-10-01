@@ -4,8 +4,8 @@
 // Ela serve para agrupar links de navegação adicionais que não cabem no menu principal.
 import React, { useState, useEffect } from 'react';
 import { useAuth } from "@/hooks/useAuth";
-import { Link } from 'react-router-dom';
-import { ChevronRight, Newspaper, BookCopy, SquarePen } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ChevronRight, Newspaper, BookCopy, SquarePen, Home, User, Settings, LogOut } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const Mais = () => {
@@ -13,6 +13,7 @@ const Mais = () => {
   const [userType, setUserType] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const navigate = useNavigate();
   useEffect(() => {
     const determineUserType = async () => {
       if (authLoading) return;
@@ -42,20 +43,20 @@ const Mais = () => {
 
   const baseProfessorLinks = [
     { href: "/meus-modelos", label: "Meus Modelos", icon: BookCopy },
-    { href: "/", label: "Nosso Conteúdo", icon: Newspaper },
+    { href: "/", label: "Home", icon: Home },
   ];
 
   if (user?.email === 'contato@titans.fitness') {
     baseProfessorLinks.push({ href: "/meus-posts", label: "Meus Posts", icon: SquarePen });
   }
-
+  
   const professorLinks = baseProfessorLinks;
 
   const alunoLinks = [
-    { href: '/', label: 'Comunidade', icon: Newspaper },
+    { href: '/', label: 'Home', icon: Home },
   ];
 
-  const links = userType === 'professor' ? professorLinks : alunoLinks;
+  const links = userType === 'professor' ? professorLinks : userType === 'aluno' ? alunoLinks : [];
 
   if (loading || authLoading) {
     return (

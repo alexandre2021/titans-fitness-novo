@@ -1,12 +1,12 @@
 import { NavLink } from "react-router-dom";
-import { Home, Dumbbell, BarChart3, MoreHorizontal } from "lucide-react";
+import { LayoutDashboard, Dumbbell, BarChart3, MoreHorizontal } from "lucide-react";
 
 const AlunoBottomNav = () => {
   const navigationItems = [
     {
-      title: "Inicial",
+      title: "Painel",
       href: "/index-aluno",
-      icon: Home,
+      icon: LayoutDashboard,
     },
     {
       title: "Rotinas",

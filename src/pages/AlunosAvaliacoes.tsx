@@ -405,7 +405,7 @@ const AlunosAvaliacoes = () => {
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4 pb-20 md:pb-0">
               {avaliacoes.map((avaliacao) => {
                 const imcClass = getIMCClassification(avaliacao.imc);
                 return (

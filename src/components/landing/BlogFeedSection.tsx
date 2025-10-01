@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Utensils, Dumbbell, HeartPulse, BrainCircuit, Zap, Stethoscope, FlaskConical, TrendingUp, ShieldCheck, Search } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -42,6 +42,7 @@ const BlogFeedSection = () => {
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [currentPage, setCurrentPage] = useState(1);
   const postsPerPage = 8;
+  const location = useLocation();
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -78,7 +79,7 @@ const BlogFeedSection = () => {
     };
 
     void fetchPosts();
-  }, []);
+  }, [location.pathname]);
 
   const filteredPosts = posts.filter(post => {
     const matchesCategory = selectedCategory === 'Todos' || post.category === selectedCategory;

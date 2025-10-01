@@ -1,7 +1,7 @@
 // ExecucaoExecutarTreino.tsx - VERSÃO CORRIGIDA SEM MODAIS DUPLICADAS
 
 import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
-import { useParams, useNavigate, useBlocker } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
@@ -38,15 +38,16 @@ interface AlunoSupabase {
 export default function ExecucaoExecutarTreino() {
   const { sessaoId } = useParams<{ sessaoId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // ESTADOS
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [sessaoData, setSessaoData] = useState<SessaoData | null>(null);
-  const [modoExecucao, setModoExecucao] = useState<'pt' | 'aluno' | null>(null);
+  const [modoExecucao, setModoExecucao] = useState<'professor' | 'aluno' | null>(null);
   const [showPauseDialog, setShowPauseDialog] = useState(false);
-  const [shouldBlock, setShouldBlock] = useState(false);
   const hasNavigated = useRef(false);
+  const tempoSessaoRef = useRef(0); // ✅ NOVO: Ref para armazenar o tempo atual
 
   const shallowCompareSessao = useCallback((a: SessaoData | null, b: SessaoData | null): boolean => {
     if (!a || !b) return false;
@@ -86,7 +87,7 @@ export default function ExecucaoExecutarTreino() {
     };
   }, [sessaoData]);
 
-  const determinarModoExecucao = useCallback(async (userId: string, sessao: SessaoData): Promise<'pt' | 'aluno' | null> => {
+  const determinarModoExecucao = useCallback(async (userId: string, sessao: SessaoData): Promise<'professor' | 'aluno' | null> => {
     try {
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
@@ -116,7 +117,7 @@ export default function ExecucaoExecutarTreino() {
           id: ptData.id,
           nome_completo: ptData.nome_completo
         });
-        return 'pt';
+        return 'professor';
       } 
       
       else if (user_type === 'aluno') {
@@ -320,70 +321,44 @@ export default function ExecucaoExecutarTreino() {
     }
   }, [userProfile, sessaoData, navigate]);
 
-  // ✅ SOLUÇÃO UNIFICADA: handleSessaoPausada apenas dispara navegação
-  const handleSessaoPausada = useCallback(() => {
-    if (hasNavigated.current) return;
-    
-    console.log('⏸️ Botão pausar clicado - disparando navegação que será interceptada');
-    
-    // Simplesmente dispara a navegação - o blocker vai interceptar e mostrar a modal
-    // ✅ CORREÇÃO: Mudar para navigate(-1) para simular o botão "voltar" do navegador
-    // e unificar os dois fluxos de pausa.
-    navigate(-1);
-  }, [navigate, hasNavigated]);
-
-  // Gerenciamento do bloqueio
+  // ✅ EFEITO PARA INTERCEPTAR O BOTÃO "VOLTAR" DO NAVEGADOR
   useEffect(() => {
-    const status = sessaoData?.status;
-    const shouldBlockValue = status === 'em_andamento' || status === 'em_aberto';
-    console.log('🔒 Status da sessão:', status, '| Deve bloquear:', shouldBlockValue);
-    setShouldBlock(shouldBlockValue);
-  }, [sessaoData]);
-
-  // ✅ BLOCKER SIMPLIFICADO: Remove lógica do pausedByExecutor
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => {
-    const shouldBlockNavigation = shouldBlock && !hasNavigated.current;
-    console.log('🚫 Tentativa de navegação - shouldBlock:', shouldBlock, 'hasNavigated:', hasNavigated.current);
-    return shouldBlockNavigation;
-  });
-
-  useEffect(() => {
-    console.log('📊 Blocker state:', blocker.state);
-    if (blocker.state === 'blocked' && !showPauseDialog) {
-      console.log('🛑 Navegação bloqueada pelo botão voltar, mostrando modal');
-      setShowPauseDialog(true);
-    }
-  }, [blocker.state, showPauseDialog]);
-
-  // Fallback para fechar aba/janela
-  useEffect(() => {
-    if (!shouldBlock) return;
-
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasNavigated.current) return;
+    const handlePopState = (event: PopStateEvent) => {
+      const isExecuting = sessaoData?.status === 'em_andamento' || sessaoData?.status === 'em_aberto';
       
-      console.log('⚠️ Tentativa de sair da página detectada');
-      e.preventDefault();
-      e.returnValue = 'Você tem uma sessão de treino em andamento. Tem certeza que deseja sair?';
-      return e.returnValue;
+      if (isExecuting && !hasNavigated.current) {
+        console.log('🛑 Navegação "voltar" interceptada.');
+        // Impede a navegação padrão do navegador
+        history.pushState(null, '', location.pathname);
+        // Mostra o nosso modal de confirmação
+        setShowPauseDialog(true);
+      }
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [shouldBlock]);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [location.pathname, sessaoData, hasNavigated]);
+
+  // Função para ser chamada pelo botão de Pausa no Executor
+  const handleShowPauseDialog = () => {
+    const isExecuting = sessaoData?.status === 'em_andamento' || sessaoData?.status === 'em_aberto';
+    if (isExecuting) {
+      console.log('⏸️ Botão de pausa clicado, mostrando modal.');
+      setShowPauseDialog(true);
+    }
+  };
 
   useEffect(() => {
     loadSessionData();
   }, [loadSessionData]);
 
-  // ✅ MODAL ÚNICA - Também desativa blocker antes de navegar
   const handleConfirmPauseAndExit = useCallback(async () => {
-    console.log('✅ Confirmando pausa e saída via botão voltar');
+    console.log('✅ Confirmando pausa e saída.');
     
     try {
-      // DESATIVAR O BLOQUEADOR PRIMEIRO
-      setShouldBlock(false);
-      
       // Limpar sessionStorage
       sessionStorage.removeItem('rotina_em_criacao');
       
@@ -392,12 +367,14 @@ export default function ExecucaoExecutarTreino() {
           .from('execucoes_sessao')
           .update({ 
             status: 'pausada',
-            data_execucao: new Date().toISOString().split('T')[0]
+          data_execucao: new Date().toISOString().split('T')[0],
+          tempo_decorrido: tempoSessaoRef.current // ✅ Garante que o tempo está sendo salvo
           })
           .eq('id', sessaoData.id);
 
         if (error) {
           console.error('Erro ao pausar sessão:', error);
+          // ✅ CORREÇÃO: Usar toast ao invés de sonnerToast
           toast.error("Erro", {
             description: "Erro ao pausar a sessão. Tente novamente."
           })
@@ -408,27 +385,20 @@ export default function ExecucaoExecutarTreino() {
       setShowPauseDialog(false);
       hasNavigated.current = true;
 
-      // Aguardar para garantir que o blocker seja desativado
-      await new Promise(resolve => setTimeout(resolve, 50));
-
-      if (blocker.state === 'blocked') {
-        blocker.proceed();
-      }
+      // Navega para a página anterior de forma direta
+      navigate(-1);
     } catch (error) {
       console.error('Erro ao confirmar pausa:', error);
       toast.error("Erro", {
         description: "Erro ao processar solicitação. Tente novamente.",
-      })
+      });
     }
-  }, [blocker, sessaoData]);
+  }, [sessaoData, navigate]);
 
   const handleCancelPauseDialog = useCallback(() => {
-    console.log('❌ Cancelando saída via botão voltar');
+    console.log('❌ Cancelando saída.');
     setShowPauseDialog(false);
-    if (blocker.state === 'blocked') {
-      blocker.reset?.();
-    }
-  }, [blocker]);
+  }, []);
 
   if (loading) {
     return (
@@ -475,7 +445,8 @@ export default function ExecucaoExecutarTreino() {
         userProfile={userProfile}
         modoExecucao={modoExecucao}
         onSessaoFinalizada={handleSessaoFinalizada}
-        onSessaoPausada={handleSessaoPausada}
+        onShowPauseDialog={handleShowPauseDialog} // Passa a função para abrir o modal
+        onTimeUpdate={(time) => (tempoSessaoRef.current = time)} // ✅ Recebe o tempo atualizado
       />
 
       {/* ✅ MODAL ÚNICA - Apenas para botão "voltar" do navegador */}

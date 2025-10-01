@@ -29,7 +29,7 @@ const AlunoMobileHeader = () => {
     // Páginas Principais (sem botão de voltar)
     switch (path) {
       case "/index-aluno":
-        return { title: "Inicial", showBackButton: false };
+        return { title: "Painel", showBackButton: false };
       case "/minhas-rotinas":
         return { title: "Minhas Rotinas", showBackButton: false };
       case "/avaliacoes-aluno":

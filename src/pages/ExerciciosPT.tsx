@@ -330,7 +330,7 @@ const ExerciciosPT = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 pb-20 md:pb-0">
               {exerciciosFiltrados.map((exercicio) => {
                 const corGrupo = exercicio.grupo_muscular ? GRUPO_CORES[exercicio.grupo_muscular] || 'bg-gray-100 text-black' : 'bg-gray-100 text-black';
                 return (
@@ -493,7 +493,7 @@ const ExerciciosPT = () => {
                     </p>
                   </CardContent>
                 </Card>
-              ) : (
+            ) : (
                 <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                   {exerciciosFiltrados.map((exercicio) => {
                     const corGrupo = exercicio.grupo_muscular ? GRUPO_CORES[exercicio.grupo_muscular] || 'bg-gray-100 text-black' : 'bg-gray-100 text-black';

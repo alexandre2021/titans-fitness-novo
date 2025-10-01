@@ -27,13 +27,13 @@ const LandingHeader = () => {
         </Link>
         <div className="flex items-center gap-2 md:gap-4">
           {location.pathname === "/" && (
-            <Link to="/aplicativo">
-              <Button variant="ghost">Nosso Aplicativo</Button>
+            <Link to="/funcionalidades">
+              <Button variant="ghost">Funcionalidades</Button>
             </Link>
           )}
-          {location.pathname.startsWith("/aplicativo") && (
+          {location.pathname.startsWith("/funcionalidades") && (
             <Link to="/">
-              <Button variant="ghost">Comunidade</Button>
+              <Button variant="ghost">Home</Button>
             </Link>
           )}
           <LoginRedirectButton />

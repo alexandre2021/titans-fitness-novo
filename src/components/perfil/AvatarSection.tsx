@@ -56,9 +56,19 @@ const ImageCropDialog: React.FC<ImageCropDialogProps> = ({
         <Button variant="ghost" size="icon" onClick={onClose} disabled={isUploading}><X className="h-4 w-4" /></Button>
       </div>
       <div className="p-4 overflow-y-auto">
-        <div className="relative h-64 md:h-80 w-full bg-white">
-          <Cropper image={imageSrc} crop={crop} zoom={zoom} aspect={1} onCropChange={setCrop} onZoomChange={setZoom} onCropComplete={onCropComplete} cropShape="round" showGrid={false} />
-        </div>
+        <Cropper
+          image={imageSrc}
+          crop={crop}
+          zoom={zoom}
+          aspect={1}
+          onCropChange={setCrop}
+          onZoomChange={setZoom}
+          onCropComplete={onCropComplete}
+          cropShape="round"
+          showGrid={false}
+          classes={{ containerClassName: 'bg-white h-64 md:h-80 w-full' }}
+          style={{ containerStyle: { backgroundColor: 'white' }, mediaStyle: { backgroundColor: 'white' } }}
+        />
         <div className="space-y-2 pt-4">
           <label className="text-sm font-medium">Zoom</label>
           <Slider value={[zoom]} min={1} max={3} step={0.1} onValueChange={(value) => setZoom(value[0])} />

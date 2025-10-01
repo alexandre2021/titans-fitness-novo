@@ -194,7 +194,7 @@ const AlunosParQ = () => {
             Respostas do Questionário
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent>
           {perguntasParQ.map((pergunta, index) => {
             const questaoKey = `questao_${index + 1}`;
             let resposta: boolean | null | undefined = null;
@@ -204,7 +204,7 @@ const AlunosParQ = () => {
             }
 
             return (
-              <div key={index} className="border-b border-border/50 pb-4 last:border-b-0 last:pb-0">
+              <div key={index} className="border-b border-border/50 pb-4 last:border-b-0 last:pb-0 mb-6 last:mb-0">
                 <div className="space-y-3">
                   <p className="text-sm font-medium leading-relaxed">
                     <span className="text-primary font-semibold">{index + 1}.</span> {pergunta}
@@ -225,6 +225,9 @@ const AlunosParQ = () => {
               da prontidão do aluno para atividade física.
             </p>
           </div>
+
+          {/* Espaçador para botões flutuantes no mobile */}
+          <div className="h-20 md:hidden" />
         </CardContent>
       </Card>
     </div>

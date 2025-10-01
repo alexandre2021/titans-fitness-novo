@@ -460,6 +460,52 @@ Este documento descreve a estrutura completa das tabelas do banco de dados no no
 
 ---
 
+## 2. Tabelas do Sistema de Mensagens ⭐ NOVA SEÇÃO
+
+### Tabela: `public.conversas`
+**Descrição**: Representa uma conversa entre dois ou mais usuários.
+
+| Coluna | Posição | Tipo de Dado | Nulável | Padrão | Tipo de Restrição | Nome da Restrição | Chave Estrangeira |
+|---|---|---|---|---|---|---|---|
+| `id` | 1 | `uuid` | False | `gen_random_uuid()` | `PRIMARY KEY` | `conversas_pkey` | |
+| `created_at` | 2 | `timestamp with time zone` | False | `now()` | | | |
+| `updated_at` | 3 | `timestamp with time zone` | False | `now()` | | | |
+| `last_message_id` | 4 | `uuid` | True | | `FOREIGN KEY` | `conversas_last_message_id_fkey` | `public.mensagens(id)` |
+
+**Nota**: `last_message_id` é usado para facilmente buscar a última mensagem para a lista de conversas.
+
+---
+
+### Tabela: `public.participantes_conversa`
+**Descrição**: Tabela de junção que associa usuários a conversas.
+
+| Coluna | Posição | Tipo de Dado | Nulável | Padrão | Tipo de Restrição | Nome da Restrição | Chave Estrangeira |
+|---|---|---|---|---|---|---|---|
+| `conversa_id` | 1 | `uuid` | False | | `PRIMARY KEY, FOREIGN KEY` | `participantes_conversa_pkey, fk_conversa` | `public.conversas(id)` |
+| `user_id` | 2 | `uuid` | False | | `PRIMARY KEY, FOREIGN KEY` | `participantes_conversa_pkey, fk_user` | `auth.users(id)` |
+| `joined_at` | 3 | `timestamp with time zone` | False | `now()` | | | |
+
+**Segurança (RLS)**: Ativada para garantir que um usuário só possa ver as conversas das quais participa.
+
+---
+
+### Tabela: `public.mensagens`
+**Descrição**: Armazena cada mensagem individual de uma conversa.
+
+| Coluna | Posição | Tipo de Dado | Nulável | Padrão | Tipo de Restrição | Nome da Restrição | Chave Estrangeira |
+|---|---|---|---|---|---|---|---|
+| `id` | 1 | `uuid` | False | `gen_random_uuid()` | `PRIMARY KEY` | `mensagens_pkey` | |
+| `conversa_id` | 2 | `uuid` | False | | `FOREIGN KEY` | `mensagens_conversa_id_fkey` | `public.conversas(id)` |
+| `remetente_id` | 3 | `uuid` | False | | `FOREIGN KEY` | `mensagens_remetente_id_fkey` | `auth.users(id)` |
+| `conteudo` | 4 | `text` | False | | `CHECK` | `conteudo_not_empty` | |
+| `created_at` | 5 | `timestamp with time zone` | False | `now()` | | | |
+| `lida_em` | 6 | `timestamp with time zone` | True | | | | |
+
+**Segurança (RLS)**: Ativada. Um usuário pode ler mensagens de uma conversa da qual participa e só pode criar mensagens como ele mesmo.
+**Realtime**: Habilitado para esta tabela.
+
+---
+
 ## Continuação - Regras de Negócio Atualizadas
 
 ### Sistema de "Seguir"

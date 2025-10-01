@@ -29,9 +29,10 @@ interface Props {
   sessaoId: string;
   sessaoData: SessaoData; // ✅ Recebe sessaoData como prop
   userProfile: UserProfile;
-  modoExecucao: 'pt' | 'aluno';
+  modoExecucao: 'professor' | 'aluno';
   onSessaoFinalizada: () => void;
-  onSessaoPausada: () => void;
+  onShowPauseDialog: () => void; // Novo callback para mostrar o modal
+  onTimeUpdate: (time: number) => void; // Novo callback para enviar o tempo atual
 }
 export const Executor = ({ 
   sessaoId, 
@@ -39,7 +40,8 @@ export const Executor = ({
   userProfile, 
   modoExecucao,
   onSessaoFinalizada,
-  onSessaoPausada
+  onShowPauseDialog,
+  onTimeUpdate,
 }: Props) => {
   const navigate = useNavigate();
   
@@ -90,7 +92,13 @@ export const Executor = ({
     pausarSessao,
     salvarExecucaoCompleta,
   } = useExercicioExecucao(sessaoData, modoExecucao, cronometroPausado, navigate);
-
+  
+  // ✅ NOVO: Efeito para notificar a página pai sobre a atualização do tempo
+  useEffect(() => {
+    if (onTimeUpdate) {
+      onTimeUpdate(tempoSessao);
+    }
+  }, [tempoSessao, onTimeUpdate]);
   // 🔥 DEBUG: Log dos exercícios sempre que mudarem
   useEffect(() => {
     console.log('🔥 DEBUG - EXERCÍCIOS ATUALIZADOS:', exercicios);
@@ -136,7 +144,7 @@ export const Executor = ({
   const loading = exerciciosLoading || lookupLoading;
 
   // ✅ Botão principal (pausar/continuar)
-  const handleBotaoPrincipal = useCallback(() => {
+  const handleBotaoPrincipal = () => {
     if (sessaoPausada || cronometroPausado) {
       // Continuar: resetar estados locais
       console.log('▶️ Continuando execução local...');
@@ -145,9 +153,9 @@ export const Executor = ({
     } else {
       // ✅ CHAMADA DIRETA - sem modal local
       console.log('⏸️ Pausando via callback...');
-      onSessaoPausada(); // Chama diretamente
+      onShowPauseDialog(); // Chama o novo callback para abrir o modal
     }
-  }, [sessaoPausada, cronometroPausado, onSessaoPausada]);
+  };
 
   // ✅ FUNÇÃO SIMPLIFICADA - finalizarSessao (igual ao PT)
   const finalizarSessao = useCallback(async () => {
@@ -293,7 +301,7 @@ export const Executor = ({
               <h1 className="text-2xl font-bold text-foreground">
                 {sessaoData?.treinos?.nome || sessaoData?.rotinas?.nome || 'Treino'}
               </h1>
-              {modoExecucao === 'pt' ? (
+              {modoExecucao === 'professor' ? (
                 sessaoData?.alunos?.nome_completo && (
                   <p className="text-muted-foreground mt-1">
                     {sessaoData.alunos.nome_completo}

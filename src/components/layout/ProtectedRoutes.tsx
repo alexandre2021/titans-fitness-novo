@@ -1,17 +1,32 @@
 // src/components/layout/ProtectedRoutes.tsx
-import React, { useState, useEffect } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { Outlet, useLocation } from "react-router-dom";
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useMediaQuery } from '@/hooks/use-media-query';
+import { useConversas } from '@/hooks/useConversas'; // ✅ ADICIONE
 
 // Import all layout components
-import AlunoSidebar from './AlunoSidebar';
-import PTSidebar from './PTSidebar';
-import AlunoMobileHeader from './AlunoMobileHeader';
-import PTMobileHeader from './PTMobileHeader';
-import AlunoBottomNav from './AlunoBottomNav';
-import PTBottomNav from './PTBottomNav';
+import AlunoSidebar from "./AlunoSidebar";
+import PTSidebar from "./PTSidebar";
+import AlunoMobileHeader from "./AlunoMobileHeader";
+import PTMobileHeader from "./PTMobileHeader";
+import AlunoBottomNav from "./AlunoBottomNav";
+import PTBottomNav from "./PTBottomNav";
+import MessagesButton from "../messages/MessageButton";
+import MessagesDrawer from "../messages/MessageDrawer";
+
+const useMessageDrawer = () => {
+  const [isOpen, setOpen] = useState(false);
+  const { refetchConversas } = useConversas();
+
+  const handleClose = () => {
+    setOpen(false);
+    refetchConversas(); // ✅ Recarrega as conversas ao fechar
+  };
+
+  return { isOpen, setOpen, handleClose };
+};
 
 const ProtectedRoutes = () => {
   const { user, loading: authLoading } = useAuth();
@@ -19,6 +34,14 @@ const ProtectedRoutes = () => {
   const [loading, setLoading] = useState(true);
   const location = useLocation();
   const isMobile = useMediaQuery("(max-width: 767px)");
+  const { unreadCount, refetchConversas } = useConversas(); // ✅ ADICIONE
+
+  const [isMessagesDrawerOpen, setMessagesDrawerOpen] = useState(false); // ✅ ADICIONE
+
+  const handleDrawerClose = () => {
+    setMessagesDrawerOpen(false);
+    refetchConversas(); // ✅ Recarrega as conversas ao fechar
+  };
 
   useEffect(() => {
     const determineUserType = async () => {
@@ -30,10 +53,8 @@ const ProtectedRoutes = () => {
         return;
       }
 
-      // 1. Tenta pegar o tipo do user_metadata (mais rápido)
       let type = user.user_metadata?.user_type;
 
-      // 2. Se não encontrar, busca no banco de dados (fonte da verdade)
       if (!type) {
         console.warn('Tipo de usuário não encontrado nos metadados. Buscando no banco de dados como fallback.');
         try {
@@ -45,7 +66,6 @@ const ProtectedRoutes = () => {
           
           type = profile?.user_type;
 
-          // 3. Se ainda não encontrar, força um refresh da sessão para pegar o JWT mais recente
           if (!type) {
             console.warn('Tipo de usuário não encontrado no banco de dados. Forçando atualização da sessão.');
             const { data: { session } } = await supabase.auth.refreshSession();
@@ -72,7 +92,6 @@ const ProtectedRoutes = () => {
   }
 
   if (!user) {
-    // O AuthGuard já deve ter redirecionado, mas isso é uma segurança extra.
     return null;
   }
 
@@ -96,21 +115,30 @@ const ProtectedRoutes = () => {
       BottomNav = PTBottomNav;
       break;
     default:
-      // Fallback para tipo de usuário desconhecido ou durante o onboarding
-      // O AuthGuard já deve ter redirecionado, mas isso é uma segurança extra.
-      // Renderiza apenas o conteúdo da página (ex: onboarding)
       return <Outlet />;
   }
 
   if (isMobile) {
     return (
       <div className="min-h-screen bg-background">
-        {/* Oculta o header apenas no modo de foco */}
-        {!isFocusedMode && <MobileHeader />}
+        {!isFocusedMode && (
+          <>
+            <MobileHeader />
+            <MessagesButton 
+              onClick={() => setMessagesDrawerOpen(true)} 
+              position="bottom-left"
+              unreadCount={unreadCount} // ✅ ADICIONE
+            />
+            <MessagesDrawer 
+              isOpen={isMessagesDrawerOpen} 
+              onClose={handleDrawerClose}
+              direction="left"
+            />
+          </>
+        )}
         <main className={`p-4 ${isFocusedMode ? 'pt-6' : 'pt-24 pb-16'}`}>
           <Outlet />
         </main>
-        {/* Oculta o BottomNav apenas no modo de foco */}
         {!isFocusedMode && <BottomNav />} 
       </div>
     );
@@ -118,9 +146,22 @@ const ProtectedRoutes = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* No desktop, a sidebar com o logo já é exibida. */}
-      {!isFocusedMode && <Sidebar />}
-      <main className={`flex-1 p-6 ${!isFocusedMode ? 'pl-72' : ''}`}>
+      {!isFocusedMode && (
+        <>
+          <Sidebar />
+          <MessagesButton 
+            onClick={() => setMessagesDrawerOpen(true)} 
+            position="top-right"
+            unreadCount={unreadCount} // ✅ ADICIONE
+          />
+          <MessagesDrawer 
+            isOpen={isMessagesDrawerOpen} 
+            onClose={handleDrawerClose}
+            direction="right"
+          />
+        </>
+      )}
+      <main className={`flex-1 p-6 ${!isFocusedMode ? 'pl-72' : ''} transition-all duration-300`}>
         <Outlet />
       </main>
     </div>

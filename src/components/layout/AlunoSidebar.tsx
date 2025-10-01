@@ -1,5 +1,5 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Home, Dumbbell, BarChart3, LogOut, User } from "lucide-react";
+import { LayoutDashboard, Dumbbell, BarChart3, LogOut, User, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,9 +20,9 @@ const AlunoSidebar = () => {
 
   const navigationItems = [
     {
-      title: "Inicial",
+      title: "Painel",
       href: "/index-aluno",
-      icon: Home,
+      icon: LayoutDashboard,
     },
     {
       title: "Rotinas",
@@ -33,6 +33,11 @@ const AlunoSidebar = () => {
       title: "Avaliações",
       href: "/avaliacoes-aluno",
       icon: BarChart3,
+    },
+    {
+      title: "Home",
+      href: "/",
+      icon: Home,
     },
   ];
 

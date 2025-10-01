@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -54,6 +54,7 @@ export type Database = {
           endereco: string | null
           genero: string | null
           id: string
+          last_warning_email_sent_at: string | null
           nome_completo: string
           onboarding_completo: boolean | null
           par_q_respostas: Json | null
@@ -78,6 +79,7 @@ export type Database = {
           endereco?: string | null
           genero?: string | null
           id: string
+          last_warning_email_sent_at?: string | null
           nome_completo: string
           onboarding_completo?: boolean | null
           par_q_respostas?: Json | null
@@ -102,6 +104,7 @@ export type Database = {
           endereco?: string | null
           genero?: string | null
           id?: string
+          last_warning_email_sent_at?: string | null
           nome_completo?: string
           onboarding_completo?: boolean | null
           par_q_respostas?: Json | null
@@ -124,17 +127,17 @@ export type Database = {
       alunos_professores: {
         Row: {
           aluno_id: string
-          created_at: string
+          data_seguindo: string | null
           professor_id: string
         }
         Insert: {
           aluno_id: string
-          created_at?: string
+          data_seguindo?: string | null
           professor_id: string
         }
         Update: {
           aluno_id?: string
-          created_at?: string
+          data_seguindo?: string | null
           professor_id?: string
         }
         Relationships: [
@@ -158,9 +161,13 @@ export type Database = {
         Row: {
           altura: number
           aluno_id: string | null
+          antebraco_direito: number | null
+          antebraco_esquerdo: number | null
           braco_direito: number | null
+          braco_esquerdo: number | null
           cintura: number | null
           coxa_direita: number | null
+          coxa_esquerda: number | null
           created_at: string | null
           data_avaliacao: string
           foto_costas_url: string | null
@@ -169,17 +176,24 @@ export type Database = {
           id: string
           imc: number
           observacoes: string | null
+          panturrilha_direita: number | null
+          panturrilha_esquerda: number | null
           peito_busto: number | null
           peso: number
+          professor_id: string | null
           quadril: number | null
           updated_at: string | null
         }
         Insert: {
           altura: number
           aluno_id?: string | null
+          antebraco_direito?: number | null
+          antebraco_esquerdo?: number | null
           braco_direito?: number | null
+          braco_esquerdo?: number | null
           cintura?: number | null
           coxa_direita?: number | null
+          coxa_esquerda?: number | null
           created_at?: string | null
           data_avaliacao: string
           foto_costas_url?: string | null
@@ -188,17 +202,24 @@ export type Database = {
           id?: string
           imc: number
           observacoes?: string | null
+          panturrilha_direita?: number | null
+          panturrilha_esquerda?: number | null
           peito_busto?: number | null
           peso: number
+          professor_id?: string | null
           quadril?: number | null
           updated_at?: string | null
         }
         Update: {
           altura?: number
           aluno_id?: string | null
+          antebraco_direito?: number | null
+          antebraco_esquerdo?: number | null
           braco_direito?: number | null
+          braco_esquerdo?: number | null
           cintura?: number | null
           coxa_direita?: number | null
+          coxa_esquerda?: number | null
           created_at?: string | null
           data_avaliacao?: string
           foto_costas_url?: string | null
@@ -207,8 +228,11 @@ export type Database = {
           id?: string
           imc?: number
           observacoes?: string | null
+          panturrilha_direita?: number | null
+          panturrilha_esquerda?: number | null
           peito_busto?: number | null
           peso?: number
+          professor_id?: string | null
           quadril?: number | null
           updated_at?: string | null
         }
@@ -221,6 +245,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "avaliacoes_fisicas_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "professores"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "fk_avaliacoes_alunos"
             columns: ["aluno_id"]
             isOneToOne: false
@@ -229,41 +260,73 @@ export type Database = {
           },
         ]
       }
+      conversas: {
+        Row: {
+          created_at: string
+          id: string
+          last_message_id: string | null
+          nome: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_message_id?: string | null
+          nome?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_message_id?: string | null
+          nome?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversas_last_message_id_fkey"
+            columns: ["last_message_id"]
+            isOneToOne: false
+            referencedRelation: "mensagens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       convites: {
         Row: {
-          id: string
-          professor_id: string
-          email_convidado: string
-          token_convite: string
-          tipo_convite: string
-          status: string | null
-          expires_at: string
           aceito_em: string | null
           created_at: string | null
+          email_convidado: string | null
+          expires_at: string
+          id: string
+          professor_id: string
+          status: string | null
+          tipo_convite: string
+          token_convite: string
           updated_at: string | null
         }
         Insert: {
-          id?: string
-          professor_id: string
-          email_convidado: string
-          token_convite?: string
-          tipo_convite: string
-          status?: string | null
-          expires_at?: string
           aceito_em?: string | null
           created_at?: string | null
+          email_convidado?: string | null
+          expires_at?: string
+          id?: string
+          professor_id: string
+          status?: string | null
+          tipo_convite: string
+          token_convite?: string
           updated_at?: string | null
         }
         Update: {
-          id?: string
-          professor_id?: string
-          email_convidado?: string
-          token_convite?: string
-          tipo_convite?: string
-          status?: string | null
-          expires_at?: string
           aceito_em?: string | null
           created_at?: string | null
+          email_convidado?: string | null
+          expires_at?: string
+          id?: string
+          professor_id?: string
+          status?: string | null
+          tipo_convite?: string
+          token_convite?: string
           updated_at?: string | null
         }
         Relationships: [
@@ -408,9 +471,11 @@ export type Database = {
           imagem_2_url: string | null
           instrucoes: string | null
           is_ativo: boolean | null
+          media_original_key: string | null
           nome: string
           professor_id: string | null
           slug: string | null
+          status_midia: string | null
           tipo: string | null
           video_url: string | null
           youtube_url: string | null
@@ -429,9 +494,11 @@ export type Database = {
           imagem_2_url?: string | null
           instrucoes?: string | null
           is_ativo?: boolean | null
+          media_original_key?: string | null
           nome: string
           professor_id?: string | null
           slug?: string | null
+          status_midia?: string | null
           tipo?: string | null
           video_url?: string | null
           youtube_url?: string | null
@@ -450,9 +517,11 @@ export type Database = {
           imagem_2_url?: string | null
           instrucoes?: string | null
           is_ativo?: boolean | null
+          media_original_key?: string | null
           nome?: string
           professor_id?: string | null
           slug?: string | null
+          status_midia?: string | null
           tipo?: string | null
           video_url?: string | null
           youtube_url?: string | null
@@ -463,13 +532,6 @@ export type Database = {
             columns: ["exercicio_padrao_id"]
             isOneToOne: false
             referencedRelation: "exercicios"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "exercicios_professor_id_fkey"
-            columns: ["professor_id"]
-            isOneToOne: false
-            referencedRelation: "professores"
             referencedColumns: ["id"]
           },
         ]
@@ -529,45 +591,73 @@ export type Database = {
           },
         ]
       }
-      modelos_exercicio: {
+      mensagens: {
         Row: {
+          conteudo: string
+          conversa_id: string
+          created_at: string
           id: string
-          modelo_treino_id: string
-          exercicio_1_id: string
-          exercicio_2_id: string | null
-          ordem: number
-          intervalo_apos_exercicio: number | null
-          created_at: string | null
-          updated_at: string | null
+          lida_em: string | null
+          remetente_id: string | null
         }
         Insert: {
+          conteudo: string
+          conversa_id: string
+          created_at?: string
           id?: string
-          modelo_treino_id: string
-          exercicio_1_id: string
-          exercicio_2_id?: string | null
-          ordem: number
-          intervalo_apos_exercicio?: number | null
-          created_at?: string | null
-          updated_at?: string | null
+          lida_em?: string | null
+          remetente_id?: string | null
         }
         Update: {
+          conteudo?: string
+          conversa_id?: string
+          created_at?: string
           id?: string
-          modelo_treino_id?: string
-          exercicio_1_id?: string
-          exercicio_2_id?: string | null
-          ordem?: number
-          intervalo_apos_exercicio?: number | null
-          created_at?: string | null
-          updated_at?: string | null
+          lida_em?: string | null
+          remetente_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "modelos_exercicio_modelo_treino_id_fkey"
-            columns: ["modelo_treino_id"]
+            foreignKeyName: "mensagens_conversa_id_fkey"
+            columns: ["conversa_id"]
             isOneToOne: false
-            referencedRelation: "modelos_treino"
+            referencedRelation: "conversas"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      modelos_exercicio: {
+        Row: {
+          created_at: string
+          exercicio_1_id: string
+          exercicio_2_id: string | null
+          id: string
+          intervalo_apos_exercicio: number | null
+          modelo_treino_id: string
+          observacoes: string | null
+          ordem: number
+        }
+        Insert: {
+          created_at?: string
+          exercicio_1_id: string
+          exercicio_2_id?: string | null
+          id?: string
+          intervalo_apos_exercicio?: number | null
+          modelo_treino_id: string
+          observacoes?: string | null
+          ordem: number
+        }
+        Update: {
+          created_at?: string
+          exercicio_1_id?: string
+          exercicio_2_id?: string | null
+          id?: string
+          intervalo_apos_exercicio?: number | null
+          modelo_treino_id?: string
+          observacoes?: string | null
+          ordem?: number
+        }
+        Relationships: [
           {
             foreignKeyName: "modelos_exercicio_exercicio_1_id_fkey"
             columns: ["exercicio_1_id"]
@@ -582,44 +672,54 @@ export type Database = {
             referencedRelation: "exercicios"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "modelos_exercicio_modelo_treino_id_fkey"
+            columns: ["modelo_treino_id"]
+            isOneToOne: false
+            referencedRelation: "modelos_treino"
+            referencedColumns: ["id"]
+          },
         ]
       }
       modelos_rotina: {
         Row: {
-          id: string
-          professor_id: string
-          nome: string
-          objetivo: string
+          created_at: string
+          descricao: string | null
           dificuldade: string
-          treinos_por_semana: number
           duracao_semanas: number
+          id: string
+          nome: string
+          objetivo: string | null
           observacoes_rotina: string | null
-          created_at: string | null
-          updated_at: string | null
+          professor_id: string
+          treinos_por_semana: number
+          updated_at: string
         }
         Insert: {
-          id?: string
-          professor_id: string
-          nome: string
-          objetivo: string
+          created_at?: string
+          descricao?: string | null
           dificuldade: string
-          treinos_por_semana: number
           duracao_semanas: number
+          id?: string
+          nome: string
+          objetivo?: string | null
           observacoes_rotina?: string | null
-          created_at?: string | null
-          updated_at?: string | null
+          professor_id: string
+          treinos_por_semana: number
+          updated_at?: string
         }
         Update: {
-          id?: string
-          professor_id?: string
-          nome?: string
-          objetivo?: string
+          created_at?: string
+          descricao?: string | null
           dificuldade?: string
-          treinos_por_semana?: number
           duracao_semanas?: number
+          id?: string
+          nome?: string
+          objetivo?: string | null
           observacoes_rotina?: string | null
-          created_at?: string | null
-          updated_at?: string | null
+          professor_id?: string
+          treinos_por_semana?: number
+          updated_at?: string
         }
         Relationships: [
           {
@@ -633,49 +733,52 @@ export type Database = {
       }
       modelos_serie: {
         Row: {
+          carga: number | null
+          carga_1: number | null
+          carga_2: number | null
+          carga_dropset: number | null
+          created_at: string
           id: string
+          intervalo_apos_serie: number | null
           modelo_exercicio_id: string
           numero_serie: number
+          observacoes: string | null
           repeticoes: number | null
-          carga: number | null
           repeticoes_1: number | null
-          carga_1: number | null
           repeticoes_2: number | null
-          carga_2: number | null
           tem_dropset: boolean | null
-          carga_dropset: number | null
-          intervalo_apos_serie: number | null
-          created_at: string | null
         }
         Insert: {
+          carga?: number | null
+          carga_1?: number | null
+          carga_2?: number | null
+          carga_dropset?: number | null
+          created_at?: string
           id?: string
+          intervalo_apos_serie?: number | null
           modelo_exercicio_id: string
           numero_serie: number
+          observacoes?: string | null
           repeticoes?: number | null
-          carga?: number | null
           repeticoes_1?: number | null
-          carga_1?: number | null
           repeticoes_2?: number | null
-          carga_2?: number | null
           tem_dropset?: boolean | null
-          carga_dropset?: number | null
-          intervalo_apos_serie?: number | null
-          created_at?: string | null
         }
         Update: {
+          carga?: number | null
+          carga_1?: number | null
+          carga_2?: number | null
+          carga_dropset?: number | null
+          created_at?: string
           id?: string
+          intervalo_apos_serie?: number | null
           modelo_exercicio_id?: string
           numero_serie?: number
+          observacoes?: string | null
           repeticoes?: number | null
-          carga?: number | null
           repeticoes_1?: number | null
-          carga_1?: number | null
           repeticoes_2?: number | null
-          carga_2?: number | null
           tem_dropset?: boolean | null
-          carga_dropset?: number | null
-          intervalo_apos_serie?: number | null
-          created_at?: string | null
         }
         Relationships: [
           {
@@ -689,34 +792,31 @@ export type Database = {
       }
       modelos_treino: {
         Row: {
+          created_at: string
+          grupos_musculares: string[]
           id: string
           modelo_rotina_id: string
           nome: string
-          grupos_musculares: string[]
-          ordem: number
           observacoes: string | null
-          created_at: string | null
-          updated_at: string | null
+          ordem: number
         }
         Insert: {
+          created_at?: string
+          grupos_musculares?: string[]
           id?: string
           modelo_rotina_id: string
           nome: string
-          grupos_musculares: string[]
-          ordem: number
           observacoes?: string | null
-          created_at?: string | null
-          updated_at?: string | null
+          ordem: number
         }
         Update: {
+          created_at?: string
+          grupos_musculares?: string[]
           id?: string
           modelo_rotina_id?: string
           nome?: string
-          grupos_musculares?: string[]
-          ordem?: number
           observacoes?: string | null
-          created_at?: string | null
-          updated_at?: string | null
+          ordem?: number
         }
         Relationships: [
           {
@@ -728,11 +828,36 @@ export type Database = {
           },
         ]
       }
+      participantes_conversa: {
+        Row: {
+          conversa_id: string
+          joined_at: string
+          user_id: string
+        }
+        Insert: {
+          conversa_id: string
+          joined_at?: string
+          user_id: string
+        }
+        Update: {
+          conversa_id?: string
+          joined_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "participantes_conversa_conversa_id_fkey"
+            columns: ["conversa_id"]
+            isOneToOne: false
+            referencedRelation: "conversas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       planos: {
         Row: {
           ativo: boolean | null
           id: string
-          limite_alunos: number | null
           limite_exercicios: number | null
           nome: string
           preco: number
@@ -740,7 +865,6 @@ export type Database = {
         Insert: {
           ativo?: boolean | null
           id: string
-          limite_alunos?: number | null
           limite_exercicios?: number | null
           nome: string
           preco: number
@@ -748,7 +872,6 @@ export type Database = {
         Update: {
           ativo?: boolean | null
           id?: string
-          limite_alunos?: number | null
           limite_exercicios?: number | null
           nome?: string
           preco?: number
@@ -757,46 +880,46 @@ export type Database = {
       }
       posts: {
         Row: {
-          author_id: string
+          author_id: string | null
           category: string | null
           content: Json | null
-          created_at: string
-          id: string
-          slug: string
-          status: "draft" | "published" | "archived"
-          title: string
-          updated_at: string | null
           cover_image_desktop_url: string | null
           cover_image_mobile_url: string | null
+          created_at: string
           excerpt: string | null
+          id: string
+          slug: string
+          status: string
+          title: string
+          updated_at: string
         }
         Insert: {
-          author_id: string
+          author_id?: string | null
           category?: string | null
           content?: Json | null
+          cover_image_desktop_url?: string | null
+          cover_image_mobile_url?: string | null
           created_at?: string
           excerpt?: string | null
           id?: string
           slug: string
-          status?: "draft" | "published" | "archived"
+          status?: string
           title: string
-          updated_at?: string | null
-          cover_image_desktop_url?: string | null
-          cover_image_mobile_url?: string | null
+          updated_at?: string
         }
         Update: {
-          author_id?: string
+          author_id?: string | null
           category?: string | null
           content?: Json | null
+          cover_image_desktop_url?: string | null
+          cover_image_mobile_url?: string | null
           created_at?: string
           excerpt?: string | null
           id?: string
           slug?: string
-          status?: "draft" | "published" | "archived"
+          status?: string
           title?: string
-          updated_at?: string | null
-          cover_image_desktop_url?: string | null
-          cover_image_mobile_url?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -816,7 +939,6 @@ export type Database = {
           avatar_letter: string | null
           avatar_type: string | null
           bio: string | null
-          codigo_pt: string | null
           created_at: string | null
           cref: string | null
           data_nascimento: string | null
@@ -826,7 +948,7 @@ export type Database = {
           genero: string | null
           id: string
           instagram: string | null
-          limite_alunos: number | null
+          last_warning_email_sent_at: string | null
           limite_exercicios: number | null
           linkedin: string | null
           nome_completo: string
@@ -844,7 +966,6 @@ export type Database = {
           avatar_letter?: string | null
           avatar_type?: string | null
           bio?: string | null
-          codigo_pt?: string | null
           created_at?: string | null
           cref?: string | null
           data_nascimento?: string | null
@@ -854,7 +975,7 @@ export type Database = {
           genero?: string | null
           id: string
           instagram?: string | null
-          limite_alunos?: number | null
+          last_warning_email_sent_at?: string | null
           limite_exercicios?: number | null
           linkedin?: string | null
           nome_completo: string
@@ -872,7 +993,6 @@ export type Database = {
           avatar_letter?: string | null
           avatar_type?: string | null
           bio?: string | null
-          codigo_pt?: string | null
           created_at?: string | null
           cref?: string | null
           data_nascimento?: string | null
@@ -882,7 +1002,7 @@ export type Database = {
           genero?: string | null
           id?: string
           instagram?: string | null
-          limite_alunos?: number | null
+          last_warning_email_sent_at?: string | null
           limite_exercicios?: number | null
           linkedin?: string | null
           nome_completo?: string
@@ -893,7 +1013,15 @@ export type Database = {
           updated_at?: string | null
           website?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_personal_trainers_user_profiles"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rotinas: {
         Row: {
@@ -901,16 +1029,17 @@ export type Database = {
           created_at: string | null
           data_inicio: string
           descricao: string | null
-          dificuldade: string
+          dificuldade: string | null
           duracao_semanas: number
           forma_pagamento: string
           id: string
           nome: string
           objetivo: string | null
           observacoes_pagamento: string | null
+          observacoes_rotina: string | null
           pdf_email_enviado: boolean | null
           permite_execucao_aluno: boolean | null
-          professor_id: string
+          professor_id: string | null
           status: string | null
           treinos_por_semana: number
           valor_total: number
@@ -920,16 +1049,17 @@ export type Database = {
           created_at?: string | null
           data_inicio: string
           descricao?: string | null
-          dificuldade: string
+          dificuldade?: string | null
           duracao_semanas: number
           forma_pagamento: string
           id?: string
           nome: string
           objetivo?: string | null
           observacoes_pagamento?: string | null
+          observacoes_rotina?: string | null
           pdf_email_enviado?: boolean | null
           permite_execucao_aluno?: boolean | null
-          professor_id: string
+          professor_id?: string | null
           status?: string | null
           treinos_por_semana: number
           valor_total: number
@@ -939,16 +1069,17 @@ export type Database = {
           created_at?: string | null
           data_inicio?: string
           descricao?: string | null
-          dificuldade?: string
+          dificuldade?: string | null
           duracao_semanas?: number
           forma_pagamento?: string
           id?: string
           nome?: string
           objetivo?: string | null
           observacoes_pagamento?: string | null
+          observacoes_rotina?: string | null
           pdf_email_enviado?: boolean | null
           permite_execucao_aluno?: boolean | null
-          professor_id?: string
+          professor_id?: string | null
           status?: string | null
           treinos_por_semana?: number
           valor_total?: number
@@ -962,7 +1093,7 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "fk_rotinas_personal"
+            foreignKeyName: "rotinas_professor_id_fkey"
             columns: ["professor_id"]
             isOneToOne: false
             referencedRelation: "professores"
@@ -975,6 +1106,7 @@ export type Database = {
           aluno_id: string
           created_at: string | null
           data_conclusao: string
+          data_inicio: string
           duracao_semanas: number
           id: string
           nome_rotina: string
@@ -986,6 +1118,7 @@ export type Database = {
           aluno_id: string
           created_at?: string | null
           data_conclusao: string
+          data_inicio: string
           duracao_semanas: number
           id?: string
           nome_rotina: string
@@ -997,6 +1130,7 @@ export type Database = {
           aluno_id?: string
           created_at?: string | null
           data_conclusao?: string
+          data_inicio?: string
           duracao_semanas?: number
           id?: string
           nome_rotina?: string
@@ -1144,13 +1278,33 @@ export type Database = {
         Args: { data: string }
         Returns: string
       }
+      delete_storage_object: {
+        Args: { bucket_name: string; object_path: string }
+        Returns: undefined
+      }
       delete_user_auth: {
         Args: { user_id: string }
         Returns: boolean
       }
-      generate_pt_code: {
+      desvincular_aluno: {
+        Args: { aluno_id: string }
+        Returns: Json
+      }
+      get_minhas_conversas: {
         Args: Record<PropertyKey, never>
-        Returns: string
+        Returns: {
+          conversa_id: string
+          mensagens_nao_lidas: number
+          outro_participante_avatar: string
+          outro_participante_avatar_color: string
+          outro_participante_avatar_letter: string
+          outro_participante_avatar_type: string
+          outro_participante_id: string
+          outro_participante_nome: string
+          remetente_ultima_mensagem_id: string
+          ultima_mensagem_conteudo: string
+          ultima_mensagem_criada_em: string
+        }[]
       }
       http: {
         Args: { request: Database["public"]["CompositeTypes"]["http_request"] }
@@ -1158,12 +1312,12 @@ export type Database = {
       }
       http_delete: {
         Args:
+          | { content: string; content_type: string; uri: string }
           | { uri: string }
-          | { uri: string; content: string; content_type: string }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
       }
       http_get: {
-        Args: { uri: string } | { uri: string; data: Json }
+        Args: { data: Json; uri: string } | { uri: string }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
       }
       http_head: {
@@ -1182,17 +1336,17 @@ export type Database = {
         }[]
       }
       http_patch: {
-        Args: { uri: string; content: string; content_type: string }
+        Args: { content: string; content_type: string; uri: string }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
       }
       http_post: {
         Args:
-          | { uri: string; content: string; content_type: string }
-          | { uri: string; data: Json }
+          | { content: string; content_type: string; uri: string }
+          | { data: Json; uri: string }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
       }
       http_put: {
-        Args: { uri: string; content: string; content_type: string }
+        Args: { content: string; content_type: string; uri: string }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
       }
       http_reset_curlopt: {
@@ -1202,6 +1356,18 @@ export type Database = {
       http_set_curlopt: {
         Args: { curlopt: string; value: string }
         Returns: boolean
+      }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      marcar_convites_expirados: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      run_inactive_users_check: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       test_checkmail_validation: {
         Args: Record<PropertyKey, never>
@@ -1228,7 +1394,7 @@ export type Database = {
       }
     }
     Enums: {
-      plano_tipo: "gratuito"
+      plano_tipo: "gratuito" | "basico" | "premium" | "profissional"
     }
     CompositeTypes: {
       http_header: {
@@ -1372,7 +1538,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      plano_tipo: ["gratuito"],
+      plano_tipo: ["gratuito", "basico", "premium", "profissional"],
     },
   },
 } as const

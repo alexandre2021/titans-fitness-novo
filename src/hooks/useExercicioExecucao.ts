@@ -71,25 +71,14 @@ interface SessaoCompleta extends SessaoData {
 
 export const useExercicioExecucao = (
   sessaoData: SessaoData | null,
-  modoExecucao: 'pt' | 'aluno', 
+  modoExecucao: 'professor' | 'aluno', 
   cronometroPausado: boolean = false,
-  navigate: (path: string) => void
+  navigate: (path: string) => void,
 ) => {
   const [exercicios, setExercicios] = useState<ExercicioData[]>([]);
   const [loading, setLoading] = useState(true);
   const [tempoSessao, setTempoSessao] = useState(0);
   const [sessaoInvalida, setSessaoInvalida] = useState(false);
-
-  // Carregar tempo salvo da sessão pausada
-  useEffect(() => {
-    if (sessaoData?.status === 'pausada' && sessaoData.tempo_decorrido) {
-      console.log(`⏰ Resumindo sessão. Tempo inicial: ${sessaoData.tempo_decorrido}s`);
-      setTempoSessao(sessaoData.tempo_decorrido);
-    } else {
-      // Inicia do zero para sessões novas ou não pausadas
-      setTempoSessao(0);
-    }
-  }, [sessaoData]);
 
   // Timer da sessão (só conta se não estiver pausado)
   useEffect(() => {
@@ -104,6 +93,14 @@ export const useExercicioExecucao = (
 
   // Carregar exercícios da rotina e progresso salvo
   useEffect(() => {
+    // ✅ NOVO: Define o tempo inicial ao carregar os dados da sessão
+    if (sessaoData) {
+      const tempoInicial = sessaoData.tempo_decorrido ?? 0;
+      setTempoSessao(tempoInicial);
+      if (tempoInicial > 0) {
+        console.log(`⏰ Resumindo sessão. Tempo inicial: ${tempoInicial}s`);
+      }
+    }
     let cancelado = false;
 
     const validarEcarregarExercicios = async () => {
@@ -379,7 +376,7 @@ export const useExercicioExecucao = (
           status: SESSAO_STATUS.PAUSADA,
           tempo_decorrido: tempoSessao,
           modo_execucao: modoExecucao,
-          observacoes: `Pausado em modo ${modoExecucao.toUpperCase()} - ${totalSeriesExecutadas} séries realizadas até agora`
+          observacoes: `Pausado em modo ${modoExecucao === 'professor' ? 'PT' : 'ALUNO'} - ${totalSeriesExecutadas} séries realizadas até agora`
         })
         .eq('id', sessaoData.id);
 
@@ -736,7 +733,7 @@ export const useExercicioExecucao = (
           tempo_total_minutos: tempoTotalMinutos,
           tempo_decorrido: 0, // ✅ Zera o tempo decorrido ao concluir
           modo_execucao: modoExecucao,
-          observacoes: `Concluído em modo ${modoExecucao.toUpperCase()} - ${totalSeriesExecutadas} séries realizadas`
+          observacoes: `Concluído em modo ${modoExecucao === 'professor' ? 'PT' : 'ALUNO'} - ${totalSeriesExecutadas} séries realizadas`
         })
         .eq('id', sessaoData.id);
 

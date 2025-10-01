@@ -33,7 +33,12 @@ const LandingFooter = () => {
           <div>
             <h3 className="font-semibold mb-4 text-gray-800">Produto</h3>
             <ul className="space-y-2">
-              <li><a href="#funcionalidades" className="text-gray-600 hover:text-gray-800 transition-colors">Funcionalidades</a></li>
+              <li>
+                <Link
+                  to="/funcionalidades"
+                  onClick={() => window.scrollTo(0, 0)} 
+                  className="text-gray-600 hover:text-gray-800 transition-colors">Funcionalidades</Link>
+              </li>
               <li><a href="#planos" className="text-gray-600 hover:text-gray-800 transition-colors">Plano</a></li>
               <li><a href="#" className="text-gray-600 hover:text-gray-800 transition-colors">API</a></li>
               <li><a href="#" className="text-gray-600 hover:text-gray-800 transition-colors">Integrações</a></li>
@@ -45,8 +50,16 @@ const LandingFooter = () => {
             <ul className="space-y-2">
               <li><a href="#" className="text-gray-600 hover:text-gray-800 transition-colors">Central de Ajuda</a></li>
               <li><a href="#" className="text-gray-600 hover:text-gray-800 transition-colors">Contato</a></li>
-              <li><Link to="/termos" className="text-gray-600 hover:text-gray-800 transition-colors">Termos de Uso</Link></li>
-              <li><Link to="/privacidade" className="text-gray-600 hover:text-gray-800 transition-colors">Política de Privacidade</Link></li>
+              <li>
+                <Link to="/termos" onClick={() => window.scrollTo(0, 0)} className="text-gray-600 hover:text-gray-800 transition-colors">
+                  Termos de Uso
+                </Link>
+              </li>
+              <li>
+                <Link to="/privacidade" onClick={() => window.scrollTo(0, 0)} className="text-gray-600 hover:text-gray-800 transition-colors">
+                  Política de Privacidade
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
