@@ -238,7 +238,7 @@ const IndexAluno = () => {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-6 pb-24 md:pb-6">
       <h1 className="text-3xl font-bold">
         Olá, {alunoProfile?.nome_completo?.split(' ')[0]}!
       </h1>
