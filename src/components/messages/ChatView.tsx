@@ -102,31 +102,32 @@ export const ChatView = ({ conversa }: ChatViewProps) => {
                 className={`flex ${msg.isMine ? 'justify-end' : 'justify-start'} gap-2`}
               >
                 {!msg.isMine && (
-                  <div className="flex-shrink-0">
-                    {conversa.avatar.type === 'image' && conversa.avatar.url ? (
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={conversa.avatar.url} alt={conversa.nome} />
-                        <AvatarFallback
-                          style={{
-                            backgroundColor: conversa.avatar.color || '#ccc',
-                            color: 'white',
-                          }}
-                        >
-                          {conversa.nome.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                    ) : (
-                      <div
-                        className="h-8 w-8 rounded-full flex items-center justify-center text-sm font-semibold"
-                        style={{
-                          backgroundColor: conversa.avatar.color || '#ccc',
-                          color: 'white',
-                        }}
-                      >
-                        {conversa.avatar.letter || conversa.nome.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage 
+                      src={
+                        conversa.isGroup && msg.remetente?.avatar_url
+                          ? msg.remetente.avatar_url
+                          : conversa.avatar.url
+                      } 
+                      alt={
+                        conversa.isGroup && msg.remetente?.nome
+                          ? msg.remetente.nome
+                          : conversa.nome
+                      }
+                    />
+                    <AvatarFallback
+                      style={{
+                        backgroundColor: 
+                          conversa.isGroup && msg.remetente?.avatar_color
+                            ? msg.remetente.avatar_color
+                            : conversa.avatar.color || '#ccc',
+                        color: 'white',
+                      }}
+                      className="text-sm font-semibold"
+                    >
+                      {(conversa.isGroup && msg.remetente?.avatar_letter) || conversa.avatar.letter || conversa.nome.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
                 )}
                 <div
                   className={`max-w-[70%] rounded-lg px-4 py-2 ${
@@ -135,6 +136,11 @@ export const ChatView = ({ conversa }: ChatViewProps) => {
                       : 'bg-muted'
                   }`}
                 >
+                  {!msg.isMine && conversa.isGroup && msg.remetente && (
+                    <p className="text-xs font-bold text-primary mb-1">
+                      {msg.remetente.nome}
+                    </p>
+                  )}
                   <p className="whitespace-pre-wrap break-words">{msg.conteudo}</p>
                   <p
                     className={`text-xs mt-1 ${

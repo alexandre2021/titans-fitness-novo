@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { X, ArrowLeft, Loader2, Search } from "lucide-react";
+import { X, ArrowLeft, Loader2, Search, Users } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useConversas, ConversaUI } from "@/hooks/useConversas";
 import { Input } from "../ui/input";
 import { ChatView } from "./ChatView";
+import { CreateGroupView } from "./CreateGroupView";
 
+type View = 'list' | 'chat' | 'create-group';
 interface MessagesDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -47,36 +49,46 @@ const ConversaItem = ({ conversa, onClick }: { conversa: ConversaUI, onClick: ()
 );
 
 const MessagesDrawer = ({ isOpen, onClose, direction = 'right' }: MessagesDrawerProps) => {
-  const [conversaAtiva, setConversaAtiva] = useState<ConversaUI | null>(null);
+  const [view, setView] = useState<View>('list');
+  const [activeConversation, setActiveConversation] = useState<ConversaUI | null>(null);
   const { conversas, loading, iniciarConversa, loadingConversa } = useConversas();
   const [searchTerm, setSearchTerm] = useState("");
 
   const filteredConversas = conversas.filter(conversa =>
     conversa.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
+  
   useEffect(() => {
     if (!isOpen) {
-      setConversaAtiva(null);
+      // Reset view when drawer is closed
+      setActiveConversation(null);
       setSearchTerm("");
+      setView('list');
     }
   }, [isOpen]);
 
   const handleBack = () => {
-    setConversaAtiva(null);
+    setActiveConversation(null);
   };
 
-  const handleItemClick = async (conversa: ConversaUI) => {
+  const handleConversationClick = async (conversa: ConversaUI) => {
     if (conversa.id) {
-      setConversaAtiva(conversa);
+      setActiveConversation(conversa);
+      setView('chat'); // ✅ Muda para a view do chat
     } else {
       const novaConversa = await iniciarConversa(conversa);
       if (novaConversa) {
-        setConversaAtiva(novaConversa);
+        setActiveConversation(novaConversa);
+        setView('chat'); // ✅ Muda para a view do chat
       } else {
         console.error("Não foi possível iniciar a conversa.");
       }
     }
+  };
+
+  const handleGroupCreated = (conversa: ConversaUI) => {
+    setActiveConversation(conversa);
+    setView('chat');
   };
 
   const positionClasses = direction === 'right'
@@ -92,52 +104,63 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right' }: MessagesDrawer
       style={{ display: 'flex', flexDirection: 'column' }}
     >
       <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
-        {conversaAtiva && (
-          <Button variant="ghost" size="icon" onClick={handleBack}>
+        {view === 'chat' && (
+          <Button variant="ghost" size="icon" onClick={() => setView('list')}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
-        <h2 className="text-lg font-semibold">{conversaAtiva ? conversaAtiva.nome : 'Mensagens'}</h2>
+        <h2 className="text-lg font-semibold">
+          {view === 'chat' && activeConversation ? activeConversation.nome : 'Mensagens'}
+        </h2>
+        {view === 'list' && (
+          <Button variant="ghost" size="icon" onClick={() => setView('create-group')}>
+            <Users className="h-5 w-5" />
+          </Button>
+        )}
         <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="h-5 w-5" />
         </Button>
       </div>
 
       <div className="flex-grow overflow-y-auto">
-        {loading ? (
-          <div className="flex justify-center items-center h-full p-4">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : !conversaAtiva ? (
-          <div className="p-2 space-y-1">
-            <div className="relative mb-2">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar conversa ou aluno..."
-                className="pl-10"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+        {view === 'list' && (
+          loading ? (
+            <div className="flex justify-center items-center h-full p-4">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-            {loadingConversa && (
-              <div className="flex justify-center items-center p-4">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            )}
-            {filteredConversas.length > 0 ? (
-              filteredConversas.map(conversa => (
-                <ConversaItem
-                  key={conversa.outroParticipanteId}
-                  conversa={conversa}
-                  onClick={() => handleItemClick(conversa)}
+          ) : (
+            <div className="p-2 space-y-1">
+              <div className="relative mb-2">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar conversa ou aluno..."
+                  className="pl-10"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                 />
-              ))
-            ) : (
-              <p className="p-4 text-center text-muted-foreground">Nenhuma conversa ou aluno encontrado.</p>
-            )}
-          </div>
-        ) : (
-          <ChatView conversa={conversaAtiva} />
+              </div>
+              {loadingConversa && (
+                <div className="flex justify-center items-center p-4">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              )}
+              {filteredConversas.length > 0 ? (
+                filteredConversas.map(conversa => (
+                  <ConversaItem
+                    key={conversa.id || conversa.outroParticipanteId}
+                    conversa={conversa}
+                    onClick={() => handleConversationClick(conversa)}
+                  />
+                ))
+              ) : (
+                <p className="p-4 text-center text-muted-foreground">Nenhuma conversa ou aluno encontrado.</p>
+              )}
+            </div>
+          )
+        )}
+        {view === 'chat' && activeConversation && <ChatView conversa={activeConversation} />}
+        {view === 'create-group' && (
+          <CreateGroupView onCancel={() => setView('list')} onGroupCreated={handleGroupCreated} />
         )}
       </div>
     </div>

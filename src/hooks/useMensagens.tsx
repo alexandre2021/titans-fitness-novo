@@ -11,6 +11,13 @@ export interface Mensagem {
   created_at: string;
   lida_em: string | null;
   isMine: boolean;
+  remetente?: {
+    nome: string;
+    avatar_url: string | null;
+    avatar_type: 'image' | 'letter' | null;
+    avatar_letter: string | null;
+    avatar_color: string | null;
+  }
 }
 
 export const useMensagens = (conversaId: string | null) => {
@@ -24,17 +31,67 @@ export const useMensagens = (conversaId: string | null) => {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // 1. Busca as mensagens simples
+      const { data: mensagensData, error: mensagensError } = await supabase
         .from('mensagens')
         .select('*')
         .eq('conversa_id', conversaId)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
+      if (mensagensError) throw mensagensError;
 
-      const mensagensFormatadas = (data || []).map(msg => ({
+      // 2. Pega IDs únicos dos remetentes (exceto o usuário atual)
+      const remetentesIds = [...new Set(
+        (mensagensData || [])
+          .map(msg => msg.remetente_id)
+          .filter(id => id !== user?.id)
+      )];
+
+      // 3. Busca dados dos remetentes em alunos e professores
+      const remetentesMap = new Map();
+
+      if (remetentesIds.length > 0) {
+        // Busca em alunos
+        const { data: alunosData } = await supabase
+          .from('alunos')
+          .select('id, nome_completo, avatar_image_url, avatar_type, avatar_letter, avatar_color')
+          .in('id', remetentesIds);
+
+        alunosData?.forEach(aluno => {
+          remetentesMap.set(aluno.id, {
+            nome: aluno.nome_completo,
+            avatar_url: aluno.avatar_image_url,
+            avatar_type: aluno.avatar_type,
+            avatar_letter: aluno.avatar_letter,
+            avatar_color: aluno.avatar_color,
+          });
+        });
+
+        // Busca em professores (para IDs que não foram encontrados em alunos)
+        const idsNaoEncontrados = remetentesIds.filter(id => !remetentesMap.has(id));
+        if (idsNaoEncontrados.length > 0) {
+          const { data: professoresData } = await supabase
+            .from('professores')
+            .select('id, nome_completo, avatar_image_url, avatar_type, avatar_letter, avatar_color')
+            .in('id', idsNaoEncontrados);
+
+          professoresData?.forEach(professor => {
+            remetentesMap.set(professor.id, {
+              nome: professor.nome_completo,
+              avatar_url: professor.avatar_image_url,
+              avatar_type: professor.avatar_type,
+              avatar_letter: professor.avatar_letter,
+              avatar_color: professor.avatar_color,
+            });
+          });
+        }
+      }
+
+      // 4. Formata as mensagens com dados dos remetentes
+      const mensagensFormatadas = (mensagensData || []).map(msg => ({
         ...msg,
         isMine: msg.remetente_id === user?.id,
+        remetente: remetentesMap.get(msg.remetente_id),
       }));
 
       setMensagens(mensagensFormatadas);

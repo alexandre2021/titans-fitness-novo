@@ -63,6 +63,7 @@ Este documento descreve a estrutura completa das tabelas do banco de dados no no
 | `avatar_image_url` | 22 | `text` | True | `` | `` | `` |  |
 | `avatar_type` | 23 | `character varying` | True | `'letter'::character varying` | `` | `` |  |
 | `limite_exercicios` | 24 | `integer` | True | `3` | `` | `` |  |
+| `last_warning_email_sent_at` | 25 | `timestamp with time zone` | True | `` | `` | `` |  |
 
 **Tipos de Plano**: gratuito, basico, premium, profissional  
 **MUDANÇA**: Removido `limite_alunos` - aplicativo gratuito sem limite de seguidores
@@ -460,67 +461,211 @@ Este documento descreve a estrutura completa das tabelas do banco de dados no no
 
 ---
 
-## 2. Tabelas do Sistema de Mensagens ⭐ NOVA SEÇÃO
+## 2. Tabelas do Sistema de Mensagens ⭐ ATUALIZADO
 
 ### Tabela: `public.conversas`
-**Descrição**: Representa uma conversa entre dois ou mais usuários.
+**Descrição**: Representa uma conversa entre dois ou mais usuários (1:1 ou grupo).
 
 | Coluna | Posição | Tipo de Dado | Nulável | Padrão | Tipo de Restrição | Nome da Restrição | Chave Estrangeira |
 |---|---|---|---|---|---|---|---|
 | `id` | 1 | `uuid` | False | `gen_random_uuid()` | `PRIMARY KEY` | `conversas_pkey` | |
-| `created_at` | 2 | `timestamp with time zone` | False | `now()` | | | |
-| `updated_at` | 3 | `timestamp with time zone` | False | `now()` | | | |
-| `last_message_id` | 4 | `uuid` | True | | `FOREIGN KEY` | `conversas_last_message_id_fkey` | `public.mensagens(id)` |
+| `nome` | 2 | `text` | True | | | | |
+| `created_at` | 3 | `timestamp with time zone` | False | `now()` | | | |
+| `updated_at` | 4 | `timestamp with time zone` | False | `now()` | | | |
+| `last_message_id` | 5 | `uuid` | True | | `FOREIGN KEY` | `conversas_last_message_id_fkey` | `public.mensagens(id)` |
+| `is_grupo` | 6 | `boolean` | False | `false` | | | |
+| `nome_grupo` | 7 | `text` | True | | | | |
+| `avatar_grupo` | 8 | `text` | True | | | | |
 
-**Nota**: `last_message_id` é usado para facilmente buscar a última mensagem para a lista de conversas.
+**Notas**: 
+- `last_message_id` é usado para buscar rapidamente a última mensagem
+- Para conversas 1:1, `is_grupo = false` e campos de grupo ficam NULL
+- Para grupos, `is_grupo = true`, `nome_grupo` e `avatar_grupo` são preenchidos
+- A coluna `nome` não está sendo usada atualmente, mas existe no schema
+
+**Segurança (RLS)**: Ativada. Usuário só vê conversas das quais participa (verificado via `participantes_conversa`)
 
 ---
 
 ### Tabela: `public.participantes_conversa`
-**Descrição**: Tabela de junção que associa usuários a conversas.
+**Descrição**: Tabela de junção N:N que associa usuários a conversas. Permite múltiplos participantes em grupos.
 
 | Coluna | Posição | Tipo de Dado | Nulável | Padrão | Tipo de Restrição | Nome da Restrição | Chave Estrangeira |
 |---|---|---|---|---|---|---|---|
-| `conversa_id` | 1 | `uuid` | False | | `PRIMARY KEY, FOREIGN KEY` | `participantes_conversa_pkey, fk_conversa` | `public.conversas(id)` |
-| `user_id` | 2 | `uuid` | False | | `PRIMARY KEY, FOREIGN KEY` | `participantes_conversa_pkey, fk_user` | `auth.users(id)` |
+| `conversa_id` | 1 | `uuid` | False | | `PRIMARY KEY, FOREIGN KEY (ON DELETE CASCADE)` | `participantes_conversa_pkey, fk_conversa` | `public.conversas(id)` |
+| `user_id` | 2 | `uuid` | False | | `PRIMARY KEY, FOREIGN KEY (ON DELETE CASCADE)` | `participantes_conversa_pkey, fk_user` | `auth.users(id)` |
 | `joined_at` | 3 | `timestamp with time zone` | False | `now()` | | | |
 
-**Segurança (RLS)**: Ativada para garantir que um usuário só possa ver as conversas das quais participa.
+**Constraint Única**: `PRIMARY KEY(conversa_id, user_id)` - Garante que um usuário não entre duas vezes na mesma conversa  
+**DELETE CASCADE**: Quando conversa ou usuário é deletado, remove participação automaticamente
+
+**Segurança (RLS)**: Base do sistema - usuário só vê registros onde `user_id = auth.uid()`
+
+**Políticas RLS**:
+- `participantes_select`: SELECT onde `user_id = auth.uid()`
+- `participantes_insert`: INSERT onde `user_id = auth.uid()`
+- `participantes_delete`: DELETE onde `user_id = auth.uid()`
 
 ---
 
 ### Tabela: `public.mensagens`
-**Descrição**: Armazena cada mensagem individual de uma conversa.
+**Descrição**: Armazena cada mensagem individual de uma conversa, com suporte para marcação de leitura.
 
 | Coluna | Posição | Tipo de Dado | Nulável | Padrão | Tipo de Restrição | Nome da Restrição | Chave Estrangeira |
 |---|---|---|---|---|---|---|---|
 | `id` | 1 | `uuid` | False | `gen_random_uuid()` | `PRIMARY KEY` | `mensagens_pkey` | |
-| `conversa_id` | 2 | `uuid` | False | | `FOREIGN KEY` | `mensagens_conversa_id_fkey` | `public.conversas(id)` |
+| `conversa_id` | 2 | `uuid` | False | | `FOREIGN KEY (ON DELETE CASCADE)` | `mensagens_conversa_id_fkey` | `public.conversas(id)` |
 | `remetente_id` | 3 | `uuid` | False | | `FOREIGN KEY` | `mensagens_remetente_id_fkey` | `auth.users(id)` |
 | `conteudo` | 4 | `text` | False | | `CHECK` | `conteudo_not_empty` | |
 | `created_at` | 5 | `timestamp with time zone` | False | `now()` | | | |
 | `lida_em` | 6 | `timestamp with time zone` | True | | | | |
 
-**Segurança (RLS)**: Ativada. Um usuário pode ler mensagens de uma conversa da qual participa e só pode criar mensagens como ele mesmo.
-**Realtime**: Habilitado para esta tabela.
+**Validações**:
+- `conteudo` não pode ser vazio (CHECK constraint)
+- `lida_em` NULL = mensagem não lida
+- `lida_em` NOT NULL = mensagem já visualizada
+
+**Contador de Não Lidas**: A função RPC `get_minhas_conversas()` conta mensagens onde:
+- `remetente_id <> auth.uid()` (não é do usuário logado)
+- `lida_em IS NULL` (ainda não foi lida)
+
+**Segurança (RLS)**: 
+- Usuário pode ler mensagens de conversas das quais participa
+- Usuário só pode criar mensagens como ele mesmo (`remetente_id = auth.uid()`)
+- Usuário pode atualizar mensagens de suas conversas (para marcar como lida)
+
+**Políticas RLS**:
+- `mensagens_select`: SELECT de mensagens de conversas onde o usuário participa
+- `mensagens_insert`: INSERT onde `remetente_id = auth.uid()`
+- `mensagens_update`: UPDATE de mensagens de conversas onde o usuário participa
+
+**Realtime**: Habilitado para esta tabela - permite recebimento instantâneo de novas mensagens
 
 ---
 
-## Continuação - Regras de Negócio Atualizadas
+## 3. Funções RPC e Edge Functions do Sistema de Mensagens
+
+### RPC: `get_minhas_conversas()`
+**Descrição**: Busca todas as conversas do usuário logado com informações completas.
+
+**Retorno**:
+```typescript
+{
+  conversa_id: uuid,
+  is_grupo: boolean,
+  outro_participante_id: uuid | null,  // NULL para grupos
+  nome: text,                          // Nome do contato ou grupo
+  avatar: text | null,
+  avatar_type: text | null,
+  avatar_letter: text | null,
+  avatar_color: text | null,
+  ultima_mensagem_conteudo: text | null,
+  ultima_mensagem_criada_em: timestamp with time zone | null,
+  remetente_ultima_mensagem_id: uuid | null,
+  mensagens_nao_lidas: bigint
+}
+```
+
+**Lógica**:
+1. Busca todas as `conversa_id` do usuário via `participantes_conversa`
+2. Para conversas 1:1 (`is_grupo = false`):
+   - Identifica o outro participante
+   - Busca dados (nome, avatar) de `alunos` ou `professores`
+   - Usa `CAST(... AS text)` para converter `character varying` → `text`
+3. Para grupos (`is_grupo = true`):
+   - Usa `nome_grupo` e `avatar_grupo` da própria tabela `conversas`
+4. Busca última mensagem via `last_message_id`
+5. Conta mensagens não lidas: `COUNT(*)` onde `remetente_id <> auth.uid()` e `lida_em IS NULL`
+6. Ordena por `ultima_mensagem_criada_em DESC NULLS LAST`
+
+**Importante**: Usa `CAST(COALESCE(...) AS text)` para campos avatar que são `character varying` nas tabelas base
+
+---
+
+### Edge Function: `create_conversation_with_aluno`
+**Descrição**: Cria uma nova conversa 1:1 ou retorna conversa existente.
+
+**Parâmetros**:
+```json
+{
+  "p_aluno_id": "uuid-do-aluno"
+}
+```
+
+**Lógica**:
+1. Verifica se já existe conversa entre os dois usuários
+2. Se existir: retorna `conversa_id` existente
+3. Se não existir:
+   - INSERT em `conversas` com `is_grupo = false`
+   - INSERT dos dois usuários em `participantes_conversa`
+   - Retorna novo `conversa_id`
+
+**Retorno**:
+```json
+{
+  "conversa_id": "uuid-da-conversa"
+}
+```
+
+**Segurança**: Usa `SECURITY DEFINER` com service role para permitir criação
+
+---
+
+### Edge Function: `create_group_conversation`
+**Descrição**: Cria uma nova conversa em grupo.
+
+**Parâmetros**:
+```json
+{
+  "nome_grupo": "Nome do Grupo",
+  "participantes_ids": ["uuid1", "uuid2", "uuid3"]
+}
+```
+
+**Lógica**:
+1. INSERT em `conversas` com:
+   - `is_grupo = true`
+   - `nome_grupo` = nome fornecido
+   - `avatar_grupo` = NULL (pode ser implementado futuramente)
+2. INSERT de todos os participantes em `participantes_conversa`
+3. Retorna `conversa_id` do grupo criado
+
+**Retorno**:
+```json
+{
+  "conversa_id": "uuid-do-grupo"
+}
+```
+
+**Segurança**: Usa `SECURITY DEFINER` com service role
+
+---
+
+## 4. Regras de Negócio Atualizadas
 
 ### Sistema de "Seguir"
 - **Aluno pode seguir N professores**: Relacionamento N:N na tabela `alunos_professores`
 - **Professor é único gerador de conteúdo**: Cria rotinas, exercícios e modelos
 - **Convite significa "começar a seguir"**: Não mais vínculo exclusivo
+- **Mensagens entre seguidores**: Professor pode enviar mensagens apenas para alunos que o seguem
 
 ### Rotina Ativa
 - **Apenas 1 rotina ativa por aluno**: Campo `alunos.professor_id`
 - **Pode ser de qualquer professor seguido**: Não precisa ser do primeiro professor
 - **Nova rotina substitui anterior**: Automaticamente bloqueia/arquiva anterior
 
-### Queries Essenciais
+### Sistema de Mensagens
+- **Conversas 1:1**: Criadas automaticamente ao clicar em um contato
+- **Grupos**: Criados explicitamente pelo professor com múltiplos participantes
+- **Mensagens não lidas**: Contadas automaticamente na lista de conversas
+- **Realtime**: Mensagens aparecem instantaneamente sem refresh
+- **Segurança**: RLS garante que usuários só vejam suas próprias conversas
 
-#### Seguidores de um Professor
+---
+
+## 5. Queries Essenciais
+
+### Seguidores de um Professor
 ```sql
 SELECT a.*, ap.data_seguindo,
        CASE WHEN a.professor_id = $professor_id 
@@ -531,7 +676,7 @@ WHERE ap.professor_id = $professor_id
 ORDER BY status_relacao DESC, ap.data_seguindo DESC
 ```
 
-#### Verificar se Pode Criar Rotina
+### Verificar se Pode Criar Rotina
 ```sql
 -- Verifica se aluno segue o professor
 SELECT 1 FROM alunos_professores 
@@ -543,3 +688,22 @@ FROM alunos a
 JOIN professores p ON a.professor_id = p.id  
 WHERE a.id = $aluno_id AND a.professor_id IS NOT NULL
 ```
+
+### Buscar Conversas com Contador de Não Lidas
+```sql
+-- Já implementado na RPC get_minhas_conversas()
+SELECT * FROM get_minhas_conversas();
+```
+
+### Marcar Mensagens como Lidas
+```sql
+UPDATE mensagens
+SET lida_em = NOW()
+WHERE conversa_id = $conversa_id
+  AND remetente_id <> auth.uid()
+  AND lida_em IS NULL;
+```
+
+---
+
+**Última atualização**: 2025-10-01

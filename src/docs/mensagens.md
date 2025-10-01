@@ -54,8 +54,10 @@ src/
     -   Utiliza o hook `useAlunosSeguidores` para obter a lista de contatos (alunos seguidores).
     -   **Mescla as duas listas**: cria uma lista unificada que mostra conversas ativas no topo e contatos sem conversa abaixo.
     -   Expõe a função `iniciarConversa`, que invoca a Edge Function `create_conversation_with_aluno` para criar uma nova conversa ou obter o objeto completo da conversa criada.
+    -   Expõe a função `criarGrupo`, que invoca a Edge Function `create_group_conversation` para criar conversas em grupo.
     -   Gerencia os estados de `loading` para a lista e `loadingConversa` para a criação de uma nova conversa.
-    -   Mantém subscription Realtime para atualizar a lista quando novas mensagens chegam.
+    -   Mantém subscription Realtime para atualizar a lista quando novas mensagens chegam ou são marcadas como lidas.
+    -   Calcula e exporta `unreadCount` com o total de mensagens não lidas em todas as conversas.
 -   **Retorno**:
     ```typescript
     {
@@ -63,7 +65,9 @@ src/
       loading: boolean,
       loadingConversa: boolean,
       iniciarConversa: (conversaPlaceholder: ConversaUI) => Promise<ConversaUI | null>,
-      refetchConversas: () => Promise<void>
+      criarGrupo: (nomeGrupo: string, participantesIds: string[]) => Promise<ConversaUI | null>,
+      refetchConversas: () => Promise<void>,
+      unreadCount: number
     }
     ```
 
@@ -81,7 +85,7 @@ src/
     }
     ```
 
-#### `src/hooks/useMensagens.tsx` ⭐ NOVO
+#### `src/hooks/useMensagens.tsx` ⭐
 -   **Responsabilidade**: Gerenciar mensagens de uma conversa específica.
 -   **O que faz**:
     -   Busca todas as mensagens de uma conversa específica via `conversa_id`, ordenadas cronologicamente.
@@ -112,14 +116,16 @@ src/
         -   Avatar (imagem ou letra com cor de fundo)
         -   Nome do contato
         -   Última mensagem ou "Inicie uma conversa"
+        -   Badge com contador de mensagens não lidas (se houver)
     -   Implementa a lógica de clique (`handleItemClick`):
         -   Se conversa existe (`conversa.id` não vazio): define como `conversaAtiva` e exibe o chat.
         -   Se não existe: chama `iniciarConversa`, aguarda retorno e define como `conversaAtiva`.
     -   Gerencia a transição entre a lista de conversas e a tela de chat ativa.
     -   Contém barra de busca para filtrar conversas por nome.
     -   Exibe estados de loading durante operações assíncronas.
+    -   Mostra contador total de mensagens não lidas no ícone do drawer.
 
-#### `src/components/messages/ChatView.tsx` ⭐ NOVO
+#### `src/components/messages/ChatView.tsx` ⭐
 -   **Responsabilidade**: Renderizar o chat ativo com histórico de mensagens e input para envio.
 -   **O que faz**:
     -   Utiliza o hook `useMensagens` passando `conversa.id`.
@@ -141,7 +147,7 @@ src/
 ### 3.3. Backend (Supabase)
 
 #### Tabelas do Banco de Dados
--   `conversas`: Armazena o ID de cada conversa e metadados como `updated_at` e `last_message_id`.
+-   `conversas`: Armazena o ID de cada conversa, metadados como `updated_at`, `last_message_id`, e informações de grupo (`is_grupo`, `nome_grupo`, `avatar_grupo`).
 -   `participantes_conversa`: Tabela de junção que associa `user_id` a `conversa_id`.
 -   `mensagens`: Armazena o conteúdo de cada mensagem, com `remetente_id`, `conversa_id`, `conteudo`, `created_at` e `lida_em`.
 
@@ -149,26 +155,31 @@ src/
 -   **Responsabilidade**: Buscar de forma eficiente todas as conversas de um usuário.
 -   **O que faz**:
     -   Encontra todas as `conversa_id` do usuário logado via `participantes_conversa`.
-    -   Para cada conversa, identifica o **outro participante**.
+    -   Para cada conversa, identifica o **outro participante** (no caso de conversas 1:1).
     -   Busca os detalhes completos do outro participante (seja aluno ou professor):
         -   Nome completo
         -   Avatar (URL, tipo, letra, cor)
+    -   Para grupos, usa os dados da própria tabela `conversas`.
     -   Busca a última mensagem de cada conversa via `last_message_id`.
+    -   Conta as mensagens não lidas (`lida_em IS NULL`) para cada conversa.
     -   Retorna um objeto "achatado" com todos os dados prontos para consumo.
     -   Ordena por `ultima_mensagem_criada_em DESC NULLS LAST` (conversas sem mensagem vão para o final).
+    -   Usa conversão explícita `CAST(... AS text)` para campos `avatar_type`, `avatar_letter` e `avatar_color` que são `character varying` nas tabelas base.
 -   **Retorno**: Array de objetos com estrutura:
     ```typescript
     {
-      conversa_id: string,
-      outro_participante_id: string,
-      outro_participante_nome: string,
-      outro_participante_avatar: string | null,
-      outro_participante_avatar_type: string | null,
-      outro_participante_avatar_letter: string | null,
-      outro_participante_avatar_color: string | null,
-      ultima_mensagem_conteudo: string | null,
-      ultima_mensagem_criada_em: string | null,
-      remetente_ultima_mensagem_id: string | null
+      conversa_id: uuid,
+      is_grupo: boolean,
+      outro_participante_id: uuid | null,
+      nome: text,
+      avatar: text | null,
+      avatar_type: text | null,
+      avatar_letter: text | null,
+      avatar_color: text | null,
+      ultima_mensagem_conteudo: text | null,
+      ultima_mensagem_criada_em: timestamp with time zone | null,
+      remetente_ultima_mensagem_id: uuid | null,
+      mensagens_nao_lidas: bigint
     }
     ```
 
@@ -184,6 +195,15 @@ src/
         3. Retorna o novo `conversa_id`
 -   **Retorno**: String com o UUID da conversa (sem aspas ou wrapping JSON extra).
 
+#### Edge Function: `create_group_conversation`
+-   **Responsabilidade**: Criar uma nova conversa em grupo.
+-   **O que faz**:
+    -   Recebe `nome_grupo` e `participantes_ids` no body.
+    -   Cria um novo registro em `conversas` com `is_grupo = true`.
+    -   Adiciona todos os participantes em `participantes_conversa`.
+    -   Retorna o `conversa_id` do grupo criado.
+-   **Retorno**: Objeto com `conversa_id`.
+
 ---
 
 ## 4. Fluxo de Dados
@@ -197,6 +217,8 @@ src/
    - Alunos seguidores (via useAlunosSeguidores)
 4. Mescla e ordena as listas
 5. Renderiza ConversaItem para cada entrada
+6. Exibe badge com contador de não lidas em cada item
+7. Exibe contador total no ícone do drawer
 ```
 
 ### 4.2. Fluxo de Início de Conversa
@@ -221,7 +243,7 @@ src/
 3. useMensagens:
    a. Insere mensagem na tabela mensagens
    b. Atualiza last_message_id da conversa
-   c. Atualiza updated_at da conversa
+   c. Atualiza updated_at da conversa (via trigger no DB)
 4. Realtime dispara evento INSERT
 5. Subscription do useMensagens adiciona mensagem ao estado
 6. Subscription do useConversas atualiza lista de conversas
@@ -232,10 +254,12 @@ src/
 ```
 1. Outro usuário envia mensagem
 2. INSERT na tabela mensagens
-3. Realtime dispara evento:
+3. Realtime dispara evento INSERT:
    - Para useMensagens (se chat está aberto): adiciona mensagem
-   - Para useConversas: recarrega lista (atualiza última mensagem)
-4. UI atualiza automaticamente em ambos os lugares
+   - Para useConversas: refetch completo (atualiza última mensagem e contador)
+4. Se chat está aberto, useMensagens marca mensagens como lidas
+5. Evento UPDATE dispara para useConversas atualizar contador
+6. UI atualiza automaticamente em ambos os lugares
 ```
 
 ---
@@ -244,8 +268,11 @@ src/
 
 ### 5.1. useConversas
 -   **Canal**: `public:mensagens`
--   **Evento**: INSERT
--   **Ação**: Recarrega toda a lista de conversas para atualizar última mensagem e ordenação
+-   **Eventos**: INSERT e UPDATE
+-   **Ação**: Recarrega toda a lista de conversas para atualizar:
+    -   Última mensagem
+    -   Ordenação
+    -   Contador de mensagens não lidas
 
 ### 5.2. useMensagens
 -   **Canal**: `conversa:{conversaId}`
@@ -261,6 +288,7 @@ src/
 |-----------------|--------|-----------|
 | useConversas | loading | Carregando lista inicial de conversas |
 | useConversas | loadingConversa | Criando nova conversa |
+| useConversas | unreadCount | Total de mensagens não lidas |
 | useMensagens | loading | Carregando histórico de mensagens |
 | useMensagens | sending | Enviando nova mensagem |
 | MessageDrawer | conversaAtiva | Conversa atualmente aberta no chat |
@@ -287,6 +315,10 @@ src/
 - **Causa**: `JSON.stringify(conversationId)` na Edge Function
 - **Solução**: Retornar UUID direto ou objeto `{conversationId}`
 
+**Erro: "structure of query does not match function result type"**
+- **Causa**: Campos `avatar_type`, `avatar_letter`, `avatar_color` são `character varying` nas tabelas mas a função RPC espera `text`
+- **Solução**: Usar `CAST(... AS text)` nos COALESCE que retornam esses campos
+
 ---
 
 ## 8. Status de Implementação
@@ -303,21 +335,24 @@ src/
 - [x] Enter para enviar, Shift+Enter para nova linha
 - [x] Estados de loading/sending
 - [x] RLS configurado sem recursão
+- [x] Contador de mensagens não lidas por conversa
+- [x] Contador total de mensagens não lidas
+- [x] Suporte a grupos
 
 ### 🔄 Melhorias Futuras
 - [ ] Indicador de "digitando..."
-- [ ] Marcação de mensagens como lidas (campo `lida_em`)
+- [ ] Marcação automática de mensagens como lidas ao abrir chat
 - [ ] Notificações push para novas mensagens
-- [ ] Contador de mensagens não lidas na lista
 - [ ] Toast/alertas para erros
 - [ ] Upload de imagens/arquivos
 - [ ] Mensagens de voz
 - [ ] Busca dentro de conversas
-- [ ] Grupos (suporte a mais de 2 participantes)
 - [ ] Reações a mensagens
 - [ ] Mensagens temporárias
 - [ ] Backup automático de conversas
 - [ ] Edição/exclusão de mensagens
+- [ ] Status online/offline dos participantes
+- [ ] Confirmação de leitura (checkmarks duplos)
 
 ---
 
@@ -326,7 +361,7 @@ src/
 -   `@supabase/supabase-js`: Cliente Supabase
 -   `date-fns`: Formatação de datas
 -   `lucide-react`: Ícones
--   `shadcn/ui`: Componentes UI (Avatar, Button, Input)
+-   `shadcn/ui`: Componentes UI (Avatar, Button, Input, Badge)
 
 ---
 
@@ -337,6 +372,7 @@ src/
 -   Subscriptions são limpas no unmount para evitar memory leaks
 -   Auto-scroll usa `scrollIntoView` com `behavior: 'smooth'`
 -   Lista de conversas usa `Map` para mesclar eficientemente
+-   `unreadCount` é calculado via `useMemo` para evitar recálculos desnecessários
 
 ---
 
@@ -367,4 +403,36 @@ src/
 ### Importante
 - Políticas RLS evitam referências circulares para prevenir recursão infinita
 - `participantes_conversa` é a tabela base (sem subqueries para ela mesma)
-- Edge Function usa `SECURITY DEFINER` com service role para operações privilegiadas
+- Edge Functions usam `SECURITY DEFINER` com service role para operações privilegiadas
+
+---
+
+## 12. Troubleshooting
+
+### Problema: Tipos TypeScript não batem com retorno da RPC
+**Solução**: Sempre que modificar uma função RPC no Supabase, execute:
+```bash
+npm run gen-types
+```
+
+### Problema: Conversas não aparecem
+**Verificar**:
+1. RLS está configurado corretamente?
+2. Usuário está em `participantes_conversa`?
+3. Console do navegador mostra erros?
+
+### Problema: Mensagens não atualizam em tempo real
+**Verificar**:
+1. Subscription está ativa? (check console logs)
+2. Canal correto? (deve ser `conversa:{conversaId}`)
+3. Realtime está habilitado no Supabase para a tabela `mensagens`?
+
+### Problema: Contador de não lidas não atualiza
+**Verificar**:
+1. Campo `lida_em` está sendo atualizado?
+2. Subscription de UPDATE está ativa no `useConversas`?
+3. RPC retorna campo `mensagens_nao_lidas`?
+
+---
+
+**Última atualização**: 2025-10-01

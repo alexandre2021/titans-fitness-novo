@@ -262,24 +262,33 @@ export type Database = {
       }
       conversas: {
         Row: {
+          avatar_grupo: string | null
           created_at: string
           id: string
+          is_grupo: boolean
           last_message_id: string | null
           nome: string | null
+          nome_grupo: string | null
           updated_at: string
         }
         Insert: {
+          avatar_grupo?: string | null
           created_at?: string
           id?: string
+          is_grupo?: boolean
           last_message_id?: string | null
           nome?: string | null
+          nome_grupo?: string | null
           updated_at?: string
         }
         Update: {
+          avatar_grupo?: string | null
           created_at?: string
           id?: string
+          is_grupo?: boolean
           last_message_id?: string | null
           nome?: string | null
+          nome_grupo?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1293,14 +1302,15 @@ export type Database = {
       get_minhas_conversas: {
         Args: Record<PropertyKey, never>
         Returns: {
+          avatar: string
+          avatar_color: string
+          avatar_letter: string
+          avatar_type: string
           conversa_id: string
+          is_grupo: boolean
           mensagens_nao_lidas: number
-          outro_participante_avatar: string
-          outro_participante_avatar_color: string
-          outro_participante_avatar_letter: string
-          outro_participante_avatar_type: string
+          nome: string
           outro_participante_id: string
-          outro_participante_nome: string
           remetente_ultima_mensagem_id: string
           ultima_mensagem_conteudo: string
           ultima_mensagem_criada_em: string
