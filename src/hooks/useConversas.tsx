@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAlunosSeguidores } from '@/hooks/useAlunosSeguidores';
@@ -8,11 +8,12 @@ import type { Database } from '@/integrations/supabase/types';
 export interface ConversaUI {
   id: string;
   nome: string;
-  outroParticipanteId: string | null; // Pode ser nulo para grupos
+  outroParticipanteId: string | null;
   ultimaMsg: string;
   naoLidas: number;
   isGroup: boolean;
   updated_at: string;
+  creatorId: string | null;
   avatar: {
     type: 'image' | 'letter' | 'group' | null;
     url: string | null;
@@ -43,8 +44,11 @@ export const useConversas = () => {
           id: conversa.conversa_id,
           nome: conversa.nome || 'Conversa',
           outroParticipanteId: conversa.outro_participante_id,
+          creatorId: conversa.creator_id,
           avatar: {
-            type: conversa.avatar_type as 'image' | 'letter' | 'group' | null,
+            type: conversa.is_grupo
+              ? conversa.avatar ? 'image' : 'group'
+              : conversa.avatar_type as 'image' | 'letter' | null,
             url: conversa.avatar,
             letter: conversa.avatar_letter,
             color: conversa.avatar_color,
@@ -63,6 +67,7 @@ export const useConversas = () => {
             id: '',
             nome: aluno.nome_completo,
             outroParticipanteId: aluno.id,
+            creatorId: null,
             avatar: {
               type: aluno.avatar_type as 'image' | 'letter' | null,
               url: aluno.avatar_image_url,
@@ -98,6 +103,7 @@ export const useConversas = () => {
     setLoading(false);
   }, [mesclarEFormatarConversas]);
 
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   useEffect(() => {
     if (!user || loadingAlunos) {
       setLoading(false);
@@ -108,33 +114,84 @@ export const useConversas = () => {
 
     fetchEFormatar();
 
+    const debouncedFetch = () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+      debounceTimer.current = setTimeout(() => {
+        fetchEFormatar();
+      }, 500); // Aguarda 500ms antes de re-buscar
+    };
+
     channel = supabase
       .channel('public:mensagens')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensagens' }, payload => {
-        console.log('Nova mensagem recebida!', payload);
-        fetchEFormatar();
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensagens' }, (payload) => {
+        const novaMensagem = payload.new as { conversa_id: string; conteudo: string; remetente_id: string; created_at: string };
+        
+        setConversas(prevConversas => {
+          const conversaIndex = prevConversas.findIndex(c => c.id === novaMensagem.conversa_id);
+
+          // Se a conversa não está na lista, busca tudo para garantir consistência
+          if (conversaIndex === -1) {
+            debouncedFetch();
+            return prevConversas;
+          }
+
+          const conversaAntiga = prevConversas[conversaIndex];
+          const isMine = novaMensagem.remetente_id === user?.id;
+
+          const conversaAtualizada: ConversaUI = {
+            ...conversaAntiga,
+            ultimaMsg: isMine ? `Você: ${novaMensagem.conteudo}` : novaMensagem.conteudo,
+            updated_at: novaMensagem.created_at,
+            naoLidas: isMine ? conversaAntiga.naoLidas : (conversaAntiga.naoLidas || 0) + 1,
+          };
+
+          // Remove a conversa da posição antiga e a coloca no topo
+          const outrasConversas = [
+            ...prevConversas.slice(0, conversaIndex),
+            ...prevConversas.slice(conversaIndex + 1),
+          ];
+
+          return [conversaAtualizada, ...outrasConversas];
+        });
       })
-      .on('postgres_changes', { 
-        event: 'UPDATE', 
-        schema: 'public', 
-        table: 'mensagens' 
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'mensagens'
       }, payload => {
-        console.log('Mensagem atualizada (marcada como lida)!', payload);
-        fetchEFormatar(); // Recarrega a lista para atualizar a contagem de não lidas
+        // Usado principalmente para marcar como lida, que zera o contador.
+        // Uma busca completa é mais segura aqui.
+        if (payload.new.lida_em) {
+          console.log('Mensagem atualizada (lida), atualizando lista de conversas...');
+          debouncedFetch();
+        }
       })
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'conversas' 
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'conversas'
       }, payload => {
         console.log('Nova conversa criada!', payload);
-        fetchEFormatar();
+        debouncedFetch();
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'conversas'
+      }, payload => {
+        console.log('Conversa atualizada (nome/avatar), atualizando lista de conversas...');
+        debouncedFetch();
       })
       .subscribe();
 
     return () => {
       if (channel) {
         supabase.removeChannel(channel);
+      }
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
       }
     };
   }, [user, loadingAlunos, fetchEFormatar]);
@@ -161,7 +218,6 @@ export const useConversas = () => {
         updated_at: new Date().toISOString(),
       };
 
-      // Atualiza a conversa específica na lista, mantendo as outras
       setConversas(prev => prev.map(c => c.outroParticipanteId === novaConversa.outroParticipanteId ? novaConversa : c));
 
       return novaConversa;
@@ -198,11 +254,12 @@ export const useConversas = () => {
         id: data.conversa_id,
         nome: nomeGrupo,
         outroParticipanteId: null,
+        creatorId: user.id,
         avatar: {
           type: 'group',
           url: avatarUrl,
           letter: nomeGrupo.charAt(0).toUpperCase(),
-          color: '#60A5FA', // Cor padrão para grupos
+          color: '#60A5FA',
         },
         ultimaMsg: 'Grupo criado. Dê as boas-vindas!',
         naoLidas: 0,
@@ -210,7 +267,7 @@ export const useConversas = () => {
         updated_at: new Date().toISOString(),
       };
 
-      await fetchEFormatar(); // Recarrega a lista para incluir o novo grupo
+      await fetchEFormatar();
       return novoGrupo;
     } catch (error) {
       console.error('Erro ao criar grupo:', error);
@@ -220,7 +277,81 @@ export const useConversas = () => {
     }
   };
 
-  // ✅ NOVO - Calcula total de mensagens não lidas
+  const removerParticipante = async (conversaId: string, participantId: string): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+      const { data, error } = await supabase.functions.invoke('remove_group_participant', {
+        body: {
+          conversa_id: conversaId,
+          participant_id: participantId,
+        },
+      });
+
+      if (error) throw error;
+
+      return true;
+    } catch (error) {
+      console.error('Erro ao remover participante:', error);
+      return false;
+    }
+  };
+
+  const adicionarParticipantes = async (conversaId: string, participantIds: string[]): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+      const { data, error } = await supabase.functions.invoke('add_group_participant', {
+        body: {
+          conversa_id: conversaId,
+          participant_ids: participantIds,
+        },
+      });
+
+      if (error) throw error;
+
+      return true;
+    } catch (error) {
+      console.error('Erro ao adicionar participantes:', error);
+      return false;
+    }
+  };
+
+  const editarGrupo = async (conversaId: string, updates: { nome?: string; avatarUrl?: string }): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+      const { error } = await supabase.functions.invoke('update_group_info', {
+        body: {
+          conversa_id: conversaId,
+          nome_grupo: updates.nome,
+          avatar_grupo: updates.avatarUrl,
+        },
+      });
+
+      if (error) throw error;
+
+      // Atualização otimista do estado local
+      setConversas(prev =>
+        prev.map(c => {
+          if (c.id === conversaId) {
+            return {
+              ...c,
+              ...(updates.nome && { nome: updates.nome }),
+              ...(updates.avatarUrl && { avatar: { ...c.avatar, url: updates.avatarUrl, type: 'image' } }),
+            };
+          }
+          return c;
+        })
+      );
+      return true;
+    } catch (error) {
+      console.error('Erro ao editar informações do grupo:', error);
+      // Adicionar toast de erro aqui seria uma boa prática
+      return false;
+    }
+  };
+
   const unreadCount = useMemo(() => {
     return conversas.reduce((total, conversa) => total + conversa.naoLidas, 0);
   }, [conversas]);
@@ -229,9 +360,12 @@ export const useConversas = () => {
     conversas, 
     loading, 
     iniciarConversa, 
-    criarGrupo, // ✅ NOVO
+    criarGrupo,
+    removerParticipante,
+    adicionarParticipantes, // ✅ ADICIONE ESTA LINHA
+    editarGrupo,
     loadingConversa, 
     refetchConversas: fetchEFormatar,
-    unreadCount // ✅ NOVO - exporta contagem total
+    unreadCount
   };
 };

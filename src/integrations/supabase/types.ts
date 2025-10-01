@@ -264,6 +264,7 @@ export type Database = {
         Row: {
           avatar_grupo: string | null
           created_at: string
+          creator_id: string | null
           id: string
           is_grupo: boolean
           last_message_id: string | null
@@ -274,6 +275,7 @@ export type Database = {
         Insert: {
           avatar_grupo?: string | null
           created_at?: string
+          creator_id?: string | null
           id?: string
           is_grupo?: boolean
           last_message_id?: string | null
@@ -284,6 +286,7 @@ export type Database = {
         Update: {
           avatar_grupo?: string | null
           created_at?: string
+          creator_id?: string | null
           id?: string
           is_grupo?: boolean
           last_message_id?: string | null
@@ -1299,6 +1302,17 @@ export type Database = {
         Args: { aluno_id: string }
         Returns: Json
       }
+      get_conversa_participantes: {
+        Args: { p_conversa_id: string }
+        Returns: {
+          avatar_color: string
+          avatar_image_url: string
+          avatar_letter: string
+          avatar_type: string
+          id: string
+          nome_completo: string
+        }[]
+      }
       get_minhas_conversas: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -1307,6 +1321,7 @@ export type Database = {
           avatar_letter: string
           avatar_type: string
           conversa_id: string
+          creator_id: string
           is_grupo: boolean
           mensagens_nao_lidas: number
           nome: string

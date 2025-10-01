@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import type { Database } from '@/integrations/supabase/types';
 
 export interface Mensagem {
   id: string;
@@ -19,6 +20,14 @@ export interface Mensagem {
     avatar_color: string | null;
   }
 }
+
+type PerfilRemetente = Mensagem['remetente'];
+
+// Cache para perfis de remetentes para evitar buscas repetidas
+const remetentesCache = new Map<string, PerfilRemetente>();
+
+// Tipo para o payload da mensagem recebida via Realtime
+type MensagemPayload = Database['public']['Tables']['mensagens']['Row'];
 
 export const useMensagens = (conversaId: string | null) => {
   const { user } = useAuth();
@@ -119,6 +128,51 @@ export const useMensagens = (conversaId: string | null) => {
     }
   }, [conversaId, user]);
 
+  const getPerfilRemetente = useCallback(async (remetenteId: string): Promise<PerfilRemetente> => {
+    if (remetentesCache.has(remetenteId)) {
+      return remetentesCache.get(remetenteId);
+    }
+
+    // Tenta buscar em 'alunos' primeiro
+    let { data: perfilData, error: perfilError } = await supabase
+      .from('alunos')
+      .select('id, nome_completo, avatar_image_url, avatar_type, avatar_letter, avatar_color')
+      .eq('id', remetenteId)
+      .single();
+
+    if (perfilError && !perfilData) {
+      // Se não encontrou em 'alunos', tenta em 'professores'
+      ({ data: perfilData, error: perfilError } = await supabase
+        .from('professores')
+        .select('id, nome_completo, avatar_image_url, avatar_type, avatar_letter, avatar_color')
+        .eq('id', remetenteId)
+        .single());
+    }
+
+    if (perfilError || !perfilData) {
+      console.error(`Erro ao buscar perfil do remetente ${remetenteId}:`, perfilError);
+      return {
+        nome: 'Usuário desconhecido',
+        avatar_url: null,
+        avatar_type: 'letter',
+        avatar_letter: '?',
+        avatar_color: '#ccc',
+      };
+    }
+
+    const perfil: PerfilRemetente = {
+      nome: perfilData.nome_completo,
+      avatar_url: perfilData.avatar_image_url,
+      avatar_type: perfilData.avatar_type as 'image' | 'letter' | null,
+      avatar_letter: perfilData.avatar_letter,
+      avatar_color: perfilData.avatar_color,
+    };
+
+    remetentesCache.set(remetenteId, perfil);
+    return perfil;
+
+  }, []);
+
   useEffect(() => {
     if (!conversaId || !user) return;
 
@@ -135,17 +189,21 @@ export const useMensagens = (conversaId: string | null) => {
           table: 'mensagens',
           filter: `conversa_id=eq.${conversaId}`,
         },
-        (payload) => {
-          const novaMensagem = {
-            ...payload.new,
-            isMine: payload.new.remetente_id === user.id,
-          } as Mensagem;
-          
+        async (payload) => {
+          const novaMensagemPayload = payload.new as MensagemPayload;
+          const isMine = novaMensagemPayload.remetente_id === user.id;
+
+          const novaMensagem: Mensagem = {
+            ...novaMensagemPayload,
+            isMine,
+            remetente: isMine ? undefined : await getPerfilRemetente(novaMensagemPayload.remetente_id),
+          };
+
           setMensagens(prev => [...prev, novaMensagem]);
-          
-          // Se a mensagem não é minha, marca como lida automaticamente
-          if (novaMensagem.remetente_id !== user.id) {
-            marcarComoLidas();
+
+          // Se a mensagem não é minha e a janela está visível, marca como lida
+          if (!isMine && document.visibilityState === 'visible') {
+            await marcarComoLidas();
           }
         }
       )
@@ -154,7 +212,7 @@ export const useMensagens = (conversaId: string | null) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [conversaId, user, fetchMensagens, marcarComoLidas]);
+  }, [conversaId, user, fetchMensagens, marcarComoLidas, getPerfilRemetente]);
 
   const enviarMensagem = async (conteudo: string): Promise<boolean> => {
     if (!conversaId || !user || !conteudo.trim()) return false;

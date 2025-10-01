@@ -476,11 +476,13 @@ Este documento descreve a estrutura completa das tabelas do banco de dados no no
 | `is_grupo` | 6 | `boolean` | False | `false` | | | |
 | `nome_grupo` | 7 | `text` | True | | | | |
 | `avatar_grupo` | 8 | `text` | True | | | | |
+| `creator_id` | 9 | `uuid` | True | | `FOREIGN KEY (ON DELETE SET NULL)` | `fk_conversas_creator` | `auth.users(id)` |
 
 **Notas**: 
 - `last_message_id` é usado para buscar rapidamente a última mensagem
 - Para conversas 1:1, `is_grupo = false` e campos de grupo ficam NULL
 - Para grupos, `is_grupo = true`, `nome_grupo` e `avatar_grupo` são preenchidos
+- `creator_id` identifica o "dono" do grupo, que tem permissões de edição/exclusão
 - A coluna `nome` não está sendo usada atualmente, mas existe no schema
 
 **Segurança (RLS)**: Ativada. Usuário só vê conversas das quais participa (verificado via `participantes_conversa`)

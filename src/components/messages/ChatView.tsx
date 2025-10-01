@@ -12,6 +12,7 @@ import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 
 interface ChatViewProps {
   conversa: ConversaUI;
+  onEditGroup?: () => void;
 }
 
 const formatMessageTime = (dateString: string) => {
@@ -26,7 +27,7 @@ const formatMessageTime = (dateString: string) => {
   }
 };
 
-export const ChatView = ({ conversa }: ChatViewProps) => {
+export const ChatView = ({ conversa, onEditGroup }: ChatViewProps) => {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isInitialLoad = useRef(true);

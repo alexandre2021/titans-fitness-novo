@@ -1,13 +1,16 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { X, ArrowLeft, Loader2, Search, Users } from "lucide-react";
+import { X, ArrowLeft, Loader2, Search, Users, Settings, Group } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useConversas, ConversaUI } from "@/hooks/useConversas";
+import { useAuth } from "@/hooks/useAuth";
 import { Input } from "../ui/input";
+import { Badge } from "@/components/ui/badge";
 import { ChatView } from "./ChatView";
 import { CreateGroupView } from "./CreateGroupView";
+import { GroupInfoView } from "./GroupInfoView";
 
-type View = 'list' | 'chat' | 'create-group';
+type View = 'list' | 'chat' | 'create-group' | 'group-info';
 interface MessagesDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -36,7 +39,12 @@ const ConversaItem = ({ conversa, onClick }: { conversa: ConversaUI, onClick: ()
     )}
     <div className="flex-1">
       <div className="flex items-center justify-between">
-        <p className="font-semibold">{conversa.nome}</p>
+        <div className="flex items-center gap-2">
+          <p className="font-semibold truncate">{conversa.nome}</p>
+          {conversa.isGroup && (
+            <Badge variant="secondary" className="text-xs">Grupo</Badge>
+          )}
+        </div>
         {conversa.naoLidas > 0 && (
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
             {conversa.naoLidas}
@@ -51,7 +59,8 @@ const ConversaItem = ({ conversa, onClick }: { conversa: ConversaUI, onClick: ()
 const MessagesDrawer = ({ isOpen, onClose, direction = 'right' }: MessagesDrawerProps) => {
   const [view, setView] = useState<View>('list');
   const [activeConversation, setActiveConversation] = useState<ConversaUI | null>(null);
-  const { conversas, loading, iniciarConversa, loadingConversa } = useConversas();
+  const { user } = useAuth();
+  const { conversas, loading, iniciarConversa, loadingConversa, refetchConversas } = useConversas();
   const [searchTerm, setSearchTerm] = useState("");
 
   const filteredConversas = conversas.filter(conversa =>
@@ -66,10 +75,6 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right' }: MessagesDrawer
       setView('list');
     }
   }, [isOpen]);
-
-  const handleBack = () => {
-    setActiveConversation(null);
-  };
 
   const handleConversationClick = async (conversa: ConversaUI) => {
     if (conversa.id) {
@@ -103,23 +108,32 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right' }: MessagesDrawer
       className={`fixed top-0 h-full w-full max-w-md bg-card shadow-2xl z-[100] transform transition-transform duration-300 ease-in-out ${positionClasses} ${transformClasses}`}
       style={{ display: 'flex', flexDirection: 'column' }}
     >
-      <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
-        {view === 'chat' && (
-          <Button variant="ghost" size="icon" onClick={() => setView('list')}>
+      <div className="flex items-center p-4 border-b flex-shrink-0 gap-2">
+        {(view === 'chat' || view === 'group-info') && (
+          <Button variant="ghost" size="icon" onClick={() => setView(view === 'group-info' ? 'chat' : 'list')} aria-label="Voltar">
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
-        <h2 className="text-lg font-semibold">
-          {view === 'chat' && activeConversation ? activeConversation.nome : 'Mensagens'}
+        <h2 className="text-lg font-semibold flex-1 truncate">
+          {view === 'chat' && activeConversation ? activeConversation.nome : 
+           view === 'group-info' ? 'Informações do Grupo' : 
+           'Mensagens'}
         </h2>
-        {view === 'list' && (
-          <Button variant="ghost" size="icon" onClick={() => setView('create-group')}>
-            <Users className="h-5 w-5" />
+        <div className="flex items-center flex-shrink-0">
+          {view === 'list' && (
+            <Button variant="ghost" size="icon" onClick={() => setView('create-group')}>
+              <Users className="h-5 w-5" />
+            </Button>
+          )}
+          {view === 'chat' && activeConversation?.isGroup && activeConversation.creatorId === user?.id && (
+            <Button variant="ghost" size="icon" onClick={() => setView('group-info')}>
+              <Settings className="h-5 w-5" />
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="h-5 w-5" />
           </Button>
-        )}
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="h-5 w-5" />
-        </Button>
+        </div>
       </div>
 
       <div className="flex-grow overflow-y-auto">
@@ -161,6 +175,9 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right' }: MessagesDrawer
         {view === 'chat' && activeConversation && <ChatView conversa={activeConversation} />}
         {view === 'create-group' && (
           <CreateGroupView onCancel={() => setView('list')} onGroupCreated={handleGroupCreated} />
+        )}
+        {view === 'group-info' && activeConversation && (
+          <GroupInfoView conversa={activeConversation} onBack={() => setView('chat')} />
         )}
       </div>
     </div>
