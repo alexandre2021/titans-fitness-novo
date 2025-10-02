@@ -12,9 +12,13 @@ export const useServiceWorker = () => {
     onRegisteredSW(swUrl, registration) {
       if (!registration) return;
 
-      const intervalMS = import.meta.env.DEV 
-        ? 10 * 1000 
-        : 60 * 60 * 1000;
+      // Desativa verificação automática em desenvolvimento
+      if (import.meta.env.DEV) {
+        console.log('[PWA] ✅ Service Worker registrado (modo dev - sem verificação automática):', swUrl);
+        return;
+      }
+
+      const intervalMS = 60 * 60 * 1000; // 1 hora apenas em produção
 
       console.log('[PWA] ✅ Service Worker registrado:', swUrl);
       console.log(`[PWA] ⏰ Verificando atualizações a cada ${intervalMS / 1000}s`);
