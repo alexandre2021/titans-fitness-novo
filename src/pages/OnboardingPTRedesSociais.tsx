@@ -57,7 +57,6 @@ const OnboardingPTRedesSociais = () => {
         return;
       }
 
-      toast.success("Onboarding concluído com sucesso!");
       navigate("/index-professor");
     } catch (error) {
       toast.error("Erro inesperado");

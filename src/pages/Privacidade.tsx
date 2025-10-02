@@ -18,7 +18,7 @@ const Privacidade = () => {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <img
-            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal-simples.png"
+            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal.png"
             alt="Titans.fitness"
             className="h-12"
           />

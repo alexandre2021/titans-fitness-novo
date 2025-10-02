@@ -89,10 +89,6 @@ export const EditRedesSociaisForm = ({ profile, onSave }: EditRedesSociaisFormPr
 
       if (error) throw error;
 
-      toast.success("Perfil atualizado", {
-        description: "Suas redes sociais foram atualizadas com sucesso."
-      });
-
       onSave();
       form.reset(values);
     } catch (error) {

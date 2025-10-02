@@ -71,9 +71,6 @@ export const useAlunos = () => {
       if (error) throw error;
 
       setAlunos(prev => prev.filter(a => a.id !== alunoId));
-      toast.success('Aluno desvinculado', {
-        description: 'O aluno não está mais na sua lista.',
-      });
       return true;
     } catch (error) {
       console.error('Erro ao desvincular aluno:', error);

@@ -122,7 +122,6 @@ const OnboardingAlunoDadosBasicos = () => {
         if (success) {
           setShowQuestionarioModal(false);
           navigate('/index-aluno');
-          toast.success("Bem-vindo(a) à plataforma!");
         } else {
           toast.error("Erro ao finalizar. Tente novamente.");
         }

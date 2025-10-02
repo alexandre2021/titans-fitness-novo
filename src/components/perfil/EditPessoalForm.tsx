@@ -106,10 +106,6 @@ export const EditPessoalForm = ({ profile, onSave }: EditPessoalFormProps) => {
 
       if (userUpdateError) throw userUpdateError;
 
-      toast.success("Perfil atualizado", {
-        description: "Suas informações pessoais foram atualizadas com sucesso."
-      })
-
       onSave();
       form.reset(values); 
     } catch (error) {

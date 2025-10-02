@@ -49,9 +49,6 @@ export const AlunoCard = ({ aluno, onDesvincular }: AlunoCardProps) => {
     const success = await onDesvincular(aluno.id);
     
     if (success) {
-      toast.success("Aluno desvinculado", {
-        description: "O vínculo com o aluno foi removido com sucesso."
-      });
       setShowUnlinkDialog(false);
     } else {
       toast.error("Erro", {
@@ -111,15 +108,7 @@ export const AlunoCard = ({ aluno, onDesvincular }: AlunoCardProps) => {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                {isDesktop ? (
-                  <Button variant="outline" size="sm" className="ml-auto flex-shrink-0">
-                    Ações <ChevronDown className="ml-2 h-4 w-4" />
-                  </Button>
-                ) : (
-                  <Button variant="default" className="h-10 w-10 rounded-full p-0 flex-shrink-0 [&_svg]:size-6">
-                    <MoreVertical />
-                  </Button>
-                )}
+                <Button variant="default" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4"><MoreVertical /></Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => navigate(`/detalhes-aluno/${aluno.id}`)}>

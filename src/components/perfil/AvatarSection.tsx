@@ -160,7 +160,6 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
       await supabase.auth.updateUser({ data: { avatar_url: finalUrl } });
 
       onProfileUpdate();
-      toast.success("Avatar atualizado com sucesso!");
     } catch (error) {
       console.error("Erro ao atualizar avatar:", error);
       toast.error("Erro", { description: "Não foi possível atualizar seu avatar." });
@@ -195,7 +194,6 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
         await supabase.storage.from('avatars').remove([path]);
       }
 
-      toast.success("Foto removida", { description: "Seu avatar de letra foi restaurado." });
       onProfileUpdate();
     } catch (error) {
       console.error("Erro ao remover imagem:", error);
@@ -213,7 +211,6 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
 
       if (error) throw error;
 
-      toast.success("Cor atualizada", { description: "A cor do seu avatar foi alterada." });
       onProfileUpdate();
       setIsColorPickerOpen(false);
     } catch (error) {

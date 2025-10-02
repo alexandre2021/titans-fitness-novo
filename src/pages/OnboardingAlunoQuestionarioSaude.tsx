@@ -54,7 +54,6 @@ const OnboardingAlunoQuestionarioSaude = () => {
       });
 
       if (success) {
-        toast.success("Questionário concluído com sucesso!");
         navigate('/index-aluno');
       } else {
         toast.error("Erro ao salvar respostas. Tente novamente.");

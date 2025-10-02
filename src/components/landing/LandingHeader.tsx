@@ -19,7 +19,7 @@ const LandingHeader = () => {
             />
           ) : (
             <img 
-              src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal-simples.png" 
+              src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal.png" 
               alt="Titans Fitness" 
               className="h-10 w-auto"
             />

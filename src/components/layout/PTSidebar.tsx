@@ -85,9 +85,9 @@ const PTSidebar = () => {
       <div className="p-6 border-b">
         <div className="flex justify-center mb-1.5">
           <img 
-            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/TitansFitnessLogo-grande.png" 
+            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal.png" 
             alt="Titans Fitness" 
-            className="h-28 w-auto"
+            className="w-full h-auto"
           />
         </div>
         <p className="text-sm text-muted-foreground text-center">Professor</p>

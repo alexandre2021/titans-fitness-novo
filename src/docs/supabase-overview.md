@@ -1,24 +1,25 @@
 # Supabase
 
-Este projeto utiliza o Supabase como backend para autenticação, banco de dados, funções edge e armazenamento de arquivos.
+Este projeto utiliza o Supabase como backend para autenticação, banco de dados, funções edge e armazenamento de arquivos. A nossa instância do cliente Supabase é aprimorada com um **interceptador global** que trata erros de autenticação (`401 Unauthorized`) automaticamente.
 
 ## Configuração
 
-O cliente Supabase é configurado em `src/integrations/supabase/client.ts`:
+O cliente Supabase é configurado em `src/integrations/supabase/client.ts`. Ele inclui uma função `fetch` customizada que monitora todas as requisições para o backend.
 
 ```typescript
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from './types';
+// src/integrations/supabase/client.ts
 
-const SUPABASE_URL = "https://...supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "chave_publica";
-
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-    storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: true,
+const customFetch = async (input, init) => {
+  const response = await fetch(input, init);
+  if (response.status === 401) {
+    // Lógica para deslogar o usuário e redirecionar para /login
+    // ...
   }
+  return response;
+};
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  global: { fetch: customFetch }
 });
 ```
 
@@ -93,18 +94,34 @@ const { error } = await supabase
 
 ---
 
-### Funções Edge
+### Funções Edge (Nova Prática Recomendada)
 
-**Chamar função edge (ex: convite de aluno):**
+Para chamar Funções Edge, **devemos utilizar o wrapper global `invokeEdgeFunction`** localizado em `src/lib/apiClient.ts`. Este wrapper centraliza a lógica de autenticação e tratamento de erros, tornando o código mais seguro e limpo.
+
+**Vantagens de usar o `invokeEdgeFunction`:**
+- **Tratamento de Erro Centralizado:** Automaticamente trata erros de rede e de autenticação.
+- **Logout Automático:** Se a API retornar um erro `401 Unauthorized` (causado por um token JWT inválido ou expirado), o wrapper irá deslogar o usuário e exibir uma mensagem amigável. Isso previne loops infinitos e comportamentos inesperados na aplicação.
+- **Código Mais Limpo:** Simplifica a chamada de funções nos componentes, eliminando a necessidade de obter a sessão e configurar cabeçalhos manualmente.
+
+**Exemplo de uso:**
 ```typescript
-const { data, error } = await supabase.functions.invoke('enviar-convite', {
-  body: {
-    nome_aluno: "Fulano",
-    email_aluno: "fulano@email.com",
-    nome_personal: "Personal",
-    codigo_pt: "ABC123"
+import { invokeEdgeFunction } from "@/lib/apiClient";
+
+// ...
+
+try {
+  const resultado = await invokeEdgeFunction<{ success: boolean, data: any }>(
+    'minha-funcao-edge', 
+    { parametro: 'valor' }
+  );
+  console.log(resultado);
+} catch (error) {
+  // O erro 401 já foi tratado (logout).
+  // Aqui tratamos outros erros específicos da função, se necessário.
+  if (!(error instanceof Error && error.message.includes('Sessão inválida'))) {
+    console.error("Erro específico da função:", error);
   }
-});
+}
 ```
 
 ---

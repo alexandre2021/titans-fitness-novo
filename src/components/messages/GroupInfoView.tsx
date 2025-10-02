@@ -53,9 +53,10 @@ const ImageCropDialog: React.FC<ImageCropDialogProps> = ({ imageSrc, isUploading
 interface GroupInfoViewProps {
   conversa: ConversaUI;
   onBack: () => void;
+  onGroupUpdated: () => void;
 }
 
-export const GroupInfoView = ({ conversa, onBack }: GroupInfoViewProps) => {
+export const GroupInfoView = ({ conversa, onBack, onGroupUpdated }: GroupInfoViewProps) => {
   const { user } = useAuth();
   const { participants, loading, refetch } = useGroupParticipants(conversa.id);
   const { removerParticipante, adicionarParticipantes, editarGrupo } = useConversas();
@@ -93,8 +94,8 @@ export const GroupInfoView = ({ conversa, onBack }: GroupInfoViewProps) => {
     try {
       const success = await editarGrupo(conversa.id, { nome: groupName.trim() });
       if (success) {
-        toast.success('Nome do grupo atualizado!');
         setIsEditingName(false);
+        onGroupUpdated();
       } else {
         toast.error('Erro ao atualizar o nome do grupo.');
       }
@@ -120,9 +121,9 @@ export const GroupInfoView = ({ conversa, onBack }: GroupInfoViewProps) => {
     try {
       const success = await adicionarParticipantes(conversa.id, selectedAlunosToAdd);
       if (success) {
-        toast.success('Participantes adicionados com sucesso!');
         setIsAddingParticipants(false);
         setSelectedAlunosToAdd([]);
+        onGroupUpdated();
         refetch();
       } else {
         toast.error('Erro ao adicionar participantes.');
@@ -167,7 +168,7 @@ export const GroupInfoView = ({ conversa, onBack }: GroupInfoViewProps) => {
       const success = await editarGrupo(conversa.id, { avatarUrl: finalUrl });
       if (success) {
         setAvatarPreview(finalUrl);
-        toast.success('Avatar do grupo atualizado!');
+        onGroupUpdated();
       } else {
         throw new Error('Falha ao salvar avatar.');
       }

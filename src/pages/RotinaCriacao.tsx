@@ -845,7 +845,6 @@ const RotinaCriacao = () => {
         }
       }
 
-      toast.success("Rascunho salvo com sucesso!");
       sessionStorage.removeItem(`${STORAGE_KEY}_${alunoId}`);
       navigate(`/alunos-rotinas/${alunoId}`, { replace: true });
     } catch (error) {
@@ -1031,7 +1030,6 @@ const RotinaCriacao = () => {
       }
 
       // 5. Limpeza e navegação
-      toast.success(draftId ? "Rascunho finalizado com sucesso!" : "Rotina criada com sucesso!");
       sessionStorage.removeItem(`${STORAGE_KEY}_${alunoId}`);
       navigate(`/alunos-rotinas/${alunoId}`, { replace: true });
 

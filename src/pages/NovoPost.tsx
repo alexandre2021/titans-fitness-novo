@@ -173,7 +173,6 @@ const NovoPost = () => {
 
       if (error) throw error;
 
-      toast.success(`Post ${status === 'published' ? 'publicado' : 'salvo como rascunho'}!`);
       navigate('/index-professor');
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Ocorreu um erro desconhecido.';

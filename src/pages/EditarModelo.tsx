@@ -756,7 +756,6 @@ const EditarModelo = () => {
         }
       }
 
-      toast.success("Modelo atualizado!", { description: "Suas alterações foram salvas com sucesso." });
       navigate("/meus-modelos", { replace: true });
 
     } catch (error) {

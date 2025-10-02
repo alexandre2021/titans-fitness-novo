@@ -215,7 +215,6 @@ const EditarPost = () => {
       const { error } = await supabase.from('posts').update(updateData).eq('id', post.id);
       if (error) throw error;
 
-      toast.success(`Post ${status === 'published' ? 'atualizado' : 'salvo como rascunho'}!`);
       navigate('/meus-posts');
     } catch (error: unknown) {
       toast.error('Erro ao salvar post', { description: (error as Error).message });

@@ -890,7 +890,6 @@ const NovoModelo = () => {
         }
       }
 
-      toast.success("Modelo Salvo!", { description: "Seu novo modelo de rotina foi salvo com sucesso." });
       sessionStorage.removeItem(STORAGE_KEY);
       navigate('/meus-modelos', { replace: true });
     } catch (error) {

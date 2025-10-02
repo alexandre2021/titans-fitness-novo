@@ -277,7 +277,6 @@ const NovoExercicio = () => {
       const key = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'video_url';
       setMidias(prev => ({ ...prev, [key]: null }));
       setSignedUrls(prev => ({ ...prev, [type === 'video' ? 'video' : type]: undefined }));
-      toast.success("Mídia removida com sucesso!");
       setShowDeleteMediaDialog(null);
     } catch (error) {
       console.error('Erro ao deletar mídia:', error);
@@ -370,8 +369,6 @@ const NovoExercicio = () => {
     setSaving(true);
 
     try {
-      toast.info("Processando", { description: "Salvando e otimizando mídias..." });
-
       const [imagem_1_url_final, imagem_2_url_final, video_url_final] = await Promise.all([
         uploadFile(midias.imagem_1_url),
         uploadFile(midias.imagem_2_url),
@@ -408,8 +405,6 @@ const NovoExercicio = () => {
         .single();
 
       if (error) throw error;
-
-      toast.success("Sucesso", { description: "Exercício criado com sucesso!" });
 
       console.log('✅ Exercício criado:', exercicio);
       navigate('/exercicios-pt');

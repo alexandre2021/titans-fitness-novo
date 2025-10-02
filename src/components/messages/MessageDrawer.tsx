@@ -76,6 +76,16 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right' }: MessagesDrawer
     }
   }, [isOpen]);
 
+  // Efeito para manter a conversa ativa sincronizada com a lista principal
+  useEffect(() => {
+    if (activeConversation) {
+      const updatedConversation = conversas.find(c => c.id === activeConversation.id);
+      if (updatedConversation) {
+        setActiveConversation(prev => prev && prev.id === updatedConversation.id && prev.ultimaMsg === updatedConversation.ultimaMsg && prev.nome === updatedConversation.nome ? prev : updatedConversation);
+      }
+    }
+  }, [conversas, activeConversation]);
+
   const handleConversationClick = async (conversa: ConversaUI) => {
     if (conversa.id) {
       setActiveConversation(conversa);
@@ -177,7 +187,7 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right' }: MessagesDrawer
           <CreateGroupView onCancel={() => setView('list')} onGroupCreated={handleGroupCreated} />
         )}
         {view === 'group-info' && activeConversation && (
-          <GroupInfoView conversa={activeConversation} onBack={() => setView('chat')} />
+          <GroupInfoView conversa={activeConversation} onBack={() => setView('chat')} onGroupUpdated={refetchConversas} />
         )}
       </div>
     </div>

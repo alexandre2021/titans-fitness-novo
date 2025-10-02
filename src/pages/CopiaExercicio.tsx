@@ -172,38 +172,23 @@ const CopiaExercicio = () => {
   // Isso elimina a dependência de variáveis de ambiente no frontend, resolvendo o problema em produção.
   const getMediaUrl = useCallback(async (path: string, tipo: 'personalizado' | 'padrao'): Promise<string> => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token;
-      if (!accessToken) {
-        throw new Error("Usuário não autenticado");
-      }
-
       // Determina o tipo de bucket a ser usado na Edge Function
       const bucket_type = tipo === 'personalizado' ? 'exercicios' : 'exercicios-padrao';
 
-      const response = await fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/get-image-url', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        },
-        body: JSON.stringify({
+      const { data: result, error } = await supabase.functions.invoke('get-image-url', {
+        body: {
           filename: path,
           bucket_type: bucket_type
-        })
+        }
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Erro ao obter URL da imagem: ${response.status} - ${errorText}`);
+      if (error) {
+        throw error;
       }
-
-      const result = await response.json();
 
       if (!result.success || !result.url) {
         throw new Error('URL não retornada pelo servidor');
       }
-
       return result.url;
     } catch (error) {
       console.error(`Erro ao obter URL para ${tipo} (${path}):`, error);
@@ -213,13 +198,14 @@ const CopiaExercicio = () => {
 
   // ✅ FUNÇÃO ATUALIZADA: Carrega as URLs das mídias para preview de forma robusta
   const loadSignedUrls = useCallback(async (tipoExercicioOriginal: 'padrao' | 'personalizado') => {
-    console.log('🔍 [loadSignedUrls] Iniciado. Estado `midias` atual:', midias);
+    const currentMidias = midias;
+    console.log('🔍 [loadSignedUrls] Iniciado. Estado `midias` atual:', currentMidias);
 
     const processMedia = async (
       mediaKey: 'imagem_1_url' | 'imagem_2_url' | 'video_url',
       signedUrlKey: 'imagem1' | 'imagem2' | 'video'
     ) => {
-      const mediaValue = midias[mediaKey];
+      const mediaValue = currentMidias[mediaKey];
       const initialValue = initialMediaUrls[mediaKey];
 
       if (mediaValue === initialValue && signedUrls[signedUrlKey]) {
@@ -260,7 +246,14 @@ const CopiaExercicio = () => {
       setLoadingImages(false);
       console.log('🔚 [loadSignedUrls] Finalizado');
     }
-  }, [midias, getMediaUrl, initialMediaUrls, signedUrls]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    // Removido `midias` e `signedUrls` para evitar recriação desnecessária.
+    // A função agora usa uma cópia local de `midias` para estabilidade.
+    // As dependências restantes são estáveis.
+    getMediaUrl, 
+    initialMediaUrls
+  ]);
 
   // Função para seleção de mídia (adaptada para desktop)
   const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
@@ -335,10 +328,6 @@ const CopiaExercicio = () => {
     try {
       const key = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'video_url';
       setMidias(prev => ({ ...prev, [key]: null }));
-      
-      toast.success("Mídia removida", {
-        description: "Mídia removida da cópia!",
-      });
 
       setShowDeleteMediaDialog(null);
     } catch (error) {
@@ -426,12 +415,13 @@ const CopiaExercicio = () => {
   }, [id, navigate, toast]);
 
   // MANTENDO useEffect original (sem mudanças nas dependências)
+  // A correção no `loadSignedUrls` acima deve resolver o loop.
   useEffect(() => {
     if (exercicioOriginal) {
       console.log('🔄 Recarregando URLs assinadas...');
       loadSignedUrls(exercicioOriginal.tipo as 'padrao' | 'personalizado');
     }
-  }, [exercicioOriginal, midias, loadSignedUrls]);
+  }, [exercicioOriginal, loadSignedUrls]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -467,10 +457,8 @@ const CopiaExercicio = () => {
           }
         });
 
-        if (presignedError || !presignedData.signedUrl) {
-          throw new Error(presignedError?.message || 'Não foi possível obter a URL de upload.');
-        }
-
+        if (presignedError || !presignedData.signedUrl) throw new Error(presignedError?.message || 'Não foi possível obter a URL de upload.');
+        
         // Upload direto para Cloudflare R2
         const uploadResponse = await fetch(presignedData.signedUrl, {
           method: 'PUT',
@@ -503,10 +491,8 @@ const CopiaExercicio = () => {
             }
           });
 
-          if (copyError || !copyResult.success) {
-            throw new Error(copyError?.message || copyResult.error || 'Não foi possível copiar a mídia.');
-          }
-
+          if (copyError || !copyResult.success) throw new Error(copyError?.message || copyResult.error || 'Não foi possível copiar a mídia.');
+          
           console.log('✅ Cópia criada com sucesso via Edge Function:', copyResult.path);
           return copyResult.path;
           
@@ -539,60 +525,54 @@ const CopiaExercicio = () => {
       return;
     }
 
-    setSaving(true);
+    setSaving(true); // O botão já indica "Salvando..."
 
-    const promise = async () => {
-        // 1. Processar e fazer upload/cópia de todas as mídias
-        const [imagem_1_url_final, imagem_2_url_final, video_url_final] = await Promise.all([
-          uploadFile(midias.imagem_1_url),
-          uploadFile(midias.imagem_2_url),
-          uploadFile(midias.video_url),
-        ]);
-  
-        const instrucoesFinal = instrucoesList.filter(i => i.trim()).join('#');
-  
-        // 2. Inserir o novo exercício no banco de dados
-        const { data: exercicio, error } = await supabase
-          .from('exercicios')
-          .insert({
-            nome: formData.nome.trim(),
-            descricao: formData.descricao.trim(),
-            grupo_muscular: formData.grupo_muscular,
-            equipamento: formData.equipamento,
-            dificuldade: formData.dificuldade,
-            instrucoes: instrucoesFinal.trim(),
-            grupo_muscular_primario: formData.grupo_muscular_primario.trim() || null,
-            grupos_musculares_secundarios: formData.grupos_musculares_secundarios.trim() || null,
-            imagem_1_url: imagem_1_url_final,
-            imagem_2_url: imagem_2_url_final,
-            video_url: video_url_final,
-            youtube_url: midias.youtube_url as string || null,
-            tipo: 'personalizado',
-            professor_id: user.id,
-            exercicio_padrao_id: exercicioOriginal?.id,
-            is_ativo: true,
-            status_midia: 'concluido'
-          })
-          .select()
-          .single();
-  
-        if (error) throw error;
-        return exercicio;
-      };
-  
-      toast.promise(promise(), {
-        loading: 'Salvando cópia do exercício...',
-        success: (exercicio) => {
-          setSaving(false);
-          navigate('/exercicios-pt');
-          return `Exercício "${exercicio.nome}" copiado com sucesso!`;
-        },
-        error: (err) => {
-          setSaving(false);
-          console.error('❌ Erro ao criar cópia:', err);
-          return `Erro ao criar cópia: ${err.message}`;
-        },
-      });
+    try {
+      // 1. Processar e fazer upload/cópia de todas as mídias
+      const [imagem_1_url_final, imagem_2_url_final, video_url_final] = await Promise.all([
+        uploadFile(midias.imagem_1_url),
+        uploadFile(midias.imagem_2_url),
+        uploadFile(midias.video_url),
+      ]);
+
+      const instrucoesFinal = instrucoesList.filter(i => i.trim()).join('#');
+
+      // 2. Inserir o novo exercício no banco de dados
+      const { data: exercicio, error } = await supabase
+        .from('exercicios')
+        .insert({
+          nome: formData.nome.trim(),
+          descricao: formData.descricao.trim(),
+          grupo_muscular: formData.grupo_muscular,
+          equipamento: formData.equipamento,
+          dificuldade: formData.dificuldade,
+          instrucoes: instrucoesFinal.trim(),
+          grupo_muscular_primario: formData.grupo_muscular_primario.trim() || null,
+          grupos_musculares_secundarios: formData.grupos_musculares_secundarios.trim() || null,
+          imagem_1_url: imagem_1_url_final,
+          imagem_2_url: imagem_2_url_final,
+          video_url: video_url_final,
+          youtube_url: midias.youtube_url as string || null,
+          tipo: 'personalizado',
+          professor_id: user.id,
+          exercicio_padrao_id: exercicioOriginal?.id,
+          is_ativo: true,
+          status_midia: 'concluido'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // O redirecionamento já indica o sucesso da operação.
+      navigate('/exercicios-pt');
+    } catch (err) {
+      const error = err as Error;
+      console.error('❌ Erro ao criar cópia:', error);
+      toast.error("Erro ao criar cópia", { description: error.message });
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {

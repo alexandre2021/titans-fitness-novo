@@ -89,10 +89,6 @@ const AlunosPT = () => {
 
       // Remover da lista local
       setConvitesPendentes(prev => prev.filter(c => c.id !== conviteId));
-
-      toast.success("Convite cancelado", {
-        description: `O convite para ${email} foi cancelado.`
-      })
     } catch (error) {
       console.error('Erro ao cancelar convite:', error);
       toast.error("Erro", {

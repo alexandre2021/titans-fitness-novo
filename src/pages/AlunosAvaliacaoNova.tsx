@@ -367,10 +367,6 @@ const AlunosAvaliacaoNova = () => {
 
       if (error) throw error;
 
-      toast.success("Avaliação criada", {
-        description: "A avaliação física foi registrada com sucesso."
-      });
-
       // Voltar para a página de avaliações
       navigate(`/alunos-avaliacoes/${id}`);
 

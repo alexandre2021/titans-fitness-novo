@@ -147,7 +147,6 @@ const OnboardingPTInformacoesBasicas = () => {
 
         if (error) throw error;
 
-        toast.success("Perfil básico salvo!", { description: "Você pode completar o restante depois."});
         navigate("/index-professor");
       } catch (error) {
         toast.error("Erro ao finalizar", { description: "Não foi possível finalizar seu onboarding."});

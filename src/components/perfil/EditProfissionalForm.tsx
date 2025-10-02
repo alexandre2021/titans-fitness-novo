@@ -122,10 +122,6 @@ export const EditProfissionalForm = ({ profile, onSave }: EditProfissionalFormPr
 
       if (error) throw error;
 
-      toast.success("Perfil atualizado", {
-        description: "Suas informações profissionais foram atualizadas com sucesso."
-      })
-
       onSave();
       form.reset(values);
     } catch (error) {

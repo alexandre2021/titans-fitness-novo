@@ -34,6 +34,11 @@ const Login = () => {
         description: 'Faça o login para ver as novidades.',
         duration: 6000
       });
+    } else if (message === 'cadastro_sucesso') {
+      toast.success('Cadastro realizado com sucesso!', {
+        description: 'Faça o login para acessar a plataforma.',
+        duration: 6000
+      });
     }
   }, [searchParams]);
 
@@ -95,8 +100,6 @@ const Login = () => {
       }
 
       console.log('[handleSubmit] 3. Login bem-sucedido. O useEffect cuidará do redirecionamento.');
-      // Em caso de sucesso, mostra o toast. O useEffect acima cuidará do redirecionamento.
-      toast.success('Login realizado com sucesso!');
 
     } catch (error) {
       console.error('[handleSubmit] 4. Erro inesperado no bloco try-catch:', error);
@@ -131,7 +134,7 @@ const Login = () => {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <img
-            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal-simples.png"
+            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal.png"
             alt="Titans.fitness"
             className="h-12"
           />

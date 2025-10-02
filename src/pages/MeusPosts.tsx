@@ -91,7 +91,6 @@ const MeusPosts = () => {
 
       const { error } = await supabase.from('posts').delete().eq('id', postParaExcluir.id);
       if (error) throw error;
-      toast.success("Post excluído com sucesso!");
       await carregarPosts(currentPage);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Ocorreu um erro desconhecido.";
@@ -147,11 +146,7 @@ const MeusPosts = () => {
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          {isDesktop ? (
-                            <Button variant="outline" size="sm">Ações <ChevronDown className="ml-2 h-4 w-4" /></Button>
-                          ) : (
-                            <Button variant="ghost" className="h-10 w-10 rounded-full p-0 flex-shrink-0"><MoreVertical className="h-5 w-5" /></Button>
-                          )}
+                          <Button variant="default" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4"><MoreVertical /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => navigate(`/blog/${post.slug}`)} disabled={post.status !== 'published'}><Eye className="mr-2 h-4 w-4" />Ver Publicação</DropdownMenuItem>

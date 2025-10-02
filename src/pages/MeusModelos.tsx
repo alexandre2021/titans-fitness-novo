@@ -85,7 +85,6 @@ const MeusModelos = () => {
       const { error } = await supabase.from('modelos_rotina').delete().eq('id', modeloParaExcluir.id);
       if (error) throw error;
       setModelos(prev => prev.filter(m => m.id !== modeloParaExcluir.id));
-      toast.success("Modelo excluído", { description: `O modelo "${modeloParaExcluir.nome}" foi removido.` });
     } catch (error) {
       toast.error("Erro ao excluir", {
         description: "Não foi possível remover o modelo. Tente novamente."
@@ -243,17 +242,7 @@ const MeusModelos = () => {
                 <CardTitle className="flex justify-between items-start text-lg">
                   <span className="flex-1 mr-2">{modelo.nome}</span>
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      {isDesktop ? (
-                        <Button variant="outline" size="sm" className="ml-auto flex-shrink-0">
-                          Ações <ChevronDown className="ml-2 h-4 w-4" />
-                        </Button>
-                      ) : (
-                        <Button variant="default" className="h-10 w-10 rounded-full p-0 flex-shrink-0 [&_svg]:size-6">
-                          <MoreVertical />
-                        </Button>
-                      )}
-                    </DropdownMenuTrigger>
+                    <DropdownMenuTrigger asChild><Button variant="default" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4"><MoreVertical /></Button></DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => handleEditarModelo(modelo.id)}>
                         <Edit className="mr-2 h-5 w-5" />

@@ -73,10 +73,6 @@ export const EditAlunoFisicasForm = ({ profile, onSave }: EditAlunoFisicasFormPr
 
       if (error) throw error;
 
-      toast.success("Perfil atualizado", {
-        description: "Suas informações físicas foram atualizadas com sucesso."
-      });
-
       onSave();
       form.reset(values);
     } catch (error) {

@@ -146,8 +146,6 @@ export const useExercicios = () => {
       setExerciciosPersonalizados(prev => prev.filter(ex => ex.id !== exercicioId));
       setTotalPersonalizados(prev => prev - 1);
 
-      toast.success("Sucesso", { description: "Exercício excluído com sucesso!" });
-
       console.log(`✅ Exercício ${exercicioId} excluído com sucesso`);
       
     } catch (error) {

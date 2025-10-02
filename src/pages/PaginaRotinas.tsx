@@ -482,10 +482,6 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         setRotinasAtivas(prev => prev.map(r => 
           r.id === rotina.id ? { ...r, status: novoStatus } : r
         ));
-        
-        toast.success(`Rotina ${novoStatus === 'Ativa' ? 'Ativada' : 'Bloqueada'}`, {
-          description: `O status da rotina foi atualizado.`,
-        });
       }
     } catch (error) {
       console.error(`Erro inesperado ao alterar status para ${novoStatus}:`, error);
@@ -551,15 +547,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            {isDesktop ? (
-              <Button variant="outline" size="sm" className="ml-auto">
-                Ações <ChevronDown className="ml-2 h-4 w-4" />
-              </Button>
-            ) : (
-              <Button variant="default" className="h-10 w-10 rounded-full p-0 flex-shrink-0 [&_svg]:size-6">
-                <MoreVertical />
-              </Button>
-            )}
+            <Button variant="default" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4"><MoreVertical /></Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => handleConcluidaClick(rotina)}>
@@ -589,15 +577,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          {isDesktop ? (
-            <Button variant="outline" size="sm" className="ml-auto" disabled={isUpdatingStatus}>
-              Ações <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
-          ) : (
-            <Button variant="default" className="h-10 w-10 rounded-full p-0 flex-shrink-0 [&_svg]:size-6" disabled={isUpdatingStatus}>
-              <MoreVertical />
-            </Button>
-          )}
+          <Button variant="default" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4" disabled={isUpdatingStatus}><MoreVertical /></Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => handleVerDetalhes(rotina.id)}>
@@ -911,15 +891,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
                             </div>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                {isDesktop ? (
-                                  <Button variant="outline" size="sm">
-                                    Ações <ChevronDown className="ml-2 h-4 w-4" />
-                                  </Button>
-                                ) : (
-                                  <Button variant="default" className="h-10 w-10 rounded-full p-0 flex-shrink-0 [&_svg]:size-6">
-                                    <MoreVertical />
-                                  </Button>
-                                )}
+                                <Button variant="default" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4"><MoreVertical /></Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => handleContinuarRascunho(rotina.id)}>

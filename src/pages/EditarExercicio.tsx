@@ -168,24 +168,14 @@ const EditarExercicio = () => {
 
   const getSignedImageUrl = useCallback(async (filename: string): Promise<string> => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token;
-      if (!accessToken) throw new Error("Usuário não autenticado");
-      
-      const response = await fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/get-image-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
-        body: JSON.stringify({ filename, bucket_type: 'exercicios' })
+      const { data, error } = await supabase.functions.invoke('get-image-url', {
+        body: { filename, bucket_type: 'exercicios' }
       });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Erro ao obter URL da imagem: ${response.status} - ${errorText}`);
-      }
-      
-      const result = await response.json();
-      if (!result.success || !result.url) throw new Error('URL não retornada pelo servidor');
-      return result.url;
+
+      if (error) throw error;
+      if (!data.success || !data.url) throw new Error('URL não retornada pelo servidor');
+
+      return data.url;
     } catch (error) {
       console.error('Erro ao obter URL assinada:', error);
       throw error;
@@ -315,7 +305,6 @@ const EditarExercicio = () => {
   const handleDeleteMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
     const urlMap = { imagem1: 'imagem_1_url', imagem2: 'imagem_2_url', video: 'video_url' };
     setMidias(prev => ({ ...prev, [urlMap[type]]: null }));
-    toast.success("Mídia removida.");
     setShowDeleteMediaDialog(null);
   };
 
@@ -429,9 +418,8 @@ const EditarExercicio = () => {
     if (!id || !user) return;
 
     setSaving(true);
-    try {
-      toast.info("Processando", { description: "Salvando e otimizando mídias..." });
 
+    try {
       const finalMediaUrls: { [key: string]: string | null } = {};
 
       for (const key of ['imagem_1_url', 'imagem_2_url', 'video_url']) {
@@ -468,13 +456,13 @@ const EditarExercicio = () => {
       .eq('id', id)
       .eq('professor_id', user.id);
 
-      if (error) throw error;
+      if (error) throw error;      
 
-      toast.success("Sucesso", { description: "Exercício atualizado com sucesso!" });
       navigate('/exercicios-pt', { state: { activeTab: 'personalizados' } });
     } catch (error) {
-      console.error('Erro ao salvar alterações:', error);
-      toast.error("Erro", { description: "Não foi possível salvar as alterações." });
+      const err = error as Error;
+      console.error('Erro ao salvar alterações:', err);
+      toast.error("Erro ao salvar", { description: err.message || "Não foi possível salvar as alterações." });
     } finally {
       setSaving(false);
     }
