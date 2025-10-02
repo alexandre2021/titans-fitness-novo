@@ -62,16 +62,15 @@ import AdminPostGuard from "./components/auth/AdminPostGuard.tsx";
 import ExecucaoSelecionarTreino from "./pages/ExecucaoSelecionarTreino";
 import ExecucaoExecutarTreino from "./pages/ExecucaoExecutarTreino";
 
-// IMPORTAÇÃO PARA PWA
-import PwaInstallPrompt from "@/components/pwa/PwaInstallPrompt";
-import PwaUpdateNotification from "@/components/pwa/PwaUpdateNotification";
+// IMPORTAÇÕES PARA PWA
+import { useServiceWorker } from "@/hooks/useServiceWorker";
 
 const queryClient = new QueryClient();
 
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <Index />,
+    element: <Index />
   },
   { path: "/funcionalidades", element: <Funcionalidades /> },
   { path: "/cadastro", element: <UserTypeSelection /> },
@@ -155,16 +154,20 @@ const router = createBrowserRouter([
   },
 ]);
 
+const AppContent = () => {
+  useServiceWorker();
+
+  return (
+    <TooltipProvider>
+      <Sonner position="bottom-left" />
+      <RouterProvider router={router} />
+    </TooltipProvider>
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Sonner position="bottom-left" />
-        <PwaInstallPrompt />
-        <PwaUpdateNotification />
-        <RouterProvider router={router} />
-      </TooltipProvider>
-    </AuthProvider>
+    <AuthProvider><AppContent /></AuthProvider>
   </QueryClientProvider>
 );
 

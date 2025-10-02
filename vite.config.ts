@@ -7,16 +7,19 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      // Mudar para 'prompt' é mais seguro. Ele notifica o usuário sobre a atualização
-      // em vez de aplicá-la automaticamente, evitando que uma versão quebrada trave o app.
       registerType: 'prompt',
+      includeAssets: ['favicon.ico', 'pwa-192x192.png', 'pwa-512x512.png'],
       workbox: {
-        // Aumenta o limite de tamanho do arquivo para o precache do service worker.
-        // O padrão é 2MB, mas nosso chunk principal está um pouco maior.
-        // Aumentamos para 5MB para evitar falhas no build.
         maximumFileSizeToCacheInBytes: 5000000,
-        // Garante que caches de versões antigas sejam removidos, evitando a "tela branca".
         cleanupOutdatedCaches: true,
+        // Garante que o service worker seja atualizado corretamente
+        skipWaiting: false,
+        clientsClaim: false,
+      },
+      // Configuração explícita para desenvolvimento
+      devOptions: {
+        enabled: true,
+        type: 'module',
       },
       manifest: {
         name: 'Titans Fitness',
