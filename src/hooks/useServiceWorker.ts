@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { toast } from 'sonner';
-import { RefreshCw } from 'lucide-react';
 
 export const useServiceWorker = () => {
   const intervalRef = useRef<number | null>(null);
@@ -37,13 +36,15 @@ export const useServiceWorker = () => {
 
   useEffect(() => {
     if (needRefresh) {
-      toast('🚀 Nova versão disponível!', {
+      toast('Nova versão disponível!', {
         description: 'Clique para atualizar agora',
+        position: 'top-center',
         action: {
           label: 'Atualizar',
           onClick: () => updateServiceWorker(true),
         },
         duration: Infinity,
+        dismissible: false,
       });
     }
   }, [needRefresh, updateServiceWorker]);
