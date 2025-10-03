@@ -21,7 +21,7 @@ const MessagesButton = ({ onClick, unreadCount, position = 'top-right' }: Messag
   return (
     <Button
       variant="secondary"
-      className={`fixed z-50 rounded-full shadow-lg flex items-center justify-center p-0 ${sizeClasses} ${positionClasses} bg-purple-600 hover:bg-purple-700 text-white`}
+      className={`fixed z-50 rounded-full shadow-lg flex items-center justify-center p-0 ${sizeClasses} ${positionClasses}`}
       onClick={onClick}
     >
       <MessageSquare />
