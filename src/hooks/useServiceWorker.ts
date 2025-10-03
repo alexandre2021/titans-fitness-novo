@@ -18,7 +18,7 @@ export const useServiceWorker = () => {
         return;
       }
 
-      const intervalMS = 60 * 60 * 1000; // 1 hora apenas em produção
+      const intervalMS = 10 * 60 * 1000; // 10 minutos para teste
 
       console.log('[PWA] ✅ Service Worker registrado:', swUrl);
       console.log(`[PWA] ⏰ Verificando atualizações a cada ${intervalMS / 1000}s`);
@@ -28,24 +28,39 @@ export const useServiceWorker = () => {
       }
 
       intervalRef.current = window.setInterval(() => {
-        console.log('[PWA] 🔄 Verificando por atualizações...');
-        registration.update();
+        const now = new Date().toLocaleTimeString();
+        console.log(`[PWA] 🔄 Verificando por atualizações às ${now}...`);
+        registration.update().then(() => {
+          console.log(`[PWA] ✔️ Verificação concluída às ${now}`);
+        }).catch((err) => {
+          console.error(`[PWA] ❌ Erro na verificação às ${now}:`, err);
+        });
       }, intervalMS);
     },
 
     onRegisterError(error) {
       console.error('[PWA] ❌ Erro ao registrar Service Worker:', error);
     },
+
+    onNeedRefresh() {
+      console.log('[PWA] 🆕 onNeedRefresh disparado!');
+    },
   });
 
   useEffect(() => {
+    console.log('[PWA] needRefresh mudou para:', needRefresh);
+    
     if (needRefresh) {
+      console.log('[PWA] 🎯 Exibindo toast de atualização');
       toast('Nova versão disponível!', {
         description: 'Clique para atualizar agora',
         position: 'top-center',
         action: {
           label: 'Atualizar',
-          onClick: () => updateServiceWorker(true),
+          onClick: () => {
+            console.log('[PWA] 🔄 Usuário clicou em atualizar');
+            updateServiceWorker(true);
+          },
         },
         duration: Infinity,
         dismissible: false,
