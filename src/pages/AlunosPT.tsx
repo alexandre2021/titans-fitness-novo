@@ -377,7 +377,7 @@ const AlunosPT = () => {
         {/* Mobile: Round floating button */}
         <Button
           onClick={handleConvidarAluno}
-          className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
+          className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-7"
           aria-label="Convidar Aluno"
         >
           <UserPlus />

@@ -256,11 +256,10 @@ export const GroupInfoView = ({ conversa, onBack, onGroupUpdated, onGroupDeleted
 
       {/* Dialog de confirmação de exclusão */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="z-[200]">
-          <DialogHeader>
-            <DialogTitle>Excluir Grupo</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
+        <DialogContent className="z-[200] w-[calc(100%-2rem)] sm:w-full sm:max-w-md">
+          <DialogHeader />
+          <div className="pt-0 pb-4">
+            <h3 className="text-lg font-semibold mb-4">Excluir Grupo</h3>
             <p className="text-muted-foreground">
               Tem certeza que deseja excluir o grupo <strong>{conversa.nome}</strong>?
             </p>
