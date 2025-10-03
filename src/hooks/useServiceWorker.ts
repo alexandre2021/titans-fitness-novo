@@ -18,7 +18,7 @@ export const useServiceWorker = () => {
         return;
       }
 
-      const intervalMS = 10 * 60 * 1000; // 10 minutos para teste
+      const intervalMS = 60 * 60 * 1000; // 1 hora
 
       console.log('[PWA] ✅ Service Worker registrado:', swUrl);
       console.log(`[PWA] ⏰ Verificando atualizações a cada ${intervalMS / 1000}s`);
@@ -61,6 +61,9 @@ export const useServiceWorker = () => {
             console.log('[PWA] 🔄 Usuário clicou em atualizar');
             updateServiceWorker(true);
           },
+        },
+        classNames: {
+          actionButton: 'bg-primary text-primary-foreground',
         },
         duration: Infinity,
         dismissible: false,

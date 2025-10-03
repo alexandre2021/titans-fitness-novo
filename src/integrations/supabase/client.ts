@@ -28,7 +28,10 @@ const customFetch = async (input: RequestInfo | URL, init?: RequestInit): Promis
 
       // Importante: Usamos a instância original para evitar um loop infinito no signOut
       if (supabaseInstance) {
-        await supabaseInstance.auth.signOut();
+        // Não esperamos o signOut, pois ele pode falhar (como visto no erro 403).
+        // A ação mais importante é redirecionar o usuário para o login.
+        supabaseInstance.auth.signOut();
+        window.location.href = '/login';
       }
     }
   }

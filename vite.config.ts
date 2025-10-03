@@ -18,7 +18,7 @@ export default defineConfig({
       },
       // Configuração explícita para desenvolvimento
       devOptions: {
-        enabled: true,
+        enabled: false, // Desabilita em DEV
         type: 'module',
       },
       manifest: {

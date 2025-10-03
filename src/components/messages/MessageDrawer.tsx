@@ -19,7 +19,15 @@ interface MessagesDrawerProps {
 
 const ConversaItem = ({ conversa, onClick }: { conversa: ConversaUI, onClick: () => void }) => (
   <div onClick={onClick} className="flex items-center p-3 hover:bg-muted/50 rounded-lg cursor-pointer transition-colors">
-    {conversa.avatar.type === 'image' && conversa.avatar.url ? (
+    {conversa.isGroup ? (
+      <div 
+        className="h-12 w-12 mr-4 rounded-full flex items-center justify-center bg-muted"
+      >
+        <Users className="h-6 w-6 text-muted-foreground" />
+      </div>
+    ) : 
+    
+    (conversa.avatar.type === 'image' && conversa.avatar.url ? (
       <Avatar className="h-12 w-12 mr-4">
         <AvatarImage src={conversa.avatar.url} alt={conversa.nome} />
         <AvatarFallback 
@@ -35,7 +43,7 @@ const ConversaItem = ({ conversa, onClick }: { conversa: ConversaUI, onClick: ()
         style={{ backgroundColor: conversa.avatar.color || '#ccc', color: 'white' }}
       >
         {conversa.avatar.letter || conversa.nome.charAt(0).toUpperCase()}
-      </div>
+      </div>)
     )}
     <div className="flex-1">
       <div className="flex items-center justify-between">
@@ -69,12 +77,13 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right' }: MessagesDrawer
   
   useEffect(() => {
     if (!isOpen) {
-      // Reset view when drawer is closed
       setActiveConversation(null);
       setSearchTerm("");
       setView('list');
+    } else {
+      refetchConversas(); // Garante que os dados estão atualizados ao abrir
     }
-  }, [isOpen]);
+  }, [isOpen, refetchConversas]);
 
   // Efeito para manter a conversa ativa sincronizada com a lista principal
   useEffect(() => {
@@ -102,8 +111,9 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right' }: MessagesDrawer
   };
 
   const handleGroupCreated = (conversa: ConversaUI) => {
-    setActiveConversation(conversa);
-    setView('chat');
+    // Solução "de estagiário": recarrega a página para garantir que a lista seja atualizada.
+    sessionStorage.setItem('openDrawerAfterReload', 'true');
+    window.location.reload();
   };
 
   const positionClasses = direction === 'right'
@@ -120,7 +130,19 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right' }: MessagesDrawer
     >
       <div className="flex items-center p-4 border-b flex-shrink-0 gap-2">
         {(view === 'chat' || view === 'group-info') && (
-          <Button variant="ghost" size="icon" onClick={() => setView(view === 'group-info' ? 'chat' : 'list')} aria-label="Voltar">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              if (view === 'chat') {
+                sessionStorage.setItem('openDrawerAfterReload', 'true');
+                window.location.reload();
+              } else {
+                setView('chat');
+              }
+            }}
+            aria-label="Voltar"
+          >
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
@@ -187,7 +209,16 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right' }: MessagesDrawer
           <CreateGroupView onCancel={() => setView('list')} onGroupCreated={handleGroupCreated} />
         )}
         {view === 'group-info' && activeConversation && (
-          <GroupInfoView conversa={activeConversation} onBack={() => setView('chat')} onGroupUpdated={refetchConversas} />
+          <GroupInfoView 
+            conversa={activeConversation} 
+            onBack={() => setView('chat')}
+            onGroupUpdated={() => refetchConversas()}
+            onGroupDeleted={() => {
+              // Apenas limpa o estado e volta para a lista. O reload vai cuidar do resto.
+              setActiveConversation(null);
+              setView('list');
+            }}
+          />
         )}
       </div>
     </div>

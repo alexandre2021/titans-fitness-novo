@@ -83,6 +83,15 @@ const ProtectedRoutes = () => {
     determineUserType();
   }, [user, authLoading]);
 
+  // Efeito para abrir o drawer de mensagens automaticamente após um reload.
+  useEffect(() => {
+    const shouldOpen = sessionStorage.getItem('openDrawerAfterReload');
+    if (shouldOpen === 'true') {
+      setMessagesDrawerOpen(true);
+      sessionStorage.removeItem('openDrawerAfterReload');
+    }
+  }, []); // O array de dependências vazio garante que isso rode apenas uma vez.
+
   if (loading || authLoading) {
     return (
       <div className="flex items-center justify-center h-screen">

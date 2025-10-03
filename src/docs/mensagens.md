@@ -55,6 +55,7 @@ src/
     -   Expõe a função `iniciarConversa` (para chats 1-para-1) e `criarGrupo` (para chats em grupo).
     -   Gerencia os estados de `loading` e `loadingConversa`.
     -   Mantém subscription Realtime para eventos de `INSERT` e `UPDATE` na tabela `mensagens`, garantindo que a lista e os contadores sejam atualizados em tempo real.
+    -   **Atualização Otimista**: Ao criar ou excluir um grupo, o hook modifica o estado local imediatamente para uma resposta rápida da UI, antes de sincronizar com o servidor.
     ```typescript
     {
       conversas: ConversaUI[],
@@ -63,6 +64,10 @@ src/
       unreadCount: number,
       iniciarConversa: (conversaPlaceholder: ConversaUI) => Promise<ConversaUI | null>,
       criarGrupo: (nomeGrupo: string, participantesIds: string[]) => Promise<ConversaUI | null>,
+      removerParticipante: (conversaId: string, participantId: string) => Promise<boolean>,
+      adicionarParticipantes: (conversaId: string, participantIds: string[]) => Promise<boolean>,
+      editarGrupo: (conversaId: string, updates: { nome?: string; avatarUrl?: string }) => Promise<boolean>,
+      excluirGrupo: (conversaId: string) => Promise<boolean>,
       refetchConversas: () => Promise<void>
     }
     ```
@@ -115,9 +120,18 @@ src/
     -   Possui um botão para "Novo Grupo", que alterna a visão para o componente `CreateGroupView`.
     -   Implementa a lógica de clique (`handleItemClick`):
         -   Se conversa existe (`conversa.id` não vazio): define como `conversaAtiva` e exibe o chat.
-        -   Se não existe: chama `iniciarConversa`, aguarda retorno e define como `conversaAtiva`.
+        -   Se não existe (é um contato sem conversa): chama `iniciarConversa`, aguarda retorno e define como `conversaAtiva`.
     -   Gerencia a transição entre a lista de conversas e a tela de chat ativa.
     -   Contém barra de busca para filtrar conversas por nome.
+
+#### `src/components/messages/GroupInfoView.tsx` ⭐ NOVO
+-   **Responsabilidade**: Exibir detalhes de um grupo e permitir ações de gerenciamento.
+-   **O que faz**:
+    -   Mostra o nome e o avatar do grupo, com opção de edição para o criador.
+    -   Lista os participantes, indicando quem é o criador.
+    -   Permite ao criador adicionar ou remover participantes.
+    -   Oferece a opção para o criador excluir o grupo, que aciona um diálogo de confirmação.
+    -   Após a exclusão, dispara um evento global (`forceRefreshMessages`) para notificar outros componentes da mudança.
 
 #### `src/components/messages/ChatView.tsx`
     -   Utiliza o hook `useMensagens` passando `conversa.id`.
@@ -354,6 +368,45 @@ src/
 -   Subscriptions são limpas no unmount para evitar memory leaks
 -   Auto-scroll usa `scrollIntoView` com `behavior: 'smooth'`
 -   Lista de conversas usa `Map` para mesclar eficientemente
+
+---
+
+## 11. Problemas Atuais e Depuração
+
+Durante o desenvolvimento, enfrentamos desafios persistentes relacionados à sincronização de estado entre a UI e o backend, especialmente em operações de criação e exclusão de grupos.
+
+### 11.1. Problema na Criação de Grupo
+
+-   **Sintoma:** Ao criar um novo grupo, ele aparece brevemente na lista de conversas e depois desaparece, só sendo exibido corretamente após um refresh manual da página.
+-   **Causa Raiz:** O problema é uma **condição de corrida (race condition)**.
+    1.  **Ação do Usuário:** A função `criarGrupo` no hook `useConversas` realiza uma **atualização otimista**, adicionando o novo grupo ao estado local da UI imediatamente.
+    2.  **Evento Realtime:** A criação do grupo no banco de dados dispara um evento `INSERT` em tempo real.
+    3.  **Busca de Dados:** O hook `useConversas` ouve esse evento e, como resposta, executa uma função (`debouncedFetch`) para buscar a lista completa de conversas do servidor, a fim de garantir a consistência.
+    4.  **A Falha:** Devido a um pequeno atraso na replicação do banco de dados, a busca de dados (passo 3) acontece *antes* que o novo grupo esteja disponível para ser lido pelo servidor. Como resultado, o hook busca a lista antiga (sem o novo grupo) e a renderiza, sobrescrevendo a atualização otimista e fazendo o grupo recém-criado "desaparecer".
+-   **Estado Atual:** A implementação atual tenta contornar isso com um `useRef` (`recentlyCreatedGroup`) para ignorar o primeiro evento de realtime após a criação, mas o problema persiste intermitentemente.
+
+### 11.2. Problema na Exclusão de Grupo
+
+-   **Sintoma:** Após o criador do grupo confirmar a exclusão na tela de `GroupInfoView`, a UI não navega de volta para a lista principal de conversas. Ela fica "presa" em uma tela intermediária (a de chat, agora inválida) ou não reage.
+-   **Causa Raiz:** O `MessageDrawer`, que controla a navegação entre as telas (`list`, `chat`, `group-info`), não está reagindo corretamente à remoção da `activeConversation` (o grupo excluído) da lista de `conversas` gerenciada pelo `useConversas`.
+-   **Estado Atual:** A solução implementada envolve um desacoplamento da lógica:
+    1.  **`GroupInfoView.tsx`:** Após a exclusão bem-sucedida, ele dispara um evento global: `window.dispatchEvent(new CustomEvent('forceRefreshMessages'))`.
+    2.  **`MessageDrawer.tsx`:** Um `useEffect` escuta este evento e, ao recebê-lo, força a navegação de volta para a lista, limpando o estado da conversa ativa e recarregando os dados.
+
+    ```typescript
+    // Em MessageDrawer.tsx
+    useEffect(() => {
+      const handleForceRefresh = () => {
+        setActiveConversation(null);
+        setView('list');
+        refetchConversas();
+      };
+      
+      window.addEventListener('forceRefreshMessages', handleForceRefresh);
+      return () => window.removeEventListener('forceRefreshMessages', handleForceRefresh);
+    }, [refetchConversas]);
+    ```
+    Apesar de ser uma solução funcional, ela depende de eventos globais, o que pode ser difícil de depurar e manter.
 
 ---
 

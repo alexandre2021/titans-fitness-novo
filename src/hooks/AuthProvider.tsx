@@ -54,8 +54,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    queryClient.clear();
-    window.location.replace('/login');
+    queryClient.clear(); // Limpa o cache do React Query
+    // Força o redirecionamento para a página de login, garantindo que a sessão seja reiniciada.
+    window.location.href = '/login';
   };
 
   const value = { user, session, loading, signOut };

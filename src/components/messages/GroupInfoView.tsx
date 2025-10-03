@@ -2,9 +2,9 @@ import { useState, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { ConversaUI, useConversas } from '@/hooks/useConversas';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/button'; 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Edit, UserPlus, LogOut, Trash2, UserX, Check, X as XIcon, Loader2, Crown } from 'lucide-react';
+import { Edit, UserPlus, LogOut, Trash2, UserX, Check, X as XIcon, Loader2, Crown, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
@@ -12,66 +12,28 @@ import { useGroupParticipants } from '@/hooks/useGroupParticipants';
 import { useAlunosSeguidores } from '@/hooks/useAlunosSeguidores';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { supabase } from '@/integrations/supabase/client';
-import Modal from 'react-modal';
-import Cropper, { type Area } from 'react-easy-crop';
-import { Slider } from '@/components/ui/slider';
-import { fileToDataURL, optimizeAndCropImage } from '@/lib/imageUtils';
-
-interface ImageCropDialogProps {
-  imageSrc: string | null;
-  isUploading: boolean;
-  onClose: () => void;
-  onSave: (croppedAreaPixels: Area) => void;
-}
-
-const ImageCropDialog: React.FC<ImageCropDialogProps> = ({ imageSrc, isUploading, onClose, onSave }) => {
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
-
-  const onCropComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
-    setCroppedAreaPixels(croppedAreaPixels);
-  }, []);
-
-  if (!imageSrc) return null;
-
-  return (
-    <Modal isOpen={!!imageSrc} onRequestClose={onClose} shouldCloseOnOverlayClick={!isUploading} className="bg-white rounded-lg max-w-md w-full mx-4 outline-none flex flex-col max-h-[90vh]" overlayClassName="fixed inset-0 bg-black/70 flex items-center justify-center z-[250] p-4">
-      <div className="flex items-center justify-between p-4 border-b"><h2 className="text-lg font-semibold">Ajustar Imagem</h2><Button variant="ghost" size="icon" onClick={onClose} disabled={isUploading}><XIcon className="h-4 w-4" /></Button></div>
-      <div className="p-4 overflow-y-auto">
-        <div className="relative h-64 md:h-80 w-full bg-muted rounded-lg overflow-hidden">
-          <Cropper image={imageSrc} crop={crop} zoom={zoom} aspect={1} onCropChange={setCrop} onZoomChange={setZoom} onCropComplete={onCropComplete} cropShape="round" showGrid={false} />
-        </div>
-        <div className="space-y-2 pt-4"><label className="text-sm font-medium">Zoom</label><Slider value={[zoom]} min={1} max={3} step={0.1} onValueChange={(value) => setZoom(value[0])} /></div>
-      </div>
-      <div className="flex justify-end gap-2 p-4 border-t"><Button type="button" variant="outline" onClick={onClose} disabled={isUploading}>Cancelar</Button><Button type="button" onClick={() => croppedAreaPixels && onSave(croppedAreaPixels)} disabled={isUploading || !croppedAreaPixels}>{isUploading ? "Salvando..." : "Salvar"}</Button></div>
-    </Modal>
-  );
-};
 
 interface GroupInfoViewProps {
   conversa: ConversaUI;
   onBack: () => void;
   onGroupUpdated: () => void;
+  onGroupDeleted?: () => void;
 }
 
-export const GroupInfoView = ({ conversa, onBack, onGroupUpdated }: GroupInfoViewProps) => {
+export const GroupInfoView = ({ conversa, onBack, onGroupUpdated, onGroupDeleted }: GroupInfoViewProps) => {
   const { user } = useAuth();
   const { participants, loading, refetch } = useGroupParticipants(conversa.id);
-  const { removerParticipante, adicionarParticipantes, editarGrupo } = useConversas();
+  const { removerParticipante, adicionarParticipantes, editarGrupo, excluirGrupo } = useConversas();
   const { alunos: alunosSeguidores } = useAlunosSeguidores();
   const [isEditingName, setIsEditingName] = useState(false);
   const [groupName, setGroupName] = useState(conversa.nome);
   const [removingParticipantId, setRemovingParticipantId] = useState<string | null>(null);
   const [isAddingParticipants, setIsAddingParticipants] = useState(false);
   const [selectedAlunosToAdd, setSelectedAlunosToAdd] = useState<string[]>([]);
-  const [imageSrc, setImageSrc] = useState<string | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(conversa.avatar.url);
-  const [isUploading, setIsUploading] = useState(false);
   const [isSavingName, setIsSavingName] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const alunosDisponiveis = alunosSeguidores.filter(
     aluno => !participants.some(p => p.id === aluno.id)
@@ -133,89 +95,36 @@ export const GroupInfoView = ({ conversa, onBack, onGroupUpdated }: GroupInfoVie
     }
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const dataUrl = await fileToDataURL(file);
-      setImageSrc(dataUrl);
-    } catch (error) {
-      toast.error('Erro ao processar imagem.');
-    }
-    e.target.value = '';
-  };
-
-  const handleUploadCroppedImage = async (pixels: Area) => {
-    if (!imageSrc) return;
-    setIsUploading(true);
-    try {
-      const file = await optimizeAndCropImage(imageSrc, pixels, 256);
-      if (!file) throw new Error('Falha ao cortar e otimizar a imagem');
-      
-      const fileName = `${conversa.id}/${Date.now()}_${file.name}`;
-      const { data, error: uploadError } = await supabase.storage
-        .from('group-avatars')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: true,
-        });
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage.from('group-avatars').getPublicUrl(fileName);
-      const finalUrl = `${publicUrl}?t=${new Date().getTime()}`;
-
-      const success = await editarGrupo(conversa.id, { avatarUrl: finalUrl });
-      if (success) {
-        setAvatarPreview(finalUrl);
-        onGroupUpdated();
-      } else {
-        throw new Error('Falha ao salvar avatar.');
-      }
-    } catch (error) {
-      console.error('Erro ao atualizar avatar:', error);
-      toast.error('Erro ao atualizar o avatar do grupo.');
-    } finally {
-      setIsUploading(false);
-      setImageSrc(null);
-    }
-  };
-
   const handleLeaveGroup = () => {
     // TODO: Implementar lógica para sair do grupo
     console.log('Saindo do grupo');
   };
 
-  const handleDeleteGroup = () => {
-    // TODO: Implementar lógica para excluir o grupo
-    console.log('Excluindo o grupo');
+  const handleDeleteGroup = async () => {
+    setIsDeleting(true);
+    try {
+      const success = await excluirGrupo(conversa.id);
+      if (success) {
+        toast.success('Grupo excluído');
+        setIsDeleteDialogOpen(false);
+        // Solução "de estagiário": recarrega a página para garantir que a lista seja atualizada.
+        sessionStorage.setItem('openDrawerAfterReload', 'true');
+        window.location.reload();
+      } else {
+        toast.error('Erro ao excluir o grupo. Tente novamente.');
+      }
+    } catch (error) {
+      console.error('Erro ao excluir grupo:', error);
+      toast.error('Erro ao excluir o grupo. Tente novamente.');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
     <div className="flex flex-col h-full">
       {/* Avatar and Name Section */}
       <div className="flex flex-col items-center p-6 space-y-4">
-        <div className="relative">
-          <Avatar className="h-24 w-24 text-3xl">
-            <AvatarImage src={avatarPreview || undefined} alt={conversa.nome} />
-            <AvatarFallback style={{ backgroundColor: conversa.avatar.color || '#ccc', color: 'white' }}>
-              {conversa.avatar.letter}
-            </AvatarFallback>
-          </Avatar>
-          {isCreator && (
-            <>
-              <Button size="icon" className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full" onClick={() => fileInputRef.current?.click()}>
-                <Edit className="h-4 w-4" />
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileSelect}
-                className="hidden" />
-            </>
-          )}
-        </div>
         {isEditingName ? (
           <div className="flex items-center gap-2">
             <Input value={groupName} onChange={(e) => setGroupName(e.target.value)} className="text-xl h-10" disabled={isSavingName} />
@@ -304,7 +213,7 @@ export const GroupInfoView = ({ conversa, onBack, onGroupUpdated }: GroupInfoVie
           </Button>
         )}
         {isCreator && (
-          <Button variant="destructive" className="w-full justify-start gap-3" onClick={handleDeleteGroup}>
+          <Button variant="destructive" className="w-full justify-start gap-3" onClick={() => setIsDeleteDialogOpen(true)}>
             <Trash2 className="h-5 w-5" />
             Excluir Grupo
           </Button>
@@ -345,14 +254,39 @@ export const GroupInfoView = ({ conversa, onBack, onGroupUpdated }: GroupInfoVie
         </DialogContent>
       </Dialog>
 
-      <ImageCropDialog
-        imageSrc={imageSrc}
-        isUploading={isUploading}
-        onClose={() => setImageSrc(null)}
-        onSave={async (pixels) => {
-          await handleUploadCroppedImage(pixels);
-        }}
-      />
+      {/* Dialog de confirmação de exclusão */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="z-[200]">
+          <DialogHeader>
+            <DialogTitle>Excluir Grupo</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-muted-foreground">
+              Tem certeza que deseja excluir o grupo <strong>{conversa.nome}</strong>?
+            </p>
+            <p className="text-muted-foreground mt-2">
+              Esta ação não pode ser desfeita. Todas as mensagens do grupo serão permanentemente excluídas.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteGroup}
+              disabled={isDeleting}
+            >
+              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Excluir Grupo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
