@@ -20,13 +20,13 @@ const MessagesButton = ({ onClick, unreadCount, position = 'top-right' }: Messag
 
   return (
     <Button
-      variant="secondary"
+      variant="default"
       className={`fixed z-50 rounded-full shadow-lg flex items-center justify-center p-0 ${sizeClasses} ${positionClasses}`}
       onClick={onClick}
     >
       <MessageSquare />
       {unreadCount != null && unreadCount > 0 && (
-        <span className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">{unreadCount}</span>
+        <span className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground">{unreadCount}</span>
       )}
     </Button>
   );

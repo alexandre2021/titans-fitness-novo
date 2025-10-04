@@ -63,7 +63,8 @@ import ExecucaoSelecionarTreino from "./pages/ExecucaoSelecionarTreino";
 import ExecucaoExecutarTreino from "./pages/ExecucaoExecutarTreino";
 
 // IMPORTAÇÕES PARA PWA
-import { useServiceWorker } from "@/hooks/useServiceWorker";
+import PwaUpdateNotification from "@/components/pwa/PwaUpdateNotification";
+import PwaInstallPrompt from "@/components/pwa/PwaInstallPrompt";
 
 const queryClient = new QueryClient();
 
@@ -155,12 +156,13 @@ const router = createBrowserRouter([
 ]);
 
 const AppContent = () => {
-  useServiceWorker();
-
   return (
     <TooltipProvider>
-      <Sonner position="bottom-left" />
+      {/* Configura o Toaster para aparecer no topo e centro */}
+      <Sonner position="top-center" richColors />
       <RouterProvider router={router} />
+      <PwaUpdateNotification />
+      <PwaInstallPrompt />
     </TooltipProvider>
   );
 };
