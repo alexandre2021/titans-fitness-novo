@@ -63,7 +63,7 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 217.2 32.6% 17.5%;
     --foreground: 210 40% 98%;
 
     --card: 222.2 84% 4.9%;
@@ -117,5 +117,12 @@ All colors MUST be HSL.
     -webkit-appearance: button;
     background-color: transparent;
     background-image: none;
+  }
+}
+
+/* Personalização do botão do Sonner no tema escuro */
+@layer components {
+  .dark [data-sonner-toast] [data-button] {
+    @apply bg-primary text-primary-foreground;
   }
 }

@@ -18,36 +18,40 @@ const AlunoMobileHeader = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const getPageConfig = (): { title: React.ReactNode; showBackButton: boolean; backPath?: string } => {
+  const getPageConfig = (): { title: React.ReactNode; subtitle?: string; showBackButton: boolean; backPath?: string } => {
     const path = location.pathname;
 
     // Páginas de Ação (com botão de voltar)
     if (path.startsWith('/execucao-rotina/')) {
-      return { title: 'Execução de Treino', showBackButton: true };
+      return { title: 'Execução de Treino', subtitle: 'Siga as instruções e registre seu progresso', showBackButton: true };
     }
 
     // Páginas Principais (sem botão de voltar)
-    switch (path) {
-      case "/index-aluno":
-        return { title: "Painel", showBackButton: false };
-      case "/minhas-rotinas":
-        return { title: "Minhas Rotinas", showBackButton: false };
-      case "/avaliacoes-aluno":
-        return { title: "Minhas Avaliações", showBackButton: false };
-      case "/perfil-aluno":
-        return { title: "Meu Perfil", showBackButton: false };
-      default:
-        return {
-          title: (
-            <img 
-              src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-logo-mobile.png" 
-              alt="Titans Fitness"
-              className="h-12"
-            />
-          ),
-          showBackButton: false
-        };
+    const mainPages: { [key: string]: { title: string; subtitle?: string } } = {
+      "/index-aluno": { title: "Painel", subtitle: `Olá, ${profile?.nome_completo?.split(' ')[0] || 'Aluno(a)'}!` },
+      "/minhas-rotinas": { title: "Minhas Rotinas", subtitle: "Acesse e acompanhe seus treinos" },
+      "/professores": { title: "Professores", subtitle: "Veja os profissionais que você segue" },
+      "/avaliacoes-aluno": { title: "Avaliações", subtitle: "Acompanhe sua evolução física" },
+      "/perfil-aluno": { title: "Meu Perfil", subtitle: "Gerencie suas informações e avatar" },
+      "/mais": { title: "Mais Opções", subtitle: "Navegue por outras seções" },
+    };
+
+    if (mainPages[path]) {
+      const page = mainPages[path];
+      return { title: page.title, subtitle: page.subtitle, showBackButton: false };
     }
+
+    // Default: Logo (para páginas não mapeadas)
+    return {
+      title: (
+        <img 
+          src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-logo-mobile.png" 
+          alt="Titans Fitness"
+          className="h-12"
+        />
+      ),
+      showBackButton: false
+    };
   };
 
   const handleLogout = async () => {
@@ -70,7 +74,7 @@ const AlunoMobileHeader = () => {
     );
   };
 
-  const { title, showBackButton, backPath } = getPageConfig();
+  const { title, subtitle, showBackButton, backPath } = getPageConfig();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-20 flex items-center justify-between p-4 border-b bg-background md:hidden">
@@ -80,7 +84,10 @@ const AlunoMobileHeader = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
-        <div className="text-lg font-semibold truncate">{title}</div>
+        <div className="flex-1 truncate">
+          <div className="text-lg font-semibold truncate">{title}</div>
+          {subtitle && <p className="text-xs text-muted-foreground truncate">{subtitle}</p>}
+        </div>
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

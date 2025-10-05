@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAlunosSeguidores } from '@/hooks/useAlunosSeguidores';
+import { useProfessoresSeguidos } from '@/hooks/useProfessoresSeguidos';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -29,8 +30,16 @@ export const useConversas = () => {
   const [conversas, setConversas] = useState<ConversaUI[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingConversa, setLoadingConversa] = useState(false);
-  const { alunos: alunosSeguidores, loading: loadingAlunos } = useAlunosSeguidores();
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const isProfessor = useMemo(() => user?.user_metadata?.user_type === 'professor', [user]);
+
+  // Hooks condicionais para carregar apenas os dados necessários
+  const { alunos: alunosSeguidores, loading: loadingAlunos } = useAlunosSeguidores();
+  const { professores: professoresSeguidos, loading: loadingProfessores } = useProfessoresSeguidos();
+
+  const contatos = useMemo(() => (isProfessor ? alunosSeguidores : professoresSeguidos), [isProfessor, alunosSeguidores, professoresSeguidos]);
+  const loadingContatos = useMemo(() => (isProfessor ? loadingAlunos : loadingProfessores), [isProfessor, loadingAlunos, loadingProfessores]);
 
   const mesclarEFormatarConversas = useCallback(
     (rawConversas: ConversaRPC[]): ConversaUI[] => {
@@ -61,19 +70,19 @@ export const useConversas = () => {
         });
       });
 
-      // 2. Adiciona alunos seguidores que ainda não têm uma conversa
-      alunosSeguidores.forEach(aluno => {
-        if (!mapaConversas.has(aluno.id)) {
-          mapaConversas.set(aluno.id, {
+      // 2. Adiciona contatos (alunos ou professores) que ainda não têm uma conversa
+      contatos.forEach(contato => {
+        if (!mapaConversas.has(contato.id)) {
+          mapaConversas.set(contato.id, {
             id: '',
-            nome: aluno.nome_completo,
-            outroParticipanteId: aluno.id,
+            nome: contato.nome_completo,
+            outroParticipanteId: contato.id,
             creatorId: null,
             avatar: {
-              type: aluno.avatar_type as 'image' | 'letter' | null,
-              url: aluno.avatar_image_url,
-              letter: aluno.avatar_letter,
-              color: aluno.avatar_color,
+              type: contato.avatar_type as 'image' | 'letter' | null,
+              url: contato.avatar_image_url,
+              letter: contato.avatar_letter,
+              color: contato.avatar_color,
             },
             ultimaMsg: 'Inicie uma conversa',
             naoLidas: 0,
@@ -88,7 +97,7 @@ export const useConversas = () => {
         return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
       });
     },
-    [alunosSeguidores]
+    [contatos]
   );
 
   const fetchEFormatar = useCallback(async () => {
@@ -105,7 +114,7 @@ export const useConversas = () => {
   }, [mesclarEFormatarConversas]);
 
   useEffect(() => {
-    if (!user || loadingAlunos) {
+    if (!user || loadingContatos) {
       setLoading(false);
       return;
     }
@@ -169,7 +178,7 @@ export const useConversas = () => {
         clearTimeout(timer);
       }
     };
-  }, [user, loadingAlunos, fetchEFormatar, mesclarEFormatarConversas]);
+  }, [user, loadingContatos, fetchEFormatar, mesclarEFormatarConversas]);
 
   const iniciarConversa = async (conversaPlaceholder: ConversaUI): Promise<ConversaUI | null> => {
     if (!user) return null;
@@ -205,7 +214,12 @@ export const useConversas = () => {
   };
 
   const criarGrupo = async (nomeGrupo: string, participantesIds: string[]): Promise<ConversaUI | null> => {
-    if (!user) return null;
+    // Adiciona verificação para garantir que apenas professores possam criar grupos.
+    if (!user || user.user_metadata?.user_type !== 'professor') {
+      console.error("Permissão negada: Apenas professores podem criar grupos.");
+      // Opcional: Adicionar um toast de erro aqui.
+      return null;
+    }
 
     setLoadingConversa(true);
     try {
@@ -357,6 +371,7 @@ export const useConversas = () => {
     excluirGrupo, // ✅ ADICIONE ESTA LINHA
     loadingConversa, 
     refetchConversas: fetchEFormatar,
-    unreadCount
+    unreadCount,
+    isProfessor,
   };
 };

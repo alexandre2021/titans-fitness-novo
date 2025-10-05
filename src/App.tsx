@@ -65,6 +65,8 @@ import ExecucaoExecutarTreino from "./pages/ExecucaoExecutarTreino";
 // IMPORTAÇÕES PARA PWA
 import PwaUpdateNotification from "@/components/pwa/PwaUpdateNotification";
 import PwaInstallPrompt from "@/components/pwa/PwaInstallPrompt";
+import Professores from "./pages/Professores";
+import DetalhesProfessor from "./pages/DetalhesProfessor";
 
 const queryClient = new QueryClient();
 
@@ -142,6 +144,11 @@ const router = createBrowserRouter([
           { path: "/minhas-rotinas", element: <PaginaRotinas modo="aluno" /> },
           { path: "/avaliacoes-aluno", element: <AvaliacoesAluno /> },
           { path: "/perfil-aluno", element: <PerfilAluno /> },
+          { 
+            path: "/professores/detalhes/:id", 
+            element: <DetalhesProfessor /> 
+          },
+          { path: "/professores", element: <Professores /> },
           // Rotas de Execução (Compartilhadas)
           { path: "/execucao-rotina/selecionar-treino/:rotinaId", element: <ExecucaoSelecionarTreino /> },
           { path: "/execucao-rotina/executar-treino/:sessaoId", element: <ExecucaoExecutarTreino /> },

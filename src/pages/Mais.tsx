@@ -3,7 +3,7 @@
 // por um ícone na barra de navegação principal (especialmente no mobile).
 // Ela serve para agrupar links de navegação adicionais que não cabem no menu principal.
 import React, { useState, useEffect } from 'react';
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from '@/hooks/useAuth';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronRight, Newspaper, BookCopy, SquarePen, Home, User, Settings, LogOut } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -54,6 +54,7 @@ const Mais = () => {
 
   const alunoLinks = [
     { href: '/', label: 'Home', icon: Home },
+    { href: '/professores', label: 'Professores', icon: User },
   ];
 
   const links = userType === 'professor' ? professorLinks : userType === 'aluno' ? alunoLinks : [];

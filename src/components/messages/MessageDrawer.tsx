@@ -68,7 +68,7 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right' }: MessagesDrawer
   const [view, setView] = useState<View>('list');
   const [activeConversation, setActiveConversation] = useState<ConversaUI | null>(null);
   const { user } = useAuth();
-  const { conversas, loading, iniciarConversa, loadingConversa, refetchConversas } = useConversas();
+  const { conversas, loading, iniciarConversa, loadingConversa, refetchConversas, isProfessor } = useConversas();
   const [searchTerm, setSearchTerm] = useState("");
 
   const filteredConversas = conversas.filter(conversa =>
@@ -111,9 +111,9 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right' }: MessagesDrawer
   };
 
   const handleGroupCreated = (conversa: ConversaUI) => {
-    // Solução "de estagiário": recarrega a página para garantir que a lista seja atualizada.
-    sessionStorage.setItem('openDrawerAfterReload', 'true');
-    window.location.reload();
+    // Solução correta: define a nova conversa como ativa e muda para a view de chat
+    setActiveConversation(conversa);
+    setView('chat');
   };
 
   const positionClasses = direction === 'right'
@@ -134,12 +134,12 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right' }: MessagesDrawer
             variant="ghost"
             size="icon"
             onClick={() => {
+              refetchConversas();
               if (view === 'chat') {
-                sessionStorage.setItem('openDrawerAfterReload', 'true');
-                window.location.reload();
-              } else {
-                setView('chat');
+                // Limpa a conversa ativa apenas ao voltar para a lista
+                setActiveConversation(null);
               }
+              setView(view === 'group-info' ? 'chat' : 'list');
             }}
             aria-label="Voltar"
           >
@@ -152,7 +152,7 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right' }: MessagesDrawer
            'Mensagens'}
         </h2>
         <div className="flex items-center flex-shrink-0">
-          {view === 'list' && (
+          {view === 'list' && isProfessor && (
             <Button variant="ghost" size="icon" onClick={() => setView('create-group')}>
               <Users className="h-5 w-5" />
             </Button>

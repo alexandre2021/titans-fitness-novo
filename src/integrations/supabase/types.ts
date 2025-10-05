@@ -955,6 +955,7 @@ export type Database = {
           cref: string | null
           data_nascimento: string | null
           data_plano: string | null
+          email: string | null
           especializacoes: string[] | null
           facebook: string | null
           genero: string | null
@@ -982,6 +983,7 @@ export type Database = {
           cref?: string | null
           data_nascimento?: string | null
           data_plano?: string | null
+          email?: string | null
           especializacoes?: string[] | null
           facebook?: string | null
           genero?: string | null
@@ -1009,6 +1011,7 @@ export type Database = {
           cref?: string | null
           data_nascimento?: string | null
           data_plano?: string | null
+          email?: string | null
           especializacoes?: string[] | null
           facebook?: string | null
           genero?: string | null
@@ -1034,6 +1037,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      push_subscriptions: {
+        Row: {
+          created_at: string
+          endpoint: string
+          subscription_object: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          subscription_object: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          subscription_object?: Json
+          user_id?: string
+        }
+        Relationships: []
       }
       rotinas: {
         Row: {

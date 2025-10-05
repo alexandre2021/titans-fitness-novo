@@ -83,6 +83,7 @@ const Cadastroprofessor = () => {
         .insert({
           id: authData.user.id,
           nome_completo: data.nomeCompleto,
+          email: data.email.toLowerCase(),
           onboarding_completo: false,
           plano: 'gratuito',
         });

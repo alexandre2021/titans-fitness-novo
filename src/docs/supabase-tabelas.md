@@ -41,29 +41,30 @@ Este documento descreve a estrutura completa das tabelas do banco de dados no no
 |---|---|---|---|---|---|---|---|
 | `id` | 1 | `uuid` | False | `` | `PRIMARY KEY` | `professores_pkey` |  |
 | `nome_completo` | 2 | `text` | False | `` | `` | `` |  |
-| `created_at` | 3 | `timestamp with time zone` | True | `now()` | `` | `` |  |
-| `updated_at` | 4 | `timestamp with time zone` | True | `now()` | `` | `` |  |
-| `onboarding_completo` | 5 | `boolean` | True | `false` | `` | `` |  |
-| `genero` | 6 | `text` | True | `` | `` | `` |  |
-| `data_nascimento` | 7 | `date` | True | `` | `` | `` |  |
-| `telefone` | 8 | `text` | True | `` | `` | `` |  |
-| `telefone_publico` | 9 | `boolean` | True | `false` | `` | `` |  |
-| `cref` | 10 | `text` | True | `` | `` | `` |  |
-| `anos_experiencia` | 11 | `text` | True | `` | `` | `` |  |
-| `especializacoes` | 12 | `ARRAY` | True | `` | `` | `` |  |
-| `bio` | 13 | `text` | True | `` | `` | `` |  |
-| `instagram` | 14 | `text` | True | `` | `` | `` |  |
-| `facebook` | 15 | `text` | True | `` | `` | `` |  |
-| `linkedin` | 16 | `text` | True | `` | `` | `` |  |
-| `website` | 17 | `text` | True | `` | `` | `` |  |
-| `plano` | 18 | `plano_tipo` | False | `'gratuito'::plano_tipo` | `` | `` |  |
-| `data_plano` | 19 | `timestamp with time zone` | True | `now()` | `` | `` |  |
-| `avatar_letter` | 20 | `character varying` | True | `` | `` | `` |  |
-| `avatar_color` | 21 | `character varying` | True | `'#3B82F6'::character varying` | `` | `` |  |
-| `avatar_image_url` | 22 | `text` | True | `` | `` | `` |  |
-| `avatar_type` | 23 | `character varying` | True | `'letter'::character varying` | `` | `` |  |
-| `limite_exercicios` | 24 | `integer` | True | `3` | `` | `` |  |
-| `last_warning_email_sent_at` | 25 | `timestamp with time zone` | True | `` | `` | `` |  |
+| `email` | 3 | `text` | False | `''::text` | `UNIQUE` | `professores_email_key` | |
+| `created_at` | 4 | `timestamp with time zone` | True | `now()` | `` | `` |  |
+| `updated_at` | 5 | `timestamp with time zone` | True | `now()` | `` | `` |  |
+| `onboarding_completo` | 6 | `boolean` | True | `false` | `` | `` |  |
+| `genero` | 7 | `text` | True | `` | `` | `` |  |
+| `data_nascimento` | 8 | `date` | True | `` | `` | `` |  |
+| `telefone` | 9 | `text` | True | `` | `` | `` |  |
+| `telefone_publico` | 10 | `boolean` | True | `false` | `` | `` |  |
+| `cref` | 11 | `text` | True | `` | `` | `` |  |
+| `anos_experiencia` | 12 | `text` | True | `` | `` | `` |  |
+| `especializacoes` | 13 | `ARRAY` | True | `` | `` | `` |  |
+| `bio` | 14 | `text` | True | `` | `` | `` |  |
+| `instagram` | 15 | `text` | True | `` | `` | `` |  |
+| `facebook` | 16 | `text` | True | `` | `` | `` |  |
+| `linkedin` | 17 | `text` | True | `` | `` | `` |  |
+| `website` | 18 | `text` | True | `` | `` | `` |  |
+| `plano` | 19 | `plano_tipo` | False | `'gratuito'::plano_tipo` | `` | `` |  |
+| `data_plano` | 20 | `timestamp with time zone` | True | `now()` | `` | `` |  |
+| `avatar_letter` | 21 | `character varying` | True | `` | `` | `` |  |
+| `avatar_color` | 22 | `character varying` | True | `'#3B82F6'::character varying` | `` | `` |  |
+| `avatar_image_url` | 23 | `text` | True | `` | `` | `` |  |
+| `avatar_type` | 24 | `character varying` | True | `'letter'::character varying` | `` | `` |  |
+| `limite_exercicios` | 25 | `integer` | True | `3` | `` | `` |  |
+| `last_warning_email_sent_at` | 26 | `timestamp with time zone` | True | `` | `` | `` |  |
 
 **Tipos de Plano**: gratuito, basico, premium, profissional  
 **MUDANÇA**: Removido `limite_alunos` - aplicativo gratuito sem limite de seguidores

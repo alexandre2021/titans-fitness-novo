@@ -30,6 +30,11 @@ const AlunoSidebar = () => {
       icon: Dumbbell,
     },
     {
+      title: "Professores",
+      href: "/professores",
+      icon: User,
+    },
+    {
       title: "Avaliações",
       href: "/avaliacoes-aluno",
       icon: BarChart3,

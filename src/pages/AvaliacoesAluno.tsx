@@ -346,20 +346,25 @@ const AvaliacoesAluno = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-center min-h-[400px]">
-          <p className="text-lg text-muted-foreground">Carregando...</p>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-lg text-muted-foreground">
+              Carregando avaliações...
+            </p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 md:p-6">
+    <div className="space-y-6">
       {/* Cabeçalho */}
       {isDesktop && (
         <div>
-          <h1 className="text-3xl font-bold">Minhas Avaliações</h1>
+          <h1 className="text-3xl font-bold">Avaliações</h1>
           <p className="text-muted-foreground">
-            Acompanhe seu progresso e evolução física
+            Acompanhe sua evolução física
           </p>
         </div>
       )}
