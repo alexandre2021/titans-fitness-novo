@@ -54,6 +54,8 @@ import NovoPost from "./pages/NovoPost";
 import EditarPost from "./pages/EditarPost";
 import PostPage from "./pages/Post";
 import MeusPosts from "./pages/MeusPosts";
+import EditarExercicioPadrao from "./pages/EditarExercicioPadrao";
+import NovoExercicioPadrao from "./pages/NovoExercicioPadrao";
 
 // NOVAS IMPORTAÇÕES PARA EXECUÇÃO
 import ExecucaoSelecionarTreino from "./pages/ExecucaoSelecionarTreino";
@@ -111,6 +113,8 @@ const router = createBrowserRouter([
           { path: "/exercicios-pt/novo", element: <NovoExercicio /> },
           { path: "/exercicios-pt/copia/:id", element: <CopiaExercicio /> },
           { path: "/exercicios-pt/editar/:id", element: <EditarExercicio /> },
+          { path: "/exercicios-pt/editar-padrao/:id", element: <EditarExercicioPadrao /> },
+          { path: "/exercicios-pt/novo-padrao", element: <NovoExercicioPadrao /> },
           { path: "/exercicios-pt/detalhes/:id", element: <DetalhesExercicio /> },
           { path: "/agenda-pt", element: <AgendaPT /> },
           // Rotas de Posts protegidas para o admin

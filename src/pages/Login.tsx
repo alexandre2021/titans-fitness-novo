@@ -25,7 +25,7 @@ const Login = () => {
         description: 'Faça o login para acessar seu novo dashboard.',
       });
     } else if (message === 'ja_seguindo') {
-      toast.info('Você já segue este Personal Trainer!', {
+      toast.info('Você já está conectado com este Personal Trainer!', {
         description: 'Nenhuma ação foi necessária. Faça o login para continuar.',
         duration: 6000
       });

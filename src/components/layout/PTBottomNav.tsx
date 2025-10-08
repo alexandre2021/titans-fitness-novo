@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Users, Dumbbell, MessageCircle } from "lucide-react";
+import { LayoutDashboard, Users, Dumbbell, MoreHorizontal } from "lucide-react";
 
 const PTBottomNav = () => {
   const navigationItems = [
@@ -17,6 +17,11 @@ const PTBottomNav = () => {
       title: "Alunos",
       href: "/alunos",
       icon: Users,
+    },
+    {
+      title: "Mais",
+      href: "/mais",
+      icon: MoreHorizontal,
     },
   ];
 

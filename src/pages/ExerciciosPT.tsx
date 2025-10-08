@@ -11,6 +11,7 @@ import { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { useExercicios } from "@/hooks/useExercicios";
 import CustomSelect from "@/components/ui/CustomSelect";
+import { useAuth } from "@/hooks/useAuth";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +41,9 @@ Modal.setAppElement('#root');
 const ExerciciosPT = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
+  const ADMIN_EMAIL = 'contato@titans.fitness';
+  const isAdmin = user?.email === ADMIN_EMAIL;
   const LIMITE_EXERCICIOS_PERSONALIZADOS = 100;
   
   const {
@@ -100,6 +104,10 @@ const ExerciciosPT = () => {
       return;
     }
     navigate("/exercicios-pt/novo");
+  };
+
+  const handleNovoExercicioPadrao = () => {
+    navigate("/exercicios-pt/novo-padrao");
   };
 
   const handleCriarCopia = (exercicioId: string) => {
@@ -359,6 +367,11 @@ const ExerciciosPT = () => {
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCriarCopia(exercicio.id); }}>
                               <Copy className="mr-2 h-4 w-4" /><span>Criar Cópia</span>
                             </DropdownMenuItem>
+                            {isAdmin && (
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/exercicios-pt/editar-padrao/${exercicio.id}`); }}>
+                                <Edit className="mr-2 h-4 w-4 text-secondary" /><span>Editar Padrão</span>
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -619,6 +632,30 @@ const ExerciciosPT = () => {
           </Button>
         </div>
       </Modal>
+
+      {/* Botão Flutuante para Novo Exercício Padrão (Admin) */}
+      {isAdmin && activeTab === "padrao" && (
+        <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
+          <Button
+            onClick={handleNovoExercicioPadrao}
+            className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
+            variant="secondary"
+            aria-label="Novo Exercício Padrão"
+          >
+            <Plus />
+          </Button>
+
+          <Button
+            onClick={handleNovoExercicioPadrao}
+            className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6"
+            size="lg"
+            variant="secondary"
+          >
+            <Plus />
+            Novo Exercício Padrão
+          </Button>
+        </div>
+      )}
 
       {/* Botão Flutuante para Novo Exercício */}
       {activeTab === "personalizados" && (

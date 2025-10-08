@@ -19,7 +19,7 @@ O processo é projetado para gerenciar os recursos da plataforma de forma eficie
 
 O sistema processa dois tipos de usuários:
 - **Alunos:** Contas de usuários finais da plataforma
-- **Personal Trainers:** Contas de profissionais que atendem alunos
+- **Professores:** Contas de profissionais que atendem alunos
 
 
 ## Fluxo do Processo
@@ -89,11 +89,11 @@ A função coleta e remove todos os arquivos pessoais do aluno dos seus respecti
 - Remove o registro do usuário do `auth.users`
 - As políticas `ON DELETE CASCADE` removem automaticamente todos os dados relacionados
 
-#### Para Personal Trainers
+#### Para Professores
 
 ##### Etapa 1: Exclusão de Arquivos
 
-1.  **Avatar do Personal Trainer** (bucket: `avatars` no Supabase Storage)
+1.  **Avatar do Professor** (bucket: `avatars` no Supabase Storage)
     -   Busca na tabela `professores` os campos `avatar_type` e `avatar_image_url`.
     -   Se `avatar_type = 'image'`, o arquivo é removido do Supabase Storage.
 
@@ -131,13 +131,13 @@ O sistema utiliza diferentes serviços de armazenamento para otimizar custos e p
 
 ### Supabase Storage
 
--   **`avatars`**: Imagens de perfil de alunos e personal trainers. Este bucket é usado para permitir a atualização dinâmica de avatares na interface através de URLs assinadas.
+-   **`avatars`**: Imagens de perfil de alunos e Professores. Este bucket é usado para permitir a atualização dinâmica de avatares na interface através de URLs assinadas.
 
 ### Cloudflare R2
 
 -   **`avaliacoes`**: Fotos de avaliações físicas dos alunos.
 -   **`rotinas`**: PDFs de rotinas de treino arquivadas.
--   **`exercicios`**: Imagens e vídeos de exercícios criados por personal trainers.
+-   **`exercicios`**: Imagens e vídeos de exercícios criados por Professores.
 
 
 ## Proteções e Segurança
@@ -147,7 +147,7 @@ O sistema utiliza diferentes serviços de armazenamento para otimizar custos e p
 Lista hardcoded de emails que nunca são processados:
 - Contas administrativas
 - Contas de sistema
-- Personal trainers críticos
+- Professores críticos
 
 
 ### Autenticação
@@ -175,6 +175,6 @@ Lista hardcoded de emails que nunca são processados:
    - Atualiza `last_warning_email_sent_at`
 4. **Para usuários com 90+ dias de inatividade**:
    - **Alunos**: Remove avatars, fotos de avaliação e PDFs de rotina
-   - **Personal Trainers**: Remove avatars, mídias de exercícios e desvincula alunos
+   - **Professores**: Remove avatars, mídias de exercícios e desvincula alunos
    - **Para ambos**: Deleta usuário do `auth.users` (cascata remove dados restantes)
 5. **Retorna estatísticas**: Usuários avisados, excluídos e arquivos removidos

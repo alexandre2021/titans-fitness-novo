@@ -230,6 +230,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log(`PTs warned: ${ptsToWarn.length}, deleted: ${ptsToDelete.length}`);
     console.log(`Total files deleted: ${totalFilesDeleted}`);
 
+    // ✅ Log de sucesso no Supabase
+    await supabase.from('cron_job_logs').insert({
+      job_name: 'check-inactive-users',
+      status: 'success',
+      details: {
+        usersWarned: alunosToWarn.length + ptsToWarn.length,
+        usersDeleted: alunosToDelete.length + ptsToDelete.length,
+        filesDeleted: totalFilesDeleted,
+      }
+    });
+
     return res.status(200).json({
       success: true,
       message: "Inactive user processing completed.",
@@ -241,6 +252,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     console.error("Error during cron job execution:", errorMessage);
+
+    // ✅ Log de erro no Supabase
+    await supabase.from('cron_job_logs').insert({
+      job_name: 'check-inactive-users',
+      status: 'error',
+      error_message: errorMessage,
+    });
+
     return res.status(500).json({ success: false, error: errorMessage });
   }
 }
