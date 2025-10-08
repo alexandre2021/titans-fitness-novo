@@ -45,41 +45,39 @@ const Login = () => {
   // Este efeito lida com o redirecionamento APÓS uma mudança de estado de login bem-sucedida.
   // Ele também redireciona usuários já logados para longe da página de login.
   useEffect(() => {
-    console.log('[Login useEffect] Disparado. Auth Loading:', authLoading, 'User:', !!user);
-    if (!authLoading && user) {
-      console.log('[Login useEffect] Usuário autenticado, iniciando redirecionamento...');
+    // ✅ CORREÇÃO: Garante que o redirecionamento só ocorra se o usuário estiver
+    // autenticado e a sessão estiver estável, evitando o loop durante o logout.
+    const checkAndRedirect = async () => {
+      // Verifica se a sessão atual é válida antes de redirecionar.
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!authLoading && user && session) {
       const redirectUser = async () => {
-        console.log('[Login useEffect] 1. Buscando perfil para o user ID:', user.id);
         const { data: profile } = await supabase
           .from('user_profiles')
           .select('user_type')
           .eq('id', user.id)
           .single();
 
-        console.log('[Login useEffect] 2. Perfil encontrado:', profile);
-
         if (profile?.user_type === 'professor') {
-          console.log('[Login useEffect] 3. Redirecionando para /index-professor');
           navigate('/index-professor', { replace: true });
         } else if (profile?.user_type === 'aluno') {
-          console.log('[Login useEffect] 3. Redirecionando para /index-aluno');
           navigate('/index-aluno', { replace: true });
         } else {
-          console.log('[Login useEffect] 3. Tipo de usuário não reconhecido ou perfil nulo. Redirecionando para /');
           // Fallback para tipos de usuário desconhecidos ou se o perfil falhar ao carregar
           navigate('/', { replace: true });
         }
       };
-
-      // Usamos void para indicar explicitamente que não estamos aguardando a promessa aqui.
-      void redirectUser();
-    }
+      // Usamos void para indicar explicitamente que não estamos aguardando a promessa aqui
+        void redirectUser();
+      }
+    };
+    void checkAndRedirect();
   }, [user, authLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    console.log('[handleSubmit] 1. Iniciando processo de login para:', email);
     
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -88,7 +86,6 @@ const Login = () => {
       });
 
       if (error) {
-        console.error('[handleSubmit] 2. Erro retornado pelo Supabase Auth:', error);
         let errorMessage = `Erro no login: ${error.message}`;
         if (error.message === "Email not confirmed") {
           errorMessage = "Email não confirmado. Por favor, verifique sua caixa de entrada.";
@@ -98,32 +95,16 @@ const Login = () => {
         toast.error(errorMessage);
         return;
       }
-
-      console.log('[handleSubmit] 3. Login bem-sucedido. O useEffect cuidará do redirecionamento.');
-
     } catch (error) {
-      console.error('[handleSubmit] 4. Erro inesperado no bloco try-catch:', error);
       toast.error("Erro inesperado no login");
       console.error("Erro no login:", error);
     } finally {
       setIsLoading(false);
-      console.log('[handleSubmit] 5. Fim do processo de login.');
     }
   };
 
-  // Se o usuário já está logado, não renderiza o formulário e aguarda o redirecionamento.
-  // Isso evita a "piscada" da tela de login.
-  if (authLoading || user) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
       <header className="border-b border-border py-4">
         <div className="flex items-center justify-center relative px-6">
           <Button
@@ -154,7 +135,7 @@ const Login = () => {
           </CardHeader>
           
           <CardContent>
-            <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-text-primary">
                   Email
@@ -208,19 +189,17 @@ const Login = () => {
                 {isLoading ? "Entrando..." : "Entrar"}
               </Button>
 
-              <div className="text-center">
-                <Link to="/esqueci-senha" className="text-sm text-primary hover:underline">
-                  Esqueci minha senha
-                </Link>
-              </div>
             </form>
             
-            <p className="mt-6 text-center text-sm text-muted-foreground">
-              Não tem uma conta?{" "}
-              <Link to="/cadastro" className="font-bold text-primary hover:underline">
-                Cadastre-se gratuitamente
+            <div className="mt-6 text-center text-sm">
+              <Link to="/esqueci-senha" className="text-primary hover:underline">
+                Esqueci minha senha
               </Link>
-            </p>
+              <p className="mt-2 text-muted-foreground">
+                Não tem uma conta?{" "}
+                <Link to="/cadastro" className="font-bold text-primary hover:underline">Cadastre-se gratuitamente</Link>
+              </p>
+            </div>
           </CardContent>
         </Card>
       </main>

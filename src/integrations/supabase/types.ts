@@ -45,6 +45,7 @@ export type Database = {
           avatar_image_url: string | null
           avatar_letter: string | null
           avatar_type: string | null
+          codigo_vinculo: string | null
           contato_emergencia_nome: string | null
           contato_emergencia_telefone: string | null
           created_at: string | null
@@ -70,6 +71,7 @@ export type Database = {
           avatar_image_url?: string | null
           avatar_letter?: string | null
           avatar_type?: string | null
+          codigo_vinculo?: string | null
           contato_emergencia_nome?: string | null
           contato_emergencia_telefone?: string | null
           created_at?: string | null
@@ -95,6 +97,7 @@ export type Database = {
           avatar_image_url?: string | null
           avatar_letter?: string | null
           avatar_type?: string | null
+          codigo_vinculo?: string | null
           contato_emergencia_nome?: string | null
           contato_emergencia_telefone?: string | null
           created_at?: string | null
@@ -300,53 +303,6 @@ export type Database = {
             columns: ["last_message_id"]
             isOneToOne: false
             referencedRelation: "mensagens"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      convites: {
-        Row: {
-          aceito_em: string | null
-          created_at: string | null
-          email_convidado: string | null
-          expires_at: string
-          id: string
-          professor_id: string
-          status: string | null
-          tipo_convite: string
-          token_convite: string
-          updated_at: string | null
-        }
-        Insert: {
-          aceito_em?: string | null
-          created_at?: string | null
-          email_convidado?: string | null
-          expires_at?: string
-          id?: string
-          professor_id: string
-          status?: string | null
-          tipo_convite: string
-          token_convite?: string
-          updated_at?: string | null
-        }
-        Update: {
-          aceito_em?: string | null
-          created_at?: string | null
-          email_convidado?: string | null
-          expires_at?: string
-          id?: string
-          professor_id?: string
-          status?: string | null
-          tipo_convite?: string
-          token_convite?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "convites_professor_id_fkey"
-            columns: ["professor_id"]
-            isOneToOne: false
-            referencedRelation: "professores"
             referencedColumns: ["id"]
           },
         ]
@@ -951,6 +907,7 @@ export type Database = {
           avatar_letter: string | null
           avatar_type: string | null
           bio: string | null
+          codigo_vinculo: string | null
           created_at: string | null
           cref: string | null
           data_nascimento: string | null
@@ -979,6 +936,7 @@ export type Database = {
           avatar_letter?: string | null
           avatar_type?: string | null
           bio?: string | null
+          codigo_vinculo?: string | null
           created_at?: string | null
           cref?: string | null
           data_nascimento?: string | null
@@ -1007,6 +965,7 @@ export type Database = {
           avatar_letter?: string | null
           avatar_type?: string | null
           bio?: string | null
+          codigo_vinculo?: string | null
           created_at?: string | null
           cref?: string | null
           data_nascimento?: string | null
@@ -1326,6 +1285,10 @@ export type Database = {
         Args: { aluno_id: string }
         Returns: Json
       }
+      gerar_codigo_vinculo_unico: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_conversa_participantes: {
         Args: { p_conversa_id: string }
         Returns: {
@@ -1337,7 +1300,7 @@ export type Database = {
           nome_completo: string
         }[]
       }
-      get_minhas_conversas: {
+      get_conversas_e_contatos: {
         Args: Record<PropertyKey, never>
         Returns: {
           avatar: string
@@ -1354,6 +1317,10 @@ export type Database = {
           ultima_mensagem_conteudo: string
           ultima_mensagem_criada_em: string
         }[]
+      }
+      get_individual_conversation_id: {
+        Args: { user_id_1: string; user_id_2: string }
+        Returns: string
       }
       http: {
         Args: { request: Database["public"]["CompositeTypes"]["http_request"] }
@@ -1412,6 +1379,10 @@ export type Database = {
       }
       marcar_convites_expirados: {
         Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      remove_aluno_from_all_groups: {
+        Args: { p_aluno_id: string; p_professor_id: string }
         Returns: undefined
       }
       run_inactive_users_check: {

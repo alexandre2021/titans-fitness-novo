@@ -65,9 +65,11 @@ Este documento descreve a estrutura completa das tabelas do banco de dados no no
 | `avatar_type` | 24 | `character varying` | True | `'letter'::character varying` | `` | `` |  |
 | `limite_exercicios` | 25 | `integer` | True | `3` | `` | `` |  |
 | `last_warning_email_sent_at` | 26 | `timestamp with time zone` | True | `` | `` | `` |  |
+| `codigo_vinculo` | 27 | `text` | True | | `UNIQUE` | `professores_codigo_vinculo_key` | |
 
 **Tipos de Plano**: gratuito, basico, premium, profissional  
 **MUDANÇA**: Removido `limite_alunos` - aplicativo gratuito sem limite de seguidores
+**NOVO**: `codigo_vinculo` é o código de 6 dígitos para que alunos possam seguir o professor.
 
 ---
 
@@ -116,8 +118,10 @@ Este documento descreve a estrutura completa das tabelas do banco de dados no no
 | `ultimo_objetivo_rotina` | 22 | `character varying` | True | `` | `` | `` |  |
 | `descricao_pessoal` | 23 | `text` | True | `` | `` | `` |  |
 | `last_warning_email_sent_at` | 24 | `timestamp with time zone` | True | `` | `` | `` |  |
+| `codigo_vinculo` | 25 | `text` | True | | `UNIQUE` | `alunos_codigo_vinculo_key` | |
 
 **Status Possíveis**: pendente, ativo, inativo, suspenso  
+**NOVO**: `codigo_vinculo` é o código de 6 dígitos para que professores possam adicionar o aluno.
 **MUDANÇA CRÍTICA**: `professor_id` agora representa apenas o professor da rotina ativa atual. Pode ser NULL se aluno não tem rotina ativa.
 
 ---
@@ -132,29 +136,13 @@ Este documento descreve a estrutura completa das tabelas do banco de dados no no
 | `data_seguindo` | 3 | `timestamp without time zone` | True | `now()` | `` | `` |  |
 
 **CONSTRAINT ÚNICA**: `UNIQUE(aluno_id, professor_id)` - Evita que aluno siga mesmo professor duas vezes  
-**DELETE CASCADE**: Quando aluno ou professor é deletado, remove relacionamento automaticamente
-
----
-
-### Tabela: `public.convites`
-**Descrição**: Sistema de convites para cadastro de alunos e início de relacionamento com professores.
-
-| Coluna | Posição | Tipo de Dado | Nulável | Padrão | Tipo de Restrição | Nome da Restrição | Chave Estrangeira |
-|---|---|---|---|---|---|---|---|
-| `id` | 1 | `uuid` | False | `gen_random_uuid()` | `PRIMARY KEY` | `convites_pkey` |  |
-| `professor_id` | 2 | `uuid` | False | `` | `FOREIGN KEY` | `convites_professor_id_fkey` | `public.professores(id)` |
-| `email_convidado` | 3 | `text` | False | `` | `` | `` |  |
-| `token_convite` | 4 | `uuid` | False | `gen_random_uuid()` | `UNIQUE` | `convites_token_convite_key` |  |
-| `tipo_convite` | 5 | `character varying` | False | `` | `CHECK` | `convites_tipo_convite_check` |  |
-| `status` | 6 | `character varying` | True | `'pendente'::character varying` | `CHECK` | `convites_status_check` |  |
-| `expires_at` | 7 | `timestamp with time zone` | False | `(now() + '7 days'::interval)` | `` | `` |  |
-| `aceito_em` | 8 | `timestamp with time zone` | True | `` | `` | `` |  |
-| `created_at` | 9 | `timestamp with time zone` | True | `now()` | `` | `` |  |
-| `updated_at` | 10 | `timestamp with time zone` | True | `now()` | `` | `` |  |
-
-**Tipos de Convite**: cadastro, vinculo  
-**Status Possíveis**: pendente, aceito, cancelado, expirado  
-**MUDANÇA**: Convite agora significa "começar a seguir" ao invés de "vincular exclusivamente"
+**DELETE CASCADE**: Quando aluno ou professor é deletado, remove o relacionamento automaticamente.
+**Políticas RLS**:
+- `SELECT`: Permite que um usuário veja um vínculo se ele for o aluno (`aluno_id`) ou o professor (`professor_id`).
+- `DELETE`: Permite que um usuário remova um vínculo se ele for o aluno ou o professor.
+- `INSERT`:
+  - **Alunos podem seguir professores**: Permite a inserção se `auth.uid() = aluno_id`.
+  - **Professores podem adicionar alunos**: Permite a inserção se `auth.uid() = professor_id`.
 
 ---
 

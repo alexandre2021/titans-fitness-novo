@@ -51,6 +51,10 @@ const Cadastroprofessor = () => {
         email: data.email,
         password: data.senha,
         options: {
+          data: {
+            nome_completo: data.nomeCompleto,
+            user_type: 'professor',
+          },
           emailRedirectTo: `${window.location.origin}/`,
         },
       });
@@ -62,6 +66,19 @@ const Cadastroprofessor = () => {
 
       if (!authData.user) {
         toast.error("Erro ao criar usuário.");
+        return;
+      }
+
+      // 1. Chamar a Database Function (RPC) para gerar um código de vínculo único
+      const { data: codigoVinculo, error: rpcError } = await supabase.rpc('gerar_codigo_vinculo_unico');
+
+      if (rpcError || !codigoVinculo) {
+        console.error('Erro ao gerar código de vínculo:', rpcError);
+        toast.error("Erro Crítico no Cadastro", {
+          description: "Não foi possível gerar um identificador único para o usuário. Tente novamente.",
+        });
+        // Opcional: deletar o usuário do Auth que acabamos de criar para consistência
+        if (authData.user) await supabase.auth.admin.deleteUser(authData.user.id);
         return;
       }
 
@@ -86,6 +103,7 @@ const Cadastroprofessor = () => {
           email: data.email.toLowerCase(),
           onboarding_completo: false,
           plano: 'gratuito',
+          codigo_vinculo: codigoVinculo, // 2. Adicionar o código gerado ao perfil do professor
         });
 
       if (ptError) {

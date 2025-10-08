@@ -1,20 +1,40 @@
 /**
  * @file AlunosPT.tsx
- * @description Página principal para o Personal Trainer gerenciar seus alunos e convites pendentes.
- *
- * @note A limpeza de convites expirados é realizada pelo cron job 'check-inactive-users.ts':
- *       - Convites de QR Code (sem email) são removidos após 1 dia.
- *       - Convites por Email são removidos após 7 dias.
+ * @description Página principal para o Personal Trainer gerenciar e adicionar seus alunos.
  */
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { UserPlus, Users, Plus, Mail, MailCheck, Trash2, Send, ChevronDown, ChevronRight, Search, Filter, X } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormDescription,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Plus,
+  Users,
+  Search,
+  Filter,
+  X,
+  Loader2,
+} from "lucide-react";
 import { useAlunos } from "@/hooks/useAlunos";
 import { useAuth } from "@/hooks/useAuth";
 import { useMediaQuery } from "@/hooks/use-media-query";
@@ -22,15 +42,22 @@ import { AlunoCard } from "@/components/alunos/AlunoCard";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import CustomSelect from "@/components/ui/CustomSelect";
+import { AlunoCardBusca } from "@/components/alunos/AlunoCardBusca";
 
-interface ConvitePendente {
+interface AlunoEncontrado {
   id: string;
-  email_convidado: string;
-  tipo_convite: string;
-  status: string;
-  created_at: string;
-  expires_at: string;
+  nome_completo: string;
+  email: string;
+  avatar_type: 'letter' | 'image';
+  avatar_image_url?: string | null;
+  avatar_letter?: string | null;
+  avatar_color?: string | null;
+  codigo_vinculo: string;
 }
+
+const codigoSchema = z.object({
+  codigo: z.string().min(6, "Código deve ter 6 caracteres").max(6, "Código deve ter 6 caracteres"),
+});
 
 const SITUACAO_OPTIONS = [
   { value: 'todos', label: 'Todos' },
@@ -46,89 +73,127 @@ const GENERO_OPTIONS = [
   { value: 'nao_informar', label: 'Prefiro não informar' },
 ];
 
+type CodigoFormData = z.infer<typeof codigoSchema>;
+
 const AlunosPT = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { alunos, loading, filtros, setFiltros, desvincularAluno, totalAlunos } = useAlunos();
+  const [fetchTrigger, setFetchTrigger] = useState(0);
+  const { alunos, loading, filtros, setFiltros, desvincularAluno, totalAlunos } = useAlunos(fetchTrigger);
   const isDesktop = useMediaQuery("(min-width: 768px)");
-  const [convitesPendentes, setConvitesPendentes] = useState<ConvitePendente[]>([]);
-  const [convitesCollapsed, setConvitesCollapsed] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Carregar convites pendentes
-  const carregarConvitesPendentes = useCallback(async () => {
-    if (!user?.id) return;
+  // Estados para o modal de adicionar aluno
+  const [isSearching, setIsSearching] = useState(false);
+  const [alunoEncontrado, setAlunoEncontrado] = useState<AlunoEncontrado | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-    try {
-      const { data: convites } = await supabase
-        .from('convites')
-        .select('id, email_convidado, tipo_convite, status, created_at, expires_at')
-        .eq('professor_id', user.id)
-        .eq('status', 'pendente')
-        .not('email_convidado', 'is', null) // Apenas convites por email devem ser listados como pendentes
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (convites) {
-        setConvitesPendentes(convites);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar convites pendentes:', error);
-    }
-  }, [user?.id]);
-
-  // Cancelar convite
-  const cancelarConvite = async (conviteId: string, email: string) => {
-    try {
-      const { error } = await supabase
-        .from('convites')
-        .update({ status: 'cancelado' })
-        .eq('id', conviteId);
-
-      if (error) throw error;
-
-      // Remover da lista local
-      setConvitesPendentes(prev => prev.filter(c => c.id !== conviteId));
-    } catch (error) {
-      console.error('Erro ao cancelar convite:', error);
-      toast.error("Erro", {
-        description: "Não foi possível cancelar o convite."
-      })
-    }
+  const refetchAlunos = () => {
+    setFetchTrigger(prev => prev + 1);
   };
 
-  // Carregar convites ao montar o componente
+  // Adicionado para depuração
   useEffect(() => {
-    carregarConvitesPendentes();
-  }, [carregarConvitesPendentes]);
+    console.log('👨‍🏫 [AlunosPT.tsx] Lista de alunos carregada:', alunos);
+  }, [alunos]);
 
-  const handleConvidarAluno = () => {
-    navigate("/convite-aluno");
+  const codigoForm = useForm<CodigoFormData>({
+    resolver: zodResolver(codigoSchema),
+    defaultValues: {
+      codigo: "",
+    },
+  });
+
+  const handleBuscarPorCodigo = async (data: CodigoFormData) => {
+    setIsSearching(true);
+    setAlunoEncontrado(null);
+    setSearchError(null);
+
+    try {
+      const { data: aluno, error } = await supabase.functions.invoke<AlunoEncontrado>('buscar-aluno-por-codigo', {
+        body: { codigo_busca: data.codigo.toUpperCase() },
+      });
+
+      if (error || !aluno) {
+        const { data: professor } = await supabase
+          .from('professores')
+          .select('id')
+          .eq('codigo_vinculo', data.codigo.toUpperCase())
+          .single();
+
+        if (professor) {
+          setSearchError("Este código pertence a um professor. Insira o código de um aluno.");
+        } else {
+          setSearchError("Nenhum aluno encontrado com este código. Verifique e tente novamente.");
+        }
+        return;
+      }
+
+      // Verificar se o professor já tem vínculo com este aluno
+      const { data: vinculoExistente, error: vinculoError } = await supabase
+        .from('alunos_professores')
+        .select('aluno_id')
+        .eq('aluno_id', aluno.id)
+        .eq('professor_id', user?.id)
+        .single();
+
+      if (vinculoError && vinculoError.code !== 'PGRST116') throw vinculoError;
+
+      if (vinculoExistente) {
+        setSearchError("Este aluno já está na sua lista.");
+        return;
+      }
+
+      setAlunoEncontrado(aluno);
+
+    } catch (e) {
+      const error = e as Error;
+      setSearchError(error.message || "Ocorreu um erro ao buscar o aluno.");
+    } finally {
+      setIsSearching(false);
+    }
   };
 
-  const formatarDataRelativa = (data: string) => {
-    const agora = new Date();
-    const dataConvite = new Date(data);
+  const handleAdicionarAluno = async (alunoId: string) => {
+    if (!user) return;
+    console.log(`[handleAdicionarAluno] 1. Iniciando adição para alunoId: ${alunoId}`);
 
-    const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
-    const diaConvite = new Date(dataConvite.getFullYear(), dataConvite.getMonth(), dataConvite.getDate());
+    const { error } = await supabase.from('alunos_professores').insert({
+      aluno_id: alunoId,
+      professor_id: user.id,
+    });
 
-    const diferencaMs = hoje.getTime() - diaConvite.getTime();
-    const diferencaDias = Math.round(diferencaMs / (1000 * 60 * 60 * 24));
-
-    if (diferencaDias === 0) return 'Hoje';
-    if (diferencaDias === 1) return 'Ontem';
-    if (diferencaDias > 1 && diferencaDias < 7) return `${diferencaDias} dias atrás`;
-    
-    return new Intl.DateTimeFormat('pt-BR').format(dataConvite);
+    if (error) {
+      console.error(`[handleAdicionarAluno] 2. Erro ao inserir na tabela 'alunos_professores':`, error);
+      if (error.code === '23505') { // Chave duplicada
+        toast.info("Este aluno já está na sua rede.");
+      } else {
+        toast.error("Erro ao adicionar aluno", { description: error.message });
+      }
+    } else {
+      console.log("[handleAdicionarAluno] 2. Vínculo criado com sucesso no banco de dados.");
+      
+      console.log("[handleAdicionarAluno] 3. Chamando refetchAlunos() para atualizar a lista...");
+      refetchAlunos(); // Atualiza a lista de alunos
+      
+      console.log("[handleAdicionarAluno] 4. Chamando resetAddModal() para fechar o modal.");
+      resetAddModal();
+    }
   };
 
-  const getConviteIcon = (tipo: string) => {
-    return tipo === 'cadastro' ? <Mail className="h-4 w-4" /> : <MailCheck className="h-4 w-4" />;
+  const resetAddModal = () => {
+    setIsAddModalOpen(false);
+    setAlunoEncontrado(null);
+    setSearchError(null);
+    codigoForm.reset();
   };
 
-  const getConviteDescricao = (tipo: string) => {
-    return tipo === 'cadastro' ? 'Convite de cadastro' : 'Convite de vínculo';
+  const handleModalOpenChange = (open: boolean) => {
+    setIsAddModalOpen(open);
+    if (!open) {
+      resetAddModal();
+    }
   };
 
   const limparFiltros = () => {
@@ -166,72 +231,7 @@ const AlunosPT = () => {
         </div>
       )}
 
-      {/* Convites Pendentes */}
-      {convitesPendentes.length > 0 && (
-        <Collapsible open={!convitesCollapsed} onOpenChange={(open) => setConvitesCollapsed(!open)}>
-          <Card>
-            <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer bg-white">
-                <CardTitle className="flex items-center gap-2">
-                  {convitesCollapsed ? (
-                    <ChevronDown className="h-4 w-4" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 rotate-90" />
-                  )}
-                  <Send className="h-5 w-5" />
-                  Convites Pendentes
-                  <Badge 
-                    variant="secondary" 
-                    className={`ml-auto text-white ${convitesPendentes.length === 1 ? 'rounded-full w-6 h-6 flex items-center justify-center p-0 md:rounded-full md:w-6 md:h-6' : ''}`}
-                    style={{ backgroundColor: '#AA1808' }}
-                  >
-                    {convitesPendentes.length}
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent>
-                <div className="space-y-3">
-                  {convitesPendentes.map((convite) => (
-                    <div key={convite.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        {getConviteIcon(convite.tipo_convite)}
-                        <div className="flex flex-col">
-                          <span className="font-medium">{convite.email_convidado}</span>
-                          <span className="text-sm text-muted-foreground">
-                            {getConviteDescricao(convite.tipo_convite)} • {formatarDataRelativa(convite.created_at)}
-                          </span>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => cancelarConvite(convite.id, convite.email_convidado)}
-                        className="text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4 pt-4 border-t">
-                  <Button 
-                    variant="outline" 
-                    onClick={handleConvidarAluno}
-                    className="w-full"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Enviar Novo Convite
-                  </Button>
-                </div>
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
-      )}
-
-      {(alunos.length === 0 && convitesPendentes.length === 0 && filtros.busca === '' && filtros.situacao === 'todos' && filtros.genero === 'todos') ? (
+      {(alunos.length === 0 && filtros.busca === '' && filtros.situacao === 'todos' && filtros.genero === 'todos') ? (
         // Estado vazio - nenhum aluno cadastrado e nenhum convite pendente
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-16">
@@ -250,17 +250,6 @@ const AlunosPT = () => {
             </p>
             <p className="text-green-600 text-lg text-center mb-6">
               ✓ Agendar sessões.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (alunos.length === 0 && convitesPendentes.length > 0 && filtros.busca === '' && filtros.situacao === 'todos' && filtros.genero === 'todos') ? (
-        // Estado com convites pendentes mas sem alunos
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Users className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Nenhum aluno</h3>
-            <p className="text-muted-foreground text-center">
-              Aguardando resposta dos convites enviados
             </p>
           </CardContent>
         </Card>
@@ -373,26 +362,74 @@ const AlunosPT = () => {
       )}
 
       {/* Botão Flutuante para Convidar Aluno */}
-      <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
-        {/* Mobile: Round floating button */}
-        <Button
-          onClick={handleConvidarAluno}
-          className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-7"
-          aria-label="Convidar Aluno"
-        >
-          <UserPlus />
-        </Button>
+      <Dialog open={isAddModalOpen} onOpenChange={handleModalOpenChange}>
+        <DialogTrigger asChild>
+          <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
+            <Button
+              className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
+              aria-label="Novo Aluno"
+            >
+              <Plus />
+            </Button>
+            <Button
+              className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6"
+              size="lg"
+            >
+              <Plus />
+              Novo Aluno
+            </Button>
+          </div>
+        </DialogTrigger>
+        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[425px] rounded-md">
+          <DialogHeader>
+            <DialogTitle>Novo Aluno</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Form {...codigoForm}>
+              <form onSubmit={codigoForm.handleSubmit(handleBuscarPorCodigo)} className="space-y-4">
+                <FormField
+                  control={codigoForm.control}
+                  name="codigo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Código de Identificação do Aluno</FormLabel>
+                      <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] items-start gap-3 sm:gap-2">
+                        <div className="flex-grow space-y-2">
+                          <FormControl>
+                            <Input
+                              placeholder="Ex: ABC123"
+                              {...field}
+                              onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                              className="font-mono tracking-widest"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </div>
+                        <Button type="submit" disabled={isSearching} className="w-full sm:w-auto mt-auto">
+                          {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+                          Buscar
+                        </Button>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                <div className="space-y-1 text-sm text-muted-foreground">
+                  <p>O aluno encontra essa informação no menu do seu avatar.</p>
+                </div>
+              </form>
+            </Form>
 
-        {/* Desktop: Standard floating button */}
-        <Button
-          onClick={handleConvidarAluno}
-          className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6"
-          size="lg"
-        >
-          <UserPlus />
-          Convidar Aluno
-        </Button>
-      </div>
+            {searchError && <p className="text-sm text-destructive mt-4">{searchError}</p>}
+
+            {alunoEncontrado && (
+              <div className="mt-6">
+                <h4 className="text-sm font-medium mb-2">Aluno encontrado:</h4>
+                <AlunoCardBusca aluno={alunoEncontrado} onAdd={handleAdicionarAluno} />
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -1,10 +1,10 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { ConversaUI, useConversas } from '@/hooks/useConversas';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button'; 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Edit, UserPlus, LogOut, Trash2, UserX, Check, X as XIcon, Loader2, Crown, Users } from 'lucide-react';
+import { Edit, UserPlus, LogOut, Trash2, UserX, Check, X as XIcon, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
@@ -13,17 +13,33 @@ import { useAlunosSeguidores } from '@/hooks/useAlunosSeguidores';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 
+export interface ConversaUI {
+  id: string;
+  nome: string;
+  outroParticipanteId: string | null;
+  ultimaMsg: string;
+  naoLidas: number;
+  isGroup: boolean;
+  updated_at: string;
+  creatorId: string | null;
+  avatar: {
+    type: 'image' | 'letter' | 'group' | null;
+    url: string | null;
+    letter: string | null;
+    color: string | null;
+  };
+}
+
 interface GroupInfoViewProps {
   conversa: ConversaUI;
   onBack: () => void;
-  onGroupUpdated: () => void;
+  onGroupUpdated: (updatedName: string) => void;
   onGroupDeleted?: () => void;
 }
 
 export const GroupInfoView = ({ conversa, onBack, onGroupUpdated, onGroupDeleted }: GroupInfoViewProps) => {
   const { user } = useAuth();
   const { participants, loading, refetch } = useGroupParticipants(conversa.id);
-  const { removerParticipante, adicionarParticipantes, editarGrupo, excluirGrupo } = useConversas();
   const { alunos: alunosSeguidores } = useAlunosSeguidores();
   const [isEditingName, setIsEditingName] = useState(false);
   const [groupName, setGroupName] = useState(conversa.nome);
@@ -54,13 +70,22 @@ export const GroupInfoView = ({ conversa, onBack, onGroupUpdated, onGroupDeleted
     }
     setIsSavingName(true);
     try {
-      const success = await editarGrupo(conversa.id, { nome: groupName.trim() });
-      if (success) {
-        setIsEditingName(false);
-        onGroupUpdated();
-      } else {
-        toast.error('Erro ao atualizar o nome do grupo.');
-      }
+      const { error } = await supabase.functions.invoke('update_group_info', {
+        body: {
+          conversa_id: conversa.id,
+          nome_grupo: groupName.trim(),
+        },
+      });
+
+      if (error) throw error;
+
+      const newName = groupName.trim();
+      setIsEditingName(false);
+      onGroupUpdated(newName);
+      toast.success('Nome do grupo atualizado');
+    } catch (error) {
+      console.error('Erro ao atualizar nome:', error);
+      toast.error('Erro ao atualizar o nome do grupo.');
     } finally {
       setIsSavingName(false);
     }
@@ -68,28 +93,47 @@ export const GroupInfoView = ({ conversa, onBack, onGroupUpdated, onGroupDeleted
 
   const handleRemoveParticipant = async (participantId: string) => {
     setRemovingParticipantId(participantId);
-    const success = await removerParticipante(conversa.id, participantId);
-    if (success) {
-      // Recarrega a lista de participantes
+    try {
+      const { error } = await supabase.functions.invoke('remove_group_participant', {
+        body: {
+          conversa_id: conversa.id,
+          participant_id: participantId,
+        },
+      });
+
+      if (error) throw error;
+
       refetch();
+      toast.success('Participante removido');
+    } catch (error) {
+      console.error('Erro ao remover participante:', error);
+      toast.error('Erro ao remover participante');
+    } finally {
+      setRemovingParticipantId(null);
     }
-    // TODO: Adicionar toast de erro em caso de falha
-    setRemovingParticipantId(null);
   };
 
   const handleAddParticipants = async () => {
     if (selectedAlunosToAdd.length === 0) return;
     setIsAdding(true);
     try {
-      const success = await adicionarParticipantes(conversa.id, selectedAlunosToAdd);
-      if (success) {
-        setIsAddingParticipants(false);
-        setSelectedAlunosToAdd([]);
-        onGroupUpdated();
-        refetch();
-      } else {
-        toast.error('Erro ao adicionar participantes.');
-      }
+      const { error } = await supabase.functions.invoke('add_group_participant', {
+        body: {
+          conversa_id: conversa.id,
+          participant_ids: selectedAlunosToAdd,
+        },
+      });
+
+      if (error) throw error;
+
+      setIsAddingParticipants(false);
+      setSelectedAlunosToAdd([]);
+      onGroupUpdated(conversa.nome);
+      refetch();
+      toast.success('Participantes adicionados');
+    } catch (error) {
+      console.error('Erro ao adicionar participantes:', error);
+      toast.error('Erro ao adicionar participantes.');
     } finally {
       setIsAdding(false);
     }
@@ -103,16 +147,18 @@ export const GroupInfoView = ({ conversa, onBack, onGroupUpdated, onGroupDeleted
   const handleDeleteGroup = async () => {
     setIsDeleting(true);
     try {
-      const success = await excluirGrupo(conversa.id);
-      if (success) {
-        toast.success('Grupo excluído');
-        setIsDeleteDialogOpen(false);
-        // Solução "de estagiário": recarrega a página para garantir que a lista seja atualizada.
-        sessionStorage.setItem('openDrawerAfterReload', 'true');
-        window.location.reload();
-      } else {
-        toast.error('Erro ao excluir o grupo. Tente novamente.');
-      }
+      const { error } = await supabase.functions.invoke('delete_group_conversation', {
+        body: {
+          conversa_id: conversa.id,
+        },
+      });
+
+      if (error) throw error;
+
+      toast.success('Grupo excluído');
+      setIsDeleteDialogOpen(false);
+      sessionStorage.setItem('openDrawerAfterReload', 'true');
+      window.location.reload();
     } catch (error) {
       console.error('Erro ao excluir grupo:', error);
       toast.error('Erro ao excluir o grupo. Tente novamente.');
@@ -123,7 +169,6 @@ export const GroupInfoView = ({ conversa, onBack, onGroupUpdated, onGroupDeleted
 
   return (
     <div className="flex flex-col h-full">
-      {/* Avatar and Name Section */}
       <div className="flex flex-col items-center p-6 space-y-4">
         {isEditingName ? (
           <div className="flex items-center gap-2">
@@ -153,7 +198,6 @@ export const GroupInfoView = ({ conversa, onBack, onGroupUpdated, onGroupDeleted
 
       <Separator />
 
-      {/* Participants Section */}
       <div className="p-4">
         <div className="flex justify-between items-center mb-2">
           <h4 className="font-semibold">{participants.length} Participantes</h4>
@@ -204,7 +248,6 @@ export const GroupInfoView = ({ conversa, onBack, onGroupUpdated, onGroupDeleted
 
       <Separator />
 
-      {/* Actions Zone */}
       <div className="p-4 space-y-2 mt-auto border-t">
         {!isCreator && (
           <Button variant="outline" className="w-full justify-start gap-3 text-destructive hover:text-destructive" onClick={handleLeaveGroup}>
@@ -220,7 +263,6 @@ export const GroupInfoView = ({ conversa, onBack, onGroupUpdated, onGroupDeleted
         )}
       </div>
 
-      {/* Dialog para adicionar participantes */}
       <Dialog open={isAddingParticipants} onOpenChange={setIsAddingParticipants}>
         <DialogContent className="z-[200]">
           <DialogHeader>
@@ -254,7 +296,6 @@ export const GroupInfoView = ({ conversa, onBack, onGroupUpdated, onGroupDeleted
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de confirmação de exclusão */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="z-[200] w-[calc(100%-2rem)] sm:w-full sm:max-w-md">
           <DialogHeader />

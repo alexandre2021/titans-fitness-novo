@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { MessageSquare } from "lucide-react";
+import { cn } from "@/lib/utils"; // Supondo que você tenha um helper `cn`
 
 interface MessagesButtonProps {
   onClick: () => void;
@@ -10,18 +11,16 @@ interface MessagesButtonProps {
 const MessagesButton = ({ onClick, unreadCount, position = 'top-right' }: MessagesButtonProps) => {
   const isDesktop = position === 'top-right';
 
-  const positionClasses = isDesktop
-    ? 'top-4 right-4'
-    : 'bottom-20 left-4'; // bottom-20 para ficar acima da navegação inferior
-
-  const sizeClasses = isDesktop
-    ? 'h-12 w-12 [&_svg]:size-6' // Tamanho menor para desktop
-    : 'h-14 w-14 [&_svg]:size-7'; // Tamanho maior para mobile
-
   return (
     <Button
       variant="secondary"
-      className={`fixed z-50 rounded-full shadow-lg flex items-center justify-center p-0 ${sizeClasses} ${positionClasses}`}
+      className={cn(
+        "fixed z-50 rounded-full shadow-lg flex items-center justify-center p-0",
+        {
+          'top-4 right-4 h-12 w-12 [&_svg]:size-6': isDesktop,
+          'bottom-20 left-4 h-14 w-14 [&_svg]:size-7': !isDesktop, // bottom-20 para ficar acima da navegação inferior
+        }
+      )}
       onClick={onClick}
     >
       <MessageSquare />

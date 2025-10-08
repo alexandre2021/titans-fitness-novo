@@ -107,6 +107,7 @@ interface Rotina {
   forma_pagamento: string;
   created_at: string;
   professor_id: string;
+  aluno_id: string;
   professores: {
     id: string;
     nome_completo: string;
@@ -499,6 +500,36 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
     setSelectedRotina(null);
   };
 
+  const handleAlunoExcluirRotina = async () => {
+    if (!selectedRotina || modo !== 'aluno') return;
+    setIsDeleting(true);
+    try {
+      // Ação correta: DELETAR a rotina do banco de dados
+      const { error } = await supabase.from('rotinas').delete().eq('id', selectedRotina.id);
+      if (error) throw error;
+
+      // Atualização otimista da UI
+      setRotinasAtivas(prev => prev.filter(r => r.id !== selectedRotina.id));
+
+      // Enviar notificação para o professor
+      if (aluno && selectedRotina.professor_id) {
+        await supabase.functions.invoke('enviar-notificacao', {
+          body: {
+            destinatario_id: selectedRotina.professor_id,
+            conteudo: `O aluno ${aluno.nome_completo} excluiu a rotina de treino "${selectedRotina.nome}".`
+          }
+        });
+      }
+
+      toast.success("Rotina excluída com sucesso.");
+    } catch (error) {
+      toast.error("Erro ao excluir rotina", { description: "Você pode não ter permissão para esta ação. Tente novamente." });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  };
+
   const handleExcluirRotina = (rotina: Rotina) => {
     setSelectedRotina(rotina);
     setShowDeleteDialog(true);
@@ -518,6 +549,19 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
 
       if (error) {
         throw error;
+      }
+
+      // Enviar notificação para o aluno
+      if (user && selectedRotina.aluno_id) {
+        const { data: professorProfile } = await supabase.from('professores').select('nome_completo').eq('id', user.id).single();
+        if (professorProfile) {
+          await supabase.functions.invoke('enviar-notificacao', {
+            body: {
+              destinatario_id: selectedRotina.aluno_id,
+              conteudo: `O professor ${professorProfile.nome_completo} excluiu sua rotina de treino "${selectedRotina.nome}".`
+            }
+          });
+        }
       }
 
       if (selectedRotina.status === 'Rascunho') {
@@ -611,9 +655,15 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
             </DropdownMenuItem>
           )}
 
-          {rotina.status === 'Bloqueada' && modo === 'aluno' && (
-            <DropdownMenuItem disabled><span className="text-base">Rotina Bloqueada</span></DropdownMenuItem>
+          {(rotina.status === 'Ativa' || rotina.status === 'Bloqueada') && modo === 'aluno' && (
+            <DropdownMenuItem
+              onClick={() => handleExcluirRotina(rotina)}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="mr-2 h-5 w-5" /><span className="text-base">Excluir Rotina</span>
+            </DropdownMenuItem>
           )}
+
         {rotina.status === 'Bloqueada' && modo === 'professor' && rotina.professor_id === user?.id && (
             <>
               <DropdownMenuItem onClick={() => handleUpdateRotinaStatus(rotina, 'Ativa')}>
@@ -1110,7 +1160,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
       </span>?
     </p>
     <p className="text-sm text-gray-600 mt-2">
-      Esta ação não pode ser desfeita e todos os treinos e exercícios serão removidos.
+      {modo === 'professor' ? 'Esta ação não pode ser desfeita e todos os treinos e exercícios serão removidos.' : 'Você não poderá mais acessar esta rotina.'}
     </p>
   </div>
   
@@ -1124,7 +1174,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
     </Button>
     <Button 
       variant="destructive" 
-      onClick={handleConfirmarExclusao} 
+      onClick={modo === 'professor' ? handleConfirmarExclusao : handleAlunoExcluirRotina}
       disabled={isDeleting}
       className="flex items-center gap-2"
     >

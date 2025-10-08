@@ -25,10 +25,8 @@ src/
 │   └── messages/
 │       ├── MessageDrawer.tsx      # 🎨 UI principal: gaveta de mensagens
 │       └── ChatView.tsx           # 💬 UI do chat ativo com mensagens
-│
+│   
 ├── hooks/
-│   ├── useConversas.tsx           # 🧠 Lógica central para buscar e gerenciar conversas
-│   ├── useAlunosSeguidores.tsx    # 🎣 Hook para buscar a lista de alunos que seguem o PT
 │   └── useMensagens.tsx           # 📨 Hook para enviar/receber mensagens de uma conversa
 │
 ├── integrations/supabase/
@@ -36,8 +34,10 @@ src/
 │
 └── supabase/
     ├── functions/
-    │   └── create_conversation_with_aluno/
-    │       └── index.ts           # ⚡ Edge Function para criar/encontrar conversas
+    │   ├── create_conversation_with_aluno/
+    │   │   └── index.ts           # ⚡ Edge Function para criar/encontrar conversas
+    │   └── enviar-notificacao/
+    │       └── index.ts           # ⚡ Edge Function para notificações do sistema
     └── ...
 ```
 
@@ -48,9 +48,8 @@ src/
 ### 3.1. Hooks (Lógica de Negócio)
 
 #### `src/hooks/useConversas.tsx`
-    -   Chama a função RPC `get_minhas_conversas` do Supabase para buscar todas as conversas (1-para-1 e em grupo).
-    -   Utiliza o hook `useAlunosSeguidores` para obter a lista de contatos (alunos seguidores).
-    -   **Mescla as duas listas**: cria uma lista unificada que mostra conversas ativas no topo e contatos sem conversa abaixo.
+    -   **Lógica Centralizada**: Chama a função RPC `get_minhas_conversas_e_contatos` do Supabase, que já retorna uma lista unificada de conversas existentes e contatos (alunos seguidores) com quem ainda não há uma conversa.
+    -   **Eficiência**: Elimina a necessidade de um segundo hook (`useAlunosSeguidores`) e da lógica de mesclagem no frontend, simplificando o código e reduzindo as chamadas ao banco de dados.
     -   Calcula a contagem de mensagens não lidas para cada conversa (`naoLidas`) e o total (`unreadCount`).
     -   Expõe a função `iniciarConversa` (para chats 1-para-1) e `criarGrupo` (para chats em grupo).
     -   Gerencia os estados de `loading` e `loadingConversa`.
@@ -69,20 +68,6 @@ src/
       editarGrupo: (conversaId: string, updates: { nome?: string; avatarUrl?: string }) => Promise<boolean>,
       excluirGrupo: (conversaId: string) => Promise<boolean>,
       refetchConversas: () => Promise<void>
-    }
-    ```
-
-#### `src/hooks/useAlunosSeguidores.tsx`
--   **Responsabilidade**: Fornecer uma lista de todos os alunos que seguem o PT logado.
--   **O que faz**:
-    -   Realiza uma query na tabela `alunos_professores` para encontrar os `aluno_id` associados ao `professor_id` atual.
-    -   Busca os dados completos de cada aluno (nome, avatar completo com tipo/letra/cor) da tabela `alunos`.
-    -   Retorna a lista de alunos seguidores, que é consumida pelo `useConversas`.
--   **Retorno**:
-    ```typescript
-    {
-      alunos: AlunoSeguidor[],
-      loading: boolean
     }
     ```
 
@@ -232,8 +217,8 @@ src/
 ### 4.2. Fluxo de Início de Conversa
 ```
 1. Usuário clica em um aluno sem conversa (conversa.id vazio)
-2. handleItemClick chama iniciarConversa(conversa)
-3. iniciarConversa invoca Edge Function create_conversation_with_aluno
+2. handleItemClick no MessageDrawer invoca a Edge Function `create_conversation_with_aluno`
+3. A função é chamada com o ID do aluno
 4. Edge Function:
    - Verifica se conversa existe
    - Cria nova se necessário
@@ -250,7 +235,7 @@ src/
 2. ChatView chama enviarMensagem(conteudo)
 3. useMensagens:
    a. Insere mensagem na tabela mensagens
-   b. Atualiza last_message_id da conversa
+   b. Atualiza `last_message_id` e `updated_at` da conversa (via trigger no DB).
    c. Atualiza updated_at da conversa (via trigger no DB)
 4. Realtime dispara evento INSERT
 5. Subscription do useMensagens adiciona mensagem ao estado
@@ -264,8 +249,8 @@ src/
 2. INSERT na tabela mensagens
 3. Realtime dispara evento:
    - Para `useMensagens` (se chat está aberto): adiciona a nova mensagem à lista.
-   - Para `useConversas`: atualiza a conversa específica na lista (última mensagem e contador de não lidas).
-4. Se o chat é aberto, `useMensagens` chama `marcarComoLidas`, disparando um evento `UPDATE` que é capturado pelo `useConversas` para zerar o contador.
+   - Para o `MessageDrawer` (que está ouvindo mudanças): ele refaz a chamada à RPC `get_conversas_e_contatos` para obter a lista atualizada.
+4. Se o chat é aberto, `useMensagens` chama `marcarComoLidas`.
 4. UI atualiza automaticamente em ambos os lugares
 ```
 

@@ -61,8 +61,7 @@ const UserTypeSelection = () => {
             </Card>
 
             {/* Aluno Card */}
-            <Card className="relative border-border hover:border-secondary transition-colors cursor-pointer group">
-              <Badge variant="secondary" className="absolute top-4 right-4">Em breve</Badge>
+            <Card className="border-border hover:border-secondary transition-colors cursor-pointer group">
               <CardHeader className="text-center pb-4">
                 <div className="w-16 h-16 bg-secondary/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-secondary/20 transition-colors">
                   <Users className="w-8 h-8 text-secondary" />
@@ -73,9 +72,11 @@ const UserTypeSelection = () => {
                 <p className="text-text-secondary mb-8">
                   Acesse seus treinos personalizados, acompanhe seu progresso e mantenha contato direto com seu Personal Trainer.
                 </p>
-                <Button className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground" disabled>
+                <Link to="/cadastro/aluno" className="block">
+                  <Button className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground">
                     Sou Aluno
                   </Button>
+                </Link>
               </CardContent>
             </Card>
           </div>

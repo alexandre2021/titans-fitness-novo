@@ -1,11 +1,30 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, ArrowLeft, Users } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 import { useAlunosSeguidores, AlunoSeguidor } from '@/hooks/useAlunosSeguidores'; 
-import { useConversas, ConversaUI } from '@/hooks/useConversas';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+export interface ConversaUI {
+  id: string;
+  nome: string;
+  outroParticipanteId: string | null;
+  ultimaMsg: string;
+  naoLidas: number;
+  isGroup: boolean;
+  updated_at: string;
+  creatorId: string | null;
+  avatar: {
+    type: 'image' | 'letter' | 'group' | null;
+    url: string | null;
+    letter: string | null;
+    color: string | null;
+  };
+}
 
 interface CreateGroupViewProps {
   onCancel: () => void;
@@ -42,10 +61,11 @@ const AlunoSelectItem = ({ aluno, onSelect, isSelected }: { aluno: AlunoSeguidor
 );
 
 export const CreateGroupView = ({ onCancel, onGroupCreated }: CreateGroupViewProps) => {
+  const { user } = useAuth();
   const { alunos, loading: loadingAlunos } = useAlunosSeguidores();
-  const { criarGrupo, loadingConversa } = useConversas();
   const [groupName, setGroupName] = useState('');
   const [selectedAlunos, setSelectedAlunos] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const handleSelectAluno = (id: string) => {
     setSelectedAlunos(prev => 
@@ -54,19 +74,52 @@ export const CreateGroupView = ({ onCancel, onGroupCreated }: CreateGroupViewPro
   };
 
   const handleCreateGroup = async () => {
-    if (!groupName.trim() || selectedAlunos.length === 0) {
-      console.error("Nome do grupo e pelo menos um participante são necessários.");
+    if (!user || !groupName.trim() || selectedAlunos.length === 0) {
+      toast.error('Nome do grupo e pelo menos um participante são necessários');
       return;
     }
 
-    // Chama a função `criarGrupo` simplificada, sem o arquivo de imagem.
-    const novoGrupo = await criarGrupo(groupName, selectedAlunos);
-    if (novoGrupo) {
+    setLoading(true);
+    try {
+      const todosParticipantes = [...new Set([user.id, ...selectedAlunos])];
+
+      const { data, error } = await supabase.functions.invoke('create_group_conversation', {
+        body: {
+          nome_grupo: groupName,
+          participantes_ids: todosParticipantes,
+        },
+      });
+
+      if (error) throw error;
+
+      const novoGrupo: ConversaUI = {
+        id: data.conversa_id,
+        nome: groupName,
+        outroParticipanteId: null,
+        creatorId: user.id,
+        avatar: {
+          type: 'group',
+          url: null,
+          letter: groupName.charAt(0).toUpperCase(),
+          color: null,
+        },
+        ultimaMsg: 'Grupo criado. Dê as boas-vindas!',
+        naoLidas: 0,
+        isGroup: true,
+        updated_at: new Date().toISOString(),
+      };
+
+      toast.success('Grupo criado com sucesso');
       onGroupCreated(novoGrupo);
+    } catch (error) {
+      console.error('Erro ao criar grupo:', error);
+      toast.error('Erro ao criar grupo');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const canCreate = groupName.trim() !== '' && selectedAlunos.length > 0 && !loadingConversa;
+  const canCreate = groupName.trim() !== '' && selectedAlunos.length > 0 && !loading;
 
   return (
     <div className="flex flex-col h-full">
@@ -106,10 +159,10 @@ export const CreateGroupView = ({ onCancel, onGroupCreated }: CreateGroupViewPro
       <div className="p-4 border-t mt-auto">
         <Button 
           className="w-full" 
-          onClick={() => handleCreateGroup()}
+          onClick={handleCreateGroup}
           disabled={!canCreate}
         >
-          {loadingConversa ? (
+          {loading ? (
             <Loader2 className="h-5 w-5 animate-spin" />
           ) : (
             `Criar Grupo (${selectedAlunos.length})`

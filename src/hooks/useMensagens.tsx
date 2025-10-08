@@ -192,6 +192,11 @@ export const useMensagens = (conversaId: string | null) => {
         async (payload) => {
           const novaMensagemPayload = payload.new as MensagemPayload;
           const isMine = novaMensagemPayload.remetente_id === user.id;
+          
+          // Se a mensagem foi enviada pelo próprio usuário,
+          // ela já foi adicionada via atualização otimista.
+          // Ignoramos o evento Realtime para evitar duplicação.
+          if (isMine) return;
 
           const novaMensagem: Mensagem = {
             ...novaMensagemPayload,
@@ -240,6 +245,13 @@ export const useMensagens = (conversaId: string | null) => {
         .eq('id', conversaId);
 
       if (updateError) throw updateError;
+
+      // Atualização Otimista: Adiciona a nova mensagem ao estado local imediatamente.
+      // Isso faz com que a mensagem apareça na tela sem precisar de um refresh.
+      setMensagens(prev => [...prev, {
+        ...novaMensagem,
+        isMine: true,
+      }]);
 
       return true;
     } catch (error) {

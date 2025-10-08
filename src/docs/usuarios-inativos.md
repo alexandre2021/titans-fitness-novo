@@ -102,8 +102,8 @@ A função coleta e remove todos os arquivos pessoais do aluno dos seus respecti
     -   Remove todas as mídias associadas aos exercícios criados pelo PT.
 
 ##### Etapa 2: Desvinculação de Alunos
-- Atualiza a tabela `alunos` definindo `professor_id = null` para todos os alunos vinculados
-- Isso preserva os dados dos alunos enquanto remove apenas a vinculação com o PT
+- Remove todos os registros da tabela `alunos_professores` onde o `professor_id` corresponde ao do PT que está sendo excluído.
+- Isso preserva os dados dos alunos, removendo apenas a relação de "seguir".
 
 
 ##### Etapa 3: Exclusão do Usuário

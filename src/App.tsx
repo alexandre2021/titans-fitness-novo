@@ -1,8 +1,4 @@
 import React from "react";
-import NovoExercicio from "./pages/NovoExercicio";
-import CopiaExercicio from "./pages/CopiaExercicio";
-import EditarExercicio from "./pages/EditarExercicio";
-import DetalhesExercicio from "./pages/DetalhesExercicio";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -10,13 +6,16 @@ import { createBrowserRouter, RouterProvider, Outlet, Navigate } from "react-rou
 import { AuthProvider } from "@/context/AuthProvider";
 import AuthGuard from "@/components/AuthGuard";
 import Index from "./pages/Index";
+import NovoExercicio from "./pages/NovoExercicio";
+import CopiaExercicio from "./pages/CopiaExercicio";
+import EditarExercicio from "./pages/EditarExercicio";
+import DetalhesExercicio from "./pages/DetalhesExercicio";
 import NotFound from "./pages/NotFound";
 import UserTypeSelection from "./pages/UserTypeSelection";
 import CadastroProfessor from "./pages/CadastroProfessor";
 import CadastroAluno from "./pages/CadastroAluno";
 import ConfirmacaoEmail from "./pages/ConfirmacaoEmail";
 import Login from "./pages/Login";
-import ConviteInvalido from "./pages/ConviteInvalido";
 import Termos from "./pages/Termos"; 
 import Privacidade from "./pages/Privacidade"; 
 import OnboardingAlunoDadosBasicos from "./pages/OnboardingAlunoDadosBasicos";
@@ -30,7 +29,6 @@ import OnboardingPTRedesSociais from "./pages/OnboardingPTRedesSociais";
 import ProtectedRoutes from "./components/layout/ProtectedRoutes";
 import IndexProfessor from "./pages/IndexProfessor";
 import AlunosPT from "./pages/AlunosPT";
-import ConviteAluno from "./pages/ConviteAluno";
 import ExerciciosPT from "./pages/ExerciciosPT";
 import AgendaPT from "./pages/AgendaPT";
 import MensagensPT from "./pages/MensagensPT";
@@ -56,7 +54,6 @@ import NovoPost from "./pages/NovoPost";
 import EditarPost from "./pages/EditarPost";
 import PostPage from "./pages/Post";
 import MeusPosts from "./pages/MeusPosts";
-import AdminPostGuard from "./components/auth/AdminPostGuard.tsx";
 
 // NOVAS IMPORTAÇÕES PARA EXECUÇÃO
 import ExecucaoSelecionarTreino from "./pages/ExecucaoSelecionarTreino";
@@ -65,6 +62,7 @@ import ExecucaoExecutarTreino from "./pages/ExecucaoExecutarTreino";
 // IMPORTAÇÕES PARA PWA
 import PwaUpdateNotification from "@/components/pwa/PwaUpdateNotification";
 import PwaInstallPrompt from "@/components/pwa/PwaInstallPrompt";
+import AdminPostGuard from "./components/auth/AdminPostGuard";
 import Professores from "./pages/Professores";
 import DetalhesProfessor from "./pages/DetalhesProfessor";
 
@@ -83,7 +81,6 @@ const router = createBrowserRouter([
   { path: "/login", element: <Login /> },
   { path: "/termos", element: <Termos /> },
   { path: "/privacidade", element: <Privacidade /> },
-  { path: "/convite-invalido", element: <ConviteInvalido /> },
   { path: "/esqueci-senha", element: <EsqueciSenha /> },
   { path: "/resetar-senha", element: <ResetarSenha /> },
   { path: "/blog/:slug", element: <PostPage /> },
@@ -110,7 +107,6 @@ const router = createBrowserRouter([
           { path: "/index-pt", element: <Navigate to="/index-professor" replace /> },
           { path: "/index-professor", element: <IndexProfessor /> },
           { path: "/alunos", element: <AlunosPT /> },
-          { path: "/convite-aluno", element: <ConviteAluno /> },
           { path: "/exercicios-pt", element: <ExerciciosPT /> },
           { path: "/exercicios-pt/novo", element: <NovoExercicio /> },
           { path: "/exercicios-pt/copia/:id", element: <CopiaExercicio /> },

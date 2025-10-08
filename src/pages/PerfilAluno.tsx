@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
@@ -76,6 +75,7 @@ const PerfilAluno = () => {
       {isDesktop && (
         <h1 className="text-3xl font-bold">Meu Perfil</h1>
       )}
+
       <AvatarSection profile={profile} onProfileUpdate={handleProfileUpdate} userType="aluno" />
       
       <AlunoPerfilTabs profile={profile} onProfileUpdate={handleProfileUpdate} />

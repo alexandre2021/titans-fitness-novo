@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { Tables } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 
 export interface Professor {
   id: string;
   nome_completo: string;
   email: string;
-  avatar_type: 'letter' | 'image';
+  avatar_type: 'letter' | 'image' | null;
   avatar_image_url?: string;
   avatar_letter?: string;
   avatar_color?: string;
@@ -15,13 +16,13 @@ export interface Professor {
   temRotinaAtiva?: boolean;
 }
 
-export const useProfessores = () => {
+export const useProfessores = (fetchTrigger = 0) => {
   const { user } = useAuth();
   const [professores, setProfessores] = useState<Professor[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroBusca, setFiltroBusca] = useState('');
 
-  const carregarProfessores = useCallback(async () => {
+  const fetchProfessores = useCallback(async () => {
     if (!user) return;
     setLoading(true);
 
@@ -57,7 +58,7 @@ export const useProfessores = () => {
       if (professoresError) throw professoresError;
       if (rotinasError) throw rotinasError;
 
-      const professoresComRotinaAtiva = new Set(rotinasAtivas.map(r => r.professor_id));
+      const professoresComRotinaAtiva = new Set((rotinasAtivas || []).map(r => r.professor_id));
 
       const professoresComStatus = (professoresData || []).map(p => ({
         ...p,
@@ -74,12 +75,53 @@ export const useProfessores = () => {
   }, [user]);
 
   useEffect(() => {
-    carregarProfessores();
-  }, [carregarProfessores]);
+    fetchProfessores();
+  }, [fetchProfessores, fetchTrigger]);
 
   const professoresFiltrados = professores.filter(p =>
     p.nome_completo.toLowerCase().includes(filtroBusca.toLowerCase())
   );
+
+  const desvincularProfessor = async (professorId: string) => {
+    if (!user) return false;
+
+    const { error } = await supabase
+      .from('alunos_professores')
+      .delete()
+      .match({ aluno_id: user.id, professor_id: professorId });
+
+    if (error) {
+      toast.error("Erro ao deixar de seguir", {
+        description: "Não foi possível remover o vínculo. Tente novamente.",
+      });
+      return false;
+    }
+
+    // Enviar notificação para o professor
+    try {
+      const { data: alunoProfile } = await supabase
+        .from('alunos')
+        .select('nome_completo')
+        .eq('id', user.id)
+        .single();
+
+      if (alunoProfile) {
+        await supabase.functions.invoke('enviar-notificacao', {
+          body: {
+            destinatario_id: professorId,
+            conteudo: `O aluno ${alunoProfile.nome_completo} deixou de te seguir.`
+          }
+        });
+      }
+    } catch (notificationError) {
+      console.warn("Falha ao enviar notificação de desvinculo:", notificationError);
+    }
+
+    // Atualiza a lista localmente para uma resposta mais rápida da UI
+    setProfessores(prev => prev.filter(p => p.id !== professorId));
+    toast.success("Você deixou de seguir o professor.");
+    return true;
+  };
 
   return {
     professores: professoresFiltrados,
@@ -87,5 +129,7 @@ export const useProfessores = () => {
     filtroBusca,
     setFiltroBusca,
     totalProfessores: professores.length,
+    refetchProfessores: fetchProfessores,
+    desvincularProfessor,
   };
 };

@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 
 export type AlunoComStatus = Tables<'alunos'>;
 
-export const useAlunos = () => {
+export const useAlunos = (fetchTrigger: number = 0) => {
   const { user } = useAuth();
   const [alunos, setAlunos] = useState<AlunoComStatus[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,8 +21,6 @@ export const useAlunos = () => {
     setLoading(true);
 
     try {
-      // MUDANÇA: A busca agora funciona diretamente graças à política de RLS correta.
-      // Buscamos os alunos através da tabela de relacionamento 'alunos_professores'.
       const { data, error } = await supabase
         .from('alunos_professores')
         .select(`
@@ -36,7 +34,6 @@ export const useAlunos = () => {
         throw error;
       }
 
-      // Os dados vêm aninhados, então precisamos extrair os perfis dos alunos
       const alunosData = data
         .map(item => item.alunos)
         .filter((aluno): aluno is Tables<'alunos'> => aluno !== null)
@@ -55,22 +52,55 @@ export const useAlunos = () => {
 
   useEffect(() => {
     fetchAlunos();
-  }, [fetchAlunos]);
+  }, [fetchAlunos, fetchTrigger]);
 
   const desvincularAluno = async (alunoId: string) => {
     if (!user?.id) return false;
 
     try {
-      // MUDANÇA: Deleta o relacionamento da tabela 'alunos_professores'
-      const { error } = await supabase
+      const { error: deleteError } = await supabase
         .from('alunos_professores')
         .delete()
         .eq('aluno_id', alunoId)
         .eq('professor_id', user.id);
 
-      if (error) throw error;
+      if (deleteError) throw deleteError;
 
-      setAlunos(prev => prev.filter(a => a.id !== alunoId));
+      const { error: groupError } = await supabase.rpc('remove_aluno_from_all_groups', {
+        p_professor_id: user.id,
+        p_aluno_id: alunoId
+      });
+
+      if (groupError) {
+        console.error('Erro ao remover aluno dos grupos:', groupError);
+      }
+
+      fetchAlunos();
+      
+      // Enviar notificação para o aluno
+      try {
+        const { data: professorProfile } = await supabase
+          .from('professores')
+          .select('nome_completo')
+          .eq('id', user.id)
+          .single();
+
+        if (professorProfile) {
+          await supabase.functions.invoke('enviar-notificacao', {
+            body: {
+              destinatario_id: alunoId,
+              conteudo: `O professor ${professorProfile.nome_completo} removeu você da rede de contatos dele.`
+            }
+          });
+        }
+      } catch (notificationError) {
+        console.warn("Falha ao enviar notificação de desvinculo:", notificationError);
+      }
+
+      toast.success('Aluno desvinculado', {
+        description: 'O aluno foi removido da sua lista e de todos os grupos.',
+      });
+      
       return true;
     } catch (error) {
       console.error('Erro ao desvincular aluno:', error);
@@ -81,7 +111,6 @@ export const useAlunos = () => {
     }
   };
 
-  // A lógica de filtro permanece a mesma, apenas opera sobre os dados corretos
   const alunosFiltrados = alunos.filter(aluno => {
     const buscaMatch = !filtros.busca || aluno.nome_completo.toLowerCase().includes(filtros.busca.toLowerCase()) || (aluno.email && aluno.email.toLowerCase().includes(filtros.busca.toLowerCase()));
     const situacaoMatch = filtros.situacao === 'todos' || aluno.status === filtros.situacao;

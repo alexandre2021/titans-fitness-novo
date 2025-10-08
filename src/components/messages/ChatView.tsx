@@ -1,14 +1,30 @@
 // src/components/messages/ChatView.tsx
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Send, Loader2, Smile } from 'lucide-react';
+import { Send, Loader2, Smile, ShieldAlert } from 'lucide-react';
 import { useMensagens } from '@/hooks/useMensagens';
-import { ConversaUI } from '@/hooks/useConversas';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
+
+export interface ConversaUI {
+  id: string;
+  nome: string;
+  outroParticipanteId: string | null;
+  ultimaMsg: string;
+  naoLidas: number;
+  isGroup: boolean;
+  updated_at: string;
+  creatorId: string | null;
+  avatar: {
+    type: 'image' | 'letter' | 'group' | null;
+    url: string | null;
+    letter: string | null;
+    color: string | null;
+  };
+}
 
 interface ChatViewProps {
   conversa: ConversaUI;
@@ -34,24 +50,23 @@ export const ChatView = ({ conversa, onEditGroup }: ChatViewProps) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { mensagens, loading, sending, enviarMensagem } = useMensagens(conversa.id);
 
-  // Auto-scroll para a última mensagem
+  const ADMIN_USER_ID = import.meta.env.VITE_ADMIN_USER_ID;
+  const isReadOnly = conversa.outroParticipanteId === ADMIN_USER_ID;
+
   useEffect(() => {
     if (mensagens.length > 0) {
       if (isInitialLoad.current) {
-        // Rolagem instantânea na primeira carga
         messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
         isInitialLoad.current = false;
       } else {
-        // Rolagem suave para novas mensagens
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }
     }
   }, [mensagens]);
 
-  // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'; // Reseta a altura para calcular o novo scrollHeight
+      textareaRef.current.style.height = 'auto';
       const scrollHeight = textareaRef.current.scrollHeight;
       textareaRef.current.style.height = `${scrollHeight}px`;
     }
@@ -88,12 +103,17 @@ export const ChatView = ({ conversa, onEditGroup }: ChatViewProps) => {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Área de mensagens */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {mensagens.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-            <p>Nenhuma mensagem ainda.</p>
-            <p className="text-sm mt-2">Envie a primeira mensagem para {conversa.nome}</p>
+            {isReadOnly ? (
+              <p>Nenhuma notificação</p>
+            ) : (
+              <>
+                <p>Nenhuma mensagem ainda.</p>
+                <p className="text-sm mt-2">Envie a primeira mensagem para {conversa.nome}</p>
+              </>
+            )}
           </div>
         ) : (
           <>
@@ -126,7 +146,11 @@ export const ChatView = ({ conversa, onEditGroup }: ChatViewProps) => {
                       }}
                       className="text-sm font-semibold"
                     >
-                      {(conversa.isGroup && msg.remetente?.avatar_letter) || conversa.avatar.letter || conversa.nome.charAt(0).toUpperCase()}
+                      {isReadOnly ? (
+                        <ShieldAlert className="h-4 w-4" />
+                      ) : (
+                        (conversa.isGroup && msg.remetente?.avatar_letter) || conversa.avatar.letter || conversa.nome.charAt(0).toUpperCase()
+                      )}
                     </AvatarFallback>
                   </Avatar>
                 )}
@@ -158,39 +182,40 @@ export const ChatView = ({ conversa, onEditGroup }: ChatViewProps) => {
         )}
       </div>
 
-      {/* Input de mensagem */}
-      <div className="p-4 border-t flex items-start gap-2 flex-shrink-0">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className="flex-shrink-0">
-              <Smile className="h-5 w-5 text-muted-foreground" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 border-0 z-[200]">
-            <EmojiPicker
-              onEmojiClick={handleEmojiClick}
-              lazyLoadEmojis
-            />
-          </PopoverContent>
-        </Popover>
-        <textarea
-          ref={textareaRef}
-          placeholder="Digite uma mensagem..."
-          rows={1}
-          className="flex-grow bg-muted p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none overflow-y-auto max-h-32"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyPress={handleKeyPress}
-          disabled={sending}
-        />
-        <Button size="icon" onClick={handleSend} disabled={sending || !inputValue.trim()}>
-          {sending ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <Send className="h-5 w-5" />
-          )}
-        </Button>
-      </div>
+      {!isReadOnly && (
+        <div className="p-4 border-t flex items-start gap-2 flex-shrink-0">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="flex-shrink-0">
+                <Smile className="h-5 w-5 text-muted-foreground" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 border-0 z-[200]">
+              <EmojiPicker
+                onEmojiClick={handleEmojiClick}
+                lazyLoadEmojis
+              />
+            </PopoverContent>
+          </Popover>
+          <textarea
+            ref={textareaRef}
+            placeholder="Digite uma mensagem..."
+            rows={1}
+            className="flex-grow bg-muted p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none overflow-y-auto max-h-32"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyPress={handleKeyPress}
+            disabled={sending}
+          />
+          <Button size="icon" onClick={handleSend} disabled={sending || !inputValue.trim()}>
+            {sending ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Send className="h-5 w-5" />
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

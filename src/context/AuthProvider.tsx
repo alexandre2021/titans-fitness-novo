@@ -13,7 +13,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    // Get initial session first
     const getInitialSession = async () => {
       try {
         const { data: { session: sessionData }, error } = await supabase.auth.getSession();
@@ -33,7 +32,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    // Set up auth state listener
     getInitialSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -60,6 +58,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = { user, session, loading, signOut };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
-

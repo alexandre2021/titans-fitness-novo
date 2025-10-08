@@ -915,6 +915,7 @@ const RotinaCriacao = () => {
             data_inicio: configuracao.data_inicio,
             descricao: configuracao.descricao || null,
             status: 'Ativa', // The main change
+            permite_execucao_aluno: true, // ✅ CORREÇÃO: Garantir que seja true ao finalizar
           })
           .eq('id', draftId)
           .select()
@@ -941,11 +942,27 @@ const RotinaCriacao = () => {
 
       } else {
         // INSERT new routine
+        let professorIdParaRotina = user.id;
+
+        // Se o usuário logado for o admin, precisamos encontrar o professor real do aluno.
+        if (user.email === 'contato@titans.fitness') {
+          const { data: relacao } = await supabase
+            .from('alunos_professores')
+            .select('professor_id')
+            .eq('aluno_id', alunoId)
+            .limit(1)
+            .single();
+          
+          if (relacao) {
+            professorIdParaRotina = relacao.professor_id;
+          }
+        }
+
         const { data: novaRotina, error: erroRotina } = await supabase
           .from('rotinas')
           .insert({
             aluno_id: alunoId,
-            professor_id: user.id,
+            professor_id: professorIdParaRotina,
             nome: configuracao.nome,
             objetivo: configuracao.objetivo,
             dificuldade: configuracao.dificuldade,
@@ -956,6 +973,7 @@ const RotinaCriacao = () => {
             valor_total: 0,
             forma_pagamento: 'PIX',
             status: 'Ativa',
+            permite_execucao_aluno: true, // ✅ CORREÇÃO: Garantir que seja true ao criar
           })
           .select()
           .single();

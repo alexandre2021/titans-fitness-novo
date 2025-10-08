@@ -1,51 +1,79 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { X, ArrowLeft, Loader2, Search, Users, Settings, Group } from "lucide-react";
+import { X, ArrowLeft, Loader2, Search, Users, Settings, ShieldAlert } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useConversas, ConversaUI } from "@/hooks/useConversas";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "../ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ChatView } from "./ChatView";
 import { CreateGroupView } from "./CreateGroupView";
 import { GroupInfoView } from "./GroupInfoView";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent } from "../ui/card";
+
+export interface ConversaUI {
+  id: string;
+  nome: string;
+  outroParticipanteId: string | null;
+  ultimaMsg: string;
+  naoLidas: number;
+  isGroup: boolean;
+  updated_at: string;
+  creatorId: string | null;
+  avatar: {
+    type: 'image' | 'letter' | 'group' | null;
+    url: string | null;
+    letter: string | null;
+    color: string | null;
+  };
+}
 
 type View = 'list' | 'chat' | 'create-group' | 'group-info';
+
+type Contato = {
+  id: string;
+  nome_completo: string;
+  avatar_image_url: string | null;
+  avatar_type: 'image' | 'letter' | null;
+  avatar_letter: string | null;
+  avatar_color: string | null;
+};
+
+
 interface MessagesDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   direction?: 'left' | 'right';
+  onUnreadCountChange?: (count: number) => void;
 }
 
 const ConversaItem = ({ conversa, onClick }: { conversa: ConversaUI, onClick: () => void }) => (
   <div onClick={onClick} className="flex items-center p-3 hover:bg-muted/50 rounded-lg cursor-pointer transition-colors">
     {conversa.isGroup ? (
-      <div 
-        className="h-12 w-12 mr-4 rounded-full flex items-center justify-center bg-muted"
-      >
+      <div className="h-12 w-12 mr-4 rounded-full flex items-center justify-center bg-muted">
         <Users className="h-6 w-6 text-muted-foreground" />
       </div>
-    ) : 
-    
-    (conversa.avatar.type === 'image' && conversa.avatar.url ? (
-      <Avatar className="h-12 w-12 mr-4">
-        <AvatarImage src={conversa.avatar.url} alt={conversa.nome} />
-        <AvatarFallback 
-          style={{ backgroundColor: conversa.avatar.color || '#ccc', color: 'white' }}
-          className="text-lg font-semibold"
-        >
-          {conversa.nome.charAt(0).toUpperCase()}
-        </AvatarFallback>
-      </Avatar>
     ) : (
-      <div 
-        className="h-12 w-12 mr-4 rounded-full flex items-center justify-center text-lg font-semibold"
-        style={{ backgroundColor: conversa.avatar.color || '#ccc', color: 'white' }}
-      >
-        {conversa.avatar.letter || conversa.nome.charAt(0).toUpperCase()}
-      </div>)
+      conversa.avatar.type === 'image' && conversa.avatar.url ? (
+        <Avatar className="h-12 w-12 mr-4">
+          <AvatarImage src={conversa.avatar.url} alt={conversa.nome} />
+          <AvatarFallback 
+            style={{ backgroundColor: conversa.avatar.color || '#ccc', color: 'white' }}
+            className="text-lg font-semibold"
+          >
+            {conversa.nome.charAt(0).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+      ) : (
+        <div 
+          className="h-12 w-12 mr-4 rounded-full flex items-center justify-center text-lg font-semibold"
+          style={{ backgroundColor: conversa.avatar.color || '#ccc', color: 'white' }}
+        >
+          {conversa.avatar.letter || conversa.nome.charAt(0).toUpperCase()}
+        </div>
+      )
     )}
-    <div className="flex-1">
+    <div className="flex-1 min-w-0">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <p className="font-semibold truncate">{conversa.nome}</p>
@@ -64,64 +92,189 @@ const ConversaItem = ({ conversa, onClick }: { conversa: ConversaUI, onClick: ()
   </div>
 );
 
-const MessagesDrawer = ({ isOpen, onClose, direction = 'right' }: MessagesDrawerProps) => {
+const MessagesDrawer = ({ isOpen, onClose, direction = 'right', onUnreadCountChange }: MessagesDrawerProps) => {
   const [view, setView] = useState<View>('list');
   const [activeConversation, setActiveConversation] = useState<ConversaUI | null>(null);
   const { user } = useAuth();
-  const { conversas, loading, iniciarConversa, loadingConversa, refetchConversas, isProfessor } = useConversas();
+  const [conversas, setConversas] = useState<ConversaUI[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loadingConversa, setLoadingConversa] = useState(false);
+  const [adminConversation, setAdminConversation] = useState<ConversaUI | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const filteredConversas = conversas.filter(conversa =>
-    conversa.nome.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  
+  const isProfessor = user?.user_metadata?.user_type === 'professor';
+
+  const fetchConversas = useCallback(async () => {
+    if (!user) return;
+
+    setLoading(true);
+    try {
+      // 1. Buscar todos os contatos (alunos ou professores)
+      // Simplificação: Chamar uma única RPC que já retorna a lista completa e formatada.
+      const { data: conversasData, error: conversasError } = await supabase.rpc('get_conversas_e_contatos');
+      if (conversasError) throw conversasError;
+
+      const conversasFormatadas: ConversaUI[] = Array.isArray(conversasData)
+        ? conversasData.map((conversa) => ({
+            id: conversa.conversa_id,
+            nome: conversa.nome,
+            outroParticipanteId: conversa.outro_participante_id,
+            creatorId: conversa.creator_id,
+            avatar: {
+              type: conversa.avatar_type as 'image' | 'letter' | 'group' | null,
+              url: conversa.avatar,
+              letter: conversa.avatar_letter,
+              color: conversa.avatar_color,
+            },
+            ultimaMsg: conversa.ultima_mensagem_conteudo,
+            naoLidas: conversa.mensagens_nao_lidas,
+            isGroup: conversa.is_grupo,
+            updated_at: conversa.ultima_mensagem_criada_em,
+          }))
+        : [];
+
+      // ✅ ADICIONADO:
+      console.log('Conversas retornadas:', conversasFormatadas);
+
+      // Separa a conversa do admin das outras
+      const adminId = import.meta.env.VITE_ADMIN_USER_ID;
+      const adminConvReal = conversasFormatadas.find(c => c.outroParticipanteId === adminId);
+      const outrasConversas = conversasFormatadas.filter(c => c.outroParticipanteId !== adminId);
+
+      // ✅ CORREÇÃO: Garante que a conversa real sempre substitua o placeholder.
+      let finalAdminConv = adminConvReal;
+      if (!finalAdminConv && adminId) {
+        // Se não houver conversa real, cria um placeholder.
+        finalAdminConv = {
+          id: `placeholder-admin-${adminId}`, // ID temporário
+          nome: 'Administrador',
+          outroParticipanteId: adminId,
+          ultimaMsg: 'Nenhuma notificação',
+          naoLidas: 0,
+          isGroup: false,
+          updated_at: new Date(0).toISOString(),
+          creatorId: null,
+          avatar: { type: 'group', url: null, letter: 'A', color: '#3B82F6' }
+        };
+      }
+
+      setAdminConversation(finalAdminConv || null);
+      setConversas(outrasConversas);
+
+      // ✅ Reporta o total de mensagens não lidas para o componente pai
+      if (onUnreadCountChange) {
+        const totalNaoLidas = conversasFormatadas.reduce((acc, c) => acc + (c.naoLidas || 0), 0);
+        onUnreadCountChange(totalNaoLidas);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar conversas:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user, onUnreadCountChange]);
+
+  useEffect(() => {
+    // ✅ CORREÇÃO: Busca as conversas na montagem inicial (mesmo fechado) e quando for aberto.
+    // Isso garante que o contador de mensagens não lidas seja carregado imediatamente.
+    if (user) {
+      void fetchConversas();
+    }
+    // A dependência `isOpen` garante que a lista seja atualizada se o usuário
+    // abrir o drawer após um tempo, mas a busca inicial já terá acontecido.
+  }, [isOpen, user, fetchConversas]); // O comentário eslint-disable foi removido pois não é mais necessário.
+
   useEffect(() => {
     if (!isOpen) {
       setActiveConversation(null);
       setSearchTerm("");
       setView('list');
-    } else {
-      refetchConversas(); // Garante que os dados estão atualizados ao abrir
     }
-  }, [isOpen, refetchConversas]);
+  }, [isOpen]);
 
-  // Efeito para manter a conversa ativa sincronizada com a lista principal
+  // Realtime: Ouve por novas mensagens e atualiza a lista
   useEffect(() => {
-    if (activeConversation) {
-      const updatedConversation = conversas.find(c => c.id === activeConversation.id);
-      if (updatedConversation) {
-        setActiveConversation(prev => prev && prev.id === updatedConversation.id && prev.ultimaMsg === updatedConversation.ultimaMsg && prev.nome === updatedConversation.nome ? prev : updatedConversation);
-      }
-    }
-  }, [conversas, activeConversation]);
+    if (!user) return;
 
-  const handleConversationClick = async (conversa: ConversaUI) => {
-    if (conversa.id) {
-      setActiveConversation(conversa);
-      setView('chat'); // ✅ Muda para a view do chat
-    } else {
-      const novaConversa = await iniciarConversa(conversa);
-      if (novaConversa) {
-        setActiveConversation(novaConversa);
-        setView('chat'); // ✅ Muda para a view do chat
-      } else {
-        console.error("Não foi possível iniciar a conversa.");
-      }
-    }
-  };
+    const channel = supabase
+      .channel('public:mensagens')
+      .on(
+        'postgres_changes',
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'mensagens',
+          filter: `remetente_id=neq.${user.id}` // ✅ CORREÇÃO: Só reage a mensagens de outros usuários
+        },
+        (payload) => {
+          console.log('Nova mensagem recebida, atualizando conversas:', payload);
+          void fetchConversas();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, fetchConversas]);
 
   const handleGroupCreated = (conversa: ConversaUI) => {
-    // Solução correta: define a nova conversa como ativa e muda para a view de chat
+    setConversas(prev => [conversa, ...prev].sort(
+        (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+      );
     setActiveConversation(conversa);
     setView('chat');
   };
 
-  const positionClasses = direction === 'right'
-    ? 'right-0 border-l'
-    : 'left-0 border-r';
-  const transformClasses = direction === 'right'
-    ? (isOpen ? 'translate-x-0' : 'translate-x-full')
-    : (isOpen ? 'translate-x-0' : '-translate-x-full');
+  const handleConversationClick = async (conversa: ConversaUI) => {
+    // ✅ CORREÇÃO: Lógica unificada para todos os cliques.
+
+    // Se a conversa já existe de verdade (não é um placeholder), abre o chat.
+    if (conversa.id && !conversa.id.startsWith('placeholder-admin-')) {
+      setActiveConversation(conversa);
+      setView('chat');
+      return;
+    }
+
+    // Se a conversa não existe ou é o placeholder do admin, cria a conversa.
+    if ((!conversa.id || conversa.id.startsWith('placeholder-admin-')) && conversa.outroParticipanteId) {
+      setLoadingConversa(true);
+      try {
+        const { data: novaConversaData, error } = await supabase.functions.invoke('create_conversation_with_aluno', {
+          body: { p_aluno_id: conversa.outroParticipanteId },
+        });
+
+        if (error || !novaConversaData || !novaConversaData.conversa_id) {
+          throw new Error('ID da conversa inválido retornado pela função.');
+        }
+
+        const novaConversa: ConversaUI = {
+          ...conversa,
+          id: novaConversaData.conversa_id,
+        };        setConversas(prev => prev.map(c => c.outroParticipanteId === novaConversa.outroParticipanteId ? novaConversa : c));
+        setActiveConversation(novaConversa);
+        setView('chat');
+      } catch (error) {
+        console.error('Erro ao iniciar conversa:', error);
+      } finally {
+        setLoadingConversa(false);
+      }
+    }
+  };
+
+  const filteredConversas = conversas.filter(conversa =>
+    conversa.nome?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleBackClick = useCallback(() => {
+    void fetchConversas();
+    if (view === 'chat') {
+      setActiveConversation(null);
+    }
+    setView(view === 'group-info' ? 'chat' : 'list');
+  }, [view, fetchConversas]);
+
+  const positionClasses = direction === 'right' ? 'right-0 border-l' : 'left-0 border-r';
+  const transformClasses = isOpen ? 'translate-x-0' : (direction === 'right' ? 'translate-x-full' : '-translate-x-full');
 
   return (
     <div
@@ -130,19 +283,7 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right' }: MessagesDrawer
     >
       <div className="flex items-center p-4 border-b flex-shrink-0 gap-2">
         {(view === 'chat' || view === 'group-info') && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              refetchConversas();
-              if (view === 'chat') {
-                // Limpa a conversa ativa apenas ao voltar para a lista
-                setActiveConversation(null);
-              }
-              setView(view === 'group-info' ? 'chat' : 'list');
-            }}
-            aria-label="Voltar"
-          >
+          <Button variant="ghost" size="icon" onClick={handleBackClick} aria-label="Voltar">
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
@@ -157,7 +298,7 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right' }: MessagesDrawer
               <Users className="h-5 w-5" />
             </Button>
           )}
-          {view === 'chat' && activeConversation?.isGroup && activeConversation.creatorId === user?.id && (
+          {view === 'chat' && activeConversation?.isGroup && (
             <Button variant="ghost" size="icon" onClick={() => setView('group-info')}>
               <Settings className="h-5 w-5" />
             </Button>
@@ -168,40 +309,74 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right' }: MessagesDrawer
         </div>
       </div>
 
-      <div className="flex-grow overflow-y-auto">
+      <div className="flex-grow overflow-y-auto flex flex-col">
         {view === 'list' && (
           loading ? (
             <div className="flex justify-center items-center h-full p-4">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <div className="p-2 space-y-1">
-              <div className="relative mb-2">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar conversa ou aluno..."
-                  className="pl-10"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              {loadingConversa && (
-                <div className="flex justify-center items-center p-4">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <>
+              {/* 1. Card Fixo do Administrador */}
+              {adminConversation && (
+                <div className="p-4 border-b">
+                  <Card 
+                    className="bg-blue-50 border-blue-200 hover:bg-blue-100 cursor-pointer transition-colors"
+                    onClick={() => handleConversationClick(adminConversation)}
+                  >
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <Avatar className="h-10 w-10 border-2 border-blue-300">
+                      <AvatarFallback className="bg-blue-500 text-white">
+                        <ShieldAlert className="h-5 w-5" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-blue-900">Administrador</p>
+                      <p className="text-xs text-blue-700 truncate">{adminConversation.ultimaMsg || 'Nenhuma notificação'}</p>
+                    </div>
+                    <div>
+                      {adminConversation.naoLidas > 0 && (
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{adminConversation.naoLidas}</span>
+                      )}
+                    </div>
+                  </CardContent>
+                  </Card>
                 </div>
               )}
-              {filteredConversas.length > 0 ? (
-                filteredConversas.map(conversa => (
-                  <ConversaItem
-                    key={conversa.id || conversa.outroParticipanteId}
-                    conversa={conversa}
-                    onClick={() => handleConversationClick(conversa)}
+
+              {/* 2. Barra de Busca */}
+              <div className="p-4 border-b">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar conversas..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
                   />
-                ))
-              ) : (
-                <p className="p-4 text-center text-muted-foreground">Nenhuma conversa ou aluno encontrado.</p>
-              )}
-            </div>
+                </div>
+              </div>
+
+              {/* 3. Lista de Conversas Rolável */}
+              <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                {loadingConversa && (
+                  <div className="flex justify-center items-center p-4">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+                {filteredConversas.length > 0 ? (
+                  filteredConversas.map(conversa => (
+                    <ConversaItem
+                      key={conversa.id || conversa.outroParticipanteId}
+                      conversa={conversa}
+                      onClick={() => handleConversationClick(conversa)}
+                    />
+                  ))
+                ) : (
+                  <p className="p-4 text-center text-muted-foreground">Nenhuma conversa ou aluno encontrado.</p>
+                )}
+              </div>
+            </>
           )
         )}
         {view === 'chat' && activeConversation && <ChatView conversa={activeConversation} />}
@@ -212,11 +387,15 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right' }: MessagesDrawer
           <GroupInfoView 
             conversa={activeConversation} 
             onBack={() => setView('chat')}
-            onGroupUpdated={() => refetchConversas()}
+            onGroupUpdated={async (updatedName) => {
+              await fetchConversas();
+              // Atualiza a conversa ativa com o novo nome para refletir imediatamente na UI
+              setActiveConversation(prev => prev ? { ...prev, nome: updatedName } : null);
+            }}
             onGroupDeleted={() => {
-              // Apenas limpa o estado e volta para a lista. O reload vai cuidar do resto.
               setActiveConversation(null);
               setView('list');
+              void fetchConversas();
             }}
           />
         )}

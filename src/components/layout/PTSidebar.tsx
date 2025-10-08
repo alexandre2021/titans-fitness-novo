@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, Dumbbell, LogOut, User, Settings, BookCopy, SquarePen, Home } from "lucide-react";
+import { LayoutDashboard, Users, Dumbbell, LogOut, User, Settings, BookCopy, SquarePen, Home, Copy, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import {
+  DropdownMenuLabel,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
@@ -12,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 import { useProfessorProfile } from "@/hooks/useProfessorProfile";
 
 const PTSidebar = () => {
@@ -61,8 +63,19 @@ const PTSidebar = () => {
   const isActive = (path: string) => location.pathname === path;
 
   const handleLogout = async () => {
-    await signOut();
-    navigate('/');
+    try {
+      await signOut();
+      navigate('/');
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error);
+    }
+  };
+
+  const handleCopyCode = () => {
+    if (profile?.codigo_vinculo) {
+      navigator.clipboard.writeText(profile.codigo_vinculo);
+      toast.success("Código copiado para a área de transferência!");
+    }
   };
 
   const getAvatarContent = () => {
@@ -129,21 +142,44 @@ const PTSidebar = () => {
               </div>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="end" className="w-72">
+            {profile && 'codigo_vinculo' in profile && profile.codigo_vinculo && (
+              <>
+                <DropdownMenuLabel className="font-normal p-4 pb-3">
+                  <div className="flex flex-col items-center text-center space-y-3">
+                    <Avatar className="h-16 w-16 mb-2">
+                      {getAvatarContent()}
+                    </Avatar>
+                    <div className="space-y-1">
+                      <p className="text-base font-semibold leading-none">{profile.nome_completo || 'Professor(a)'}</p>
+                      <p className="text-sm leading-none text-muted-foreground">{user?.email}</p>
+                    </div>
+                    <div className="w-full pt-2">
+                      <p className="text-xs text-muted-foreground mb-2">Identificação</p>
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="text-base font-mono bg-muted px-3 py-1.5 rounded-md select-all truncate">{profile.codigo_vinculo}</div>
+                        <Button variant="outline" size="icon" className="h-9 w-9 flex-shrink-0" onClick={handleCopyCode}><Copy className="h-4 w-4" /></Button>
+                      </div>
+                    </div>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator className="my-2 bg-neutral-200 dark:bg-neutral-700" />
+              </>
+            )}
             <DropdownMenuGroup>
               <DropdownMenuItem onClick={() => navigate('/perfil-pt')}>
-                <User className="mr-2 h-4 w-4" />
-                Perfil
+                <User className="mr-2 h-5 w-5" />
+                <span className="text-base">Meu Perfil</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate('/configuracoes-pt')}>
-                <Settings className="mr-2 h-4 w-4" />
-                Configurações
+                <Settings className="mr-2 h-5 w-5" />
+                <span className="text-base">Configurações</span>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-red-600">
-              <LogOut className="mr-2 h-4 w-4" />
-              Sair
+              <LogOut className="mr-2 h-5 w-5" />
+              <span className="text-base">Sair</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

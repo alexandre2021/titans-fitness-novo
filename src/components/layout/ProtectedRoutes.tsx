@@ -1,10 +1,9 @@
 // src/components/layout/ProtectedRoutes.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense, lazy } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useMediaQuery } from '@/hooks/use-media-query';
-import { useConversas } from '@/hooks/useConversas'; // ✅ ADICIONE
 
 // Import all layout components
 import AlunoSidebar from "./AlunoSidebar";
@@ -13,20 +12,10 @@ import AlunoMobileHeader from "./AlunoMobileHeader";
 import PTMobileHeader from "./PTMobileHeader";
 import AlunoBottomNav from "./AlunoBottomNav";
 import PTBottomNav from "./PTBottomNav";
-import MessagesButton from "../messages/MessageButton";
-import MessagesDrawer from "../messages/MessageDrawer";
 
-const useMessageDrawer = () => {
-  const [isOpen, setOpen] = useState(false);
-  const { refetchConversas } = useConversas();
-
-  const handleClose = () => {
-    setOpen(false);
-    refetchConversas(); // ✅ Recarrega as conversas ao fechar
-  };
-
-  return { isOpen, setOpen, handleClose };
-};
+// Lazy load message components for better performance
+const MessagesDrawer = lazy(() => import('@/components/messages/MessageDrawer'));
+const MessagesButton = lazy(() => import('@/components/messages/MessageButton'));
 
 const ProtectedRoutes = () => {
   const { user, loading: authLoading } = useAuth();
@@ -34,14 +23,8 @@ const ProtectedRoutes = () => {
   const [loading, setLoading] = useState(true);
   const location = useLocation();
   const isMobile = useMediaQuery("(max-width: 767px)");
-  const { unreadCount, refetchConversas } = useConversas(); // ✅ ADICIONE
-
-  const [isMessagesDrawerOpen, setMessagesDrawerOpen] = useState(false); // ✅ ADICIONE
-
-  const handleDrawerClose = () => {
-    setMessagesDrawerOpen(false);
-    refetchConversas(); // ✅ Recarrega as conversas ao fechar
-  };
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const determineUserType = async () => {
@@ -53,6 +36,12 @@ const ProtectedRoutes = () => {
         return;
       }
 
+      // ✅ CORREÇÃO: Se o usuário foi deslogado (por exemplo, sessão expirou),
+      // interrompe a execução para evitar redirecionamentos incorretos.
+      if (!user) {
+        setLoading(false);
+        return;
+      }
       let type = user.user_metadata?.user_type;
 
       if (!type) {
@@ -83,25 +72,12 @@ const ProtectedRoutes = () => {
     determineUserType();
   }, [user, authLoading]);
 
-  // Efeito para abrir o drawer de mensagens automaticamente após um reload.
-  useEffect(() => {
-    const shouldOpen = sessionStorage.getItem('openDrawerAfterReload');
-    if (shouldOpen === 'true') {
-      setMessagesDrawerOpen(true);
-      sessionStorage.removeItem('openDrawerAfterReload');
-    }
-  }, []); // O array de dependências vazio garante que isso rode apenas uma vez.
-
   if (loading || authLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary"></div>
       </div>
     );
-  }
-
-  if (!user) {
-    return null;
   }
 
   const isFocusedMode = 
@@ -130,49 +106,37 @@ const ProtectedRoutes = () => {
   if (isMobile) {
     return (
       <div className="min-h-screen bg-background">
-        {!isFocusedMode && (
-          <>
-            <MobileHeader />
-            <MessagesButton 
-              onClick={() => setMessagesDrawerOpen(true)} 
-              position="bottom-left"
-              unreadCount={unreadCount} // ✅ ADICIONE
-            />
-            <MessagesDrawer 
-              isOpen={isMessagesDrawerOpen} 
-              onClose={handleDrawerClose}
-              direction="left"
-            />
-          </>
-        )}
+        {!isFocusedMode && <MobileHeader />}
         <main className={`p-4 ${isFocusedMode ? 'pt-6' : 'pt-24 pb-16'}`}>
           <Outlet />
         </main>
-        {!isFocusedMode && <BottomNav />} 
+        {!isFocusedMode && <BottomNav />}
+        <Suspense>
+          <MessagesButton onClick={() => setIsDrawerOpen(true)} position="bottom-left" unreadCount={unreadCount} />
+          <MessagesDrawer 
+            isOpen={isDrawerOpen} 
+            onClose={() => setIsDrawerOpen(false)} 
+            direction="left" 
+            onUnreadCountChange={setUnreadCount} />
+        </Suspense>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      {!isFocusedMode && (
-        <>
-          <Sidebar />
-          <MessagesButton 
-            onClick={() => setMessagesDrawerOpen(true)} 
-            position="top-right"
-            unreadCount={unreadCount} // ✅ ADICIONE
-          />
-          <MessagesDrawer 
-            isOpen={isMessagesDrawerOpen} 
-            onClose={handleDrawerClose}
-            direction="right"
-          />
-        </>
-      )}
+      {!isFocusedMode && <Sidebar />}
       <main className={`flex-1 p-6 ${!isFocusedMode ? 'pl-72' : ''} transition-all duration-300`}>
         <Outlet />
       </main>
+      <Suspense>
+        <MessagesButton onClick={() => setIsDrawerOpen(true)} position="top-right" unreadCount={unreadCount} />
+        <MessagesDrawer 
+          isOpen={isDrawerOpen} 
+          onClose={() => setIsDrawerOpen(false)} 
+          direction="right" 
+          onUnreadCountChange={setUnreadCount} />
+      </Suspense>
     </div>
   );
 };

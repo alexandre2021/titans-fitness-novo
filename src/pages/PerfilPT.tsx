@@ -83,6 +83,7 @@ const PerfilPT = () => {
       {isDesktop && (
         <h1 className="text-3xl font-bold">Meu Perfil</h1>
       )}
+
       <AvatarSection profile={profile} onProfileUpdate={handleProfileUpdate} userType="professor" />
       
       <PerfilTabs profile={profile} onProfileUpdate={handleProfileUpdate} />

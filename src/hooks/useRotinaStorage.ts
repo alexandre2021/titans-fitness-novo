@@ -537,7 +537,7 @@ export const useRotinaStorage = (alunoId: string) => {
         valor_total: configuracao.valor_total,
         forma_pagamento: configuracao.forma_pagamento,
         data_inicio: configuracao.data_inicio,
-        permite_execucao_aluno: configuracao.permite_execucao_aluno,
+        permite_execucao_aluno: true, // ✅ CORREÇÃO: Sempre criar como true
         observacoes_pagamento: configuracao.observacoes_pagamento,
         observacoes_rotina: observacoesRotina,
       };

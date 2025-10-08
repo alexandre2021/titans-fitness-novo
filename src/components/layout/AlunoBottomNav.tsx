@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Dumbbell, BarChart3, MoreHorizontal } from "lucide-react";
+import { LayoutDashboard, Dumbbell, BarChart3, MessageCircle } from "lucide-react";
 
 const AlunoBottomNav = () => {
   const navigationItems = [
@@ -17,11 +17,6 @@ const AlunoBottomNav = () => {
       title: "Avaliações",
       href: "/avaliacoes-aluno",
       icon: BarChart3,
-    },
-    {
-      title: "Mais",
-      href: "/mais",
-      icon: MoreHorizontal,
     },
   ];
 
