@@ -73,7 +73,7 @@ const ConversaItem = ({ conversa, onClick }: { conversa: ConversaUI, onClick: ()
         </div>
       )
     )}
-    <div className="flex-1 min-w-0">
+    <div className="flex-1">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <p className="font-semibold truncate">{conversa.nome}</p>
@@ -137,7 +137,29 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right', onUnreadCountCha
       console.log('Conversas retornadas:', conversasFormatadas);
 
       // Separa a conversa do admin das outras
-      const adminId = import.meta.env.VITE_ADMIN_USER_ID;
+      // NOTA PARA MANUTENÇÃO FUTURA:
+      // A conversa com o "Administrador" é um canal de notificações do sistema para o usuário.
+      // Atualmente, existem 4 cenários principais que geram uma mensagem aqui:
+      // 1. Boas-vindas: Uma mensagem é enviada quando um novo usuário (aluno ou PT) se cadastra.
+      // 2. Rotina Cancelada: Quando um Personal Trainer é excluído por inatividade, suas rotinas
+      //    são canceladas e os alunos afetados recebem uma notificação do sistema.
+      // 3. Rotina Excluída: Quando um Personal Trainer exclui uma rotina de um aluno, o aluno
+      //    recebe uma notificação.
+      // 4. Aviso de Inatividade: O sistema envia um aviso para usuários que estão inativos
+      //    há mais de 60 dias, antes de a conta ser excluída (conforme a cron `check-inactive-users`).
+      //
+      // Essas notificações são enviadas pela Edge Function `enviar-notificacao`, que tem como
+      // remetente o ID do administrador (VITE_ADMIN_USER_ID).
+      const rawAdminId = import.meta.env.VITE_ADMIN_USER_ID;
+      let adminId: string | null = null;
+      if (typeof rawAdminId === 'string' && rawAdminId.length > 0) {
+        adminId = rawAdminId;
+      } else {
+        // Se VITE_ADMIN_USER_ID não está configurado, loga um aviso e não tenta criar o card fixo.
+        // A conversa do admin, se existir, aparecerá na lista geral.
+        console.warn('VITE_ADMIN_USER_ID não está configurado ou é inválido. A conversa do administrador pode não ser exibida corretamente no topo.');
+      }
+
       const adminConvReal = conversasFormatadas.find(c => c.outroParticipanteId === adminId);
       const outrasConversas = conversasFormatadas.filter(c => c.outroParticipanteId !== adminId);
 
@@ -331,7 +353,7 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right', onUnreadCountCha
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-blue-900">Administrador</p>
+                      <p className="font-semibold text-blue-900">{adminConversation.nome}</p>
                       <p className="text-xs text-blue-700 truncate">{adminConversation.ultimaMsg || 'Nenhuma notificação'}</p>
                     </div>
                     <div>
