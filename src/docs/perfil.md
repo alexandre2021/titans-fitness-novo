@@ -1,6 +1,6 @@
 # 👤 Sistema de Perfil de Usuário
 
-Este documento descreve a arquitetura e as principais funcionalidades do sistema de perfil de usuário, que é compartilhado entre Alunos e Personal Trainers.
+Este documento descreve a arquitetura e as principais funcionalidades do sistema de perfil de usuário, que é compartilhado entre Alunos e Profesores.
 
 ---
 
@@ -84,7 +84,7 @@ const EditPessoalModal = ({ open, onOpenChange, ... }) => {
 A busca e atualização dos dados de perfil são centralizadas em hooks customizados para cada tipo de usuário.
 
 -   **`usePTProfile.ts`**:
-    -   Busca os dados do Personal Trainer logado na tabela `professores`.
+    -   Busca os dados do Professor logado na tabela `professores`.
     -   Fornece funções para atualizar as informações (pessoais, profissionais, redes sociais).
     -   Gerencia os estados de `loading` e `error`.
 

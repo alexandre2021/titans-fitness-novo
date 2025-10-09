@@ -20,21 +20,7 @@ const Login = () => {
 
   useEffect(() => {
     const message = searchParams.get('message');
-    if (message === 'vinculo_sucesso') {
-      toast.success('Vínculo com o Personal Trainer realizado com sucesso!', {
-        description: 'Faça o login para acessar seu novo dashboard.',
-      });
-    } else if (message === 'ja_seguindo') {
-      toast.info('Você já está conectado com este Personal Trainer!', {
-        description: 'Nenhuma ação foi necessária. Faça o login para continuar.',
-        duration: 6000
-      });
-    } else if (message === 'seguir_sucesso') {
-      toast.success('Agora você está seguindo um novo Personal Trainer!', {
-        description: 'Faça o login para ver as novidades.',
-        duration: 6000
-      });
-    } else if (message === 'cadastro_sucesso') {
+    if (message === 'cadastro_sucesso') {
       toast.success('Cadastro realizado com sucesso!', {
         description: 'Faça o login para acessar a plataforma.',
         duration: 6000

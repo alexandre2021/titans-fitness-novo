@@ -65,6 +65,7 @@ import ExecucaoExecutarTreino from "./pages/ExecucaoExecutarTreino";
 import PwaUpdateNotification from "@/components/pwa/PwaUpdateNotification";
 import PwaInstallPrompt from "@/components/pwa/PwaInstallPrompt";
 import AdminPostGuard from "./components/auth/AdminPostGuard";
+import Calendario from "./pages/Calendario";
 import Professores from "./pages/Professores";
 import DetalhesProfessor from "./pages/DetalhesProfessor";
 
@@ -150,6 +151,8 @@ const router = createBrowserRouter([
           },
           { path: "/professores", element: <Professores /> },
           // Rotas de Execução (Compartilhadas)
+          // Nova rota para o calendário
+          { path: "/calendario", element: <Calendario /> },
           { path: "/execucao-rotina/selecionar-treino/:rotinaId", element: <ExecucaoSelecionarTreino /> },
           { path: "/execucao-rotina/executar-treino/:sessaoId", element: <ExecucaoExecutarTreino /> },
         ]

@@ -362,14 +362,20 @@ const ExerciciosPT = () => {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/exercicios-pt/detalhes/${exercicio.id}`, { state: { fromTab: 'padrao' } }); }}>
-                              <Eye className="mr-2 h-4 w-4" /><span>Ver Detalhes</span>
+                              <Eye className="mr-2 h-5 w-5" />
+                              <span className="text-base">Ver Detalhes</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCriarCopia(exercicio.id); }}>
-                              <Copy className="mr-2 h-4 w-4" /><span>Criar Cópia</span>
+                              <Copy className="mr-2 h-5 w-5" />
+                              <span className="text-base">Criar Cópia</span>
                             </DropdownMenuItem>
                             {isAdmin && (
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/exercicios-pt/editar-padrao/${exercicio.id}`); }}>
-                                <Edit className="mr-2 h-4 w-4 text-secondary" /><span>Editar Padrão</span>
+                              <DropdownMenuItem
+                                onClick={(e) => { e.stopPropagation(); navigate(`/exercicios-pt/editar-padrao/${exercicio.id}`); }}
+                                className="bg-secondary text-secondary-foreground hover:bg-secondary/80 focus:bg-secondary/80 focus:text-secondary-foreground"
+                              >
+                                <Edit className="mr-2 h-5 w-5" />
+                                <span className="text-base">Editar Padrão</span>
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>
@@ -531,12 +537,17 @@ const ExerciciosPT = () => {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/exercicios-pt/detalhes/${exercicio.id}`, { state: { fromTab: 'personalizados' } }); }}>
-                                  <Eye className="mr-2 h-4 w-4" /><span>Ver Detalhes</span>
+                                  <Eye className="mr-2 h-5 w-5" />
+                                  <span className="text-base">Ver Detalhes</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/exercicios-pt/editar/${exercicio.id}`); }}>
-                                  <Edit className="mr-2 h-4 w-4" /><span>Editar</span>
+                                  <Edit className="mr-2 h-5 w-5" />
+                                  <span className="text-base">Editar</span>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleExcluirExercicio(exercicio.id); }} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /><span>Excluir</span></DropdownMenuItem>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleExcluirExercicio(exercicio.id); }} className="text-destructive focus:text-destructive">
+                                  <Trash2 className="mr-2 h-5 w-5" />
+                                  <span className="text-base">Excluir</span>
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>

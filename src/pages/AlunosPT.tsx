@@ -1,6 +1,6 @@
 /**
  * @file AlunosPT.tsx
- * @description Página principal para o Personal Trainer gerenciar e adicionar seus alunos.
+ * @description Página principal para o Professor gerenciar e adicionar seus alunos.
  */
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";

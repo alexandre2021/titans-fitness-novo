@@ -25,7 +25,7 @@ export default defineConfig({
       manifest: {
         name: 'Titans Fitness',
         short_name: 'Titans',
-        description: 'Aplicativo de gestão de treinos para personal trainers e alunos.',
+        description: 'Aplicativo de gestão de treinos para professores e alunos.',
         theme_color: '#AA1808',
         background_color: '#ffffff',
         start_url: '/',

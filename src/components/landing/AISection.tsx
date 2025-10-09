@@ -15,7 +15,7 @@ const AISection = () => {
             <h2 className="text-4xl font-bold text-text-primary mb-6">
               Inteligência Artificial que 
               <span className="text-primary"> revoluciona </span>
-              o Personal Training
+              o professor
             </h2>
             
             <p className="text-xl text-text-secondary mb-8 leading-relaxed">

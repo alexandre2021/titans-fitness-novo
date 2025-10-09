@@ -6,7 +6,7 @@ Este documento detalha a arquitetura e o fluxo da funcionalidade de Avaliações
 
 ## 1. Arquitetura de Arquivos
 
-A funcionalidade é dividida entre a visão do Personal Trainer (PT) e a do Aluno, com base nos arquivos analisados. A lógica de negócio e as definições de tipo estão atualmente duplicadas dentro de cada componente de página.
+A funcionalidade é dividida entre a visão do Professor e a do Aluno, com base nos arquivos analisados. A lógica de negócio e as definições de tipo estão atualmente duplicadas dentro de cada componente de página.
 
 ```
 src/
@@ -29,9 +29,9 @@ src/
 
 ## 2. Visão Geral
 
-O sistema de avaliações permite que Personal Trainers (PTs) registrem e analisem dados antropométricos e fotográficos de seus alunos. Os alunos, por sua vez, podem visualizar seu histórico completo de avaliações, acompanhar a evolução e ver as observações de seus treinadores.
+O sistema de avaliações permite que Professor registrem e analisem dados antropométricos e fotográficos de seus alunos. Os alunos, por sua vez, podem visualizar seu histórico completo de avaliações, acompanhar a evolução e ver as observações de seus treinadores.
 
-O fluxo é dividido em duas perspectivas principais: a do Personal Trainer (criação e gerenciamento) e a do Aluno (visualização e acompanhamento).
+O fluxo é dividido em duas perspectivas principais: a do Professor (criação e gerenciamento) e a do Aluno (visualização e acompanhamento).
 
 ---
 
@@ -41,12 +41,12 @@ O fluxo é dividido em duas perspectivas principais: a do Personal Trainer (cria
 -   **Armazenamento de Imagens (Supabase Storage):** As fotos de progresso (frente, lado, costas) são salvas em um bucket privado no Supabase Storage, garantindo que não sejam publicamente acessíveis.
 -   **URLs Seguras (Edge Function `get-image-url`):** Para exibir as imagens de forma segura, o frontend não acessa o bucket diretamente. Em vez disso, ele invoca uma Edge Function que valida a autenticação do usuário e gera uma URL assinada e temporária para cada imagem. Isso previne o acesso não autorizado às fotos dos alunos.
 -   **Segurança de Acesso (RLS - Row Level Security):** Políticas de segurança no nível da linha do banco de dados garantem que:
-    -   Um **Personal Trainer** só pode criar, ver, editar ou excluir avaliações de alunos que estão diretamente vinculados a ele.
+    -   Um **Professor** só pode criar, ver, editar ou excluir avaliações de alunos que estão diretamente vinculados a ele.
     -   Um **Aluno** só pode visualizar suas próprias avaliações.
 
 ---
 
-## 4. Fluxo do Personal Trainer
+## 4. Fluxo do Professor
 
 Com base nos arquivos analisados, a funcionalidade implementada para o PT é a seguinte:
 

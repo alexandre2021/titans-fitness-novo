@@ -59,7 +59,7 @@ function App() {
 }
 ```
 
-Além das rotas principais, o projeto utiliza navegação condicional para diferentes tipos de usuários (aluno, personal trainer), e componentes de navegação (sidebar, bottom nav) para adaptar a experiência entre desktop e mobile.
+Além das rotas principais, o projeto utiliza navegação condicional para diferentes tipos de usuários (aluno, professor), e componentes de navegação (sidebar, bottom nav) para adaptar a experiência entre desktop e mobile.
 
 O React Router permite navegação programática (ex: `navigate('/dashboard-aluno')`) e proteção de rotas via componentes como `AuthGuard`.
 

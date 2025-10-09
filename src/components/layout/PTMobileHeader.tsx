@@ -59,6 +59,9 @@ const PTMobileHeader = () => {
     if (path.startsWith('/selecionar-modelo')) return { title: 'Selecionar Modelo', showBackButton: true };
     if (path.startsWith('/execucao-rotina/')) return { title: 'Execução de Treino', showBackButton: true };
 
+    // ✅ Adicionando rota do Calendário
+    if (path.startsWith('/calendario')) return { title: 'Agenda', showBackButton: true };
+
     // Páginas Principais (sem botão de voltar)
     const mainPages: { [key: string]: { title: string; subtitle?: string } } = {
       "/index-professor": { title: "Painel", subtitle: `Bem-vindo, ${profile?.nome_completo?.split(' ')[0] || 'Professor(a)'}!` },

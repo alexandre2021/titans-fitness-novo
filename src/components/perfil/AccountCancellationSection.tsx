@@ -67,7 +67,7 @@ const getCancellationConfig = (userType: 'professor' | 'aluno') => {
         "• Todas as suas avaliações físicas serão removidas",
         "• Histórico de treinos será deletado",
         "• PDFs de rotinas arquivadas serão removidos",
-        "• Você será desvinculado do seu Personal Trainer",
+        "• Você será desvinculado do seu professor",
         "• Esta ação não pode ser desfeita"
       ]
     };

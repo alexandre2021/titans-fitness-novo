@@ -330,7 +330,7 @@ const AvaliacoesAluno = () => {
         {/* Observações */}
         {avaliacaoSelecionada.observacoes && (
           <Card>
-            <CardHeader><CardTitle>Observações do Personal</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Observações do Professor</CardTitle></CardHeader>
             <CardContent>
               <p className="text-sm whitespace-pre-wrap bg-muted p-4 rounded-lg">
                 {avaliacaoSelecionada.observacoes}
@@ -376,7 +376,7 @@ const AvaliacoesAluno = () => {
             <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">Nenhuma avaliação</h3>
             <p className="text-muted-foreground">
-              Suas avaliações físicas aparecerão aqui quando realizadas pelo seu Personal Trainer.
+              Suas avaliações físicas aparecerão aqui quando realizadas pelo seu Professor.
             </p>
           </div>
         </div>

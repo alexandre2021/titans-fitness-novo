@@ -41,7 +41,7 @@ const Privacidade = () => {
             <p className="text-text-secondary mb-4">
               Esta Política de Privacidade descreve como o Titans.fitness coleta, usa, armazena e 
               protege suas informações pessoais. Aplicamos os mesmos padrões de proteção tanto para 
-              Personal Trainers quanto para Alunos, respeitando as especificidades de cada perfil.
+              Professores quanto para Alunos, respeitando as especificidades de cada perfil.
             </p>
             <p className="text-text-secondary mb-4">
               Estamos comprometidos com a proteção de seus dados pessoais conforme a Lei Geral de 
@@ -63,7 +63,7 @@ const Privacidade = () => {
               <li>Dados de uso da plataforma (logs, atividades)</li>
             </ul>
 
-            <h3 className="text-xl font-semibold text-text-primary mb-2">2.2 Dados Específicos de Personal Trainers:</h3>
+            <h3 className="text-xl font-semibold text-text-primary mb-2">2.2 Dados Específicos de Professores:</h3>
             <ul className="list-disc pl-6 text-text-secondary space-y-1 mb-4">
               <li>Informações profissionais e certificações</li>
               <li>Experiência e especializações</li>
@@ -86,7 +86,7 @@ const Privacidade = () => {
             <ul className="list-disc pl-6 text-text-secondary space-y-2">
               <li><strong>Fornecer nossos serviços:</strong> Permitir o funcionamento da plataforma e suas funcionalidades</li>
               <li><strong>Personalização:</strong> Adaptar a experiência às necessidades de cada usuário</li>
-              <li><strong>Comunicação:</strong> Facilitar a interação entre Personal Trainers e Alunos</li>
+              <li><strong>Comunicação:</strong> Facilitar a interação entre Professores e Alunos</li>
               <li><strong>Melhoria contínua:</strong> Analisar uso para aprimorar produtos e serviços</li>
               <li><strong>Segurança:</strong> Proteger contra fraudes e uso inadequado</li>
               <li><strong>Inteligência Artificial:</strong> Análise de dados para sugestões e insights (sempre anonimizados)</li>
@@ -100,7 +100,7 @@ const Privacidade = () => {
               <strong>Não vendemos seus dados pessoais.</strong> O compartilhamento ocorre apenas nas seguintes situações:
             </p>
             <ul className="list-disc pl-6 text-text-secondary space-y-2">
-              <li><strong>Entre usuários conectados:</strong> Personal Trainers e seus Alunos compartilham informações relevantes para o serviço</li>
+              <li><strong>Entre usuários conectados:</strong> Professores e seus Alunos compartilham informações relevantes para o serviço</li>
               <li><strong>Provedores de serviço:</strong> Empresas que nos auxiliam (hospedagem, analytics, suporte) sob rigorosos acordos de confidencialidade</li>
               <li><strong>Obrigações legais:</strong> Quando exigido por lei, órgãos reguladores ou processos judiciais</li>
               <li><strong>Proteção de direitos:</strong> Para proteger nossos direitos, segurança dos usuários ou investigar atividades suspeitas</li>

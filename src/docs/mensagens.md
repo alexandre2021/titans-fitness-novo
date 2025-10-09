@@ -6,7 +6,7 @@ Este documento descreve a arquitetura e o fluxo de dados do sistema de mensagens
 
 ## 1. Visão Geral
 
-O sistema de mensagens permite que Personal Trainers (PTs) se comuniquem diretamente com os alunos que os seguem. A interface principal é um "drawer" (gaveta lateral) que, ao ser aberto, exibe uma lista unificada de:
+O sistema de mensagens permite que professores se comuniquem diretamente com os alunos que os seguem. A interface principal é um "drawer" (gaveta lateral) que, ao ser aberto, exibe uma lista unificada de:
 
 1.  **Conversas existentes**, ordenadas pela mensagem mais recente.
 2.  **Alunos seguidores** com quem ainda não há uma conversa iniciada.

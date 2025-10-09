@@ -29,6 +29,9 @@ const AlunoMobileHeader = () => {
       return { title: 'Execução de Treino', subtitle: 'Siga as instruções e registre seu progresso', showBackButton: true };
     }
 
+    // ✅ Adicionando rota do Calendário
+    if (path.startsWith('/calendario')) return { title: 'Agenda', showBackButton: true };
+
     // Páginas Principais (sem botão de voltar)
     const mainPages: { [key: string]: { title: string; subtitle?: string } } = {
       "/index-aluno": { title: "Painel", subtitle: `Olá, ${profile?.nome_completo?.split(' ')[0] || 'Aluno(a)'}!` },
@@ -60,13 +63,6 @@ const AlunoMobileHeader = () => {
   const handleLogout = async () => {
     await signOut();
     navigate('/');
-  };
-
-  const handleCopyCode = () => {
-    if (profile?.codigo_vinculo) {
-      navigator.clipboard.writeText(profile.codigo_vinculo);
-      toast.success("Código copiado para a área de transferência!");
-    }
   };
 
   const getAvatarContent = () => {
@@ -108,29 +104,6 @@ const AlunoMobileHeader = () => {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-72">
-          {profile && 'codigo_vinculo' in profile && profile.codigo_vinculo && (
-            <>
-                <DropdownMenuLabel className="font-normal p-4 pb-3">
-                  <div className="flex flex-col items-center text-center space-y-3">
-                    <Avatar className="h-16 w-16 mb-2">
-                    {getAvatarContent()}
-                  </Avatar>
-                  <div className="space-y-1">
-                    <p className="text-base font-semibold leading-none">{profile.nome_completo || 'Aluno(a)'}</p>
-                    <p className="text-sm leading-none text-muted-foreground">{user?.email}</p>
-                  </div>
-                    <div className="w-full pt-2">
-                    <p className="text-xs text-muted-foreground mb-2">Identificação</p>
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="text-base font-mono bg-muted px-3 py-1.5 rounded-md select-all truncate">{profile.codigo_vinculo}</div>
-                      <Button variant="outline" size="icon" className="h-9 w-9 flex-shrink-0" onClick={handleCopyCode}><Copy className="h-4 w-4" /></Button>
-                    </div>
-                  </div>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator className="my-2 bg-neutral-200 dark:bg-neutral-700" />
-            </>
-          )}
           <DropdownMenuGroup>
             <DropdownMenuItem onClick={() => navigate('/perfil-aluno')}>
               <User className="mr-2 h-5 w-5" />

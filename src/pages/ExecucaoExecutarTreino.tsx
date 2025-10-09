@@ -109,7 +109,7 @@ export default function ExecucaoExecutarTreino() {
           .single();
 
         if (ptError || !ptData) {
-          throw new Error('Dados do Personal Trainer não encontrados.');
+          throw new Error('Dados do Professor não encontrados.');
         }
         
         setUserProfile({
@@ -131,7 +131,7 @@ export default function ExecucaoExecutarTreino() {
 
         if (!sessao.rotinas?.permite_execucao_aluno) {
           toast.error("Execução não Permitida", {
-            description: "Esta rotina não permite execução independente. Fale com seu Personal Trainer."
+            description: "Esta rotina não permite execução independente. Fale com seu Professor."
           })
           navigate(-1);
           return null;

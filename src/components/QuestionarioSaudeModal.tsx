@@ -29,7 +29,7 @@ const QuestionarioSaudeModal = ({
         </div>
         
         <p className="text-muted-foreground">
-          Quer responder um questionário rápido de saúde? São 7 perguntas simples que ajudam seu personal a criar treinos mais seguros para você. Leva menos de 1 minuto!
+          Quer responder um questionário rápido de saúde? São 7 perguntas simples que ajudam seu professor a criar treinos mais seguros para você. Leva menos de 1 minuto!
         </p>
       </div>
 

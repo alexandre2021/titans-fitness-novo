@@ -35,7 +35,7 @@ src/
 
 ## 2. Visão Geral da Solução
 
-O sistema foi projetado para permitir que os personal trainers criem e editem rotinas de treino, associando-as a alunos. A solução é baseada em React com TypeScript e utiliza o Supabase como backend para autenticação e banco de dados.
+O sistema foi projetado para permitir que os professores criem e editem rotinas de treino, associando-as a alunos. A solução é baseada em React com TypeScript e utiliza o Supabase como backend para autenticação e banco de dados.
 
 O processo de criação de uma rotina é dividido em etapas, gerenciadas pelo componente principal **`RotinaCriacao.tsx`**. A solução se baseia em uma arquitetura de módulos reutilizáveis, onde cada componente e hook tem uma responsabilidade bem definida.
 

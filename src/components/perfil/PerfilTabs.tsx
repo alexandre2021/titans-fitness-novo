@@ -1,4 +1,4 @@
-// src/components/perfil/PerfilTabs.tsx (versão para Personal Trainers)
+// src/components/perfil/PerfilTabs.tsx (versão para professores)
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

@@ -2,7 +2,7 @@
 
 ## 1. Visão Geral da Solução
 
-O sistema de execução de rotinas permite que personal trainers ou alunos iniciem e registrem o progresso de um treino em tempo real. O fluxo é otimizado para uma experiência de usuário fluida, com foco em simplicidade, contagem regressiva de intervalos e registro de desempenho (cargas e repetições).
+O sistema de execução de rotinas permite que professores ou alunos iniciem e registrem o progresso de um treino em tempo real. O fluxo é otimizado para uma experiência de usuário fluida, com foco em simplicidade, contagem regressiva de intervalos e registro de desempenho (cargas e repetições).
 
 ## 2. Estrutura de Diretórios e Arquivos
 

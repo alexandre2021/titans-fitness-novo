@@ -450,6 +450,59 @@ Este documento descreve a estrutura completa das tabelas do banco de dados no no
 
 ---
 
+### Tabela: `public.agendamentos` ⭐ NOVA
+**Descrição**: Armazena os agendamentos de sessões de treino e avaliações físicas entre professores e alunos.
+
+| Coluna | Posição | Tipo de Dado | Nulável | Padrão | Tipo de Restrição | Nome da Restrição | Chave Estrangeira |
+|---|---|---|---|---|---|---|---|
+| `id` | 1 | `uuid` | False | `gen_random_uuid()` | `PRIMARY KEY` | `agendamentos_pkey` | |
+| `professor_id` | 2 | `uuid` | False | | `FOREIGN KEY (ON DELETE CASCADE)` | `agendamentos_professor_id_fkey` | `public.professores(id)` |
+| `aluno_id` | 3 | `uuid` | False | | `FOREIGN KEY (ON DELETE CASCADE)` | `agendamentos_aluno_id_fkey` | `public.alunos(id)` |
+| `tipo` | 4 | `tipo_agendamento` | False | | | | |
+| `status` | 5 | `status_agendamento` | False | `'pendente'` | | | |
+| `data_hora_inicio` | 6 | `timestamp with time zone` | False | | | | |
+| `data_hora_fim` | 7 | `timestamp with time zone` | False | | | | |
+| `notas_professor` | 8 | `text` | True | | | | |
+| `notas_aluno` | 9 | `text` | True | | | | |
+| `created_at` | 10 | `timestamp with time zone` | False | `now()` | | | |
+| `updated_at` | 11 | `timestamp with time zone` | False | `now()` | | | |
+
+**Tipos de Agendamento**: sessao_treino, avaliacao_fisica
+**Status do Agendamento**: pendente, confirmado, recusado, cancelado, concluido
+**Segurança (RLS)**: Ativada. Políticas granulares para cada operação (CRUD) para garantir que apenas os usuários autorizados possam realizar ações específicas.
+
+**Políticas de Segurança (RLS) Detalhadas**:
+- **SELECT**: Professor e Aluno podem ver os agendamentos em que estão envolvidos.
+  ```sql
+  CREATE POLICY "Usuários podem ver seus próprios agendamentos"
+  ON public.agendamentos FOR SELECT
+  USING (auth.uid() = professor_id OR auth.uid() = aluno_id);
+  ```
+- **INSERT**: Apenas o professor pode criar um novo agendamento.
+  ```sql
+  CREATE POLICY "Professores podem criar agendamentos"
+  ON public.agendamentos FOR INSERT
+  WITH CHECK (auth.uid() = professor_id);
+  ```
+- **UPDATE**: Professor pode alterar qualquer campo. Aluno só pode alterar o status para 'confirmado' ou 'recusado', e adicionar notas.
+  ```sql
+  CREATE POLICY "Usuários podem atualizar seus agendamentos"
+  ON public.agendamentos FOR UPDATE
+  USING (auth.uid() = professor_id OR auth.uid() = aluno_id)
+  WITH CHECK (
+    (auth.uid() = professor_id) OR -- Professor pode tudo
+    (auth.uid() = aluno_id AND status IN ('confirmado', 'recusado')) -- Aluno tem permissão limitada
+  );
+  ```
+- **DELETE**: Apenas o professor pode deletar um agendamento.
+  ```sql
+  CREATE POLICY "Professores podem deletar agendamentos"
+  ON public.agendamentos FOR DELETE
+  USING (auth.uid() = professor_id);
+  ```
+
+---
+
 ## 2. Tabelas do Sistema de Mensagens ⭐ ATUALIZADO
 
 ### Tabela: `public.conversas`

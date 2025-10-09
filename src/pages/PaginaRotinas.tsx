@@ -829,7 +829,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
                     <Dumbbell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                     <h3 className="text-lg font-semibold mb-2">Nenhuma rotina</h3>
                     <p className="text-muted-foreground mb-6">
-                      {modo === 'professor' ? 'Este aluno não possui nenhuma rotina no momento. Crie uma nova rotina personalizada.' : 'Você ainda não tem uma rotina. Fale com seu Personal Trainer.'}
+                      {modo === 'professor' ? 'Este aluno não possui nenhuma rotina no momento. Crie uma nova rotina personalizada.' : 'Você ainda não tem uma rotina. Fale com seu Professor.'}
                     </p>
                   </div>
                 ) : (
@@ -1085,7 +1085,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         <div>
           <p className="font-medium text-blue-800 mb-1">Rascunho</p>
           <p className="text-sm text-muted-foreground">
-            Rotina em processo de criação pelo personal trainer, ainda não finalizada.
+            Rotina em processo de criação pelo professor, ainda não finalizada.
           </p>
         </div>
       </div>
@@ -1105,7 +1105,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         <div>
           <p className="font-medium text-red-800 mb-1">Bloqueada</p>
           <p className="text-sm text-muted-foreground">
-            Acesso aos treinos foi suspenso temporariamente pelo personal trainer.
+            Acesso aos treinos foi suspenso temporariamente pelo professor.
           </p>
         </div>
       </div>
@@ -1115,7 +1115,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         <div>
           <p className="font-medium text-orange-800 mb-1">Cancelada</p>
           <p className="text-sm text-muted-foreground">
-            Rotina interrompida por uma ação administrativa, como a exclusão da conta do Personal Trainer.
+            Rotina interrompida por uma ação administrativa, como a exclusão da conta do Professor.
           </p>
         </div>
       </div>
@@ -1193,7 +1193,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   </div>
 </Modal>
 
-      {/* Botão Flutuante para Nova Rotina (Apenas para Personal) */}
+      {/* Botão Flutuante para Nova Rotina (Apenas para Professor) */}
       {modo === 'professor' && activeTab === 'atual' && (
         <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
           {/* Mobile: Round floating button */}

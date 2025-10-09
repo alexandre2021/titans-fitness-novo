@@ -338,7 +338,7 @@ async function processPTDeletion(user: UserProfile): Promise<number> {
       .from('execucoes_sessao')
       .update({
         status: 'cancelada',
-        observacoes: `Sessão cancelada automaticamente em ${hoje} devido à exclusão da conta do Personal Trainer por inatividade.`
+        observacoes: `Sessão cancelada automaticamente em ${hoje} devido à exclusão da conta do professor por inatividade.`
       })
       .in('rotina_id', rotinaIds)
       .in('status', ['em_aberto', 'em_andamento', 'pausada']) // Apenas sessões pendentes
@@ -362,7 +362,7 @@ async function processPTDeletion(user: UserProfile): Promise<number> {
     console.error(`[PT Deletion] Erro ao buscar rotinas para arquivar do PT ${user.id}:`, fetchRotinasError);
   } else if (rotinasParaArquivar && rotinasParaArquivar.length > 0) {
     console.log(`[PT Deletion] Encontradas ${rotinasParaArquivar.length} rotinas para arquivar do PT ${user.id}`);
-    const motivo = `Rotina encerrada automaticamente em ${hoje} devido à exclusão da conta do Personal Trainer por inatividade.`;
+    const motivo = `Rotina encerrada automaticamente em ${hoje} devido à exclusão da conta do professor por inatividade.`;
 
     for (const rotina of rotinasParaArquivar as Rotina[]) {
       try {
@@ -444,18 +444,6 @@ async function processPTDeletion(user: UserProfile): Promise<number> {
       }
   const results = await Promise.allSettled(fileDeletionPromises);
   filesDeletedCount += results.filter(r => r.status === 'fulfilled' && r.value).length;
-
-  // 5. Desvincular Alunos (N:N) - Remove a relação da tabela de junção
-  const { error: desvinculaError } = await supabase
-        .from('alunos_professores')
-        .delete()
-        .eq('professor_id', user.id);
-
-      if (desvinculaError) {
-        console.error(`Error unlinking students from PT ${user.id}:`, desvinculaError);
-      } else {
-        console.log(`Students unlinked from PT ${user.id}`);
-      }
 
   // 6. Deletar Usuário
   const { error: deleteUserError } = await supabaseAdmin.auth.admin.deleteUser(user.id);

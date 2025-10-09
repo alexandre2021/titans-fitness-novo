@@ -172,7 +172,7 @@ export const useExercicioExecucao = (
         // ✅ 3. Validar permissão de execução do aluno
         if (modoExecucao === 'aluno' && !sessaoComRotina.rotinas?.permite_execucao_aluno) {
           console.log(`🚫 Acesso bloqueado. Aluno não tem permissão para executar esta rotina.`);
-          handleInvalidSession("Execução não permitida", "Você não tem permissão para iniciar esta rotina. Fale com seu Personal Trainer.");
+          handleInvalidSession("Execução não permitida", "Você não tem permissão para iniciar esta rotina. Fale com seu Professor.");
           return;
         }
 

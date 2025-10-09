@@ -41,23 +41,23 @@ const Termos = () => {
             <p className="text-text-secondary mb-4">
               Ao acessar e usar a plataforma Titans.fitness, você concorda em estar vinculado a estes 
               Termos de Uso e a todas as leis e regulamentos aplicáveis. Estes termos se aplicam tanto 
-              a Personal Trainers quanto a Alunos que utilizam nossa plataforma.
+              a Professores quanto a Alunos que utilizam nossa plataforma.
             </p>
           </section>
 
           <section className="mb-8">
             <h2 className="text-2xl font-semibold text-text-primary mb-4">2. Descrição do Serviço</h2>
             <p className="text-text-secondary mb-4">
-              O Titans.fitness é uma plataforma digital que conecta Personal Trainers e seus alunos, 
+              O Titans.fitness é uma plataforma digital que conecta Professores e seus alunos, 
               oferecendo ferramentas para gestão de treinos, acompanhamento de progresso, comunicação 
               e análise de desempenho através de inteligência artificial.
             </p>
             <p className="text-text-secondary mb-4">
-              <strong>Para Personal Trainers:</strong> Oferecemos ferramentas para gerenciar clientes, 
+              <strong>Para Professores:</strong> Oferecemos ferramentas para gerenciar clientes, 
               criar treinos personalizados, acompanhar progressos e manter comunicação eficiente.
             </p>
             <p className="text-text-secondary mb-4">
-              <strong>Para Alunos:</strong> Fornecemos acesso aos treinos criados pelo seu Personal Trainer, 
+              <strong>Para Alunos:</strong> Fornecemos acesso aos treinos criados pelo seu Professor, 
               ferramentas de acompanhamento e comunicação direta com seu profissional.
             </p>
             <p className="text-text-secondary mb-4">
@@ -73,9 +73,9 @@ const Termos = () => {
               ocorrerem em sua conta.
             </p>
             <p className="text-text-secondary mb-4">
-              <strong>Alunos</strong> devem ser convidados por um Personal Trainer para completar o cadastro. 
-              <strong>Personal Trainers</strong> podem convidar alunos através da plataforma após validação 
-              de seu perfil profissional.
+              <strong>Alunos e Professores</strong> podem se cadastrar de forma independente. Após o cadastro, 
+              o Aluno pode se vincular a um ou mais Professores utilizando o código de vínculo 
+              fornecido pelo profissional.
             </p>
           </section>
 
@@ -84,7 +84,7 @@ const Termos = () => {
             <div className="bg-orange-50 border-l-4 border-orange-500 p-4 mb-4">
               <p className="text-text-primary font-semibold mb-2">Exclusão de Contas por Inatividade</p>
               <p className="text-text-secondary">
-                Contas de <strong>Alunos e Personal Trainers</strong> que permanecerem inativas por <strong>90 (noventa) dias consecutivos</strong> serão 
+                Contas de <strong>Alunos e Professores</strong> que permanecerem inativas por <strong>90 (noventa) dias consecutivos</strong> serão 
                 automaticamente programadas para exclusão de nossa plataforma.
               </p>
             </div>
@@ -93,12 +93,12 @@ const Termos = () => {
               <li><strong>Aviso prévio:</strong> Usuários recebem um email de aviso aos 60 dias de inatividade</li>
               <li><strong>Dados:</strong> Após a exclusão, todos os dados serão permanentemente removidos e não poderão ser recuperados</li>
               <li><strong>Reativação:</strong> Para evitar a exclusão, basta fazer login na plataforma antes do prazo</li>
-              <li><strong>Personal Trainers:</strong> A exclusão de uma conta de Personal Trainer resultará no cancelamento de todas as rotinas ativas e na desvinculação de todos os alunos associados.</li>
+              <li><strong>Professores:</strong> A exclusão de uma conta de Professor resultará no cancelamento de todas as rotinas ativas e na desvinculação de todos os alunos associados.</li>
             </ul>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-text-primary mb-4">5. Responsabilidades do Personal Trainer</h2>
+            <h2 className="text-2xl font-semibold text-text-primary mb-4">5. Responsabilidades do Professor</h2>
             <ul className="list-disc pl-6 text-text-secondary space-y-2">
               <li>Possuir qualificações adequadas e certificações válidas para exercer a profissão</li>
               <li>Realizar avaliação física adequada e coletar informações de saúde antes de iniciar treinos</li>
@@ -114,13 +114,13 @@ const Termos = () => {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold text-text-primary mb-4">6. Responsabilidades do Aluno</h2>
             <ul className="list-disc pl-6 text-text-secondary space-y-2">
-              <li>Fornecer informações de saúde precisas, completas e atualizadas ao Personal Trainer</li>
-              <li>Seguir as orientações e treinos prescritos pelo Personal Trainer de forma responsável</li>
+              <li>Fornecer informações de saúde precisas, completas e atualizadas ao Professor</li>
+              <li>Seguir as orientações e treinos prescritos pelo Professor de forma responsável</li>
               <li>Comunicar imediatamente qualquer problema de saúde, lesão ou desconforto</li>
               <li>Usar a plataforma de forma adequada e respeitosa</li>
               <li>Informar sobre limitações físicas, medicamentos ou condições médicas relevantes</li>
-              <li>Manter contato regular com seu Personal Trainer sobre seu progresso e dificuldades</li>
-              <li>Buscar acompanhamento médico quando orientado pelo Personal Trainer</li>
+              <li>Manter contato regular com seu Professor sobre seu progresso e dificuldades</li>
+              <li>Buscar acompanhamento médico quando orientado pelo Professor</li>
               <li>Respeitar suas próprias limitações e não exceder orientações recebidas</li>
             </ul>
           </section>
@@ -128,14 +128,14 @@ const Termos = () => {
           <section className="mb-8">
             <h2 className="text-2xl font-semibold text-text-primary mb-4">7. Relacionamento Profissional</h2>
             <p className="text-text-secondary mb-4">
-              A plataforma facilita a comunicação entre Personal Trainers e Alunos, mas não é responsável 
+              A plataforma facilita a comunicação entre Professores e Alunos, mas não é responsável 
               pela qualidade do relacionamento profissional ou pelos resultados obtidos.
             </p>
             <ul className="list-disc pl-6 text-text-secondary space-y-2">
-              <li>Os acordos financeiros devem ser estabelecidos diretamente entre Personal Trainer e Aluno</li>
+              <li>Os acordos financeiros devem ser estabelecidos diretamente entre Professores e Aluno</li>
               <li>A plataforma não processa pagamentos nem participa de transações financeiras</li>
               <li>Disputas profissionais devem ser resolvidas entre as partes ou através de órgãos competentes</li>
-              <li>O Personal Trainer deve seguir as normas do CREF e legislação profissional aplicável</li>
+              <li>O Professor deve seguir as normas do CREF e legislação profissional aplicável</li>
             </ul>
           </section>
 
@@ -156,9 +156,9 @@ const Termos = () => {
             </p>
             <ul className="list-disc pl-6 text-text-secondary space-y-2 mb-6">
               <li>Lesões ou danos resultantes da execução inadequada de exercícios</li>
-              <li>Qualidade dos serviços prestados pelos Personal Trainers</li>
+              <li>Qualidade dos serviços prestados pelos Professores</li>
               <li>Resultados específicos de treinos ou programas</li>
-              <li>Disputas entre Personal Trainers e Alunos</li>
+              <li>Disputas entre Professores e Alunos</li>
               <li>Perda de dados devido a problemas técnicos ou inatividade da conta</li>
             </ul>
             
@@ -166,10 +166,10 @@ const Termos = () => {
               <p className="text-text-primary font-semibold mb-2">Responsabilidade Profissional</p>
               <p className="text-text-secondary">
                 Embora a plataforma não se responsabilize pelos serviços prestados, é <strong>obrigação 
-                legal e ética do Personal Trainer</strong> seguir as normas do CREF (Conselho Regional 
+                legal e ética do Professor</strong> seguir as normas do CREF (Conselho Regional 
                 de Educação Física), realizar avaliações adequadas, monitorar a saúde dos alunos e atuar 
                 dentro de seu escopo profissional. A negligência nessas responsabilidades pode resultar 
-                em consequências legais e profissionais para o Personal Trainer.
+                em consequências legais e profissionais para o Professor.
               </p>
             </div>
           </section>
@@ -204,7 +204,7 @@ const Termos = () => {
               conforme descrito no item 4.
             </p>
             <p className="text-text-secondary mb-4">
-              Personal Trainers podem desvincular alunos de suas contas, mas isso não exclui a conta 
+              Professores podem desvincular alunos de suas contas, mas isso não exclui a conta 
               do aluno da plataforma.
             </p>
           </section>

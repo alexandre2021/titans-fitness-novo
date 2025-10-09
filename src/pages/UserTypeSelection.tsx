@@ -40,21 +40,21 @@ const UserTypeSelection = () => {
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-            {/* Personal Trainer Card */}
+            {/* Professor Card */}
             <Card className="border-border hover:border-primary transition-colors cursor-pointer group">
               <CardHeader className="text-center pb-4">
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-primary/20 transition-colors">
                   <User className="w-8 h-8 text-primary" />
                 </div>
-                <CardTitle className="text-2xl text-text-primary">Personal Trainer</CardTitle>
+                <CardTitle className="text-2xl text-text-primary">Professor</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
                 <p className="text-text-secondary mb-8">
-                  Gerencie seus alunos, crie treinos personalizados e acompanhe o progresso de cada cliente com nossa IA.
+                  Gerencie seus alunos, crie treinos personalizados e acompanhe seus progressos.
                 </p>
                 <Link to="/cadastro/professor" className="block">
                   <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
-                    Sou Personal Trainer
+                    Sou Professor
                   </Button>
                 </Link>
               </CardContent>
@@ -70,7 +70,7 @@ const UserTypeSelection = () => {
               </CardHeader>
               <CardContent className="text-center">
                 <p className="text-text-secondary mb-8">
-                  Acesse seus treinos personalizados, acompanhe seu progresso e mantenha contato direto com seu Personal Trainer.
+                  Acesse seus treinos personalizados, acompanhe seu progresso e mantenha contato direto com seu Professor.
                 </p>
                 <Link to="/cadastro/aluno" className="block">
                   <Button className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground">

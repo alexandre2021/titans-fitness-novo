@@ -15,7 +15,7 @@ src/
 │   └── useAuth.tsx                      # Hook + Provider de autenticação
 ├── pages/
 │   ├── Login.tsx                        # Página de login
-│   ├── IndexPT.tsx                      # Dashboard do Personal Trainer
+│   ├── IndexPT.tsx                      # Dashboard do Professor
 │   ├── IndexAluno.tsx                   # Dashboard do Aluno
 │   ├── OnboardingPT*.tsx               # Páginas de onboarding PT
 │   ├── OnboardingAluno*.tsx            # Páginas de onboarding Aluno
@@ -91,7 +91,7 @@ const { user, session, loading, signOut } = useAuth();
 - Qualquer rota protegida → `/login`
 
 
-#### Personal Trainer Logado:
+#### Professor Logado:
 ```
 ┌─ Onboarding Incompleto ─┐
 │ Qualquer rota → /onboarding-pt/informacoes-basicas
@@ -233,7 +233,7 @@ const { user, session, loading, signOut } = useAuth();
 ## Tipos de Usuário
 
 
-### Personal Trainer
+### Professor
 - **Páginas principais**: `/index-pt`, `/alunos`, `/exercicios-pt`
 - **Onboarding**: 3 etapas (informações básicas, experiência, redes sociais)
 - **Verificação**: Tabela `professores.onboarding_completo`

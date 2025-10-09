@@ -150,6 +150,35 @@ const TIPOS_SERIE = {
 
 ---
 
+## 🗓️ **AGENDAMENTOS**
+
+### **Tipos de Agendamento:**
+```typescript
+const TIPOS_AGENDAMENTO = [
+  'sessao_treino',
+  'avaliacao_fisica'
+];
+```
+
+### **Status de Agendamento:**
+```typescript
+const STATUS_AGENDAMENTO = [
+  'pendente',    // Proposto pelo professor, aguardando confirmação do aluno
+  'confirmado',  // Confirmado pelo aluno
+  'recusado',    // Recusado pelo aluno
+  'concluido'    // Evento já ocorreu
+];
+
+const CORES_STATUS_AGENDAMENTO = {
+  'pendente': 'bg-orange-100 text-orange-800',
+  'confirmado': 'bg-green-100 text-green-800',
+  'recusado': 'bg-red-100 text-red-800',
+  'concluido': 'bg-blue-100 text-blue-800'
+};
+```
+
+---
+
 ## 🎨 **SISTEMA DE CORES TAILWIND**
 
 ### **Classes Padrão para Badges:**

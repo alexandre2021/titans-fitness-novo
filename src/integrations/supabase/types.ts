@@ -38,6 +38,63 @@ export type Database = {
         }
         Relationships: []
       }
+      agendamentos: {
+        Row: {
+          aluno_id: string
+          created_at: string
+          data_hora_fim: string
+          data_hora_inicio: string
+          id: string
+          notas_aluno: string | null
+          notas_professor: string | null
+          professor_id: string
+          status: Database["public"]["Enums"]["status_agendamento"]
+          tipo: Database["public"]["Enums"]["tipo_agendamento"]
+          updated_at: string
+        }
+        Insert: {
+          aluno_id: string
+          created_at?: string
+          data_hora_fim: string
+          data_hora_inicio: string
+          id?: string
+          notas_aluno?: string | null
+          notas_professor?: string | null
+          professor_id: string
+          status?: Database["public"]["Enums"]["status_agendamento"]
+          tipo: Database["public"]["Enums"]["tipo_agendamento"]
+          updated_at?: string
+        }
+        Update: {
+          aluno_id?: string
+          created_at?: string
+          data_hora_fim?: string
+          data_hora_inicio?: string
+          id?: string
+          notas_aluno?: string | null
+          notas_professor?: string | null
+          professor_id?: string
+          status?: Database["public"]["Enums"]["status_agendamento"]
+          tipo?: Database["public"]["Enums"]["tipo_agendamento"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agendamentos_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: false
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "professores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       alunos: {
         Row: {
           altura: number | null
@@ -306,6 +363,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      cron_job_logs: {
+        Row: {
+          details: Json | null
+          error_message: string | null
+          id: number
+          job_name: string
+          run_at: string
+          status: string
+        }
+        Insert: {
+          details?: Json | null
+          error_message?: string | null
+          id?: number
+          job_name: string
+          run_at?: string
+          status: string
+        }
+        Update: {
+          details?: Json | null
+          error_message?: string | null
+          id?: number
+          job_name?: string
+          run_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      debug_logs: {
+        Row: {
+          created_at: string | null
+          data: Json | null
+          id: number
+          step: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          data?: Json | null
+          id?: number
+          step?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          data?: Json | null
+          id?: number
+          step?: string | null
+        }
+        Relationships: []
       }
       execucoes_series: {
         Row: {
@@ -1322,6 +1427,10 @@ export type Database = {
         Args: { user_id_1: string; user_id_2: string }
         Returns: string
       }
+      get_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       http: {
         Args: { request: Database["public"]["CompositeTypes"]["http_request"] }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
@@ -1415,6 +1524,13 @@ export type Database = {
     }
     Enums: {
       plano_tipo: "gratuito" | "basico" | "premium" | "profissional"
+      status_agendamento:
+        | "pendente"
+        | "confirmado"
+        | "recusado"
+        | "cancelado"
+        | "concluido"
+      tipo_agendamento: "sessao_treino" | "avaliacao_fisica"
     }
     CompositeTypes: {
       http_header: {
@@ -1559,6 +1675,14 @@ export const Constants = {
   public: {
     Enums: {
       plano_tipo: ["gratuito", "basico", "premium", "profissional"],
+      status_agendamento: [
+        "pendente",
+        "confirmado",
+        "recusado",
+        "cancelado",
+        "concluido",
+      ],
+      tipo_agendamento: ["sessao_treino", "avaliacao_fisica"],
     },
   },
 } as const

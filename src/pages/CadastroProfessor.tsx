@@ -146,7 +146,7 @@ const Cadastroprofessor = () => {
         <Card className="w-full max-w-md border-border shadow-lg">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl text-text-primary">
-              Cadastro Personal Trainer
+              Cadastro Professor
             </CardTitle>
             <p className="text-text-secondary text-sm">
               Crie sua conta e comece a gerenciar seus alunos
@@ -274,7 +274,7 @@ const Cadastroprofessor = () => {
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                   disabled={isLoading}
                 >
-                  {isLoading ? "Cadastrando..." : "Cadastrar Personal Trainer"}
+                  {isLoading ? "Cadastrando..." : "Cadastrar Professor"}
                 </Button>
               </form>
             </Form>

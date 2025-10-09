@@ -190,7 +190,7 @@ const Professores = () => {
             <Users className="h-16 w-16 text-muted-foreground mb-4" />
             <h3 className="text-xl font-semibold mb-2">Nenhum professor</h3>
             <p className="text-muted-foreground mb-6 max-w-md">
-              Você ainda não está seguindo nenhum professor. Para começar, peça o código de identificação do seu personal trainer.
+              Você ainda não está seguindo nenhum professor. Para começar, peça o código de identificação do seu professor.
             </p>
           </CardContent>
         </Card>

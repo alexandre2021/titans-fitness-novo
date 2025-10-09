@@ -1,6 +1,6 @@
 # Onboarding
 
-Este documento explica como funciona o fluxo de onboarding para novos usuários na plataforma, separando o processo para Personal Trainer e para Aluno.
+Este documento explica como funciona o fluxo de onboarding para novos usuários na plataforma, separando o processo para professor e para Aluno.
 
 ## Onboarding do Aluno
 
@@ -18,9 +18,9 @@ O fluxo de onboarding do aluno é composto por duas etapas principais:
    - Ao finalizar, os dados são salvos e o onboarding é marcado como completo
    - Não há upload de foto de perfil nesta etapa
 
-## Onboarding do Personal Trainer
+## Onboarding do Professor
 
-O fluxo do personal trainer é dividido em três etapas principais:
+O fluxo do professor é dividido em três etapas principais:
 
 1. **Informações Básicas**
    - Campos: nome completo, gênero, data de nascimento, telefone (opcional), CREF (opcional)

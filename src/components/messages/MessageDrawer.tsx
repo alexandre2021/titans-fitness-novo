@@ -141,9 +141,9 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right', onUnreadCountCha
       // A conversa com o "Administrador" é um canal de notificações do sistema para o usuário.
       // Atualmente, existem 4 cenários principais que geram uma mensagem aqui:
       // 1. Boas-vindas: Uma mensagem é enviada quando um novo usuário (aluno ou PT) se cadastra.
-      // 2. Rotina Cancelada: Quando um Personal Trainer é excluído por inatividade, suas rotinas
+      // 2. Rotina Cancelada: Quando um professor é excluído por inatividade, suas rotinas
       //    são canceladas e os alunos afetados recebem uma notificação do sistema.
-      // 3. Rotina Excluída: Quando um Personal Trainer exclui uma rotina de um aluno, o aluno
+      // 3. Rotina Excluída: Quando um professor exclui uma rotina de um aluno, o aluno
       //    recebe uma notificação.
       // 4. Aviso de Inatividade: O sistema envia um aviso para usuários que estão inativos
       //    há mais de 60 dias, antes de a conta ser excluída (conforme a cron `check-inactive-users`).
