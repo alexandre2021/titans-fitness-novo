@@ -32,7 +32,7 @@ const NovoExercicioPadrao = () => {
   useEffect(() => {
     if (user && user.email !== ADMIN_EMAIL) {
       toast.error("Acesso Negado", { description: "Você não tem permissão para criar exercícios padrão." });
-      navigate('/exercicios-pt');
+      navigate('/exercicios');
     }
   }, [user, navigate, toast, ADMIN_EMAIL]);
   
@@ -226,7 +226,7 @@ const NovoExercicioPadrao = () => {
 
       if (error) throw error;
 
-      navigate('/exercicios-pt');
+      navigate('/exercicios');
     } catch (error) {
       console.error('Erro ao criar exercício padrão:', error);
       toast.error("Erro ao criar exercício", { description: "Não foi possível criar o exercício padrão. Tente novamente." });
@@ -241,7 +241,7 @@ const NovoExercicioPadrao = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" onClick={() => navigate('/exercicios-pt')} className="h-10 w-10 p-0"><ArrowLeft className="h-4 w-4" /></Button>
+              <Button variant="ghost" onClick={() => navigate('/exercicios')} className="h-10 w-10 p-0"><ArrowLeft className="h-4 w-4" /></Button>
               <div className="flex-1">
                 <div className="mb-1"><Badge variant="outline" className="bg-green-50 text-green-700 border-green-200"><Plus className="h-3 w-3 mr-1" />Exercício Padrão</Badge></div>
                 <h1 className="text-3xl font-bold flex items-center gap-2">Novo Exercício Padrão</h1>

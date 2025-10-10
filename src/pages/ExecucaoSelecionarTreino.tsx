@@ -283,23 +283,21 @@ export default function ExecucaoSelecionarTreino() {
   }
 
   return (
-    <div className="container max-w-4xl mx-auto p-6 space-y-6">
+    <div className="space-y-6">
       {/* HEADER */}
       {isDesktop && (
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <Button 
+            <Button
               variant="ghost"
-              size="sm"
               onClick={() => navigate(-1)}
-              className="text-primary hover:text-primary/80"
+              className="h-10 w-10 p-0"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Voltar
+              <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Execução de Treino</h1>
-              <p className="text-muted-foreground">{aluno.nome_completo}</p>
+              <h1 className="text-3xl font-bold text-foreground">Execução de Rotina</h1>
+              <p className="text-muted-foreground">Execução da Rotina '{rotina?.nome}'</p>
             </div>
           </div>
         </div>

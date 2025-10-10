@@ -326,7 +326,7 @@ const AlunosRotinaDetalhes = () => {
   };
 
   const handleVoltar = () => {
-    navigate(`/alunos-rotinas/${alunoId}`);
+    navigate(-1);
   };
 
   if (loading) {
@@ -378,7 +378,7 @@ const AlunosRotinaDetalhes = () => {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Cabeçalho */}
       <div className="flex items-center gap-4">
         <Button 
@@ -389,8 +389,8 @@ const AlunosRotinaDetalhes = () => {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">{rotina.nome}</h1>
-          <p className="text-muted-foreground">Detalhes completos da rotina de treino</p>
+          <h1 className="text-3xl font-bold">Detalhes da Rotina</h1>
+          <p className="text-muted-foreground">Detalhes da rotina '{rotina.nome}'</p>
         </div>
       </div>
 

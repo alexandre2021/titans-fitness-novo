@@ -142,7 +142,7 @@ const DetalhesExercicio = () => {
     const fetchExercicio = async () => {
       if (!id || !user) {
         // Se não houver ID, volta para a lista sem estado específico
-        navigate('/exercicios-pt');
+        navigate('/exercicios');
         return;
       }
 
@@ -187,7 +187,7 @@ const DetalhesExercicio = () => {
         toast.error("Erro", {
           description: "Não foi possível carregar os detalhes do exercício."
         })
-        navigate('/exercicios-pt'); // Em caso de erro, volta sem estado
+        navigate('/exercicios'); // Em caso de erro, volta sem estado
       } finally {
         setLoading(false);
       }
@@ -200,19 +200,19 @@ const DetalhesExercicio = () => {
     // Usa o estado da navegação para saber de qual aba veio.
     // Se não houver estado, usa o tipo do exercício como fallback.
     const abaDeOrigem = location.state?.fromTab || (exercicio?.tipo === 'personalizado' ? 'personalizados' : 'padrao');
-    navigate('/exercicios-pt', { state: { activeTab: abaDeOrigem }});
+    navigate('/exercicios', { state: { activeTab: abaDeOrigem }});
   };
 
   const handleCriarCopia = () => {
     if (!exercicio) return;
     // A verificação de limite agora é feita na página principal de exercícios.
     // Aqui, apenas navegamos para a página de cópia.
-    navigate(`/exercicios-pt/copia/${exercicio.id}`);
+    navigate(`/exercicios/copia/${exercicio.id}`);
   };
 
   const handleEditar = () => {
     if (!exercicio) return;
-    navigate(`/exercicios-pt/editar/${exercicio.id}`);
+    navigate(`/exercicios/editar/${exercicio.id}`);
   };
 
   const handleViewMedia = (url: string) => {
@@ -238,7 +238,7 @@ const DetalhesExercicio = () => {
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
-              onClick={() => navigate('/exercicios-pt')}
+              onClick={() => navigate('/exercicios')}
             className="h-10 w-10 p-0"
           >
             <ArrowLeft className="h-4 w-4" />

@@ -1378,6 +1378,10 @@ export type Database = {
         Args: { data: string }
         Returns: string
       }
+      delete_old_rejected_appointments: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       delete_storage_object: {
         Args: { bucket_name: string; object_path: string }
         Returns: undefined
@@ -1426,6 +1430,22 @@ export type Database = {
       get_individual_conversation_id: {
         Args: { user_id_1: string; user_id_2: string }
         Returns: string
+      }
+      get_rotinas_ativas_por_professor: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          aluno_avatar_color: string
+          aluno_avatar_image_url: string
+          aluno_avatar_letter: string
+          aluno_avatar_type: string
+          aluno_id: string
+          aluno_nome_completo: string
+          data_inicio: string
+          duracao_semanas: number
+          rotina_id: string
+          rotina_nome: string
+          rotina_status: string
+        }[]
       }
       get_user_role: {
         Args: Record<PropertyKey, never>

@@ -248,7 +248,7 @@ src/
 1. Outro usuário envia mensagem
 2. INSERT na tabela mensagens
 3. Realtime dispara evento:
-   - Para `useMensagens` (se chat está aberto): adiciona a nova mensagem à lista.
+   - Para `useMensagens` (se o chat estiver aberto): adiciona a nova mensagem à lista.
    - Para o `MessageDrawer` (que está ouvindo mudanças): ele refaz a chamada à RPC `get_conversas_e_contatos` para obter a lista atualizada.
 4. Se o chat é aberto, `useMensagens` chama `marcarComoLidas`.
 4. UI atualiza automaticamente em ambos os lugares
@@ -258,13 +258,10 @@ src/
 
 ## 5. Realtime Subscriptions
 
-### 5.1. useConversas
--   **Canal**: `public:mensagens`
--   **Evento**: INSERT
--   **Ação**: Recarrega toda a lista de conversas para atualizar última mensagem e ordenação
+### 5.1. MessageDrawer.tsx
+-   **Ação**: Recarrega toda a lista de conversas (via `fetchConversas`) para atualizar a última mensagem e a ordenação.
 
 ### 5.2. useMensagens
--   **Canal**: `conversa:{conversaId}`
 -   **Evento**: INSERT
 -   **Filtro**: `conversa_id=eq.{conversaId}`
 -   **Ação**: Adiciona nova mensagem ao array local sem recarregar
@@ -274,10 +271,10 @@ src/
 ## 6. Estados e Loading
 
 | Hook/Componente | Estado | Descrição |
-|-----------------|--------|-----------|
-| useConversas | loading | Carregando lista inicial de conversas |
-| useConversas | loadingConversa | Criando nova conversa |
-| useMensagens | loading | Carregando histórico de mensagens |
+|-----------------|---------|-----------------------------------------|
+| MessageDrawer   | loading | Carregando lista inicial de conversas |
+| MessageDrawer   | loadingConversa | Criando nova conversa |
+| useMensagens    | loading | Carregando histórico de mensagens |
 | useMensagens | sending | Enviando nova mensagem |
 | MessageDrawer | conversaAtiva | Conversa atualmente aberta no chat |
 
@@ -362,19 +359,14 @@ Durante o desenvolvimento, enfrentamos desafios persistentes relacionados à sin
 
 ### 11.1. Problema na Criação de Grupo
 
--   **Sintoma:** Ao criar um novo grupo, ele aparece brevemente na lista de conversas e depois desaparece, só sendo exibido corretamente após um refresh manual da página.
--   **Causa Raiz:** O problema é uma **condição de corrida (race condition)**.
-    1.  **Ação do Usuário:** A função `criarGrupo` no hook `useConversas` realiza uma **atualização otimista**, adicionando o novo grupo ao estado local da UI imediatamente.
+    1.  **Ação do Usuário:** A função de criar grupo realiza uma **atualização otimista**, adicionando o novo grupo ao estado local da UI imediatamente.
     2.  **Evento Realtime:** A criação do grupo no banco de dados dispara um evento `INSERT` em tempo real.
-    3.  **Busca de Dados:** O hook `useConversas` ouve esse evento e, como resposta, executa uma função (`debouncedFetch`) para buscar a lista completa de conversas do servidor, a fim de garantir a consistência.
+    3.  **Busca de Dados:** O `MessageDrawer` ouve esse evento e, como resposta, executa uma função para buscar a lista completa de conversas do servidor, a fim de garantir a consistência.
     4.  **A Falha:** Devido a um pequeno atraso na replicação do banco de dados, a busca de dados (passo 3) acontece *antes* que o novo grupo esteja disponível para ser lido pelo servidor. Como resultado, o hook busca a lista antiga (sem o novo grupo) e a renderiza, sobrescrevendo a atualização otimista e fazendo o grupo recém-criado "desaparecer".
--   **Estado Atual:** A implementação atual tenta contornar isso com um `useRef` (`recentlyCreatedGroup`) para ignorar o primeiro evento de realtime após a criação, mas o problema persiste intermitentemente.
 
 ### 11.2. Problema na Exclusão de Grupo
 
--   **Sintoma:** Após o criador do grupo confirmar a exclusão na tela de `GroupInfoView`, a UI não navega de volta para a lista principal de conversas. Ela fica "presa" em uma tela intermediária (a de chat, agora inválida) ou não reage.
--   **Causa Raiz:** O `MessageDrawer`, que controla a navegação entre as telas (`list`, `chat`, `group-info`), não está reagindo corretamente à remoção da `activeConversation` (o grupo excluído) da lista de `conversas` gerenciada pelo `useConversas`.
--   **Estado Atual:** A solução implementada envolve um desacoplamento da lógica:
+-   **Causa Raiz:** O `MessageDrawer`, que controla a navegação entre as telas (`list`, `chat`, `group-info`), não está reagindo corretamente à remoção da `activeConversation` (o grupo excluído) da sua lista de `conversas`.
     1.  **`GroupInfoView.tsx`:** Após a exclusão bem-sucedida, ele dispara um evento global: `window.dispatchEvent(new CustomEvent('forceRefreshMessages'))`.
     2.  **`MessageDrawer.tsx`:** Um `useEffect` escuta este evento e, ao recebê-lo, força a navegação de volta para a lista, limpando o estado da conversa ativa e recarregando os dados.
 

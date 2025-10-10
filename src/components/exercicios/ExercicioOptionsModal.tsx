@@ -39,7 +39,7 @@ export const ExercicioOptionsModal = ({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuItem onClick={() => handleNavigation(`/exercicios-pt/detalhes/${exercicio.id}`)}>
+        <DropdownMenuItem onClick={() => handleNavigation(`/exercicios/detalhes/${exercicio.id}`)}>
           <Eye className="h-4 w-4 mr-2" />
           <div className="flex flex-col">
             <span>Detalhes</span>
@@ -58,7 +58,7 @@ export const ExercicioOptionsModal = ({
         )}
         
         {isPersonalizado && (
-          <DropdownMenuItem onClick={() => handleNavigation(`/exercicios-pt/editar/${exercicio.id}`)}>
+          <DropdownMenuItem onClick={() => handleNavigation(`/exercicios/editar/${exercicio.id}`)}>
             <Edit className="h-4 w-4 mr-2" />
             <div className="flex flex-col">
               <span>Editar</span>

@@ -106,10 +106,10 @@ const EditarExercicioPadrao = () => {
 
   useEffect(() => {
     const fetchExercicio = async () => {
-      if (!id || !user) { navigate('/exercicios-pt'); return; }
+      if (!id || !user) { navigate('/exercicios'); return; }
       if (user.email !== ADMIN_EMAIL) {
         toast.error("Acesso Negado");
-        navigate('/exercicios-pt');
+        navigate('/exercicios');
         return;
       }
 
@@ -133,7 +133,7 @@ const EditarExercicioPadrao = () => {
         setInitialMediaUrls({ imagem_1_url: data.imagem_1_url, imagem_2_url: data.imagem_2_url, video_url: data.video_url });
       } catch (error) {
         toast.error("Erro ao carregar exercício", { description: (error as Error).message });
-        navigate('/exercicios-pt');
+        navigate('/exercicios');
       } finally {
         setLoading(false);
       }
@@ -241,7 +241,7 @@ const EditarExercicioPadrao = () => {
       }).eq('id', id);
 
       if (error) throw error;
-      navigate('/exercicios-pt');
+      navigate('/exercicios');
     } catch (error) {
       toast.error("Erro ao salvar", { description: (error as Error).message });
     } finally {
@@ -261,7 +261,7 @@ const EditarExercicioPadrao = () => {
     <div className="space-y-6">
       {!isMobile && (
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/exercicios-pt')} className="h-10 w-10 p-0">
+          <Button variant="ghost" onClick={() => navigate('/exercicios')} className="h-10 w-10 p-0">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>

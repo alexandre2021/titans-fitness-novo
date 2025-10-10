@@ -13,10 +13,18 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import Modal from 'react-modal';
 
 const formSchema = z.object({
   senhaAtual: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
@@ -28,7 +36,6 @@ const formSchema = z.object({
 });
 
 export const PasswordChangeSection = () => {
-  const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showPasswords, setShowPasswords] = useState({
     atual: false,
@@ -84,7 +91,6 @@ export const PasswordChangeSection = () => {
       });
 
       form.reset();
-      setIsOpen(false);
     } catch (error: unknown) {
       let errorMessage = 'Não foi possível alterar a senha. Tente novamente.';
       if (error instanceof Error && error.message.includes('incorreta')) {
@@ -115,138 +121,91 @@ export const PasswordChangeSection = () => {
               Mantenha sua conta segura com uma senha forte
             </p>
           </div>
-          
-          <Button variant="outline" onClick={() => setIsOpen(true)}>
-            <Lock className="h-4 w-4 mr-2" />
-            Alterar Senha
-          </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Lock className="h-4 w-4 mr-2" />
+                Alterar Senha
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Alterar Senha</DialogTitle>
+              </DialogHeader>
+              <div className="py-4">
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="senhaAtual"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Senha Atual</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Input type={showPasswords.atual ? "text" : "password"} {...field} />
+                              <Button type="button" variant="ghost" size="sm" className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent" onClick={() => togglePasswordVisibility('atual')}>
+                                {showPasswords.atual ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-          <Modal
-            isOpen={isOpen}
-            onRequestClose={() => {}} // Impede o fechamento por ações padrão
-            shouldCloseOnOverlayClick={false}
-            shouldCloseOnEsc={false}
-            className="bg-white rounded-lg max-w-md w-full mx-4 outline-none"
-            overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          >
-            <div className="flex items-center p-6 border-b">
-              <h2 className="text-lg font-semibold">Alterar Senha</h2>
-            </div>
-            <div className="p-6">
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="senhaAtual"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Senha Atual</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Input
-                              type={showPasswords.atual ? "text" : "password"}
-                              {...field}
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                              onClick={() => togglePasswordVisibility('atual')}
-                            >
-                              {showPasswords.atual ? (
-                                <EyeOff className="h-4 w-4" />
-                              ) : (
-                                <Eye className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    <FormField
+                      control={form.control}
+                      name="novaSenha"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nova Senha</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Input type={showPasswords.nova ? "text" : "password"} {...field} />
+                              <Button type="button" variant="ghost" size="sm" className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent" onClick={() => togglePasswordVisibility('nova')}>
+                                {showPasswords.nova ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  <FormField
-                    control={form.control}
-                    name="novaSenha"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nova Senha</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Input
-                              type={showPasswords.nova ? "text" : "password"}
-                              {...field}
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                              onClick={() => togglePasswordVisibility('nova')}
-                            >
-                              {showPasswords.nova ? (
-                                <EyeOff className="h-4 w-4" />
-                              ) : (
-                                <Eye className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="confirmarSenha"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Confirmar Nova Senha</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Input
-                              type={showPasswords.confirmar ? "text" : "password"}
-                              {...field}
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    <FormField
+                      control={form.control}
+                      name="confirmarSenha"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Confirmar Nova Senha</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Input type={showPasswords.confirmar ? "text" : "password"} {...field} />
+                              <Button type="button" variant="ghost" size="sm" className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                               onClick={() => togglePasswordVisibility('confirmar')}
-                            >
-                              {showPasswords.confirmar ? (
-                                <EyeOff className="h-4 w-4" />
-                              ) : (
-                                <Eye className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="flex justify-end space-x-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      Cancelar
-                    </Button>
-                    <Button type="submit" disabled={isLoading}>
-                      {isLoading ? "Alterando..." : "Alterar Senha"}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </div>
-          </Modal>
+                              >
+                                {showPasswords.confirmar ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button type="button" variant="outline">Cancelar</Button>
+                      </DialogClose>
+                      <Button type="submit" disabled={isLoading}>
+                        {isLoading ? "Alterando..." : "Alterar Senha"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </CardContent>
     </Card>

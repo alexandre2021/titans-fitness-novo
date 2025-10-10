@@ -1,7 +1,7 @@
 // src/pages/IndexAluno.tsx
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAlunoProfile } from '@/hooks/useAlunoProfile';
 import { supabase } from '@/integrations/supabase/client';
@@ -48,6 +48,8 @@ const IndexAluno = () => {
   const [proximosAgendamentos, setProximosAgendamentos] = useState<Agendamento[]>([]);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [agendamentosTab, setAgendamentosTab] = useState('semana');
+  const [activeRotinaId, setActiveRotinaId] = useState<string | null>(null);
+  const [activeRotinaName, setActiveRotinaName] = useState<string | null>(null);
 
   // Estados para o modal de recusa
   const [agendamentoParaRecusar, setAgendamentoParaRecusar] = useState<Agendamento | null>(null);
@@ -171,6 +173,21 @@ const IndexAluno = () => {
           .eq('aluno_id', user.id)
           .eq('status', 'Ativa')
           .limit(1);
+        
+        let sessoesConcluidasCount = 0;
+        if (rotinaAtiva && rotinaAtiva.length > 0) {
+          const rotinaId = rotinaAtiva[0].id;
+          setActiveRotinaId(rotinaId);
+          setActiveRotinaName(rotinaAtiva[0].nome);
+
+          // Conta as sessões concluídas APENAS da rotina ativa
+          const { count } = await supabase
+            .from('execucoes_sessao')
+            .select('*', { count: 'exact', head: true })
+            .eq('rotina_id', rotinaId)
+            .eq('status', 'concluida');
+          sessoesConcluidasCount = count || 0;
+        }
 
         // 3. Fetch other stats
         const { count: avaliacoesCount } = await supabase
@@ -183,17 +200,7 @@ const IndexAluno = () => {
           .select('*', { count: 'exact', head: true })
           .eq('aluno_id', user.id);
 
-        // Calculate workouts in the last 7 days
-        const seteDiasAtras = new Date();
-        seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
-        const { count: treinosRecentesCount } = await supabase
-          .from('execucoes_sessao')
-          .select('*', { count: 'exact', head: true })
-          .eq('aluno_id', user.id)
-          .eq('status', 'concluida')
-          .gte('data_execucao', seteDiasAtras.toISOString().split('T')[0]);
-
-        setTreinos7dias(treinosRecentesCount || 0);
+        setTreinos7dias(sessoesConcluidasCount);
         setStats({ 
           rotinas: rotinaAtiva?.length || 0, 
           avaliacoes: avaliacoesCount || 0,
@@ -280,54 +287,68 @@ const IndexAluno = () => {
 
       {/* Cards de Estatísticas */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/minhas-rotinas')}>
-          <CardHeader>
-            <CardTitle className="flex flex-row items-center justify-between space-y-0 pb-2 text-sm font-medium">
-              Rotinas
-              <ClipboardList className="h-4 w-4 text-muted-foreground" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.rotinas}</div>
-            <p className="text-xs text-muted-foreground">rotina ativa</p>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/minhas-rotinas')}>
-          <CardHeader>
-            <CardTitle className="flex flex-row items-center justify-between space-y-0 pb-2 text-sm font-medium">
-              Treinos (7d)
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{treinos7dias}</p>
-            <p className="text-sm text-muted-foreground">sessões concluídas</p>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/avaliacoes-aluno')}>
-          <CardHeader>
-            <CardTitle className="flex flex-row items-center justify-between space-y-0 pb-2 text-sm font-medium">
-              Avaliações
-              <BarChart3 className="h-4 w-4 text-muted-foreground" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{stats.avaliacoes}</p>
-            <p className="text-sm text-muted-foreground">avaliações realizadas</p>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/professores')}>
-          <CardHeader>
-            <CardTitle className="flex flex-row items-center justify-between space-y-0 pb-2 text-sm font-medium">
-              Professores
-              <User className="h-4 w-4 text-muted-foreground" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.professores}</div>
-            <p className="text-xs text-muted-foreground">professores que você segue</p>
-          </CardContent>
-        </Card>
+        <Link to="/minhas-rotinas">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full flex flex-col">
+            <CardHeader className="pb-2 space-y-0"> {/* Remove o espaço entre título e descrição */}
+              <CardTitle className="flex flex-row items-center justify-between space-y-0 text-sm font-medium"> {/* Remove pb-2 daqui */}
+                Rotinas
+                <ClipboardList className="h-4 w-4 text-muted-foreground" />
+              </CardTitle>
+              <CardDescription className="text-xs truncate">&nbsp;</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.rotinas}</div>
+              <p className="text-xs text-muted-foreground">rotina ativa</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link to={activeRotinaId ? `/execucao-rotina/selecionar-treino/${activeRotinaId}` : '/minhas-rotinas'}>
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full flex flex-col">
+            <CardHeader className="pb-2 space-y-0"> {/* Remove o espaço entre título e descrição */}
+              <CardTitle className="flex flex-row items-center justify-between space-y-0 text-sm font-medium"> {/* Remove pb-2 daqui */}
+                Sessões
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardTitle>
+              <CardDescription className="text-xs truncate">
+                {activeRotinaName ? `Rotina '${activeRotinaName}'` : <>&nbsp;</>}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">{treinos7dias}</p>
+              <p className="text-xs text-muted-foreground">sessões concluídas</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link to="/avaliacoes-aluno">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full flex flex-col">
+            <CardHeader className="pb-2 space-y-0"> {/* Remove o espaço entre título e descrição */}
+              <CardTitle className="flex flex-row items-center justify-between space-y-0 text-sm font-medium"> {/* Remove pb-2 daqui */}
+                Avaliações
+                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              </CardTitle>
+              <CardDescription className="text-xs truncate">&nbsp;</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold">{stats.avaliacoes}</p>
+              <p className="text-sm text-muted-foreground">avaliações realizadas</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link to="/professores">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full flex flex-col">
+            <CardHeader className="pb-2 space-y-0"> {/* Remove o espaço entre título e descrição */}
+              <CardTitle className="flex flex-row items-center justify-between space-y-0 text-sm font-medium"> {/* Remove pb-2 daqui */}
+                Professores
+                <User className="h-4 w-4 text-muted-foreground" />
+              </CardTitle>
+              <CardDescription className="text-xs truncate">&nbsp;</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.professores}</div>
+              <p className="text-xs text-muted-foreground">professores que você segue</p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* NOVA SEÇÃO: Próximos Agendamentos */}

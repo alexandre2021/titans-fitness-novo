@@ -29,11 +29,11 @@ export const ExercicioCard = ({ exercicio, onCriarCopia, onExcluir, activeTab }:
   const navigate = useNavigate();
 
   const handleNavigateToDetails = () => {
-    navigate(`/exercicios-pt/detalhes/${exercicio.id}`, { state: { fromTab: activeTab } });
+    navigate(`/exercicios/detalhes/${exercicio.id}`, { state: { fromTab: activeTab } });
   };
 
   const handleNavigateToEdit = () => {
-    navigate(`/exercicios-pt/editar/${exercicio.id}`);
+    navigate(`/exercicios/editar/${exercicio.id}`);
   };
 
   return (

@@ -136,19 +136,19 @@ import EditarExercicio from "./pages/EditarExercicio";
 import DetalhesExercicio from "./pages/DetalhesExercicio";
 
 // Rotas do PT:
-<Route path="/exercicios-pt" element={<PTLayout />}>
+<Route path="/exercicios" element={<PTLayout />}>
   <Route index element={<ExerciciosPT />} />
 </Route>
-<Route path="/exercicios-pt/novo" element={<PTLayout />}>
+<Route path="/exercicios/novo" element={<PTLayout />}>
   <Route index element={<NovoExercicio />} />
 </Route>
-<Route path="/exercicios-pt/copia/:id" element={<PTLayout />}>
+<Route path="/exercicios/copia/:id" element={<PTLayout />}>
   <Route index element={<CopiaExercicio />} />
 </Route>
-<Route path="/exercicios-pt/editar/:id" element={<PTLayout />}>
+<Route path="/exercicios/editar/:id" element={<PTLayout />}>
   <Route index element={<EditarExercicio />} />
 </Route>
-<Route path="/exercicios-pt/detalhes/:id" element={<PTLayout />}>
+<Route path="/exercicios/detalhes/:id" element={<PTLayout />}>
   <Route index element={<DetalhesExercicio />} />
 </Route>
 ```

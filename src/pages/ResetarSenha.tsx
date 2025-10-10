@@ -34,11 +34,19 @@ export default function ResetarSenha() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
-        // A recuperação de senha foi iniciada, o usuário está nesta página
-        // após clicar no link de e-mail. Não precisamos fazer nada aqui,
-        // apenas permitir que eles insiram uma nova senha.
+        // Se o evento disparou mas não há sessão, o token é inválido.
+        if (!session) {
+          setUrlError("Sessão de recuperação inválida. Por favor, solicite um novo link de redefinição de senha.");
+        }
       }
     });
+
+    // Adiciona um pequeno delay para dar tempo ao onAuthStateChange de executar.
+    // Se após 500ms a sessão ainda não existir, o link é provavelmente inválido.
+    const timer = setTimeout(async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) setUrlError("Não foi possível verificar a sessão de recuperação. O link pode ser inválido ou expirado. Por favor, solicite um novo.");
+    }, 500);
 
     return () => {
       subscription.unsubscribe();

@@ -48,7 +48,7 @@ O upload do avatar de perfil também processa a imagem no cliente, mas o armazen
 ### 3.1. Fluxo de Upload
 
 1.  **Seleção da Imagem:** O usuário seleciona uma imagem.
-2.  **Corte no Cliente:** Um modal com `react-easy-crop` é aberto.
+2.  **Corte no Cliente:** Um modal com `react-easy-crop` é aberto em ambas as plataformas (desktop e mobile).
     -   A proporção é travada em **1:1 (quadrada)**.
     -   O usuário ajusta o zoom e a posição.
 3.  **Otimização com Canvas:** A função `optimizeAndCropImage` de `imageUtils.ts` é chamada.

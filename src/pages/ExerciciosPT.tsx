@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import Modal from 'react-modal';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const GRUPOS_MUSCULARES = ['Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Abdômen', 'Pernas', 'Glúteos', 'Panturrilha'];
 const EQUIPAMENTOS = ['Barra', 'Halteres', 'Máquina', 'Peso Corporal', 'Cabo', 'Kettlebell', 'Fitas de Suspensão', 'Elásticos', 'Bola Suíça', 'Bolas Medicinais', 'Landmine', 'Bola Bosu'];
@@ -35,8 +35,6 @@ const GRUPO_CORES: { [key: string]: string } = {
   'Glúteos': 'bg-violet-100 text-violet-800',
   'Panturrilha': 'bg-indigo-100 text-indigo-800'
 };
-
-Modal.setAppElement('#root');
 
 const ExerciciosPT = () => {
   const navigate = useNavigate();
@@ -63,7 +61,6 @@ const ExerciciosPT = () => {
   const [activeTab, setActiveTab] = useState<"padrao" | "personalizados">(location.state?.activeTab || "padrao");
   const [showFilters, setShowFilters] = useState(false);
   const isDesktop = useMediaQuery("(min-width: 768px)");
-  const [isLimitInfoOpen, setIsLimitInfoOpen] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [exercicioParaExcluir, setExercicioParaExcluir] = useState<Tables<'exercicios'> | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -103,11 +100,11 @@ const ExerciciosPT = () => {
       })
       return;
     }
-    navigate("/exercicios-pt/novo");
+    navigate("/exercicios/novo");
   };
 
   const handleNovoExercicioPadrao = () => {
-    navigate("/exercicios-pt/novo-padrao");
+    navigate("/exercicios/novo-padrao");
   };
 
   const handleCriarCopia = (exercicioId: string) => {
@@ -117,7 +114,7 @@ const ExerciciosPT = () => {
       })
       return;
     }
-    navigate(`/exercicios-pt/copia/${exercicioId}`);
+    navigate(`/exercicios/copia/${exercicioId}`);
   };
 
   const handleExcluirExercicio = async (exercicioId: string) => {
@@ -342,7 +339,7 @@ const ExerciciosPT = () => {
               {exerciciosFiltrados.map((exercicio) => {
                 const corGrupo = exercicio.grupo_muscular ? GRUPO_CORES[exercicio.grupo_muscular] || 'bg-gray-100 text-black' : 'bg-gray-100 text-black';
                 return (
-                  <Card key={exercicio.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/exercicios-pt/detalhes/${exercicio.id}`, { state: { fromTab: 'padrao' } })}>
+                  <Card key={exercicio.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/exercicios/detalhes/${exercicio.id}`, { state: { fromTab: 'padrao' } })}>
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0 pr-1 md:pr-4">
@@ -361,7 +358,7 @@ const ExerciciosPT = () => {
                             <Button variant="default" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4" onClick={(e) => e.stopPropagation()}><MoreVertical /></Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/exercicios-pt/detalhes/${exercicio.id}`, { state: { fromTab: 'padrao' } }); }}>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/exercicios/detalhes/${exercicio.id}`, { state: { fromTab: 'padrao' } }); }}>
                               <Eye className="mr-2 h-5 w-5" />
                               <span className="text-base">Ver Detalhes</span>
                             </DropdownMenuItem>
@@ -371,7 +368,7 @@ const ExerciciosPT = () => {
                             </DropdownMenuItem>
                             {isAdmin && (
                               <DropdownMenuItem
-                                onClick={(e) => { e.stopPropagation(); navigate(`/exercicios-pt/editar-padrao/${exercicio.id}`); }}
+                                onClick={(e) => { e.stopPropagation(); navigate(`/exercicios/editar-padrao/${exercicio.id}`); }}
                                 className="bg-secondary text-secondary-foreground hover:bg-secondary/80 focus:bg-secondary/80 focus:text-secondary-foreground"
                               >
                                 <Edit className="mr-2 h-5 w-5" />
@@ -517,7 +514,7 @@ const ExerciciosPT = () => {
                   {exerciciosFiltrados.map((exercicio) => {
                     const corGrupo = exercicio.grupo_muscular ? GRUPO_CORES[exercicio.grupo_muscular] || 'bg-gray-100 text-black' : 'bg-gray-100 text-black';
                     return (
-                      <Card key={exercicio.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/exercicios-pt/detalhes/${exercicio.id}`, { state: { fromTab: 'personalizados' } })}>
+                      <Card key={exercicio.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/exercicios/detalhes/${exercicio.id}`, { state: { fromTab: 'personalizados' } })}>
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 min-w-0 pr-1 md:pr-4">
@@ -536,11 +533,11 @@ const ExerciciosPT = () => {
                                 <Button variant="default" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4" onClick={(e) => e.stopPropagation()}><MoreVertical /></Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/exercicios-pt/detalhes/${exercicio.id}`, { state: { fromTab: 'personalizados' } }); }}>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/exercicios/detalhes/${exercicio.id}`, { state: { fromTab: 'personalizados' } }); }}>
                                   <Eye className="mr-2 h-5 w-5" />
                                   <span className="text-base">Ver Detalhes</span>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/exercicios-pt/editar/${exercicio.id}`); }}>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/exercicios/editar/${exercicio.id}`); }}>
                                   <Edit className="mr-2 h-5 w-5" />
                                   <span className="text-base">Editar</span>
                                 </DropdownMenuItem>
@@ -562,87 +559,42 @@ const ExerciciosPT = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Modal de Informação sobre Limite - React Modal */}
-      <Modal
-        isOpen={isLimitInfoOpen}
-        onRequestClose={() => setIsLimitInfoOpen(false)}
-        shouldCloseOnOverlayClick={true}
-        shouldCloseOnEsc={true}
-        className="bg-white rounded-lg p-6 max-w-md w-full mx-4 outline-none"
-        overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-      >
-        <div className="flex items-center gap-2 mb-4">
-          <Info className="h-5 w-5 text-blue-500" />
-          <h2 className="text-lg font-semibold">Limite de Exercícios Atingido</h2>
-        </div>
-        <div className="mb-6">
-          <p className="text-sm text-gray-600">
-            Você alcançou o limite de <strong>{LIMITE_EXERCICIOS_PERSONALIZADOS} exercícios personalizados</strong>.
-            <br /><br />
-            Para criar novos exercícios, você pode revisar e excluir exercícios antigos que não estão mais em uso.
-          </p>
-        </div>
-        <div className="flex justify-end">
-          <Button onClick={() => setIsLimitInfoOpen(false)}>
-            Entendi
-          </Button>
-        </div>
-      </Modal>
-
-      {/* Modal de Confirmação de Exclusão - React Modal BLOQUEADA */}
-      <Modal
-        isOpen={showDeleteDialog}
-        onRequestClose={() => {}} // Não permite fechar
-        shouldCloseOnOverlayClick={false}
-        shouldCloseOnEsc={false}
-        className="bg-white rounded-lg p-6 max-w-md w-full mx-4 outline-none"
-        overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-      >
-        <div className="flex items-center gap-2 mb-4">
-          <AlertTriangle className="h-5 w-5 text-red-500" />
-          <h2 className="text-lg font-semibold">Excluir Exercício</h2>
-        </div>
-        
-        <div className="mb-6">
-          <p className="text-sm text-gray-600 leading-relaxed">
-            Tem certeza que deseja excluir o exercício personalizado{" "}
-            <span className="font-semibold text-gray-900">
-              "{exercicioParaExcluir?.nome}"
-            </span>?
-          </p>
-          <p className="text-sm text-gray-600 mt-2">
-            Esta ação não pode ser desfeita.
-          </p>
-        </div>
-        
-        <div className="flex gap-3 justify-end">
-          <Button 
-            variant="outline" 
-            onClick={handleCancelarExclusao}
-            disabled={isDeleting}
-          >
-            Cancelar
-          </Button>
-          <Button 
-            variant="destructive" 
-            onClick={handleConfirmarExclusao} 
-            disabled={isDeleting}
-            className="flex items-center gap-2"
-          >
-            {isDeleting ? (
-              <>
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                Excluindo...
-              </>
-            ) : (
-              <>
-                <Trash2 className="h-4 w-4" />
-                Excluir
-              </>
-            )}
-          </Button>
-        </div>
-      </Modal>
+      {/* Modal de Confirmação de Exclusão */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Excluir Exercício
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o exercício personalizado{" "}
+              <span className="font-semibold text-foreground">"{exercicioParaExcluir?.nome}"</span>?
+              <br />
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelarExclusao} disabled={isDeleting}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmarExclusao}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent mr-2" />
+                  Excluindo...
+                </>
+              ) : (
+                "Excluir"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Botão Flutuante para Novo Exercício Padrão (Admin) */}
       {isAdmin && activeTab === "padrao" && (
@@ -672,7 +624,7 @@ const ExerciciosPT = () => {
       {activeTab === "personalizados" && (
         <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
           <Button
-            onClick={canAddMore ? handleNovoExercicio : () => setIsLimitInfoOpen(true)}
+            onClick={canAddMore ? handleNovoExercicio : () => toast.error("Limite atingido", { description: `Você atingiu o limite de ${LIMITE_EXERCICIOS_PERSONALIZADOS} exercícios personalizados.` })}
             className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
             aria-label={canAddMore ? "Novo Exercício" : "Limite de exercícios atingido"}
           >
@@ -680,7 +632,7 @@ const ExerciciosPT = () => {
           </Button>
 
           <Button
-            onClick={canAddMore ? handleNovoExercicio : () => setIsLimitInfoOpen(true)}
+            onClick={canAddMore ? handleNovoExercicio : () => toast.error("Limite atingido", { description: `Você atingiu o limite de ${LIMITE_EXERCICIOS_PERSONALIZADOS} exercícios personalizados.` })}
             className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6"
             size="lg"
             variant={canAddMore ? "default" : "outline"}

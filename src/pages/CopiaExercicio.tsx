@@ -342,7 +342,7 @@ const CopiaExercicio = () => {
   useEffect(() => {
     const fetchExercicio = async () => {
       if (!id) {
-        navigate('/exercicios-pt');
+        navigate('/exercicios');
         return;
       }
 
@@ -405,7 +405,7 @@ const CopiaExercicio = () => {
         toast.error("Erro ao carregar", {
           description: "Não foi possível carregar o exercício. Verifique se o ID está correto.",
         });
-        navigate('/exercicios-pt');
+        navigate('/exercicios');
       } finally {
         setLoading(false);
       }
@@ -565,7 +565,7 @@ const CopiaExercicio = () => {
       if (error) throw error;
 
       // O redirecionamento já indica o sucesso da operação.
-      navigate('/exercicios-pt');
+      navigate('/exercicios');
     } catch (err) {
       const error = err as Error;
       console.error('❌ Erro ao criar cópia:', error);
@@ -590,7 +590,7 @@ const CopiaExercicio = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/exercicios-pt')} className="h-10 w-10 p-0">
+          <Button variant="ghost" onClick={() => navigate('/exercicios')} className="h-10 w-10 p-0">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
@@ -610,7 +610,7 @@ const CopiaExercicio = () => {
           {/* Layout Desktop */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <Button variant="ghost" onClick={() => navigate('/exercicios-pt')} className="h-10 w-10 p-0">
+                <Button variant="ghost" onClick={() => navigate('/exercicios')} className="h-10 w-10 p-0">
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <div className="flex-1">

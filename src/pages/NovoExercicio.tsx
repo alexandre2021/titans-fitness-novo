@@ -407,7 +407,7 @@ const NovoExercicio = () => {
       if (error) throw error;
 
       console.log('✅ Exercício criado:', exercicio);
-      navigate('/exercicios-pt');
+      navigate('/exercicios');
       
     } catch (error) {
       console.error('❌ Erro ao criar exercício:', error);
@@ -427,7 +427,7 @@ const NovoExercicio = () => {
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
-                onClick={() => navigate('/exercicios-pt')}
+                onClick={() => navigate('/exercicios')}
                 className="h-10 w-10 p-0"
               >
                 <ArrowLeft className="h-4 w-4" />

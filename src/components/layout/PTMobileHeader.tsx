@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -11,26 +11,36 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, Settings, ArrowLeft, Copy } from "lucide-react";
+import { LogOut, User, Settings, ArrowLeft, Copy, Info } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfessorProfile } from "@/hooks/useProfessorProfile";
 import { toast } from "sonner";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from '@/components/ui/alert-dialog';
 
 const PTMobileHeader = () => {
   const { user, signOut } = useAuth();
   const { profile } = useProfessorProfile();
   const location = useLocation();
   const navigate = useNavigate();
+  const [showStatusInfoDialog, setShowStatusInfoDialog] = useState(false);
 
-  const getPageConfig = (): { title: React.ReactNode; subtitle?: string; showBackButton: boolean; backPath?: string } => {
+  const getPageConfig = (): { 
+    title: React.ReactNode; 
+    subtitle?: string; 
+    showBackButton: boolean; 
+    backPath?: string;
+    showInfoButton?: boolean; } => {
     const path = location.pathname;
 
     // Páginas de Ação (com botão de voltar)
-    if (path.startsWith('/exercicios-pt/novo')) return { title: 'Novo Exercício', showBackButton: true };
-    if (path.startsWith('/exercicios-pt/editar')) return { title: 'Editar Exercício', showBackButton: true };
-    if (path.startsWith('/exercicios-pt/copia')) return { title: 'Copiar Exercício', showBackButton: true };
-    if (path.startsWith('/exercicios-pt/detalhes')) return { title: 'Detalhes do Exercício', showBackButton: true };
-    if (path.startsWith('/alunos-rotinas/')) return { title: 'Rotinas do Aluno', showBackButton: true };
+    if (path.startsWith('/exercicios/novo')) return { title: 'Novo Exercício', showBackButton: true };
+    if (path.startsWith('/exercicios/editar')) return { title: 'Editar Exercício', showBackButton: true };
+    if (path.startsWith('/exercicios/copia')) return { title: 'Copiar Exercício', showBackButton: true };
+    if (path.startsWith('/exercicios/detalhes')) return { title: 'Detalhes do Exercício', showBackButton: true };
+    
+    // Páginas de Rotina com botão de info
+    if (path.startsWith('/rotinas')) return { title: 'Rotinas', showBackButton: false, showInfoButton: true };
+    if (path.startsWith('/alunos-rotinas/')) return { title: 'Rotinas do Aluno', showBackButton: true, showInfoButton: true };
 
     // ✅ Lógica específica para Avaliações (mais específicas primeiro)
     if (path.includes('/nova') && path.startsWith('/alunos-avaliacoes/')) {
@@ -66,7 +76,7 @@ const PTMobileHeader = () => {
     const mainPages: { [key: string]: { title: string; subtitle?: string } } = {
       "/index-professor": { title: "Painel", subtitle: `Bem-vindo, ${profile?.nome_completo?.split(' ')[0] || 'Professor(a)'}!` },
       "/alunos": { title: "Alunos", subtitle: "Gerencie seus alunos e acompanhe seu progresso" },
-      "/exercicios-pt": { title: "Exercícios", subtitle: "Gerencie seus exercícios padrão e personalizados" },
+      "/exercicios": { title: "Exercícios", subtitle: "Gerencie seus exercícios padrão e personalizados" },
       "/meus-modelos": { title: "Meus Modelos", subtitle: "Gerencie seus modelos de rotina" },
       "/mais": { title: "Mais Opções", subtitle: "Navegue por outras seções e configurações" },
       "/agenda-pt": { title: "Agenda" },
@@ -124,7 +134,7 @@ const PTMobileHeader = () => {
     );
   };
 
-  const { title, subtitle, showBackButton, backPath } = getPageConfig();
+  const { title, subtitle, showBackButton, backPath, showInfoButton } = getPageConfig();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-20 flex items-center justify-between p-4 border-b bg-background md:hidden">
@@ -135,7 +145,19 @@ const PTMobileHeader = () => {
           </Button>
         )}
         <div className="flex-1 truncate">
-          <div className="text-lg font-semibold truncate">{title}</div>
+          <div className="flex items-center gap-2">
+            <div className="text-lg font-semibold truncate">{title}</div>
+            {showInfoButton && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setShowStatusInfoDialog(true)}
+                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground flex-shrink-0"
+              >
+                <Info className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
           {subtitle && (
             <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
           )}
@@ -190,6 +212,59 @@ const PTMobileHeader = () => {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {/* Modal de Informações sobre Status */}
+      <AlertDialog open={showStatusInfoDialog} onOpenChange={setShowStatusInfoDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Situação das Rotinas</AlertDialogTitle>
+            <AlertDialogDescription>
+              Entenda o significado de cada status das rotinas de treino.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+              <div>
+                <p className="font-medium text-blue-800 mb-1">Rascunho</p>
+                <p className="text-sm text-muted-foreground">
+                  Rotina em processo de criação pelo professor, ainda não finalizada.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
+              <div>
+                <p className="font-medium text-green-800 mb-1">Ativa</p>
+                <p className="text-sm text-muted-foreground">
+                  Aluno pode acessar e executar os treinos normalmente.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 rounded-full bg-red-500 mt-2 flex-shrink-0"></div>
+              <div>
+                <p className="font-medium text-red-800 mb-1">Bloqueada</p>
+                <p className="text-sm text-muted-foreground">
+                  Acesso aos treinos foi suspenso temporariamente pelo professor.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 rounded-full bg-gray-500 mt-2 flex-shrink-0"></div>
+              <div>
+                <p className="font-medium text-gray-800 mb-1">Encerrada</p>
+                <p className="text-sm text-muted-foreground">
+                  Rotina concluída ou cancelada, movida para o histórico do aluno.
+                </p>
+              </div>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Fechar</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </header>
   );
 };

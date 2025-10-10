@@ -741,7 +741,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-6 pb-24 md:pb-8">
         {/* Cabeçalho da Página (Apenas para Desktop) */}
         {isDesktop && (
           <div className="flex items-center justify-between">
@@ -756,7 +756,18 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
                 </Button>
               )}
               <div>
-                <h1 className="text-3xl font-bold">Rotinas</h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-3xl font-bold">Rotinas do Aluno</h1>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setShowStatusInfoDialog(true)}
+                    className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                    title="Informações sobre status das rotinas"
+                  >
+                    <Info className="h-4 w-4" />
+                  </Button>
+                </div>
                 <p className="text-muted-foreground">{modo === 'professor' ? `Gerencie as rotinas de ${aluno.nome_completo}` : 'Suas rotinas de treino'}</p>
               </div>
             </div>
@@ -808,19 +819,8 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-3">
-                  <Dumbbell className="h-5 w-5" />
+                  <FileText className="h-5 w-5" />
                   Rotina Atual
-                  {modo === 'professor' && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => setShowStatusInfoDialog(true)}
-                      className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                      title="Informações sobre status das rotinas"
-                    >
-                      <Info className="h-4 w-4" />
-                    </Button>
-                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -833,7 +833,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-4 pb-20 md:pb-0">
+                  <div className="space-y-4">
                     {rotinasAtivas.map((rotina) => (
                       <div key={rotina.id} className="border rounded-lg p-6 hover:bg-muted/50 transition-colors">
                         {/* Header da rotina */}
@@ -931,7 +931,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-4 pb-20 md:pb-0">
+                    <div className="space-y-4">
                       {rotinasRascunho.map((rotina) => (
                         <Card key={rotina.id}>
                           <CardContent className="p-4 flex items-center justify-between">
@@ -969,7 +969,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-3">
-                  <Dumbbell className="h-5 w-5" />
+                  <FileText className="h-5 w-5" />
                   Rotinas Encerradas
                 </CardTitle>
               </CardHeader>
@@ -983,7 +983,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-4 pb-20 md:pb-0">
+                  <div className="space-y-4">
                     {rotinasArquivadas.map((rotina) => (
                       <div key={rotina.id} className="border rounded-lg p-4 md:p-6 hover:bg-muted/50 transition-colors">
                         {/* Header da rotina com título e badge de conclusão */}

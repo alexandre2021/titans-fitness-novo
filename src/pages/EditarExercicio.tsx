@@ -310,14 +310,14 @@ const EditarExercicio = () => {
 
   useEffect(() => {
     const fetchExercicio = async () => {
-      if (!id || !user) { navigate('/exercicios-pt', { state: { activeTab: 'personalizados' } }); return; }
+      if (!id || !user) { navigate('/exercicios', { state: { activeTab: 'personalizados' } }); return; }
 
       try {
         const { data, error } = await supabase.from('exercicios').select('*').eq('id', id).single();
         if (error || !data) throw new Error('Exercício não encontrado ou erro ao buscar.');
         if (data.tipo !== 'personalizado' || data.professor_id !== user.id) {
           toast.error("Acesso Negado", { description: "Você não pode editar este exercício." });
-          navigate('/exercicios-pt', { state: { activeTab: 'personalizados' } });
+          navigate('/exercicios', { state: { activeTab: 'personalizados' } });
           return;
         }
 
@@ -347,7 +347,7 @@ const EditarExercicio = () => {
       } catch (error) {
         console.error('Erro ao carregar exercício:', error);
         toast.error("Erro", { description: "Não foi possível carregar o exercício." });
-        navigate('/exercicios-pt', { state: { activeTab: 'personalizados' } });
+      navigate('/exercicios', { state: { activeTab: 'personalizados' } });
       } finally {
         setLoading(false);
       }
@@ -458,7 +458,7 @@ const EditarExercicio = () => {
 
       if (error) throw error;      
 
-      navigate('/exercicios-pt', { state: { activeTab: 'personalizados' } });
+      navigate('/exercicios', { state: { activeTab: 'personalizados' } });
     } catch (error) {
       const err = error as Error;
       console.error('Erro ao salvar alterações:', err);
@@ -484,7 +484,7 @@ const EditarExercicio = () => {
         {/* Layout Desktop */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" onClick={() => navigate('/exercicios-pt', { state: { activeTab: 'personalizados' } })} className="h-10 w-10 p-0">
+              <Button variant="ghost" onClick={() => navigate('/exercicios', { state: { activeTab: 'personalizados' } })} className="h-10 w-10 p-0">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
               <div className="flex-1">

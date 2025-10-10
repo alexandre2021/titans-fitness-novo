@@ -234,7 +234,7 @@ const { user, session, loading, signOut } = useAuth();
 
 
 ### Professor
-- **Páginas principais**: `/index-pt`, `/alunos`, `/exercicios-pt`
+- **Páginas principais**: `/index-pt`, `/alunos`, `/exercicios`
 - **Onboarding**: 3 etapas (informações básicas, experiência, redes sociais)
 - **Verificação**: Tabela `professores.onboarding_completo`
 

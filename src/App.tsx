@@ -58,6 +58,7 @@ import EditarExercicioPadrao from "./pages/EditarExercicioPadrao";
 import NovoExercicioPadrao from "./pages/NovoExercicioPadrao";
 
 // NOVAS IMPORTAÇÕES PARA EXECUÇÃO
+import RotinasPT from "./pages/RotinasPT.tsx";
 import ExecucaoSelecionarTreino from "./pages/ExecucaoSelecionarTreino";
 import ExecucaoExecutarTreino from "./pages/ExecucaoExecutarTreino";
 
@@ -110,13 +111,13 @@ const router = createBrowserRouter([
           { path: "/index-pt", element: <Navigate to="/index-professor" replace /> },
           { path: "/index-professor", element: <IndexProfessor /> },
           { path: "/alunos", element: <AlunosPT /> },
-          { path: "/exercicios-pt", element: <ExerciciosPT /> },
-          { path: "/exercicios-pt/novo", element: <NovoExercicio /> },
-          { path: "/exercicios-pt/copia/:id", element: <CopiaExercicio /> },
-          { path: "/exercicios-pt/editar/:id", element: <EditarExercicio /> },
-          { path: "/exercicios-pt/editar-padrao/:id", element: <EditarExercicioPadrao /> },
-          { path: "/exercicios-pt/novo-padrao", element: <NovoExercicioPadrao /> },
-          { path: "/exercicios-pt/detalhes/:id", element: <DetalhesExercicio /> },
+          { path: "/exercicios", element: <ExerciciosPT /> },
+          { path: "/exercicios/novo", element: <NovoExercicio /> },
+          { path: "/exercicios/copia/:id", element: <CopiaExercicio /> },
+          { path: "/exercicios/editar/:id", element: <EditarExercicio /> },
+          { path: "/exercicios/editar-padrao/:id", element: <EditarExercicioPadrao /> },
+          { path: "/exercicios/novo-padrao", element: <NovoExercicioPadrao /> },
+          { path: "/exercicios/detalhes/:id", element: <DetalhesExercicio /> },
           { path: "/agenda-pt", element: <AgendaPT /> },
           // Rotas de Posts protegidas para o admin
           {
@@ -131,6 +132,7 @@ const router = createBrowserRouter([
           { path: "/perfil-pt", element: <PerfilPT /> },
           { path: "/meus-modelos", element: <MeusModelos /> },
           { path: "/configuracoes-pt", element: <ConfiguracoesPT /> },
+          { path: "/rotinas", element: <RotinasPT /> },
           // Rota para a nova página "Mais"
           { path: "/mais", element: <Mais /> },
           { path: "/detalhes-aluno/:id", element: <DetalhesAluno /> },
