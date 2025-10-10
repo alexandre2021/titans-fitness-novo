@@ -61,10 +61,10 @@ type ReagendarFormData = z.infer<typeof reagendarSchema>;
 const today = new Date().toISOString().split('T')[0];
 
 const CORES_STATUS_AGENDAMENTO: Record<string, string> = {
-  'pendente': 'bg-orange-100 text-orange-800 border-orange-200',
-  'confirmado': 'bg-green-100 text-green-800 border-green-200',
-  'recusado': 'bg-red-100 text-red-800 border-red-200',
-  'concluido': 'bg-blue-100 text-blue-800 border-blue-200'
+  'pendente': 'bg-orange-400 text-white',
+  'confirmado': 'bg-green-400 text-white',
+  'recusado': 'bg-red-400 text-white',
+  'concluido': 'bg-blue-400 text-white'
 };
 
 const IndexProfessor = () => {
@@ -321,7 +321,7 @@ const IndexProfessor = () => {
           <CardHeader>
             <CardTitle>Agendamentos</CardTitle>
           </CardHeader>
-          <CardContent className="pt-0">
+          <CardContent className="pt-0 px-2 sm:px-6">
             <Tabs value={agendamentosTab} onValueChange={setAgendamentosTab}>
               <TabsList className="grid w-full grid-cols-3 mb-4">
                 <TabsTrigger value="hoje">Hoje</TabsTrigger>

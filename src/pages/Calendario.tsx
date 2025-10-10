@@ -56,9 +56,8 @@ const agendamentoSchema = z.object({
   hora: z.string().min(1, "A hora é obrigatória."),
   notas: z.string().optional(),
 });
-type AgendamentoFormData = z.infer<typeof agendamentoSchema>;
 
-const today = new Date().toISOString().split('T')[0];
+type AgendamentoFormData = z.infer<typeof agendamentoSchema>;
 
 const Calendario = () => {
   const { user } = useAuth();
@@ -139,6 +138,32 @@ const Calendario = () => {
     if (!user || !profile) return;
     setLoading(true);
 
+    try {
+      const userIdField = profile.user_type === 'professor' ? 'professor_id' : 'aluno_id';
+
+      // Atualiza agendamentos passados para 'concluido'
+      const { error: updateError } = await supabase
+        .from('agendamentos')
+        .update({ status: 'concluido' })
+        .eq(userIdField, user.id)
+        .in('status', ['pendente', 'confirmado'])
+        .lt('data_hora_inicio', new Date().toISOString());
+
+      if (updateError) console.error("Calendario: Erro ao atualizar agendamentos passados:", updateError);
+
+      // Exclui agendamentos recusados que já passaram
+      const { error: deleteError } = await supabase
+        .from('agendamentos')
+        .delete()
+        .eq(userIdField, user.id)
+        .eq('status', 'recusado')
+        .lt('data_hora_inicio', new Date().toISOString());
+
+      if (deleteError) console.error("Calendario: Erro ao excluir agendamentos recusados:", deleteError);
+    } catch (e) {
+      console.error("Calendario: Erro na limpeza de agendamentos antigos:", e);
+    }
+
     const start = startOfMonth(currentDate);
     const end = endOfMonth(currentDate);
 
@@ -173,6 +198,21 @@ const Calendario = () => {
   }, [profile, fetchAgendamentos]);
 
   const handleDayClick = (day: Date) => {
+    // Se estiver no mobile, na visão semanal, muda para a visão diária do dia clicado.
+    if (!isDesktop && viewMode === 'semanal') {
+      setCurrentDate(day);
+      setViewMode('diaria');
+      return;
+    }
+
+    // Se estiver no desktop, na visão mensal, muda para a visão semanal do dia clicado.
+    if (isDesktop && viewMode === 'mensal') {
+      setCurrentDate(day);
+      setViewMode('semanal');
+      return;
+    }
+
+    // Comportamento padrão (abrir modal) para desktop (visão semanal) ou mobile (visão diária).
     const agendamentosDoDia = agendamentos.filter(ag => isSameDay(new Date(ag.data_hora_inicio), day));
     if (agendamentosDoDia.length > 0) {
       setSelectedDay(day);
@@ -222,8 +262,14 @@ const Calendario = () => {
     if (!user) return;
     setIsSaving(true);
 
-
-    const dataHoraInicio = new Date(`${data.data}T${data.hora}`);
+    // Cria a data e hora no fuso horário local do usuário
+    const dataHoraInicioLocal = new Date(`${data.data}T${data.hora}`);
+    if (dataHoraInicioLocal < new Date()) {
+      toast.error("Não é possível agendar no passado.");
+      setIsSaving(false);
+      return;
+    }
+    const dataHoraInicio = dataHoraInicioLocal;
     const dataHoraFim = new Date(dataHoraInicio.getTime() + 60 * 60 * 1000); // Adiciona 1h
 
     const { error } = await supabase.from('agendamentos').insert({
@@ -329,27 +375,40 @@ const Calendario = () => {
 
       <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'semanal' | 'mensal' | 'diaria')} className="w-full">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
-          {isDesktop && (
+          <TabsList className="grid w-full sm:w-auto grid-cols-2">
+            {isDesktop ? (
+              <>
+                <TabsTrigger value="semanal">Semanal</TabsTrigger>
+                <TabsTrigger value="mensal">Mensal</TabsTrigger>
+              </>
+            ) : (
+              <>
+                <TabsTrigger value="diaria">Diária</TabsTrigger>
+                <TabsTrigger value="semanal">Semanal</TabsTrigger>
+              </>
+            )}
+          </TabsList>
+          {/* {isDesktop && (
             <TabsList className="grid w-full sm:w-auto grid-cols-2">
               <TabsTrigger value="semanal">Semanal</TabsTrigger>
               <TabsTrigger value="mensal">Mensal</TabsTrigger>
             </TabsList>
-          )}
+          )} */}
           <div className="flex items-center justify-center flex-grow">
-            <Button variant="ghost" size="icon" onClick={() => setCurrentDate(viewMode === 'semanal' ? subWeeks(currentDate, 1) : viewMode === 'diaria' ? subDays(currentDate, 1) : subMonths(currentDate, 1))}>
+            <Button variant="ghost" size="icon" onClick={() => setCurrentDate(viewMode === 'diaria' ? subDays(currentDate, 1) : viewMode === 'semanal' ? subWeeks(currentDate, 1) : subMonths(currentDate, 1))}>
               <ChevronLeft className="h-5 w-5" />
             </Button>
             <h2 className="text-lg font-semibold text-center w-64">
               {headerTitle}
             </h2>
-            <Button variant="ghost" size="icon" onClick={() => setCurrentDate(viewMode === 'semanal' ? addWeeks(currentDate, 1) : viewMode === 'diaria' ? addDays(currentDate, 1) : addMonths(currentDate, 1))}>
+            <Button variant="ghost" size="icon" onClick={() => setCurrentDate(viewMode === 'diaria' ? addDays(currentDate, 1) : viewMode === 'semanal' ? addWeeks(currentDate, 1) : addMonths(currentDate, 1))}>
               <ChevronRight className="h-5 w-5" />
             </Button>
           </div>
         </div>
 
         {/* Visão Diária (Mobile) */}
-        {!isDesktop && (
+        {!isDesktop && viewMode === 'diaria' && (
           <div className="space-y-2">
             {agendamentos.filter(ag => isSameDay(new Date(ag.data_hora_inicio), currentDate)).length > 0 ? (
               agendamentos.filter(ag => isSameDay(new Date(ag.data_hora_inicio), currentDate))
@@ -370,6 +429,33 @@ const Calendario = () => {
                   );
                 })
             ) : (<div className="text-center py-10"><p className="text-muted-foreground">Nenhum agendamento para hoje.</p></div>)}
+          </div>
+        )}
+
+        {/* Visão Semanal (Mobile) - Similar à mensal do desktop */}
+        {!isDesktop && viewMode === 'semanal' && (
+          <div className="p-4 bg-card rounded-lg shadow-sm">
+            <div className="grid grid-cols-7 gap-1 text-center text-sm">
+              {weekDays.map(day => (<div key={day} className="font-medium text-muted-foreground">{day}</div>))}
+              {calendarDays.map((day, index) => {
+                const isDayNull = day === null;
+                return (
+                <div key={index} className={`p-1 h-24 rounded-md flex flex-col items-center cursor-pointer transition-colors ${!isDayNull ? 'hover:bg-muted' : ''}`} onClick={() => !isDayNull && handleDayClick(day)}>
+                  {day && (
+                    <>
+                      <span className={`w-7 h-7 flex items-center justify-center rounded-full ${isToday(day) ? 'bg-primary text-primary-foreground' : ''}`}>{format(day, 'd')}</span>
+                      <div className="mt-1 w-full space-y-1 overflow-y-auto">
+                        {agendamentos.filter(ag => isSameDay(new Date(ag.data_hora_inicio), day)).map(ag => {
+                          const isPastAndResolvable = startOfDay(new Date(ag.data_hora_inicio)) < startOfDay(new Date()) && (ag.status === 'confirmado' || ag.status === 'pendente');
+                          const status = isPastAndResolvable ? 'concluido' : ag.status;
+                          return (<div key={ag.id} className={`w-full h-2 rounded-full ${CORES_STATUS_AGENDAMENTO[status] || 'bg-gray-200'}`} />);
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>);
+              })}
+            </div>
           </div>
         )}
 
@@ -457,7 +543,7 @@ const Calendario = () => {
 
       {/* Modal de Detalhes do Dia */}
       <Dialog open={isDayModalOpen} onOpenChange={setIsDayModalOpen}>
-        <DialogContent>
+        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[425px] rounded-md">
           <DialogHeader>
             <DialogTitle>Agendamentos para {selectedDay && format(selectedDay, "dd 'de' MMMM", { locale: ptBR })}</DialogTitle>
           </DialogHeader>
@@ -587,7 +673,7 @@ const Calendario = () => {
                 )}
               />
               <div className="grid grid-cols-2 gap-4">
-                <FormField control={form.control} name="data" render={({ field }) => (<FormItem><FormLabel>Data</FormLabel><FormControl><Input type="date" required min={today} {...field} /></FormControl><FormMessage /></FormItem>)} />
+                <FormField control={form.control} name="data" render={({ field }) => (<FormItem><FormLabel>Data</FormLabel><FormControl><Input type="date" required min={format(new Date(), 'yyyy-MM-dd')} {...field} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="hora" render={({ field }) => (<FormItem><FormLabel>Hora</FormLabel><FormControl><Input type="time" required step="300" {...field} /></FormControl><FormMessage /></FormItem>)} />
               </div>
               <FormField

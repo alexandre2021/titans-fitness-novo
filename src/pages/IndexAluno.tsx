@@ -30,11 +30,11 @@ type Agendamento = Tables<'agendamentos'> & {
 };
 
 const CORES_STATUS_AGENDAMENTO: Record<string, string> = {
-  'pendente': 'bg-red-100 text-red-800 border-red-200',
-  'confirmado': 'bg-green-100 text-green-800 border-green-200',
-  'recusado': 'bg-red-100 text-red-800 border-red-200',
-  'cancelado': 'bg-orange-100 text-orange-800 border-orange-200',
-  'concluido': 'bg-gray-100 text-gray-800 border-gray-200'
+  'pendente': 'bg-orange-400 text-white',
+  'confirmado': 'bg-green-400 text-white',
+  'recusado': 'bg-red-400 text-white',
+  'cancelado': 'bg-orange-400 text-white', // Usando a mesma cor de pendente
+  'concluido': 'bg-blue-400 text-white'
 };
 
 const IndexAluno = () => {
@@ -336,7 +336,7 @@ const IndexAluno = () => {
           <CardHeader>
             <CardTitle>Agendamentos</CardTitle>
           </CardHeader>
-          <CardContent className="pt-0">
+          <CardContent className="pt-0 px-2 sm:px-6">
             <Tabs value={agendamentosTab} onValueChange={setAgendamentosTab}>
               <TabsList className="grid w-full grid-cols-3 mb-4">
                 <TabsTrigger value="hoje">Hoje</TabsTrigger>
