@@ -169,7 +169,7 @@ const AppContent = () => {
   return (
     <TooltipProvider>
       {/* Configura o Toaster para aparecer no topo e centro */}
-      <Sonner position="top-center" richColors />
+      <Sonner position="top-center" richColors theme="light" />
       <RouterProvider router={router} />
       <PwaUpdateNotification />
       <PwaInstallPrompt />
