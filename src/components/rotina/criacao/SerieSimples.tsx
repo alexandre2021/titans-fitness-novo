@@ -99,7 +99,7 @@ export const SerieSimples = ({ exercicio, treinoId, isUltimoExercicio, onUpdate 
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs text-gray-600">Drop</Label>
+                  <Label className="text-xs text-gray-600">Drop-set</Label>
                   <Button
                     type="button"
                     variant="outline"
@@ -142,7 +142,7 @@ export const SerieSimples = ({ exercicio, treinoId, isUltimoExercicio, onUpdate 
                 <div className="flex items-center gap-2 mb-2">
                   <div className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-full text-xs font-medium">
                     <Flame className="h-3 w-3" />
-                    Drop Set
+                    Drop-set
                   </div>
                 </div>
                 

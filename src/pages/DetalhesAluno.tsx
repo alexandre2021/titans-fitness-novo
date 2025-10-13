@@ -155,7 +155,7 @@ const DetalhesAluno = () => {
       )}
 
       {/* Card de Informações do Aluno */}
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader>
           <CardTitle className="flex items-center gap-3">
             <User className="h-5 w-5" />
@@ -163,7 +163,7 @@ const DetalhesAluno = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Avatar e Nome */}
+          {/* Avatar, Nome e Status */}
           <div className="flex items-center gap-4">
             <Avatar className="h-12 w-12">
               {renderAvatar()}
@@ -178,75 +178,69 @@ const DetalhesAluno = () => {
               </Badge>
             </div>
           </div>
-
-          {/* Informações Detalhadas */}
-          {/* Desktop: 2 colunas, Mobile: 1 coluna */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Email</p>
-                  <p className="text-sm text-muted-foreground">{displayValue(aluno.email)}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Telefone</p>
-                  <p className="text-sm text-muted-foreground">{displayValue(aluno.telefone ? formatters.phone(aluno.telefone) : null)}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Data de Nascimento</p>
-                  <p className="text-sm text-muted-foreground">
-                    {displayValue(aluno.data_nascimento ? formatters.date(aluno.data_nascimento) : null)}
-                  </p>
-                </div>
+          
+          {/* Contato */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pt-4 border-t">
+            <div className="flex items-center gap-3">
+              <Mail className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Email</p>
+                <p className="text-sm text-muted-foreground">{displayValue(aluno.email)}</p>
               </div>
             </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Gênero</p>
-                  <p className="text-sm text-muted-foreground">{displayGender(aluno.genero)}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Weight className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Peso</p>
-                  <p className="text-sm text-muted-foreground">{displayValue(aluno.peso, 'kg')}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Ruler className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">Altura</p>
-                  <p className="text-sm text-muted-foreground">{displayValue(aluno.altura, 'cm')}</p>
-                </div>
+            <div className="flex items-center gap-3">
+              <Phone className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Telefone</p>
+                <p className="text-sm text-muted-foreground">{displayValue(aluno.telefone ? formatters.phone(aluno.telefone) : null)}</p>
               </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Endereço e Descrição Pessoal (ocupam a largura total) */}
-          <div className="space-y-4 pt-6 border-t">
-              <div className="flex items-start gap-3">
-                <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium">Endereço</p>
-                  <p className="text-sm text-muted-foreground">{displayValue(aluno.endereco)}</p>
-                </div>
+      <Card>
+        <CardHeader><CardTitle>Dados do Aluno</CardTitle></CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="flex items-center gap-3">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Data de Nascimento</p>
+                <p className="text-sm text-muted-foreground">
+                  {displayValue(aluno.data_nascimento ? formatters.date(aluno.data_nascimento) : null)}
+                </p>
               </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Gênero</p>
+                <p className="text-sm text-muted-foreground">{displayGender(aluno.genero)}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Weight className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Peso</p>
+                <p className="text-sm text-muted-foreground">{displayValue(aluno.peso, 'kg')}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Ruler className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Altura</p>
+                <p className="text-sm text-muted-foreground">{displayValue(aluno.altura, 'cm')}</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
+      <Card>
+        <CardHeader><CardTitle>Outras Informações</CardTitle></CardHeader>
+        <CardContent>
+          <div className="space-y-6">
             <div className="flex items-start gap-3">
               <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
               <div>
@@ -256,17 +250,24 @@ const DetalhesAluno = () => {
                 </p>
               </div>
             </div>
-          </div>
-
-          {/* Nota Informativa */}
-          <div className="bg-muted/50 p-4 rounded-lg">
-            <p className="text-sm text-muted-foreground">
-              <strong>Nota:</strong> As edições das informações são realizadas diretamente pelo aluno 
-              através do aplicativo. Como Professor, você possui acesso apenas para visualização.
-            </p>
+            <div className="flex items-start gap-3">
+              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+              <div>
+                <p className="text-sm font-medium">Endereço</p>
+                <p className="text-sm text-muted-foreground">{displayValue(aluno.endereco)}</p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Nota Informativa */}
+      <div className="bg-muted/50 p-4 rounded-lg">
+        <p className="text-sm text-muted-foreground">
+          <strong>Nota:</strong> As edições das informações são realizadas diretamente pelo aluno 
+          através do aplicativo. Como Professor, você possui acesso apenas para visualização.
+        </p>
+      </div>
 
       {/* Espaçador para botões flutuantes no mobile */}
       <div className="h-20 md:hidden" />

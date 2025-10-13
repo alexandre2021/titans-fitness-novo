@@ -45,7 +45,16 @@ import { toast } from 'sonner';
 import RotinaDetalhesModal from '@/components/rotina/RotinaDetalhesModal';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { ExercicioRotina, Serie } from '@/types/rotina.types';
-import { ExercicioModelo } from './RotinaCriacao'; // Type for creation/editing state
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { ExercicioModelo } from './NovoModelo'; // Type for creation/editing state
 import { Tables } from '@/integrations/supabase/types'; // Supabase generated types
 
 // Componente de modal genérico usando react-modal
@@ -1139,59 +1148,31 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         ResponsiveModal={ResponsiveModal}
       />
 
-      {/* Modal de Confirmação de Exclusão - React Modal BLOQUEADA */}
-<Modal
-  isOpen={showDeleteDialog}
-  onRequestClose={() => {}} // Não permite fechar
-  shouldCloseOnOverlayClick={false}
-  shouldCloseOnEsc={false}
-  className="bg-white rounded-lg p-6 max-w-md w-full mx-4 outline-none"
-  overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
->
-  <div className="flex items-center gap-2 mb-4">
-    <h2 className="text-lg font-semibold">Excluir Rotina</h2>
-  </div>
-  
-  <div className="mb-6">
-    <p className="text-sm text-gray-600 leading-relaxed">
-      Tem certeza que deseja excluir a rotina{" "}
-      <span className="font-semibold text-gray-900">
-        "{selectedRotina?.nome}"
-      </span>?
-    </p>
-    <p className="text-sm text-gray-600 mt-2">
-      {modo === 'professor' ? 'Esta ação não pode ser desfeita e todos os treinos e exercícios serão removidos.' : 'Você não poderá mais acessar esta rotina.'}
-    </p>
-  </div>
-  
-  <div className="flex gap-3 justify-end">
-    <Button 
-      variant="outline" 
-      onClick={handleCancelarExclusao}
-      disabled={isDeleting}
-    >
-      Cancelar
-    </Button>
-    <Button 
-      variant="destructive" 
-      onClick={modo === 'professor' ? handleConfirmarExclusao : handleAlunoExcluirRotina}
-      disabled={isDeleting}
-      className="flex items-center gap-2"
-    >
-      {isDeleting ? (
-        <>
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-          Excluindo...
-        </>
-      ) : (
-        <>
-          <Trash2 className="h-4 w-4" />
-          Excluir
-        </>
-      )}
-    </Button>
-  </div>
-</Modal>
+      {/* Modal de Confirmação de Exclusão */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Rotina?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a rotina "{selectedRotina?.nome}"?
+              {modo === 'professor'
+                ? ' Esta ação não pode ser desfeita e todos os dados associados serão removidos.'
+                : ' Você não poderá mais acessar esta rotina.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelarExclusao} disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={modo === 'professor' ? handleConfirmarExclusao : handleAlunoExcluirRotina}
+              disabled={isDeleting}
+            >
+              {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+              {isDeleting ? 'Excluindo...' : 'Excluir'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Botão Flutuante para Nova Rotina (Apenas para Professor) */}
       {modo === 'professor' && activeTab === 'atual' && (
@@ -1240,9 +1221,8 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
               <div className="flex items-start gap-3 text-sm">
                 <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-medium text-foreground">Dica: Agilize seu trabalho!</p>
                   <p className="text-muted-foreground">
-                    Crie <strong className="text-foreground">Modelos de Rotina</strong> para montar treinos para seus alunos em segundos. Você poderá criá-los na seção "Modelos" do menu principal.
+                    Dica: Agilize seu trabalho com Modelos de Rotina.
                   </p>
                 </div>
               </div>

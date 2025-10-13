@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { X, Search, Link, Dumbbell, Filter, Check, Info } from 'lucide-react';
+import { X, Search, Link, Dumbbell, Filter, Check, Info, Plus } from 'lucide-react';
 import Modal from 'react-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { useExercicios } from '@/hooks/useExercicios';
 import { ExercicioDetalhesModal } from '../execucao/shared/ExercicioDetalhesModal';
 import { Tables } from '@/integrations/supabase/types';
+import { toast } from 'sonner';
 
 // Constantes
 const EQUIPAMENTOS = [
@@ -59,15 +60,17 @@ const CORES_DIFICULDADES: {[key: string]: string} = {
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (exercicios: Tables<'exercicios'>[]) => void;
+  onAdd: (exercicios: Tables<'exercicios'>[], tipo: 'simples' | 'combinada') => void;
   gruposMuscularesFiltro: string[];
+  exerciciosJaAdicionados: string[];
 }
 
 export const ExercicioModal: React.FC<Props> = ({
   isOpen,
   onClose,
   onAdd,
-  gruposMuscularesFiltro
+  gruposMuscularesFiltro,
+  exerciciosJaAdicionados
 }) => {
   const grupoMuscularOptions = useMemo(() => [
     { value: 'todos', label: 'Todos os grupos' },
@@ -115,8 +118,6 @@ export const ExercicioModal: React.FC<Props> = ({
   // Resetar seleção quando modal abre/fecha
   useEffect(() => {
     if (isOpen) {
-      setExerciciosSelecionados([]);
-      setTipoSerie('simples');
       // Se há APENAS um grupo, filtra por ele. Se houver mais, começa mostrando todos.
       if (gruposMuscularesFiltro.length === 1) {
         setFiltros(prev => ({ ...prev, grupo_muscular: gruposMuscularesFiltro[0] }));
@@ -125,6 +126,12 @@ export const ExercicioModal: React.FC<Props> = ({
       }
     }
   }, [isOpen, gruposMuscularesFiltro]);
+
+  // Limpa a seleção quando o tipo de série muda
+  useEffect(() => {
+    setExerciciosSelecionados([]);
+  }, [tipoSerie]);
+
 
   // Função para atualizar filtros
   const atualizarFiltro = (campo: string, valor: string) => {
@@ -191,7 +198,7 @@ export const ExercicioModal: React.FC<Props> = ({
 
   // Toggle seleção de exercício
   const toggleExercicioSelecionado = (exercicio: Tables<'exercicios'>) => {
-    if (!podeSelecionarExercicio(exercicio)) return;
+    if (!podeSelecionarExercicio(exercicio) || exerciciosJaAdicionados.includes(exercicio.id)) return;
 
     const jaEstaSelecionado = exerciciosSelecionados.find(ex => ex.id === exercicio.id);
     
@@ -214,7 +221,7 @@ export const ExercicioModal: React.FC<Props> = ({
 
   // Verificar se pode selecionar exercício
   const podeSelecionarExercicio = (exercicio: Tables<'exercicios'>) => {
-    const jaEstaSelecionado = exerciciosSelecionados.find(ex => ex.id === exercicio.id);
+    const jaEstaSelecionado = exerciciosSelecionados.some(ex => ex.id === exercicio.id);
     
     if (jaEstaSelecionado) return true; // Sempre pode desselecionar
     
@@ -236,22 +243,29 @@ export const ExercicioModal: React.FC<Props> = ({
 
   // Confirmar seleção e adicionar exercício
   const handleConfirmar = () => {
-    if (!isSelecaoValida()) return;
-    onAdd(exerciciosSelecionados);
-    onClose();
+    if (!isSelecaoValida()) return;    
+    onAdd(exerciciosSelecionados, tipoSerie);    
+
+    if (tipoSerie === 'simples' && exerciciosSelecionados.length === 1) {
+      toast.success(`Exercício "${exerciciosSelecionados[0].nome}" adicionado.`);
+    } else if (tipoSerie === 'combinada' && exerciciosSelecionados.length === 2) {
+      toast.success(`Exercícios '${exerciciosSelecionados[0].nome}' e '${exerciciosSelecionados[1].nome}' adicionados.`);
+    }
+
+    // Limpa a seleção para permitir a próxima escolha, sem fechar o modal
+    setExerciciosSelecionados([]);
   };
 
   // Texto para o contador de seleção
   const selecaoTexto = (() => {
     const count = exerciciosSelecionados.length;
-    if (count === 0) return '';
 
     if (tipoSerie === 'combinada') {
-      return `${count}/2 exercício${count > 1 ? 's' : ''} selecionado${count > 1 ? 's' : ''}`;
+      return `Selecione 2 exercícios (${count}/2)`;
     }
-
-    const plural = count > 1 ? 's' : '';
-    return `${count} exercício${plural} selecionado${plural}`;
+    
+    // Para série simples
+    return `Selecione 1 exercício (${count}/1)`;
   })();
 
   return (
@@ -269,8 +283,8 @@ export const ExercicioModal: React.FC<Props> = ({
         <div className="px-6 py-4 border-b flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Dumbbell className="h-5 w-5" />
-              <span className="font-semibold">Adicionar Exercício ao Modelo</span>
+              <Plus className="h-5 w-5" />
+              <span className="font-semibold">Adicionar Exercício(s)</span>
             </div>
             <Button
               variant="ghost"
@@ -421,16 +435,10 @@ export const ExercicioModal: React.FC<Props> = ({
               </div>
             )}
 
-            {/* Informação sobre seleção */}
-            <div className="flex items-center justify-between text-sm">
+            {/* Contador de exercícios encontrados */}
+            <div className="text-sm text-gray-600">
               <span className="text-gray-600">
                 {exerciciosFiltrados.length} exercício(s) encontrado(s)
-              </span>
-              <span className="text-gray-600">
-                {tipoSerie === 'simples' 
-                  ? 'Selecione 1 exercício' 
-                  : `Selecione 2 exercícios (${exerciciosSelecionados.length}/2)`
-                }
               </span>
             </div>
           </div>
@@ -456,18 +464,19 @@ export const ExercicioModal: React.FC<Props> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {exerciciosFiltrados.map((exercicio: Tables<'exercicios'>) => {
                   const estaSelecionado = exerciciosSelecionados.find(ex => ex.id === exercicio.id);
-                  const podeSelecionar = podeSelecionarExercicio(exercicio);
+                  const jaAdicionado = exerciciosJaAdicionados.includes(exercicio.id);
+                  const podeSelecionar = !jaAdicionado && podeSelecionarExercicio(exercicio);
 
                   return (
                     <div
                       key={String(exercicio.id)}
                       className={`
-                        relative p-4 border rounded-lg cursor-pointer transition-all
+                        relative p-4 border rounded-lg transition-all
                         ${estaSelecionado 
                           ? 'border-red-500 bg-red-50 ring-2 ring-red-200' 
                           : podeSelecionar
-                            ? 'border-gray-200 hover:border-red-300 hover:bg-red-50'
-                            : 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-50'
+                            ? 'border-gray-200 cursor-pointer hover:border-red-300 hover:bg-red-50'
+                            : 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-60'
                         }
                       `}
                       onClick={() => podeSelecionar && toggleExercicioSelecionado(exercicio)}
@@ -484,6 +493,12 @@ export const ExercicioModal: React.FC<Props> = ({
                         >
                           <Info className="h-4 w-4 text-blue-600" />
                         </Button>
+
+                        {jaAdicionado && !estaSelecionado && (
+                          <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center" title="Já adicionado a este treino">
+                            <Check className="h-4 w-4 text-white" />
+                          </div>
+                        )}
 
                         {/* Check de seleção */}
                         {estaSelecionado && (
@@ -535,45 +550,28 @@ export const ExercicioModal: React.FC<Props> = ({
 
         {/* Footer fixo */}
         <div className="px-6 py-4 border-t bg-gray-50 flex-shrink-0">
-          {/* Mobile: Contador em linha separada */}
-          <div className="block md:hidden mb-3">
-            {exerciciosSelecionados.length > 0 && (
-              <div className="text-sm text-gray-600 text-center">{selecaoTexto}</div>
-            )}
-          </div>
-
-          {/* Linha dos botões */}
-          <div className="flex items-center justify-between">
-            {/* Desktop: Contador à esquerda */}
-            <div className="hidden md:block text-sm text-gray-600">
-              {exerciciosSelecionados.length > 0 && (
-                <span>{selecaoTexto}</span>
-              )}
-            </div>
-
-            {/* Mobile: Espaçador */}
-            <div className="block md:hidden"></div>
-
-            {/* Botões */}
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-              >
-                <X className="h-4 w-4 mr-2" />
-                Cancelar
-              </Button>
-              
-              <Button
-                type="button"
-                onClick={handleConfirmar}
-                disabled={!isSelecaoValida()}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                <Check className="h-4 w-4 mr-2" />
-                {`Adicionar ${tipoSerie === 'simples' ? 'Exercício' : 'Exercícios'}`}
-              </Button>
+          <div className="flex justify-end">
+            <div className="flex flex-col items-end gap-2">
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onClose}
+                >
+                  <Check className="h-4 w-4 mr-2" />
+                  Concluir
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleConfirmar}
+                  disabled={!isSelecaoValida()}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar
+                </Button>
+              </div>
+              <div className="text-sm text-gray-600 h-5">{selecaoTexto}</div>
             </div>
           </div>
         </div>

@@ -1,10 +1,7 @@
 // src/pages/RotinaCriacao.tsx
 
 import React, { useState, useEffect, useCallback, FormEvent, useRef } from 'react';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -14,9 +11,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import CustomSelect from "@/components/ui/CustomSelect";
+import CustomSelect from '@/components/ui/CustomSelect';
 import { toast } from 'sonner';
-import { Plus, Trash2, Save, X, Dumbbell, Check, Loader2, ChevronRight, ChevronLeft, GripVertical } from 'lucide-react';
+import { Plus, Trash2, Save, X, Dumbbell, Check, Loader2, ChevronRight, ChevronLeft, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
@@ -160,11 +157,6 @@ const RotinaConfiguracaoStep = ({ onAvancar, initialData, onCancelar, aluno, onU
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Mantém o estado principal atualizado
-  useEffect(() => {
-    onUpdate({ configuracao: formData });
-  }, [formData, onUpdate]);
-
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.nome || formData.nome.trim().length < 3) newErrors.nome = "O nome da rotina deve ter pelo menos 3 caracteres.";
@@ -257,89 +249,42 @@ const RotinaConfiguracaoStep = ({ onAvancar, initialData, onCancelar, aluno, onU
   );
 };
 
-const SortableTreinoCard = ({ id, treino, index, adicionarGrupoMuscular, removerGrupoMuscular }: {
-  id: string;
-  treino: TreinoTemp;
-  index: number;
-  adicionarGrupoMuscular: (index: number, grupo: string) => void;
-  removerGrupoMuscular: (index: number, grupo: string) => void;
-}) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 10 : undefined,
-  };
-
-  const treinoCompleto = treino.grupos_musculares.length > 0;
-
-  return (
-    <div ref={setNodeRef} style={style} {...attributes}>
-      <Card className={treinoCompleto ? "border-green-200" : "border-gray-200"}>
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center justify-between text-lg">
-            <div {...listeners} className="flex items-center cursor-grab p-2 -m-2 rounded-lg">
-              <GripVertical className="h-5 w-5 mr-2 text-gray-400" />
-              Treino {String.fromCharCode(65 + index)}
-            </div>
-            {treinoCompleto && (
-              <Badge className="bg-green-100 text-green-800 text-xs flex items-center gap-1">
-                <Check className="h-3 w-3 mr-1" />
-                Requisitos
-              </Badge>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-0">
-          <div className="space-y-2">
-            <Label>Grupos Musculares</Label>
-            <div className="flex flex-wrap gap-2 min-h-[2.5rem] p-2 border rounded-md bg-gray-50">
-              {treino.grupos_musculares.length > 0 ? (
-                treino.grupos_musculares.map(grupo => (
-                  <Badge key={grupo} variant="secondary" className={`${CORES_GRUPOS_MUSCULARES[grupo] || 'bg-gray-100 text-gray-800'} cursor-pointer hover:opacity-80`} onClick={() => removerGrupoMuscular(index, grupo)}>
-                    {grupo} <Trash2 className="h-3 w-3 ml-1.5" />
-                  </Badge>
-                ))
-              ) : <span className="text-gray-500 text-sm p-1">Selecione os grupos musculares abaixo</span>}
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label className="text-sm text-gray-600">Adicionar Grupos:</Label>
-            <div className="flex flex-wrap gap-2">
-              {GRUPOS_MUSCULARES.filter(g => !treino.grupos_musculares.includes(g)).map(g => (
-                <Badge key={g} variant="outline" className="cursor-pointer hover:bg-gray-100" onClick={() => adicionarGrupoMuscular(index, g)}><Plus className="h-3 w-3 mr-1" />{g}</Badge>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
-
-// --- Etapa 2: Componente de Treinos (EXATAMENTE igual ao NovoModelo) ---
+// --- Etapa 2: Componente de Treinos ---
 const RotinaTreinosStep = ({ onAvancar, onVoltar, initialData, configuracao, onCancelar, onUpdate }: RotinaTreinosStepProps) => {
   const [treinos, setTreinos] = useState<TreinoTemp[]>(() => {
+    // Se já tem treinos salvos (vindo do rascunho/storage), usa eles
     if (initialData && initialData.length > 0) {
       return initialData;
     }
+    
+    // Se não tem, gera treinos vazios baseado na configuração da Etapa 1
     if (configuracao?.treinos_por_semana) {
-      const frequencia = configuracao.treinos_por_semana;
-      const treinosIniciais: TreinoTemp[] = [];
       const nomesTreinos = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
-      for (let i = 0; i < frequencia; i++) {
-        treinosIniciais.push({
-          id: `treino_draft_${Date.now()}_${i}`,
-          nome: `Treino ${nomesTreinos[i] || String.fromCharCode(65 + i)}`,
-          grupos_musculares: [],
-          ordem: i + 1,
-        });
-      }
-      return treinosIniciais;
+      return Array.from({ length: configuracao.treinos_por_semana }, (_, i) => ({
+        id: `treino_draft_${Date.now()}_${i}`,
+        nome: `Treino ${nomesTreinos[i] || String.fromCharCode(65 + i)}`,
+        grupos_musculares: [],
+        ordem: i + 1,
+      }));
     }
     return [];
   });
+
+  // Sincroniza o estado interno se os dados iniciais ou a configuração mudarem.
+  useEffect(() => {
+    if (initialData && initialData.length > 0) {
+      setTreinos(initialData);
+    } else if (configuracao?.treinos_por_semana) {
+      const nomesTreinos = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+      const novosTreinos = Array.from({ length: configuracao.treinos_por_semana }, (_, i) => ({
+        id: `treino_draft_${Date.now()}_${i}`,
+        nome: `Treino ${nomesTreinos[i] || String.fromCharCode(65 + i)}`,
+        grupos_musculares: [],
+        ordem: i + 1,
+      }));
+      setTreinos(novosTreinos);
+    }
+  }, [initialData, configuracao?.treinos_por_semana]);
 
   const adicionarGrupoMuscular = (treinoIndex: number, grupo: string) => {
     setTreinos(prev => prev.map((treino, index) => {
@@ -359,25 +304,22 @@ const RotinaTreinosStep = ({ onAvancar, onVoltar, initialData, configuracao, onC
     }));
   };
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  const handleMoverTreino = (index: number, direcao: 'cima' | 'baixo') => {
+    setTreinos(prev => {
+      const novosTreinos = [...prev];
+      const newIndex = direcao === 'cima' ? index - 1 : index + 1;
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      const oldIndex = treinos.findIndex((t) => t.id === active.id);
-      const newIndex = treinos.findIndex((t) => t.id === over.id);
+      if (newIndex < 0 || newIndex >= novosTreinos.length) return prev;
+
+      // Troca os treinos de posição
+      [novosTreinos[index], novosTreinos[newIndex]] = [novosTreinos[newIndex], novosTreinos[index]];
+
+      // Renomeia e reordena todos os treinos
       const nomesTreinos = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
-      setTreinos((items) => arrayMove(items, oldIndex, newIndex).map((item, index) => ({
-        ...item,
-        ordem: index + 1,
-        nome: `Treino ${nomesTreinos[index] || String.fromCharCode(65 + index)}`
-      })));
-    }
+      return novosTreinos.map((treino, i) => ({
+        ...treino, nome: `Treino ${nomesTreinos[i] || String.fromCharCode(65 + i)}`, ordem: i + 1
+      }));
+    });
   }
 
   const treinosCompletos = treinos.filter(t => t.grupos_musculares.length > 0).length;
@@ -398,7 +340,7 @@ const RotinaTreinosStep = ({ onAvancar, onVoltar, initialData, configuracao, onC
     <Card>
       <CardHeader>
         <CardTitle>Etapa 2: Adição de Grupos Musculares</CardTitle>
-        <p className="text-muted-foreground">Defina os nomes e grupos musculares para cada treino da semana.</p>
+        <p className="text-muted-foreground">Defina os grupos musculares para cada treino da semana.</p>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
@@ -416,32 +358,41 @@ const RotinaTreinosStep = ({ onAvancar, onVoltar, initialData, configuracao, onC
         </CardContent>
       </Card>
       
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={treinos.map(t => t.id)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-4">
-              {treinos.map((treino, index) => (
-                <SortableTreinoCard key={treino.id} id={treino.id} treino={treino} index={index} adicionarGrupoMuscular={adicionarGrupoMuscular} removerGrupoMuscular={removerGrupoMuscular} />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
+        <div className="space-y-4">
+          {treinos.map((treino, index) => {
+            const treinoCompleto = treino.grupos_musculares.length > 0;
+            return (
+              <Card key={treino.id} className={treinoCompleto ? "border-green-200" : "border-gray-200"}>
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center justify-between text-lg">
+                    <div className="flex items-center gap-2">
+                      <div className="flex flex-col -space-y-2">
+                        <Button type="button" variant="ghost" size="sm" onClick={() => handleMoverTreino(index, 'cima')} disabled={index === 0} className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"><ChevronUp className="h-5 w-5" /></Button>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => handleMoverTreino(index, 'baixo')} disabled={index === treinos.length - 1} className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"><ChevronDown className="h-5 w-5" /></Button>
+                      </div>
+                      {treino.nome}
+                    </div>
+                    {treinoCompleto && <Badge className="bg-green-100 text-green-800 text-xs flex items-center gap-1"><Check className="h-3 w-3 mr-1" />Requisitos</Badge>}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 pt-0">
+                  <div className="space-y-2"><Label>Grupos Musculares</Label><div className="flex flex-wrap gap-2 min-h-[2.5rem] p-2 border rounded-md bg-gray-50">{treino.grupos_musculares.length > 0 ? treino.grupos_musculares.map(grupo => (<Badge key={grupo} variant="secondary" className={`${CORES_GRUPOS_MUSCULARES[grupo] || 'bg-gray-100 text-gray-800'} cursor-pointer hover:opacity-80`} onClick={() => removerGrupoMuscular(index, grupo)}>{grupo} <Trash2 className="h-3 w-3 ml-1.5" /></Badge>)) : <span className="text-gray-500 text-sm p-1">Selecione os grupos musculares abaixo</span>}</div></div>
+                  <div className="space-y-2"><Label className="text-sm text-gray-600">Adicionar Grupos:</Label><div className="flex flex-wrap gap-2">{GRUPOS_MUSCULARES.filter(g => !treino.grupos_musculares.includes(g)).map(g => (<Badge key={g} variant="outline" className="cursor-pointer hover:bg-gray-100" onClick={() => adicionarGrupoMuscular(index, g)}><Plus className="h-3 w-3 mr-1" />{g}</Badge>))}</div></div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       
         {/* Espaçamento para botões fixos */}
       <div className="pb-20 md:pb-6" />
 
       {/* Botões de navegação - Desktop */}
       <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t p-4 hidden md:flex justify-between items-center z-50 px-6 lg:px-8">
-          <Button variant="outline" onClick={handleVoltarClick} size="lg">
-              <ChevronLeft className="h-4 w-4 mr-2" />
-              Voltar
-          </Button>
+          <Button variant="outline" onClick={handleVoltarClick} size="lg"><ChevronLeft className="h-4 w-4 mr-2" />Voltar</Button>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={onCancelar} size="lg">
-                Cancelar
-            </Button>
-            <Button onClick={handleProximo} disabled={!requisitosAtendidos} size="lg">
-              Avançar para Exercícios <ChevronRight className="h-4 w-4 ml-2" />
-            </Button>
+            <Button variant="ghost" onClick={onCancelar} size="lg">Cancelar</Button>
+            <Button onClick={handleProximo} disabled={!requisitosAtendidos} size="lg">Avançar para Exercícios <ChevronRight className="h-4 w-4 ml-2" /></Button>
           </div>
       </div>
 
@@ -468,23 +419,46 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, initialData, treinos, onU
   const [treinoAtual, setTreinoAtual] = useState<TreinoTemp | null>(null);
   const { getExercicioInfo } = useExercicioLookup();
 
-  useEffect(() => { onUpdate({ exercicios }); }, [exercicios, onUpdate]);
+  // ✅ NOVO: Sincroniza com initialData quando ele muda
+  useEffect(() => {
+    console.log('🔄 useEffect RotinaExerciciosStep - initialData mudou:', initialData);
+    setExercicios(initialData || {});
+  }, [initialData]);
+
+  // ✅ NOVO: Salvar exercícios ao voltar
+  const handleVoltarClick = () => {
+    console.log('💾 Salvando exercícios antes de voltar:', exercicios);
+    onUpdate({ exercicios }); // ← SALVA os exercícios!
+    onVoltar();
+  };
 
   const handleAbrirModal = (treino: TreinoTemp) => {
+    console.log('🔍 Abrindo modal para treino:', treino.id);
+    console.log('📦 Exercícios atuais do treino:', exercicios[treino.id]);
     setTreinoAtual(treino);
     setIsModalOpen(true);
   };
 
-  const handleAdicionarExercicios = (exerciciosSelecionados: Tables<'exercicios'>[]) => {
+  const handleAdicionarExercicios = (exerciciosSelecionados: Tables<'exercicios'>[], tipo: 'simples' | 'combinada') => {
     if (!treinoAtual || exerciciosSelecionados.length === 0) return;
+
     let exerciciosParaAdicionar: ExercicioModelo[] = [];
-    if (exerciciosSelecionados.length === 2) {
-      exerciciosParaAdicionar.push({ id: `ex_modelo_${Date.now()}`, exercicio_1_id: exerciciosSelecionados[0].id, exercicio_2_id: exerciciosSelecionados[1].id, tipo: 'combinada', series: [{ id: `serie_comb_${Date.now()}`, numero_serie: 1, repeticoes_1: 0, carga_1: 0, repeticoes_2: 0, carga_2: 0, intervalo_apos_serie: 90 }], intervalo_apos_exercicio: 120 });
-    } else {
+
+    if (tipo === 'combinada' && exerciciosSelecionados.length === 2) {
+      exerciciosParaAdicionar.push({
+        id: `ex_modelo_${Date.now()}_${Math.random()}`,
+        exercicio_1_id: exerciciosSelecionados[0].id,
+        exercicio_2_id: exerciciosSelecionados[1].id,
+        tipo: 'combinada',
+        series: [{ id: `serie_comb_${Date.now()}`, numero_serie: 1, repeticoes_1: 0, carga_1: 0, repeticoes_2: 0, carga_2: 0, intervalo_apos_serie: 90 }],
+        intervalo_apos_exercicio: 120,
+      });
+    } else { // Série Simples
       exerciciosParaAdicionar = exerciciosSelecionados.map(ex => ({ id: `ex_modelo_${Date.now()}_${Math.random()}`, exercicio_1_id: ex.id, tipo: 'simples', series: [{ id: `serie_${Date.now()}`, numero_serie: 1, repeticoes: 0, carga: 0, intervalo_apos_serie: 60 }], intervalo_apos_exercicio: 90 }));
     }
+
     setExercicios(prev => ({ ...prev, [treinoAtual.id]: [...(prev[treinoAtual.id] || []), ...exerciciosParaAdicionar] }));
-    setIsModalOpen(false);
+    // Não fecha o modal, permitindo adicionar mais exercícios
   };
 
   const handleRemoverExercicio = (treinoId: string, exercicioId: string) => {
@@ -493,6 +467,26 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, initialData, treinos, onU
 
   const handleAtualizarExercicio = (treinoId: string, exercicioId: string, dados: Partial<ExercicioModelo>) => {
     setExercicios(prev => ({ ...prev, [treinoId]: (prev[treinoId] || []).map(ex => ex.id === exercicioId ? { ...ex, ...dados } : ex) }));
+  };
+
+  const handleMoverExercicio = (treinoId: string, exercicioIndex: number, direcao: 'cima' | 'baixo') => {
+    setExercicios(prev => {
+      const treinoExercicios = prev[treinoId] || [];
+      if (treinoExercicios.length < 2) return prev;
+
+      const newIndex = direcao === 'cima' ? exercicioIndex - 1 : exercicioIndex + 1;
+
+      if (newIndex < 0 || newIndex >= treinoExercicios.length) {
+        return prev;
+      }
+
+      const novosExercicios = [...treinoExercicios];
+      const temp = novosExercicios[exercicioIndex];
+      novosExercicios[exercicioIndex] = novosExercicios[newIndex];
+      novosExercicios[newIndex] = temp;
+
+      return { ...prev, [treinoId]: novosExercicios };
+    });
   };
 
   const requisitosAtendidos = treinos.every(t => exercicios[t.id] && exercicios[t.id].length > 0);
@@ -533,7 +527,7 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, initialData, treinos, onU
               </Button>
               {/* Botão para Desktop: com ícone e texto */}
               <Button type="button" variant="default" onClick={() => handleAbrirModal(treino)} size="sm" className="hidden md:flex">
-                <Plus className="h-4 w-4 mr-2" /> Exercício
+                <Plus className="h-4 w-4 mr-2" /> Exercício(s)
               </Button>
             </CardHeader>
             <CardContent>
@@ -543,19 +537,25 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, initialData, treinos, onU
                     const exercicioInfo1 = getExercicioInfo(ex.exercicio_1_id);
                     const exercicioInfo2 = ex.exercicio_2_id ? getExercicioInfo(ex.exercicio_2_id) : null;
                     const nomeExercicio = ex.tipo === 'combinada' && exercicioInfo2 ? `${exercicioInfo1.nome} + ${exercicioInfo2.nome}` : exercicioInfo1.nome;
+                    const isPrimeiroExercicio = exIndex === 0;
                     const isUltimoExercicioDoTreino = exIndex === exercicios[treino.id].length - 1;
 
                     return (
                       <div key={ex.id} className="border-t pt-4 first:border-t-0 first:pt-0">
-                        <div className="flex items-start justify-between mb-3">
-                          <h4 className="font-medium text-gray-900">{nomeExercicio}</h4>
-                          <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoverExercicio(treino.id, ex.id)} className="text-gray-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></Button>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <div className="flex flex-col -space-y-2">
+                              <Button type="button" variant="ghost" size="sm" onClick={() => handleMoverExercicio(treino.id, exIndex, 'cima')} disabled={isPrimeiroExercicio} className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"><ChevronUp className="h-5 w-5" /></Button>
+                              <Button type="button" variant="ghost" size="sm" onClick={() => handleMoverExercicio(treino.id, exIndex, 'baixo')} disabled={isUltimoExercicioDoTreino} className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"><ChevronDown className="h-5 w-5" /></Button>
+                            </div>
+                            <h4 className="font-medium text-gray-900">{nomeExercicio}</h4>
+                          </div>
+                          <div>
+                            <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoverExercicio(treino.id, ex.id)} className="text-gray-400 hover:text-red-500 h-8 w-8 p-0"><Trash2 className="h-4 w-4" /></Button>
+                          </div>
                         </div>
-                        {ex.tipo === 'simples' ? (
-                          <SerieSimples exercicio={ex} treinoId={treino.id} isUltimoExercicio={isUltimoExercicioDoTreino} onUpdate={dados => handleAtualizarExercicio(treino.id, ex.id, dados)} />
-                        ) : (
-                          <SerieCombinada exercicio={ex} treinoId={treino.id} isUltimoExercicio={isUltimoExercicioDoTreino} onUpdate={dados => handleAtualizarExercicio(treino.id, ex.id, dados)} />
-                        )}
+                        {ex.tipo === 'simples' ? <SerieSimples exercicio={ex} treinoId={treino.id} isUltimoExercicio={isUltimoExercicioDoTreino} onUpdate={dados => handleAtualizarExercicio(treino.id, ex.id, dados)} />
+                         : <SerieCombinada exercicio={ex} treinoId={treino.id} isUltimoExercicio={isUltimoExercicioDoTreino} onUpdate={dados => handleAtualizarExercicio(treino.id, ex.id, dados)} />}
                       </div>
                     );
                   })}
@@ -576,7 +576,7 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, initialData, treinos, onU
 
         {/* Botões de navegação - Desktop */}
         <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t p-4 hidden md:flex justify-between items-center z-50 px-6 lg:px-8">
-          <Button variant="outline" onClick={onVoltar} size="lg" disabled={isSaving}><ChevronLeft className="h-4 w-4 mr-2" /> Voltar</Button>
+          <Button variant="outline" onClick={handleVoltarClick} size="lg" disabled={isSaving}><ChevronLeft className="h-4 w-4 mr-2" /> Voltar</Button>
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={onCancelar} size="lg" disabled={isSaving}>Cancelar</Button>
             <Button onClick={onFinalizar} disabled={!requisitosAtendidos || isSaving} size="lg" className="bg-green-600 hover:bg-green-700">
@@ -588,7 +588,7 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, initialData, treinos, onU
         {/* Botões de navegação - Mobile */}
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 md:hidden z-50">
           <div className="flex justify-between items-center">
-              <Button variant="outline" onClick={onVoltar} size="lg" disabled={isSaving}>Voltar</Button>
+            <Button variant="outline" onClick={handleVoltarClick} size="lg" disabled={isSaving}>Voltar</Button>
               <div className="flex items-center gap-2">
                 <Button variant="ghost" onClick={onCancelar} size="lg" disabled={isSaving}>Cancelar</Button>
                 <Button onClick={onFinalizar} disabled={!requisitosAtendidos || isSaving} className="bg-green-600 hover:bg-green-700" size="lg">
@@ -597,7 +597,14 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, initialData, treinos, onU
               </div>
           </div>
         </div>
-        {isModalOpen && <ExercicioModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onAdd={handleAdicionarExercicios} gruposMuscularesFiltro={treinoAtual?.grupos_musculares || []} />}
+        {isModalOpen && (
+          <ExercicioModal 
+            isOpen={isModalOpen} 
+            onClose={() => setIsModalOpen(false)} 
+            onAdd={handleAdicionarExercicios} 
+            gruposMuscularesFiltro={treinoAtual?.grupos_musculares || []}
+            exerciciosJaAdicionados={treinoAtual ? (exercicios[treinoAtual.id] || []).flatMap(ex => [ex.exercicio_1_id, ex.exercicio_2_id]).filter(Boolean) as string[] : []}
+          />)}
       </div>
       </CardContent>
     </Card>
@@ -607,6 +614,7 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, initialData, treinos, onU
 const RotinaCriacao = () => {
   const { alunoId } = useParams<{ alunoId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
 
   const [aluno, setAluno] = useState<Aluno | null>(null);
@@ -649,106 +657,127 @@ const RotinaCriacao = () => {
 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const updateStorage = useCallback((data: Partial<RotinaEmCriacao>) => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-    setSaveStatus('saving');
-
-    setTimeout(() => {
+  const updateStorage = useCallback((data: Partial<RotinaEmCriacao>): Promise<void> => {
+    return new Promise((resolve) => {
       setRotinaEmCriacao(prev => {
         const newData = { ...prev, ...data };
         sessionStorage.setItem(`${STORAGE_KEY}_${alunoId}`, JSON.stringify(newData));
+        resolve();
         return newData;
       });
-      setSaveStatus('saved');
-      saveTimeoutRef.current = setTimeout(() => {
-        setSaveStatus('idle');
-      }, 2000);
-    }, 300);
+    });
   }, [alunoId]);
 
-  const handleAvancarConfiguracao = (data: ModeloConfiguracaoData) => {
-    const oldConfig = rotinaEmCriacao.configuracao;
-    const oldTreinos = rotinaEmCriacao.treinos || [];
-    const oldExercicios = rotinaEmCriacao.exercicios || {};
-
+  const handleAvancarConfiguracao = async (data: ModeloConfiguracaoData) => {
+    // ✅ CORRIGIDO: Pega a frequência do STORAGE (não da configuração atual do formulário)
+    const storageFrequency = rotinaEmCriacao.configuracao?.treinos_por_semana;
     const newFrequency = data.treinos_por_semana;
-    const oldFrequency = oldConfig?.treinos_por_semana;
-
-    let updatedTreinos = [...oldTreinos];
-    const updatedExercicios = { ...oldExercicios };
-
-    // Ajusta o número de treinos se a frequência mudou
-    if (newFrequency !== undefined && oldFrequency !== undefined && newFrequency !== oldFrequency) {
-      const currentCount = updatedTreinos.length;
-
-      if (newFrequency > currentCount) {
-        // Aumentou a frequência: adiciona novos treinos vazios
-        const nomesTreinos = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
-        for (let i = currentCount; i < newFrequency; i++) {
-          updatedTreinos.push({
-            id: `treino_draft_${Date.now()}_${i}`,
-            nome: `Treino ${nomesTreinos[i] || String.fromCharCode(65 + i)}`,
-            grupos_musculares: [],
-            ordem: i + 1,
-          });
-        }
-      } else if (newFrequency < currentCount) {
-        // Diminuiu a frequência: remove treinos e seus exercícios
-        const treinosParaRemover = updatedTreinos.slice(newFrequency);
-        updatedTreinos = updatedTreinos.slice(0, newFrequency);
-
-        treinosParaRemover.forEach(treino => {
-          if (updatedExercicios[treino.id]) {
-            delete updatedExercicios[treino.id];
-          }
-        });
-      }
+  
+    if (newFrequency === undefined) {
+      await updateStorage({ configuracao: data, etapaAtual: 'treinos' });
+      setEtapa('treinos');
+      return;
     }
+  
+    // ✅ Compara a frequência do STORAGE com a nova
+    if (storageFrequency !== undefined && newFrequency !== storageFrequency) {
+      toast.info("A frequência de treinos foi alterada.", {
+        description: "Os treinos e exercícios foram reiniciados para se adequar à nova configuração."
+      });
+  
+      const nomesTreinos = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+      const novosTreinos = Array.from({ length: newFrequency }, (_, i) => ({
+        id: `treino_draft_${Date.now()}_${i}`,
+        nome: `Treino ${nomesTreinos[i] || String.fromCharCode(65 + i)}`,
+        grupos_musculares: [],
+        ordem: i + 1,
+      }));
 
-    updateStorage({ configuracao: data, treinos: updatedTreinos, exercicios: updatedExercicios, etapaAtual: 'treinos' });
+      // Zera treinos e exercícios
+      await updateStorage({
+        configuracao: data,
+        treinos: novosTreinos,
+        exercicios: {},
+        etapaAtual: 'treinos'
+      });
+    } else {
+      await updateStorage({ 
+        configuracao: data, 
+        etapaAtual: 'treinos' 
+      });
+    }
     setEtapa('treinos');
   };
 
   const handleAvancarTreinos = (data: TreinoTemp[]) => {
-    const oldExercicios = rotinaEmCriacao.exercicios || {};
-    const newExercicios = { ...oldExercicios };
-    let hasChanges = false;
+    const oldTreinos = rotinaEmCriacao.treinos || [];
+    
+    console.log('🔍 DEBUG handleAvancarTreinos DETALHADO:');
+    console.log('📊 Treinos antigos:', JSON.stringify(oldTreinos, null, 2));
+    console.log('📊 Treinos novos:', JSON.stringify(data, null, 2));
+    console.log('🆔 IDs dos treinos antigos:', oldTreinos.map(t => t.id));
+    console.log('🆔 IDs dos treinos novos:', data.map(t => t.id));
+    console.log('📦 Exercícios atuais no storage:', rotinaEmCriacao.exercicios);
+    
+    // ✅ Verifica se é primeira vez OU se todos os treinos antigos estavam vazios
+    const todosOldTreinosVazios = oldTreinos.every(t => t.grupos_musculares.length === 0);
+    const isPrimeiraVez = oldTreinos.length === 0 || todosOldTreinosVazios;
 
-    const compareMuscleGroups = (arr1: string[], arr2: string[]) => {
-      if (arr1.length !== arr2.length) return false;
-      const sorted1 = [...arr1].sort();
-      const sorted2 = [...arr2].sort();
-      return sorted1.every((value, index) => value === sorted2[index]);
-    };
+    // console.log('🔍 DEBUG handleAvancarTreinos DETALHADO:');
+    // console.log('📊 Treinos antigos:', JSON.stringify(oldTreinos, null, 2));
+    // console.log('📊 Treinos novos:', JSON.stringify(data, null, 2));
+    console.log('🆕 É primeira vez (ou todos vazios)?', isPrimeiraVez);
 
-    data.forEach(newTreino => {
-      const oldTreino = rotinaEmCriacao.treinos?.find(t => t.id === newTreino.id);
-
-      if (oldTreino && !compareMuscleGroups(oldTreino.grupos_musculares, newTreino.grupos_musculares)) {
-        const exercisesForThisTreino = newExercicios[newTreino.id] || [];
-
-        if (exercisesForThisTreino.length > 0) {
-          const filteredExercises = exercisesForThisTreino.filter(ex => {
-            const info1 = getExercicioInfo(ex.exercicio_1_id);
-            if (info1.grupo_muscular && newTreino.grupos_musculares.includes(info1.grupo_muscular)) return true;
-            if (ex.exercicio_2_id) {
-              const info2 = getExercicioInfo(ex.exercicio_2_id);
-              if (info2.grupo_muscular && newTreino.grupos_musculares.includes(info2.grupo_muscular)) return true;
-            }
-            return false;
-          });
-
-          if (filteredExercises.length < exercisesForThisTreino.length) {
-            toast.info(`Exercícios removidos do ${newTreino.nome}`, { description: "Alguns exercícios foram removidos por não pertencerem mais aos grupos musculares selecionados." });
-          }
-          newExercicios[newTreino.id] = filteredExercises;
-          hasChanges = true;
-        }
-      }
+    // Comparação detalhada
+    console.log('📏 Quantidade de treinos:', {
+      antigos: oldTreinos.length,
+      novos: data.length,
+      mudou: data.length !== oldTreinos.length
     });
-    updateStorage({ treinos: data, exercicios: hasChanges ? newExercicios : oldExercicios, etapaAtual: 'exercicios' });
+
+    // ✅ CORRIGIDO: Verifica mudanças APENAS nos grupos musculares, IGNORANDO ordem/nome
+    const mudouAlgoNosTreinos = data.length !== oldTreinos.length || data.some((newTreino) => {
+      const oldTreino = oldTreinos.find(t => t.id === newTreino.id); // ✅ CORREÇÃO: Encontrar treino antigo pelo ID
+      if (!oldTreino) { // Se o treino novo não foi encontrado no array antigo (pelo ID), é uma mudança
+        console.log(`✨ Treino ${newTreino.nome} (ID: ${newTreino.id}) é NOVO ou seu ID mudou`);
+        return true;
+      }
+      
+      const oldGrupos = oldTreino.grupos_musculares.slice().sort();
+      const newGrupos = newTreino.grupos_musculares.slice().sort();
+      
+      const gruposMudaram = JSON.stringify(oldGrupos) !== JSON.stringify(newGrupos);
+      
+      const index = data.findIndex(t => t.id === newTreino.id);
+      console.log(`🔎 Treino ${index} (${newTreino.nome}):`, {
+        'grupos antigos': oldGrupos,
+        'grupos novos': newGrupos,
+        'mudou': gruposMudaram
+      });
+      
+      // ✅ Compara APENAS grupos musculares (ignora nome/ordem)
+      return gruposMudaram;
+    });
+
+    console.log('🎯 Resultado final: mudouAlgoNosTreinos =', mudouAlgoNosTreinos);
+
+    if (mudouAlgoNosTreinos) {
+      console.log('✅ RESETANDO EXERCÍCIOS!');
+      
+      // ✅ SÓ mostra toast se NÃO for a primeira vez E se os treinos não estavam todos vazios
+      if (!isPrimeiraVez) {
+        toast.info("A estrutura dos treinos foi alterada.", {
+          description: "Todos os exercícios foram reiniciados para garantir a consistência."
+        });
+      }
+      
+      updateStorage({ treinos: data, exercicios: {}, etapaAtual: 'exercicios' });
+    } else {
+      console.log('⚠️ MANTENDO EXERCÍCIOS');
+      
+      updateStorage({ treinos: data, etapaAtual: 'exercicios' });
+    }
+
     setEtapa('exercicios');
   };
 
@@ -774,7 +803,7 @@ const RotinaCriacao = () => {
 
     setIsSaving(true);
 
-    const { configuracao, treinos, exercicios } = rotinaEmCriacao;
+    const { draftId, configuracao, treinos, exercicios } = rotinaEmCriacao;
 
     if (!configuracao || !configuracao.nome || configuracao.nome.trim() === '') {
       toast.error("Nome da rotina é obrigatório", { description: "Por favor, forneça um nome para a rotina antes de salvar como rascunho." });
@@ -783,31 +812,69 @@ const RotinaCriacao = () => {
     }
 
     try {
-      // 1. Inserir a rotina principal como rascunho
-      const { data: rotinaCriada, error: erroRotina } = await supabase
-        .from('rotinas')
-        .insert({
-          aluno_id: alunoId,
-          professor_id: user.id,
-          nome: configuracao.nome || `Rascunho - ${new Date().toLocaleDateString()}`,
-          objetivo: configuracao.objetivo || null,
-          dificuldade: configuracao.dificuldade || null, // Permite nulo, conforme alteração no DB
-          treinos_por_semana: configuracao.treinos_por_semana || 1, // Valor padrão para NOT NULL
-          duracao_semanas: configuracao.duracao_semanas || 1, // Valor padrão para NOT NULL
-          data_inicio: configuracao.data_inicio || null,
-          descricao: configuracao.descricao || null,
-          status: 'Rascunho', // Chave para salvar como rascunho
-          valor_total: 0, // Valor padrão para NOT NULL
-          forma_pagamento: 'PIX', // Valor padrão para NOT NULL
-        })
-        .select()
-        .single();
+      let rotinaId: string;
 
-      if (erroRotina) throw erroRotina;
+      if (draftId) {
+        // ATUALIZA o rascunho existente
+        const { data: rotinaAtualizada, error: erroUpdate } = await supabase
+          .from('rotinas')
+          .update({
+            nome: configuracao.nome,
+            objetivo: configuracao.objetivo,
+            dificuldade: configuracao.dificuldade,
+            treinos_por_semana: configuracao.treinos_por_semana,
+            duracao_semanas: configuracao.duracao_semanas,
+            data_inicio: configuracao.data_inicio,
+            descricao: configuracao.descricao || null,
+            status: 'Rascunho',
+          })
+          .eq('id', draftId)
+          .select()
+          .single();
+        if (erroUpdate) throw erroUpdate;
+        rotinaId = rotinaAtualizada.id;
 
-      // 2. Inserir treinos, exercícios e séries se existirem
+        // Limpa dados antigos associados
+        const { data: treinosAntigos } = await supabase.from('treinos').select('id').eq('rotina_id', rotinaId);
+        
+        if (treinosAntigos && treinosAntigos.length > 0) {
+          const treinoIdsAntigos = treinosAntigos.map(t => t.id);
+          
+          // DELETAR EXERCÍCIOS E SÉRIES ANTIGOS (CASCADE)
+          // O Supabase está configurado para deletar em cascata:
+          // Deletar um 'treino' -> deleta 'exercicios_rotina' associados -> deleta 'series' associadas.
+          // Portanto, basta deletar os treinos.
+          
+          await supabase.from('treinos').delete().in('id', treinoIdsAntigos);
+        }
+
+      } else {
+        // INSERE um novo rascunho
+        const { data: rotinaCriada, error: erroRotina } = await supabase
+          .from('rotinas')
+          .insert({
+            aluno_id: alunoId,
+            professor_id: user.id,
+            nome: configuracao.nome,
+            objetivo: configuracao.objetivo || null,
+            dificuldade: configuracao.dificuldade || null,
+            treinos_por_semana: configuracao.treinos_por_semana || 1,
+            duracao_semanas: configuracao.duracao_semanas || 1,
+            data_inicio: configuracao.data_inicio || null,
+            descricao: configuracao.descricao || null,
+            status: 'Rascunho',
+            valor_total: 0,
+            forma_pagamento: 'PIX',
+          })
+          .select()
+          .single();
+        if (erroRotina) throw erroRotina;
+        rotinaId = rotinaCriada.id;
+      }
+
+      // A lógica de inserir treinos, exercícios e séries é a mesma para ambos os casos
       if (treinos && treinos.length > 0) {
-        const treinosParaInserir = treinos.map((treino, index) => ({ rotina_id: rotinaCriada.id, nome: treino.nome, grupos_musculares: treino.grupos_musculares.join(','), ordem: index + 1, observacoes: treino.observacoes }));
+        const treinosParaInserir = treinos.map((treino, index) => ({ rotina_id: rotinaId, nome: treino.nome, grupos_musculares: treino.grupos_musculares.join(','), ordem: index + 1, observacoes: treino.observacoes }));
         const { data: treinosCriados, error: erroTreinos } = await supabase.from('treinos').insert(treinosParaInserir).select();
         if (erroTreinos) throw erroTreinos;
 
@@ -827,14 +894,10 @@ const RotinaCriacao = () => {
                 const seriesParaInserir = exercicio.series.map(s => ({
                   exercicio_id: exercicioCriado.id,
                   numero_serie: s.numero_serie,
-                  repeticoes: s.repeticoes ?? 0,
-                  carga: s.carga ?? 0,
-                  repeticoes_1: s.repeticoes_1 ?? 0,
-                  carga_1: s.carga_1 ?? 0,
-                  repeticoes_2: s.repeticoes_2 ?? 0,
-                  carga_2: s.carga_2 ?? 0,
-                  tem_dropset: s.tem_dropset ?? false,
-                  carga_dropset: s.carga_dropset ?? 0,
+                  repeticoes: s.repeticoes ?? 0, carga: s.carga ?? 0,
+                  repeticoes_1: s.repeticoes_1 ?? 0, carga_1: s.carga_1 ?? 0,
+                  repeticoes_2: s.repeticoes_2 ?? 0, carga_2: s.carga_2 ?? 0,
+                  tem_dropset: s.tem_dropset ?? false, carga_dropset: s.carga_dropset ?? 0,
                   intervalo_apos_serie: s.intervalo_apos_serie ?? 60
                 }));
                 const { error: erroSeries } = await supabase.from('series').insert(seriesParaInserir);
@@ -846,7 +909,14 @@ const RotinaCriacao = () => {
       }
 
       sessionStorage.removeItem(`${STORAGE_KEY}_${alunoId}`);
-      navigate(`/alunos-rotinas/${alunoId}`, { replace: true });
+      toast.success("Rascunho salvo com sucesso!");
+      
+      const from = location.state?.from;
+      if (from === '/rotinas') {
+        navigate('/rotinas', { replace: true });
+      } else {
+        navigate(`/alunos-rotinas/${alunoId}`, { replace: true });
+      }
     } catch (error) {
       console.error("Erro ao salvar rascunho:", error);
       toast.error("Erro ao Salvar Rascunho", { description: error instanceof Error ? error.message : "Não foi possível salvar o rascunho." });
@@ -1049,7 +1119,13 @@ const RotinaCriacao = () => {
 
       // 5. Limpeza e navegação
       sessionStorage.removeItem(`${STORAGE_KEY}_${alunoId}`);
-      navigate(`/alunos-rotinas/${alunoId}`, { replace: true });
+
+      const from = location.state?.from;
+      if (from === '/rotinas') {
+        navigate('/rotinas', { replace: true });
+      } else {
+        navigate(`/alunos-rotinas/${alunoId}`, { replace: true });
+      }
 
     } catch (error) {
       console.error("Erro ao salvar rotina:", error);
@@ -1087,27 +1163,6 @@ const RotinaCriacao = () => {
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold">Criar Nova Rotina</h1>
-          {aluno && <span className="font-medium text-lg">{aluno.nome_completo}</span>}
-        </div>
-        {saveStatus !== 'idle' && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground transition-opacity duration-300">
-            {saveStatus === 'saving' ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Salvando rascunho...
-              </>
-            ) : (
-              <>
-                <Check className="h-4 w-4 text-green-500" />
-                Rascunho salvo!
-              </>
-            )}
-          </div>
-        )}
-      </div>
       <AlertDialog open={isCancelModalOpen} onOpenChange={setIsCancelModalOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

@@ -274,6 +274,59 @@ Esta categoria aborda as dúvidas sobre a criação e gerenciamento de rotinas.
     *   **Concluída:** Todas as sessões de treino da rotina foram executadas pelo aluno. A rotina é finalizada e arquivada automaticamente.
 *   **Tags:** `status`, `rotina`, `ativa`, `bloqueada`, `rascunho`, `cancelada`, `concluída`
 
+### Título: Por que o objetivo e a disponibilidade são definidos na rotina e não no perfil do aluno?
+*   **Conteúdo:** Esta é uma decisão de design para tornar o acompanhamento mais flexível e preciso. Os objetivos e a disponibilidade de um aluno podem mudar com o tempo (ex: um ciclo de "Ganho de Massa" seguido por um de "Condicionamento"). Ao atrelar essas informações à rotina, cada ciclo de treino se torna um registro histórico completo e autocontido. Se estivessem no perfil, a cada mudança, o histórico da fase anterior seria perdido. Essa abordagem garante um acompanhamento muito mais rico e detalhado da evolução do aluno a longo prazo.
+*   **Tags:** `objetivo`, `disponibilidade`, `rotina`, `perfil do aluno`, `histórico`, `evolução`, `design`
+
+### Título: [Professor] Como crio uma nova rotina para um aluno?
+*   **Conteúdo:** Para criar uma nova rotina, primeiro acesse a página do aluno desejado e vá para a seção "Rotinas". Clique no botão "Nova Rotina". Você terá duas opções: "Rotina em Branco" para começar do zero, ou "Usar um Modelo" para aplicar um template que você já criou.
+*   **Tags:** `criar rotina`, `nova rotina`, `treino`, `professor`, `aluno`
+
+### Título: [Professor] Como funciona o processo de criação de rotina?
+*   **Conteúdo:** O processo de criação de uma rotina é dividido em 3 etapas simples:
+    1.  **Configuração:** Você define as informações gerais da rotina, como nome, objetivo, duração e frequência semanal.
+    2.  **Treinos:** Você define os grupos musculares para cada dia de treino da semana (Ex: Treino A - Peito e Tríceps).
+    3.  **Exercícios:** Você adiciona os exercícios para cada treino, configurando séries, repetições, carga e intervalos.
+    Seu progresso é salvo automaticamente a cada etapa.
+*   **Tags:** `etapas`, `criar rotina`, `configuração`, `treinos`, `exercícios`, `passo a passo`
+
+### Título: [Professor] O que são "Modelos de Rotina"?
+*   **Conteúdo:** Modelos de Rotina são templates de treino que você pode criar e salvar para usar no futuro. Em vez de montar um treino do zero para cada novo aluno com objetivos similares, você pode simplesmente aplicar um modelo e fazer pequenos ajustes. Isso economiza muito tempo e padroniza seus métodos de treinamento. Você pode gerenciar seus modelos na seção "Meus Modelos" do menu principal.
+*   **Tags:** `modelos`, `templates`, `rotinas`, `agilizar`, `produtividade`, `reutilizar`
+
+### Título: [Professor] Como criar uma rotina a partir de um modelo?
+*   **Conteúdo:** Ao criar uma nova rotina para um aluno, escolha a opção "Usar um Modelo". Você será levado a uma tela com todos os seus modelos salvos. Selecione o modelo desejado e a plataforma irá pré-preencher todas as etapas de criação da rotina (configuração, treinos e exercícios) com as informações do modelo. Você poderá então revisar e ajustar qualquer detalhe antes de finalizar e atribuir a rotina ao aluno.
+*   **Tags:** `usar modelo`, `aplicar template`, `criar rotina`, `agilizar`
+
+### Título: [Professor] Posso salvar uma rotina para continuar depois?
+*   **Conteúdo:** Sim. Durante o processo de criação de uma rotina, se você precisar parar e voltar depois, basta clicar em "Cancelar". O sistema perguntará se você deseja "Salvar como Rascunho". Ao salvar, a rotina ficará disponível na aba "Rascunho" na página de rotinas do aluno, pronta para você continuar a edição de onde parou.
+*   **Tags:** `rascunho`, `salvar progresso`, `continuar depois`, `criar rotina`
+
+### Título: Quantas rotinas encerradas ficam salvas no meu histórico?
+*   **Conteúdo:** Para manter seu histórico sempre relevante e otimizado, a plataforma salva automaticamente as suas **últimas 4 rotinas encerradas**. Quando uma nova rotina é finalizada (a 5ª ou posterior), a mais antiga é removida para dar lugar à nova. Este sistema é conhecido como FIFO (First-In, First-Out).
+*   **Tags:** `histórico`, `rotinas encerradas`, `limite`, `4 rotinas`, `fifo`, `armazenamento`
+
+### Título: Posso ter mais de uma rotina de treino ativa ao mesmo tempo?
+*   **Conteúdo:** Não. Para garantir foco e um acompanhamento preciso, cada aluno pode ter apenas **uma rotina ativa (ou um rascunho) por vez**. O sistema não permite a criação de uma nova rotina se já existir uma em andamento. Para criar uma nova, é necessário que a rotina atual seja finalizada ou excluída manualmente pelo professor ou pelo aluno. Isso garante que você sempre siga um plano de treino claro e coeso.
+*   **Tags:** `múltiplas rotinas`, `duas rotinas`, `rotina ativa`, `limite`, `criar nova rotina`, `erro`
+
+### Título: [Professor] Qual a diferença entre Série Simples e Série Combinada (Superset)?
+*   **Conteúdo:** Na criação de treinos, você pode escolher entre dois tipos de séries:
+    *   **Série Simples:** É o método tradicional, onde o aluno executa todas as séries de **um único exercício** antes de passar para o próximo.
+    *   **Série Combinada (Superset):** É um método de alta intensidade onde dois exercícios são executados em sequência, com pouco ou nenhum descanso entre eles. Na plataforma, você pode usar a "Série Combinada" para criar qualquer tipo de Superset, seja para o mesmo grupo muscular (ex: Rosca Direta + Rosca Martelo) ou para grupos musculares antagonistas (ex: Rosca Direta + Extensão de Tríceps).
+*   **Tags:** `série simples`, `série combinada`, `superset`, `super-série`, `bi-set`, `criar treino`, `exercícios`
+
+### Título: [Professor] O que é e como configuro um Drop Set?
+*   **Conteúdo:** Drop Set é uma técnica de alta intensidade onde, após completar as repetições de uma série, o aluno imediatamente reduz a carga e continua a executar o mesmo exercício até a falha. Em nossa plataforma, você pode adicionar um Drop Set a qualquer **Série Simples**. Ao configurar a série, marque a opção "Adicionar Drop Set" e informe qual será a carga reduzida. Durante a execução, o aluno será instruído a realizar a série principal normalmente e, em seguida, fazer o drop até a falha, sem descanso.
+*   **Tags:** `drop set`, `série simples`, `alta intensidade`, `falha muscular`, `criar treino`
+
+### Título: [Professor] Como a "Meta" é exibida para o aluno durante o treino?
+*   **Conteúdo:** O campo "Meta" na tela de execução do aluno mostra o objetivo de repetições e carga que você definiu. A exibição se adapta da seguinte forma:
+    1.  **Repetições e Carga definidas (ex: 12 reps, 20kg):** Aparecerá como "Meta: 12 x 20kg".
+    2.  **Apenas Repetições definidas (ex: 12 reps, 0kg):** Aparecerá como "Meta: 12 repetições". Ideal para exercícios com peso corporal.
+    3.  **Repetições zeradas ou em branco:** O campo "Meta" não será exibido. Use esta opção para dar liberdade ao aluno, permitindo que ele decida e registre as repetições e a carga que conseguiu executar na hora do treino.
+*   **Tags:** `meta`, `execução`, `treino`, `repetições`, `carga`, `configurar série`, `livre`
+
 ---
 
 ## Categoria: Meu Perfil (Professor)
@@ -386,6 +439,14 @@ Esta categoria explica como funciona o registro e o acompanhamento de avaliaçõ
 *   **Conteúdo:** Sim, a segurança das suas fotos é nossa prioridade. Todas as imagens de avaliação são armazenadas em um local seguro e privado, inacessível publicamente. Apenas você e o professor responsável pela sua rotina ativa podem visualizá-las através de links temporários e seguros gerados pela plataforma.
 *   **Tags:** `segurança`, `privacidade`, `fotos`, `LGPD`, `imagens seguras`
 
+### Título: Qual o intervalo recomendado entre as avaliações físicas?
+*   **Conteúdo:** Para que a análise de progresso seja mais precisa e significativa, recomendamos um intervalo de **pelo menos 30 dias** entre cada avaliação física. Ao tentar criar uma nova avaliação em um período menor, a plataforma exibirá um aviso, mas permitirá que você continue caso seja necessário.
+*   **Tags:** `avaliação física`, `intervalo`, `30 dias`, `frequência`, `recomendação`
+
+### Título: Quantas avaliações físicas ficam salvas no histórico?
+*   **Conteúdo:** A plataforma mantém um histórico das **últimas 4 avaliações físicas** de cada aluno. Ao criar uma nova avaliação (a 5ª ou posterior), a avaliação mais antiga é automaticamente removida para dar lugar à nova, seguindo um sistema FIFO (First-In, First-Out). Isso garante que o histórico se mantenha sempre relevante e atualizado com os dados mais recentes.
+*   **Tags:** `avaliação física`, `histórico`, `limite`, `4 avaliações`, `fifo`, `armazenamento`
+
 ---
 
 ## Categoria: Gestão de Alunos (Professor)
@@ -397,16 +458,25 @@ Esta categoria detalha como gerenciar seus alunos, desde a adição até o acomp
 *   **Tags:** `adicionar aluno`, `novo aluno`, `código de vínculo`, `convidar aluno`
 
 ### Título: Como removo o vínculo com um aluno?
-*   **Conteúdo:** Na página "Alunos", encontre o card do aluno que deseja remover. Clique no menu de opções (ícone de três pontos) e selecione "Desvincular". Uma confirmação será solicitada. Ao confirmar, você perderá o acesso aos dados do aluno e ele será notificado.
+*   **Conteúdo:** Na página "Alunos", encontre o card do aluno que deseja remover. Clique no menu de opções (ícone de três pontos) e selecione "Desvincular". Uma confirmação será solicitada. **Atenção: esta ação é importante.** Ao confirmar a desvinculação:
+    1.  Você perderá o acesso imediato a todos os dados do aluno, incluindo histórico e avaliações.
+    2.  Se o aluno tiver uma rotina de treino criada por você, ela será **automaticamente cancelada e arquivada**.
+    3.  O aluno será notificado sobre a desvinculação.
+    Esta ação remove apenas o seu vínculo com o aluno, não exclui a conta dele.
 *   **Tags:** `remover aluno`, `desvincular`, `excluir aluno`, `gerenciar alunos`
 
 ### Título: O que posso fazer na página de um aluno?
 *   **Conteúdo:** Ao clicar em um aluno na sua lista, você acessa um menu de opções com várias ações de gerenciamento:
     *   **Ver Detalhes:** Visualiza as informações pessoais do aluno (nome, email, telefone, etc.). Essas informações são editáveis apenas pelo próprio aluno.
+    *   **Por que não posso editar?** Para garantir a privacidade e o controle do aluno sobre seus próprios dados (em conformidade com a LGPD), apenas ele pode alterar suas informações pessoais. Como professor, você tem acesso de visualização para poder se comunicar e gerenciar os treinos.
     *   **Rotinas:** Acessa a página de gerenciamento de rotinas exclusiva daquele aluno, onde você pode criar, editar, visualizar e gerenciar as rotinas dele.
     *   **Avaliações:** Leva para a tela de avaliações físicas, onde você pode registrar novas medidas e fotos ou ver o histórico de progresso.
     *   **PAR-Q:** Permite consultar as respostas do Questionário de Prontidão para Atividade Física preenchido pelo aluno.
 *   **Tags:** `gerenciar aluno`, `detalhes do aluno`, `rotinas do aluno`, `avaliações do aluno`, `par-q`
+
+### Título: [Professor] O que é o Questionário PAR-Q e por que é importante?
+*   **Conteúdo:** O PAR-Q (Questionário de Prontidão para Atividade Física) é um questionário padrão de 7 perguntas que o aluno preenche para informar sobre sua condição de saúde. Consultar as respostas do PAR-Q é um passo crucial antes de criar uma rotina de treino, pois ajuda a identificar potenciais riscos e a garantir que o programa de exercícios seja seguro e adequado para o aluno.
+*   **Tags:** `par-q`, `questionário de saúde`, `segurança`, `anamnese`, `aluno`
 
 ### Título: Qual a diferença entre a página "Rotinas" de um aluno e a página "Rotinas" do menu principal?
 *   **Conteúdo:**

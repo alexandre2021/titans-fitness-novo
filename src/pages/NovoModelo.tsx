@@ -1,20 +1,28 @@
-import { useState, useEffect, FormEvent, useCallback } from "react";
+import React, { useState, useEffect, FormEvent, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { useAuth } from "@/hooks/useAuth";
+import { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 import { Button } from "@/components/ui/button";
-import { Check, ChevronLeft, ChevronRight, GripVertical, Plus, Trash2, X, Dumbbell, ChevronUp, ChevronDown, Loader2 } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Plus, Trash2, X, Dumbbell, ChevronUp, ChevronDown, Loader2, Save } from "lucide-react";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +31,6 @@ import { useExercicioLookup } from "@/hooks/useExercicioLookup";
 import { SerieSimples } from "@/components/rotina/criacao/SerieSimples";
 import { SerieCombinada } from "@/components/rotina/criacao/SerieCombinada";
 import { ExercicioModal } from "@/components/rotina/criacao/ExercicioModal";
-import { Tables } from "@/integrations/supabase/types";
 import CustomSelect from "@/components/ui/CustomSelect";
 
 // --- Constantes ---
@@ -95,6 +102,13 @@ interface ModeloConfiguracaoProps {
   onCancelar: () => void;
 }
 
+interface ModeloEmCriacao {
+  configuracao?: ModeloConfiguracaoData;
+  treinos?: TreinoTemp[];
+  exercicios?: Record<string, ExercicioModelo[]>;
+  etapaAtual?: Etapa;
+}
+
 interface ModeloTreinosProps {
   onAvancar: (data: TreinoTemp[]) => void;
   onVoltar: () => void;
@@ -137,6 +151,7 @@ const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar }: ModeloConfig
     if (!formData.dificuldade) newErrors.dificuldade = "A dificuldade é obrigatória.";
     if (!formData.treinos_por_semana) newErrors.treinos_por_semana = "A frequência é obrigatória.";
     if (!formData.duracao_semanas) newErrors.duracao_semanas = "A duração é obrigatória.";
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -262,77 +277,11 @@ const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar }: ModeloConfig
   );
 };
 
-const SortableTreinoCard = ({ id, treino, index, atualizarCampoTreino, adicionarGrupoMuscular, removerGrupoMuscular }: {
-  id: string;
-  treino: TreinoTemp;
-  index: number;
-  atualizarCampoTreino: (index: number, campo: keyof TreinoTemp, valor: string | number) => void;
-  adicionarGrupoMuscular: (index: number, grupo: string) => void;
-  removerGrupoMuscular: (index: number, grupo: string) => void;
-}) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 10 : undefined,
-  };
-
-  const treinoCompleto = treino.nome && treino.nome.trim().length >= 2 && treino.grupos_musculares.length > 0;
-
-  return (
-    <div ref={setNodeRef} style={style} {...attributes}>
-      <Card className={treinoCompleto ? "border-green-200" : "border-gray-200"}>
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center justify-between text-lg">
-            <div {...listeners} className="flex items-center cursor-grab p-2 -m-2 rounded-lg">
-              <GripVertical className="h-5 w-5 mr-2 text-gray-400" />
-              Treino {String.fromCharCode(65 + index)}
-            </div>
-            {treinoCompleto && (
-              <Badge className="bg-green-100 text-green-800 text-xs flex items-center gap-1">
-                <Check className="h-3 w-3 mr-1" />
-                Requisitos
-              </Badge>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Grupos Musculares</Label>
-            <div className="flex flex-wrap gap-2 min-h-[2.5rem] p-2 border rounded-md bg-gray-50">
-              {treino.grupos_musculares.length > 0 ? (
-                treino.grupos_musculares.map(grupo => (
-                  <Badge key={grupo} variant="secondary" className={`${CORES_GRUPOS_MUSCULARES[grupo] || 'bg-gray-100 text-gray-800'} cursor-pointer hover:opacity-80`} onClick={() => removerGrupoMuscular(index, grupo)}>
-                    {grupo} <X className="h-3 w-3 ml-1.5" />
-                  </Badge>
-                ))
-              ) : <span className="text-gray-500 text-sm p-1">Selecione os grupos musculares abaixo</span>}
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label className="text-sm text-gray-600">Adicionar Grupos:</Label>
-            <div className="flex flex-wrap gap-2">
-              {GRUPOS_MUSCULARES.filter(g => !treino.grupos_musculares.includes(g)).map(g => (
-                <Badge key={g} variant="outline" className="cursor-pointer hover:bg-gray-100" onClick={() => adicionarGrupoMuscular(index, g)}><Plus className="h-3 w-3 mr-1" />{g}</Badge>
-              ))}
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={`observacoes_${index}`}>Observações (Opcional)</Label>
-            <Textarea id={`observacoes_${index}`} value={treino.observacoes || ''} onChange={(e) => atualizarCampoTreino(index, 'observacoes', e.target.value)} placeholder="Adicione notas sobre este treino específico..." rows={2} />
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
-
 // --- Etapa 2: Componente de Treinos ---
 const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCancelar, onUpdate }: ModeloTreinosProps) => {
   const [treinos, setTreinos] = useState<TreinoTemp[]>(() => {
     if (initialData && initialData.length > 0) {
-      return initialData;
+      return initialData.sort((a, b) => a.ordem - b.ordem);
     }
     if (configuracao?.treinos_por_semana) {
       const frequencia = configuracao.treinos_por_semana;
@@ -350,6 +299,26 @@ const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCance
     }
     return [];
   });
+
+  const handleMoverTreino = (index: number, direcao: 'cima' | 'baixo') => {
+    setTreinos(prev => {
+      const novosTreinos = [...prev];
+      const newIndex = direcao === 'cima' ? index - 1 : index + 1;
+
+      if (newIndex < 0 || newIndex >= novosTreinos.length) return prev;
+
+      // Troca os treinos de posição
+      [novosTreinos[index], novosTreinos[newIndex]] = [novosTreinos[newIndex], novosTreinos[index]];
+
+      // Renomeia e reordena todos os treinos
+      const nomesTreinos = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+      return novosTreinos.map((treino, i) => ({
+        ...treino, 
+        nome: `Treino ${nomesTreinos[i] || String.fromCharCode(65 + i)}`, 
+        ordem: i + 1
+      }));
+    });
+  }
 
   const adicionarGrupoMuscular = (treinoIndex: number, grupo: string) => {
     setTreinos(prev => prev.map((treino, index) => {
@@ -377,23 +346,8 @@ const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCance
       return treino;
     }));
   };
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      const oldIndex = treinos.findIndex((t) => t.id === active.id);
-      const newIndex = treinos.findIndex((t) => t.id === over.id);
-      setTreinos((items) => arrayMove(items, oldIndex, newIndex).map((item, index) => ({ ...item, ordem: index + 1 })));
-    }
-  }
-
-  const treinosCompletos = treinos.filter(t => t.nome && t.nome.trim().length >= 2 && t.grupos_musculares.length > 0).length;
+  const treinosCompletos = treinos.filter(t => t.grupos_musculares.length > 0).length;
   const requisitosAtendidos = treinosCompletos === treinos.length;
 
   const handleProximo = () => {
@@ -410,8 +364,8 @@ const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCance
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Etapa 2: Adição de Grupos Musculares</CardTitle>
-        <p className="text-muted-foreground">Defina os nomes e grupos musculares para cada treino da semana.</p>
+        <CardTitle>Etapa 2: Divisão dos Treinos</CardTitle>
+        <p className="text-muted-foreground">Defina os grupos musculares para cada treino da semana.</p>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
@@ -429,15 +383,32 @@ const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCance
         </CardContent>
       </Card>
       
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={treinos.map(t => t.id)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-4">
-              {treinos.map((treino, index) => (
-                <SortableTreinoCard key={treino.id} id={treino.id} treino={treino} index={index} atualizarCampoTreino={atualizarCampoTreino} adicionarGrupoMuscular={adicionarGrupoMuscular} removerGrupoMuscular={removerGrupoMuscular} />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
+        <div className="space-y-4">
+          {treinos.map((treino, index) => {
+            const treinoCompleto = treino.grupos_musculares.length > 0;
+            return (
+              <Card key={treino.id} className={treinoCompleto ? "border-green-200" : "border-gray-200"}>
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center justify-between text-lg">
+                    <div className="flex items-center gap-2">
+                      <div className="flex flex-col -space-y-2">
+                        <Button type="button" variant="ghost" size="sm" onClick={() => handleMoverTreino(index, 'cima')} disabled={index === 0} className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"><ChevronUp className="h-5 w-5" /></Button>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => handleMoverTreino(index, 'baixo')} disabled={index === treinos.length - 1} className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"><ChevronDown className="h-5 w-5" /></Button>
+                      </div>
+                      {treino.nome}
+                    </div>
+                    {treinoCompleto && <Badge className="bg-green-100 text-green-800 text-xs flex items-center gap-1"><Check className="h-3 w-3 mr-1" />Requisitos</Badge>}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 pt-0">
+                  <div className="space-y-2"><Label>Grupos Musculares</Label><div className="flex flex-wrap gap-2 min-h-[2.5rem] p-2 border rounded-md bg-gray-50">{treino.grupos_musculares.length > 0 ? treino.grupos_musculares.map(grupo => (<Badge key={grupo} variant="secondary" className={`${CORES_GRUPOS_MUSCULARES[grupo] || 'bg-gray-100 text-gray-800'} cursor-pointer hover:opacity-80`} onClick={() => removerGrupoMuscular(index, grupo)}>{grupo} <Trash2 className="h-3 w-3 ml-1.5" /></Badge>)) : <span className="text-gray-500 text-sm p-1">Selecione os grupos musculares abaixo</span>}</div></div>
+                  <div className="space-y-2"><Label className="text-sm text-gray-600">Adicionar Grupos:</Label><div className="flex flex-wrap gap-2">{GRUPOS_MUSCULARES.filter(g => !treino.grupos_musculares.includes(g)).map(g => (<Badge key={g} variant="outline" className="cursor-pointer hover:bg-gray-100" onClick={() => adicionarGrupoMuscular(index, g)}><Plus className="h-3 w-3 mr-1" />{g}</Badge>))}</div></div>
+                  <div className="space-y-2"><Label htmlFor={`observacoes_${index}`}>Observações (Opcional)</Label><Textarea id={`observacoes_${index}`} value={treino.observacoes || ''} onChange={(e) => atualizarCampoTreino(index, 'observacoes', e.target.value)} placeholder="Adicione notas sobre este treino específico..." rows={2} /></div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       
         {/* Espaçamento para botões fixos */}
       <div className="pb-20 md:pb-6" />
@@ -481,7 +452,12 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
   const [treinoAtual, setTreinoAtual] = useState<TreinoTemp | null>(null);
   const { getExercicioInfo } = useExercicioLookup();
 
-  // Atualiza o storage sempre que os exercícios mudam
+  // Sincroniza com initialData quando ele muda (ex: reset)
+  useEffect(() => {
+    setExercicios(initialData || {});
+  }, [initialData]);
+
+  // Salva no storage sempre que os exercícios mudam
   useEffect(() => {
     onUpdate({ exercicios });
   }, [exercicios, onUpdate]);
@@ -491,13 +467,11 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
     setIsModalOpen(true);
   };
 
-  const handleAdicionarExercicios = (exerciciosSelecionados: Tables<'exercicios'>[]) => {
+  const handleAdicionarExercicios = (exerciciosSelecionados: Tables<'exercicios'>[], tipo: 'simples' | 'combinada') => {
     if (!treinoAtual || exerciciosSelecionados.length === 0) return;
 
     let exerciciosParaAdicionar: ExercicioModelo[] = [];
-
-    if (exerciciosSelecionados.length === 2) {
-      // Caso de série combinada
+    if (tipo === 'combinada' && exerciciosSelecionados.length === 2) {
       const exercicioCombinado: ExercicioModelo = {
         id: `ex_modelo_${Date.now()}_${Math.random()}`,
         exercicio_1_id: exerciciosSelecionados[0].id,
@@ -508,7 +482,7 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
       };
       exerciciosParaAdicionar.push(exercicioCombinado);
     } else {
-      // Caso de série simples (o modal envia um ou mais)
+      // Série Simples
       exerciciosParaAdicionar = exerciciosSelecionados.map(ex => ({
         id: `ex_modelo_${Date.now()}_${Math.random()}`,
         exercicio_1_id: ex.id,
@@ -522,7 +496,7 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
       ...prev,
       [treinoAtual.id]: [...(prev[treinoAtual.id] || []), ...exerciciosParaAdicionar]
     }));
-    setIsModalOpen(false);
+    // Não fecha o modal para permitir adicionar mais
   };
 
   const handleRemoverExercicio = (treinoId: string, exercicioId: string) => {
@@ -539,8 +513,29 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
     }));
   };
 
+  const handleMoverExercicio = (treinoId: string, exercicioIndex: number, direcao: 'cima' | 'baixo') => {
+    setExercicios(prev => {
+      const treinoExercicios = prev[treinoId] || [];
+      if (treinoExercicios.length < 2) return prev;
+
+      const newIndex = direcao === 'cima' ? exercicioIndex - 1 : exercicioIndex + 1;
+
+      if (newIndex < 0 || newIndex >= treinoExercicios.length) {
+        return prev;
+      }
+
+      const novosExercicios = [...treinoExercicios];
+      const temp = novosExercicios[exercicioIndex];
+      novosExercicios[exercicioIndex] = novosExercicios[newIndex];
+      novosExercicios[newIndex] = temp;
+
+      return { ...prev, [treinoId]: novosExercicios };
+    });
+  };
+
   const treinosCompletos = treinos.filter(t => exercicios[t.id] && exercicios[t.id].length > 0).length;
   const requisitosAtendidos = treinosCompletos === treinos.length;
+
 
   return (
     <Card>
@@ -584,20 +579,25 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
             <CardContent>
               {(exercicios[treino.id] || []).length > 0 ? (
                 <div className="space-y-4">
-                  {exercicios[treino.id].map((ex, exercicioIndex) => {
+                  {exercicios[treino.id].map((ex, exIndex) => {
                     const exercicioInfo1 = getExercicioInfo(ex.exercicio_1_id);
                     const exercicioInfo2 = ex.exercicio_2_id ? getExercicioInfo(ex.exercicio_2_id) : null;
                     const nomeExercicio = ex.tipo === 'combinada' && exercicioInfo2 ? `${exercicioInfo1.nome} + ${exercicioInfo2.nome}` : exercicioInfo1.nome;
                     
-                    const isUltimoExercicioDoTreino = exercicioIndex === exercicios[treino.id].length - 1;
+                    const isPrimeiroExercicio = exIndex === 0;
+                    const isUltimoExercicioDoTreino = exIndex === exercicios[treino.id].length - 1;
                     
                     return (
                       <div key={ex.id} className="border-t pt-4 first:border-t-0 first:pt-0">
-                        <div className="flex items-start justify-between mb-3">
-                          <h4 className="font-medium text-gray-900">{nomeExercicio}</h4>
-                          <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoverExercicio(treino.id, ex.id)} className="text-gray-400 hover:text-red-500">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <div className="flex flex-col -space-y-2">
+                              <Button type="button" variant="ghost" size="sm" onClick={() => handleMoverExercicio(treino.id, exIndex, 'cima')} disabled={isPrimeiroExercicio} className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"><ChevronUp className="h-5 w-5" /></Button>
+                              <Button type="button" variant="ghost" size="sm" onClick={() => handleMoverExercicio(treino.id, exIndex, 'baixo')} disabled={isUltimoExercicioDoTreino} className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"><ChevronDown className="h-5 w-5" /></Button>
+                            </div>
+                            <h4 className="font-medium text-gray-900">{nomeExercicio}</h4>
+                          </div>
+                          <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoverExercicio(treino.id, ex.id)} className="text-gray-400 hover:text-red-500 h-8 w-8 p-0"><Trash2 className="h-4 w-4" /></Button>
                         </div>
                         {ex.tipo === 'simples' ? (
                           <SerieSimples exercicio={ex} treinoId={treino.id} isUltimoExercicio={isUltimoExercicioDoTreino} onUpdate={dados => handleAtualizarExercicio(treino.id, ex.id, dados)} />
@@ -610,7 +610,7 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground">Nenhum exercício adicionado.</p>
+                  <Dumbbell className="h-10 w-10 mx-auto text-gray-300 mb-4" /><p className="text-muted-foreground">Nenhum exercício adicionado.</p>
                 </div>
               )}
             </CardContent>
@@ -623,10 +623,7 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
 
       {/* Botões de navegação - Desktop */}
       <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t p-4 hidden md:flex justify-between items-center z-50 px-6 lg:px-8">
-          <Button variant="outline" onClick={onVoltar} size="lg" disabled={isSaving}>
-              <ChevronLeft className="h-4 w-4 mr-2" />
-              Voltar
-          </Button>
+          <Button variant="outline" onClick={onVoltar} size="lg" disabled={isSaving}><ChevronLeft className="h-4 w-4 mr-2" />Voltar</Button>
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={onCancelar} size="lg" disabled={isSaving}>
                 Cancelar
@@ -634,12 +631,12 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
             <Button onClick={onFinalizar} disabled={!requisitosAtendidos || isSaving} size="lg" className="bg-green-600 hover:bg-green-700">
               {isSaving ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   Salvando...
                 </>
               ) : (
                 <>
-                  <Check className="h-4 w-4 mr-2" />
+                  <Save className="h-4 w-4 mr-2" />
                   Salvar Modelo
                 </>
               )}
@@ -668,6 +665,7 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
           onClose={() => setIsModalOpen(false)}
           onAdd={handleAdicionarExercicios}
           gruposMuscularesFiltro={treinoAtual?.grupos_musculares || []}
+          exerciciosJaAdicionados={treinoAtual ? (exercicios[treinoAtual.id] || []).flatMap(ex => [ex.exercicio_1_id, ex.exercicio_2_id]).filter(Boolean) as string[] : []}
         />
       )}
         </div>
@@ -692,8 +690,8 @@ const NovoModelo = () => {
   const [etapa, setEtapa] = useState<Etapa>('configuracao');
   const [modeloEmCriacao, setModeloEmCriacao] = useState<ModeloEmCriacao>({});
   const { user } = useAuth();
-  const { getExercicioInfo } = useExercicioLookup();
   const [isSaving, setIsSaving] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 
   // Carregar dados do sessionStorage ao montar
   useEffect(() => {
@@ -706,99 +704,89 @@ const NovoModelo = () => {
   }, []);
 
   // Salvar dados no sessionStorage ao alterar
-  const updateStorage = useCallback((data: Partial<ModeloEmCriacao>) => {
-    setModeloEmCriacao(prev => {
-      const newData = { ...prev, ...data };
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
-      return newData;
+  const updateStorage = useCallback((data: Partial<ModeloEmCriacao>): Promise<void> => {
+    return new Promise((resolve) => {
+      setModeloEmCriacao(prev => {
+        const newData = { ...prev, ...data };
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+        resolve();
+        return newData;
+      });
     });
   }, []);
 
-  const handleAvancarConfiguracao = (data: ModeloConfiguracaoData) => {
+  const handleAvancarConfiguracao = async (data: ModeloConfiguracaoData) => {
     const oldConfig = modeloEmCriacao.configuracao;
-    const oldTreinos = modeloEmCriacao.treinos || [];
-    const oldExercicios = modeloEmCriacao.exercicios || {};
-
     const newFrequency = data.treinos_por_semana;
     const oldFrequency = oldConfig?.treinos_por_semana;
 
-    let updatedTreinos = [...oldTreinos];
-    const updatedExercicios = { ...oldExercicios };
-
-    // Ajusta o número de treinos se a frequência mudou (exceto na primeira vez)
-    if (newFrequency !== undefined && oldFrequency !== undefined && newFrequency !== oldFrequency) {
-      const currentCount = updatedTreinos.length;
-
-      if (newFrequency > currentCount) {
-        // Aumentou a frequência: adiciona novos treinos vazios
-        const nomesTreinos = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
-        for (let i = currentCount; i < newFrequency; i++) {
-          updatedTreinos.push({
-            id: `treino_draft_${Date.now()}_${i}`,
-            nome: `Treino ${nomesTreinos[i] || String.fromCharCode(65 + i)}`,
-            grupos_musculares: [],
-            ordem: i + 1,
-          });
-        }
-      } else if (newFrequency < currentCount) {
-        // Diminuiu a frequência: remove treinos e seus exercícios
-        const treinosParaRemover = updatedTreinos.slice(newFrequency);
-        updatedTreinos = updatedTreinos.slice(0, newFrequency);
-
-        treinosParaRemover.forEach(treino => {
-          if (updatedExercicios[treino.id]) {
-            delete updatedExercicios[treino.id];
-          }
-        });
-      }
+    if (newFrequency === undefined) {
+      await updateStorage({ configuracao: data, etapaAtual: 'treinos' });
+      setEtapa('treinos');
+      return;
     }
 
-    updateStorage({ configuracao: data, treinos: updatedTreinos, exercicios: updatedExercicios, etapaAtual: 'treinos' });
+    // Se a frequência mudou (e não é a primeira vez), reinicia os treinos e exercícios.
+    if (oldFrequency !== undefined && newFrequency !== oldFrequency) {
+      toast.info("A frequência de treinos foi alterada.", {
+        description: "Os treinos e exercícios foram reiniciados para se adequar à nova configuração."
+      });
+
+      const nomesTreinos = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+      const novosTreinos = Array.from({ length: newFrequency }, (_, i) => ({
+        id: `treino_draft_${Date.now()}_${i}`,
+        nome: `Treino ${nomesTreinos[i] || String.fromCharCode(65 + i)}`,
+        grupos_musculares: [],
+        ordem: i + 1,
+      }));
+
+      await updateStorage({
+        configuracao: data,
+        treinos: novosTreinos,
+        exercicios: {},
+        etapaAtual: 'treinos'
+      });
+    } else {
+      await updateStorage({ configuracao: data, etapaAtual: 'treinos' });
+    }
     setEtapa('treinos');
   };
 
   const handleAvancarTreinos = (data: TreinoTemp[]) => {
-    const oldExercicios = modeloEmCriacao.exercicios || {};
-    const newExercicios = { ...oldExercicios };
-    let hasChanges = false;
+    const oldTreinos = modeloEmCriacao.treinos || [];
+    const todosOldTreinosVazios = oldTreinos.every(t => t.grupos_musculares.length === 0);
+    const isPrimeiraVez = oldTreinos.length === 0 || todosOldTreinosVazios;
 
-    const compareMuscleGroups = (arr1: string[], arr2: string[]) => {
-      if (arr1.length !== arr2.length) return false;
-      const sorted1 = [...arr1].sort();
-      const sorted2 = [...arr2].sort();
-      return sorted1.every((value, index) => value === sorted2[index]);
-    };
-
-    data.forEach(newTreino => {
-      const oldTreino = modeloEmCriacao.treinos?.find(t => t.id === newTreino.id);
-
-      if (oldTreino && !compareMuscleGroups(oldTreino.grupos_musculares, newTreino.grupos_musculares)) {
-        const exercisesForThisTreino = newExercicios[newTreino.id] || [];
-
-        if (exercisesForThisTreino.length > 0) {
-          const filteredExercises = exercisesForThisTreino.filter(ex => {
-            const info1 = getExercicioInfo(ex.exercicio_1_id);
-            if (info1.grupo_muscular && newTreino.grupos_musculares.includes(info1.grupo_muscular)) return true;
-            if (ex.exercicio_2_id) {
-              const info2 = getExercicioInfo(ex.exercicio_2_id);
-              if (info2.grupo_muscular && newTreino.grupos_musculares.includes(info2.grupo_muscular)) return true;
-            }
-            return false;
-          });
-
-          if (filteredExercises.length < exercisesForThisTreino.length) {
-            toast.info(`Exercícios removidos do Treino ${newTreino.nome}`, { description: "Alguns exercícios foram removidos por não pertencerem mais aos grupos musculares selecionados." });
-          }
-          newExercicios[newTreino.id] = filteredExercises;
-          hasChanges = true;
-        }
-      }
+    // ✅ CORRIGIDO: Verifica mudanças APENAS nos grupos musculares, IGNORANDO ordem/nome
+    const mudouAlgoNosTreinos = data.length !== oldTreinos.length || data.some((newTreino) => {
+      const oldTreino = oldTreinos.find(t => t.id === newTreino.id);
+      if (!oldTreino) return true; // Treino novo ou ID mudou
+      
+      const oldGrupos = oldTreino.grupos_musculares.slice().sort();
+      const newGrupos = newTreino.grupos_musculares.slice().sort();
+      
+      // ✅ Compara APENAS grupos musculares (ignora nome/ordem)
+      return JSON.stringify(oldGrupos) !== JSON.stringify(newGrupos);
     });
-    updateStorage({ treinos: data, exercicios: hasChanges ? newExercicios : oldExercicios, etapaAtual: 'exercicios' });
+
+    if (mudouAlgoNosTreinos) {
+      if (!isPrimeiraVez) {
+        toast.info("A estrutura dos treinos foi alterada.", {
+          description: "Todos os exercícios foram reiniciados para garantir a consistência."
+        });
+      }
+      updateStorage({ treinos: data, exercicios: {}, etapaAtual: 'exercicios' }); // Zera exercícios
+    } else {
+      updateStorage({ treinos: data, etapaAtual: 'exercicios' }); // Mantém exercícios
+    }
     setEtapa('exercicios');
   };
 
   const handleCancelar = () => {
+    setIsCancelModalOpen(true);
+  };
+
+  const confirmarDescarte = () => {
     sessionStorage.removeItem(STORAGE_KEY);
     navigate('/meus-modelos', { replace: true });
   };
@@ -891,6 +879,7 @@ const NovoModelo = () => {
       }
 
       sessionStorage.removeItem(STORAGE_KEY);
+      toast.success("Modelo salvo com sucesso!");
       navigate('/meus-modelos', { replace: true });
     } catch (error) {
       console.error("Erro ao salvar modelo:", error);
@@ -915,16 +904,23 @@ const NovoModelo = () => {
   };
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">Novo Modelo de Rotina</h1>
-            <p className="text-muted-foreground">Crie um template de treino para reutilizar com seus alunos.</p>
-          </div>
-        </div>
-      </div>
-      <div className="mt-6">{renderEtapa()}</div>
+    <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto">
+      {renderEtapa()}
+
+      <AlertDialog open={isCancelModalOpen} onOpenChange={setIsCancelModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Descartar Modelo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja descartar este modelo? Todo o progresso será perdido.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Continuar Editando</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmarDescarte}>Descartar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

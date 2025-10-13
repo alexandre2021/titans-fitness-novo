@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,7 @@ const FREQUENCIAS_OPTIONS = [{ value: 'todos', label: 'Todas' }, ...FREQUENCIAS.
 const NovoModeloSelecao = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const { user } = useAuth();
 
   const alunoId = searchParams.get('alunoId');
@@ -168,7 +169,7 @@ const NovoModeloSelecao = () => {
 
       // 3. Salvar no sessionStorage e navegar para a página de criação
       sessionStorage.setItem(`rotina_em_criacao_${alunoId}`, JSON.stringify(rotinaStorageData));
-      navigate(`/rotinas-criar/${alunoId}`);
+      navigate(`/rotinas-criar/${alunoId}`, { state: { from: location.state?.from } });
 
     } catch (error) {
       console.error("Erro ao selecionar modelo:", error);

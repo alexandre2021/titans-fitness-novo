@@ -19,6 +19,7 @@ const PerfilAluno = () => {
   const [loading, setLoading] = useState(true);
   const [fetchTrigger, setFetchTrigger] = useState(0);
   const isDesktop = useMediaQuery("(min-width: 768px)");
+  const [parQRespostas, setParQRespostas] = useState<Record<string, boolean | null> | null>(null);
 
   const fetchProfile = useCallback(async () => {
     if (!user) return;
@@ -26,12 +27,13 @@ const PerfilAluno = () => {
     try {
       const { data, error } = await supabase
         .from('alunos')
-        .select('*')
+        .select('*, par_q_respostas')
         .eq('id', user.id)
         .single();
 
       if (error) throw error;
       setProfile(data);
+      setParQRespostas((data.par_q_respostas as Record<string, boolean | null>) || null);
     } catch (error) {
       console.error("Erro ao buscar perfil do Aluno:", error);
     } finally {
@@ -78,7 +80,7 @@ const PerfilAluno = () => {
 
       <AvatarSection profile={profile} onProfileUpdate={handleProfileUpdate} userType="aluno" />
       
-      <AlunoPerfilTabs profile={profile} onProfileUpdate={handleProfileUpdate} />
+      <AlunoPerfilTabs profile={{...profile, par_q_respostas: parQRespostas}} onProfileUpdate={handleProfileUpdate} />
     </div>
   );
 };

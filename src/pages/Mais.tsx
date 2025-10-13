@@ -54,7 +54,6 @@ const Mais = () => {
 
   const alunoLinks = [
     { href: '/', label: 'Home', icon: Home },
-    { href: '/professores', label: 'Professores', icon: User },
   ];
 
   const links = userType === 'professor' ? professorLinks : userType === 'aluno' ? alunoLinks : [];

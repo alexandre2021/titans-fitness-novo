@@ -7,15 +7,16 @@ import { useMediaQuery } from '@/hooks/use-media-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/badge'; 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ArrowLeft, Users, Target, Clock, Plus, FileText, MoreVertical, Eye, Play, Ban, Activity, Trash2, BicepsFlexed, Repeat, User as UserIcon, Info, Search, Filter, X } from 'lucide-react';
+import { ArrowLeft, Users, Target, Clock, Plus, FileText, MoreVertical, Eye, Play, Ban, Activity, Trash2, BicepsFlexed, Repeat, User as UserIcon, Info, Search, Filter, X, Loader2 } from 'lucide-react';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ExercicioModelo } from './RotinaCriacao';
 import CustomSelect from '@/components/ui/CustomSelect';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -82,6 +83,17 @@ const RotinasPT = () => {
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [showStatusInfoDialog, setShowStatusInfoDialog] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  
+  // Estados para exclusão
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [rotinaParaExcluir, setRotinaParaExcluir] = useState<RotinaCardProps | null>(null);
+
+  // Estados para o novo fluxo de criação
+  const [alunoSelecionado, setAlunoSelecionado] = useState<string | null>(null);
+  const [showCriarOpcoesModal, setShowCriarOpcoesModal] = useState(false);
+  const [loadingModelos, setLoadingModelos] = useState(false);
+  const [temModelos, setTemModelos] = useState(false);
+  const [isCheckingRotina, setIsCheckingRotina] = useState<string | null>(null); // ID do aluno sendo verificado
 
   useEffect(() => {
     const fetchRotinasAtivas = async () => {
@@ -128,6 +140,25 @@ const RotinasPT = () => {
 
     void fetchRotinasAtivas();
   }, [user]);
+
+  // Verifica se o professor tem modelos quando o modal de opções é aberto
+  useEffect(() => {
+    if (!showCriarOpcoesModal || !user) return;
+
+    const checkForModels = async () => {
+      setLoadingModelos(true);
+      try {
+        const { count, error } = await supabase.from('modelos_rotina').select('*', { count: 'exact', head: true }).eq('professor_id', user.id);
+        if (error) throw error;
+        setTemModelos((count || 0) > 0);
+      } catch (error) {
+        setTemModelos(false);
+      } finally {
+        setLoadingModelos(false);
+      }
+    };
+    void checkForModels();
+  }, [showCriarOpcoesModal, user]);
 
   const rotinasFiltradas = useMemo(() => {
     let rotinas: RotinaCardProps[] = [];
@@ -217,26 +248,143 @@ const RotinasPT = () => {
     }
   };
 
-  const handleNovaRotinaClick = () => {
+  const handleExcluirRotina = (rotina: RotinaCardProps) => {
+    setRotinaParaExcluir(rotina);
+    setShowDeleteDialog(true);
+  };
+
+  const handleConfirmarExclusao = async () => {
+    if (!rotinaParaExcluir || !user) return;
+
+    setIsUpdatingStatus(true); // Reutilizando o estado de loading
+    try {
+      const { error } = await supabase
+        .from('rotinas')
+        .delete()
+        .eq('id', rotinaParaExcluir.id)
+        .eq('professor_id', user.id);
+
+      if (error) throw error;
+
+      // Atualiza o estado local para remover a rotina da UI
+      setAllRotinas(prev => prev.filter(r => r.id !== rotinaParaExcluir.id));
+      toast.success("Rotina excluída com sucesso.");
+
+    } catch (error) {
+      console.error("Erro ao excluir rotina:", error);
+      toast.error("Erro ao excluir rotina", {
+        description: "Não foi possível remover a rotina. Tente novamente.",
+      });
+    } finally {
+      setIsUpdatingStatus(false);
+      setShowDeleteDialog(false);
+      setRotinaParaExcluir(null);
+    }
+  };
+
+  const handleAbrirModalSelecaoAluno = () => {
     setIsCreateModalOpen(true);
   };
 
-  const handleSelectAlunoParaNovaRotina = (alunoId: string) => {
+  const handleSelectAlunoParaNovaRotina = async (alunoId: string) => {
+    if (isCheckingRotina) return; // Evita cliques duplos
+    setIsCheckingRotina(alunoId);
+
+    // Simula uma pequena espera para melhorar a percepção do usuário
+    await new Promise(resolve => setTimeout(resolve, 300));
+
     // Verifica se o aluno selecionado já tem uma rotina ativa ou rascunho
     const temRotinaAtiva = allRotinas.some(r => r.aluno_id === alunoId && (r.status === 'Ativa' || r.status === 'Bloqueada'));
     const temRascunho = allRotinas.some(r => r.aluno_id === alunoId && r.status === 'Rascunho');
 
     if (temRotinaAtiva) {
       toast.error("Aluno já possui uma rotina ativa.", { description: "Finalize ou exclua a rotina atual antes de criar uma nova para este aluno." });
+      setIsCheckingRotina(null);
       return;
     }
     if (temRascunho) {
       toast.error("Já existe um rascunho para este aluno.", { description: "Continue a edição do rascunho existente ou exclua-o para criar uma nova rotina." });
+      setIsCheckingRotina(null);
       return;
     }
 
+    // Em vez de navegar, fecha o primeiro modal, guarda o aluno e abre o segundo
     setIsCreateModalOpen(false);
-    navigate(`/rotinas-criar/${alunoId}`);
+    setIsCheckingRotina(null); // Reseta o estado de verificação
+    setAlunoSelecionado(alunoId);
+    setShowCriarOpcoesModal(true);
+  };
+
+  const handleCriarDoZero = () => {
+    if (!alunoSelecionado) return;
+    setShowCriarOpcoesModal(false);
+    sessionStorage.removeItem(`rotina_em_criacao_${alunoSelecionado}`);
+    navigate(`/rotinas-criar/${alunoSelecionado}`, { state: { from: '/rotinas' } });
+  };
+
+  const handleUsarModelo = () => {
+    if (!alunoSelecionado) return;
+    setShowCriarOpcoesModal(false);
+    sessionStorage.removeItem(`rotina_em_criacao_${alunoSelecionado}`);
+    navigate(`/selecionar-modelo?alunoId=${alunoSelecionado}`, { state: { from: '/rotinas' } });
+  };
+
+  const handleContinuarRascunho = async (rotina: RotinaCardProps) => {
+    try {
+      // 1. Buscar todos os dados do rascunho
+      const { data: rotinaDb, error: rotinaError } = await supabase.from('rotinas').select('*').eq('id', rotina.id).single();
+      if (rotinaError) throw rotinaError;
+
+      const { data: treinos, error: treinosError } = await supabase.from('treinos').select('*').eq('rotina_id', rotina.id).order('ordem');
+      if (treinosError) throw treinosError;
+
+      const exerciciosPorTreino: Record<string, ExercicioModelo[]> = {};
+      for (const treino of treinos) {
+        const { data: exerciciosDb, error: exerciciosError } = await supabase.from('exercicios_rotina').select('*, series(*)').eq('treino_id', treino.id).order('ordem');
+        if (exerciciosError) throw exerciciosError;
+
+        exerciciosPorTreino[treino.id] = exerciciosDb.map((ex): ExercicioModelo => ({
+          id: ex.id,
+          exercicio_1_id: ex.exercicio_1_id,
+          exercicio_2_id: ex.exercicio_2_id ?? undefined,
+          tipo: ex.exercicio_2_id ? 'combinada' : 'simples',
+          series: (ex.series as Tables<'series'>[]).map(s => ({
+            id: s.id,
+            numero_serie: s.numero_serie,
+            repeticoes: s.repeticoes ?? undefined, carga: s.carga ?? undefined,
+            repeticoes_1: s.repeticoes_1 ?? undefined, carga_1: s.carga_1 ?? undefined,
+            repeticoes_2: s.repeticoes_2 ?? undefined, carga_2: s.carga_2 ?? undefined,
+            tem_dropset: s.tem_dropset ?? undefined, carga_dropset: s.carga_dropset ?? undefined,
+            intervalo_apos_serie: s.intervalo_apos_serie ?? undefined,
+          })).sort((a, b) => a.numero_serie - b.numero_serie),
+          intervalo_apos_exercicio: ex.intervalo_apos_exercicio ?? undefined
+        }));
+      }
+
+      // 2. Montar o objeto para o sessionStorage
+      const rotinaStorageData = {
+        draftId: rotinaDb.id,
+        configuracao: {
+          nome: rotinaDb.nome || '',
+          objetivo: rotinaDb.objetivo || '',
+          dificuldade: rotinaDb.dificuldade || '',
+          duracao_semanas: rotinaDb.duracao_semanas ?? undefined,
+          treinos_por_semana: rotinaDb.treinos_por_semana ?? undefined,
+          data_inicio: rotinaDb.data_inicio || new Date().toISOString().split('T')[0],
+          descricao: rotinaDb.descricao || ''
+        },
+        treinos: treinos.map(t => ({ ...t, grupos_musculares: t.grupos_musculares ? t.grupos_musculares.split(',') : [] })),
+        exercicios: exerciciosPorTreino,
+        etapaAtual: 'configuracao',
+      };
+
+      // 3. Salvar no sessionStorage e navegar
+      sessionStorage.setItem(`rotina_em_criacao_${rotina.aluno_id}`, JSON.stringify(rotinaStorageData));
+      navigate(`/rotinas-criar/${rotina.aluno_id}`);
+
+    } catch (error) {
+      toast.error("Erro ao carregar rascunho", { description: "Não foi possível carregar os dados do rascunho. Tente novamente." });
+    }
   };
 
   if (loading) {
@@ -385,11 +533,15 @@ const RotinasPT = () => {
                                 <Button variant="default" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4" onClick={(e) => e.stopPropagation()} disabled={isUpdatingStatus}><MoreVertical /></Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => navigate(`/alunos-rotinas/${rotina.aluno_id}/${rotina.id}`)}><Eye className="mr-2 h-5 w-5" /><span className="text-base">Detalhes</span></DropdownMenuItem>
-                                {!isRascunho && <DropdownMenuItem onClick={() => navigate(`/execucao-rotina/selecionar-treino/${rotina.id}`, { state: { modo: 'professor' } })}><Play className="mr-2 h-5 w-5" /><span className="text-base">Treinar</span></DropdownMenuItem>}
-                                {isAtiva && <DropdownMenuItem onClick={() => handleUpdateRotinaStatus(rotina, 'Bloqueada')}><Ban className="mr-2 h-5 w-5" /><span className="text-base">Bloquear</span></DropdownMenuItem>}
-                                {isBloqueada && <DropdownMenuItem onClick={() => handleUpdateRotinaStatus(rotina, 'Ativa')}><Activity className="mr-2 h-5 w-5" /><span className="text-base">Reativar</span></DropdownMenuItem>}
-                                <DropdownMenuItem className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-5 w-5" /><span className="text-base">Excluir</span></DropdownMenuItem>
+                                {isRascunho ? (
+                                  <DropdownMenuItem onClick={() => handleContinuarRascunho(rotina)}><Play className="mr-2 h-5 w-5" /><span className="text-base">Continuar</span></DropdownMenuItem>
+                                ) : (
+                                  <DropdownMenuItem onClick={() => navigate(`/alunos-rotinas/${rotina.aluno_id}/${rotina.id}`)}><Eye className="mr-2 h-5 w-5" /><span className="text-base">Detalhes</span></DropdownMenuItem>
+                                )}
+                                {isAtiva && <DropdownMenuItem onClick={() => navigate(`/execucao-rotina/selecionar-treino/${rotina.id}`, { state: { modo: 'professor' } })}><Play className="mr-2 h-5 w-5" /><span className="text-base">Treinar</span></DropdownMenuItem> }
+                                {isAtiva && <DropdownMenuItem onClick={() => handleUpdateRotinaStatus(rotina, 'Bloqueada')}><Ban className="mr-2 h-5 w-5" /><span className="text-base">Bloquear</span></DropdownMenuItem> }
+                                {isBloqueada && <DropdownMenuItem onClick={() => handleUpdateRotinaStatus(rotina, 'Ativa')}><Activity className="mr-2 h-5 w-5" /><span className="text-base">Reativar</span></DropdownMenuItem> }                                
+                                <DropdownMenuItem onClick={() => handleExcluirRotina(rotina)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-5 w-5" /><span className="text-base">Excluir</span></DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
@@ -424,7 +576,7 @@ const RotinasPT = () => {
           <DialogTrigger asChild>
             {/* Botão para Mobile */}
             <Button
-              onClick={handleNovaRotinaClick}
+              onClick={handleAbrirModalSelecaoAluno}
               className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
               aria-label="Nova Rotina"
             >
@@ -434,7 +586,7 @@ const RotinasPT = () => {
           <DialogTrigger asChild>
             {/* Botão para Desktop */}
             <Button
-              onClick={handleNovaRotinaClick}
+              onClick={handleAbrirModalSelecaoAluno}
               className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6"
               size="lg"
             ><Plus /> Nova Rotina</Button>
@@ -447,7 +599,11 @@ const RotinasPT = () => {
             <div className="py-4 max-h-[60vh] overflow-y-auto">
               <div className="space-y-2">
                 {alunos.map(aluno => (
-                  <div key={aluno.id} onClick={() => handleSelectAlunoParaNovaRotina(aluno.id)} className="flex items-center p-3 hover:bg-muted/50 rounded-lg cursor-pointer transition-colors">
+                  <button
+                    key={aluno.id}
+                    onClick={() => handleSelectAlunoParaNovaRotina(aluno.id)}
+                    disabled={!!isCheckingRotina}
+                    className="w-full flex items-center p-3 hover:bg-muted/50 rounded-lg cursor-pointer transition-colors text-left disabled:cursor-not-allowed disabled:opacity-70">
                     <Avatar className="h-10 w-10 mr-4">
                       {aluno.avatar_type === 'image' && aluno.avatar_image_url ? (
                         <AvatarImage src={aluno.avatar_image_url} alt={aluno.nome_completo} />
@@ -457,8 +613,13 @@ const RotinasPT = () => {
                         </AvatarFallback>
                       )}
                     </Avatar>
-                    <p className="font-medium">{aluno.nome_completo}</p>
-                  </div>
+                    <p className="font-medium flex-1">{aluno.nome_completo}</p>
+                    {isCheckingRotina === aluno.id && (
+                      <div className="ml-4">
+                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                      </div>
+                    )}
+                  </button>
                 ))}
               </div>
             </div>
@@ -518,6 +679,53 @@ const RotinasPT = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal de Confirmação de Exclusão */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Rotina?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a rotina "{rotinaParaExcluir?.nome}"? Esta ação não pode ser desfeita e todos os dados associados (treinos, exercícios, séries) serão removidos permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setRotinaParaExcluir(null)} disabled={isUpdatingStatus}>Cancelar</AlertDialogCancel>
+            <Button variant="destructive" onClick={handleConfirmarExclusao} disabled={isUpdatingStatus}>
+              {isUpdatingStatus ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Excluindo...</> : 'Excluir'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Modal de Opções de Criação */}
+      <Dialog open={showCriarOpcoesModal} onOpenChange={setShowCriarOpcoesModal}>
+        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[425px] rounded-md">
+          <DialogHeader>
+            <DialogTitle>Como criar a rotina?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Button onClick={handleCriarDoZero} className="w-full" size="lg">
+              Rotina em Branco
+            </Button>
+            {loadingModelos ? (
+              <Button disabled className="w-full" size="lg">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Verificando modelos...
+              </Button>
+            ) : temModelos ? (
+              <Button onClick={handleUsarModelo} className="w-full" variant="outline" size="lg">
+                Usar um Modelo
+              </Button>
+            ) : (
+              <div className="text-center text-sm text-muted-foreground pt-2">
+                Dica: Crie modelos de rotina para agilizar seu trabalho.
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 };

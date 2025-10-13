@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EditAlunoPessoalForm } from "./EditAlunoPessoalForm";
 import { EditAlunoFisicasForm } from "./EditAlunoFisicasForm";
 import { PasswordChangeSection } from "./PasswordChangeSection";
+import { AlunoParQForm } from "./AlunoParQForm";
 import { AccountCancellationSection } from "./AccountCancellationSection";
 
 interface AlunoProfileData {
@@ -15,6 +16,7 @@ interface AlunoProfileData {
   peso?: number;
   altura?: number;
   descricao_pessoal?: string;
+  par_q_respostas?: Record<string, boolean | null> | null;
 }
 
 interface AlunoPerfilTabsProps {
@@ -28,6 +30,7 @@ export const AlunoPerfilTabs = ({ profile, onProfileUpdate }: AlunoPerfilTabsPro
       <TabsList>
         <TabsTrigger value="basicas">Informações Básicas</TabsTrigger>
         <TabsTrigger value="fisicas">Informações Físicas</TabsTrigger>
+        <TabsTrigger value="saude">Saúde (PAR-Q)</TabsTrigger>
         <TabsTrigger value="seguranca">Segurança</TabsTrigger>
         <TabsTrigger value="conta">Conta</TabsTrigger>
       </TabsList>
@@ -50,6 +53,17 @@ export const AlunoPerfilTabs = ({ profile, onProfileUpdate }: AlunoPerfilTabsPro
           </CardHeader>
           <CardContent>
             <EditAlunoFisicasForm profile={profile} onSave={onProfileUpdate || (() => {})} />
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="saude">
+        <Card>
+          <CardHeader>
+            <CardTitle>Questionário de Saúde (PAR-Q)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AlunoParQForm profile={profile} onSave={onProfileUpdate || (() => {})} />
           </CardContent>
         </Card>
       </TabsContent>
