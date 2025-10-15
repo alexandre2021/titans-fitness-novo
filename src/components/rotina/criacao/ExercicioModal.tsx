@@ -568,7 +568,7 @@ export const ExercicioModal: React.FC<Props> = ({
                   className="bg-red-600 hover:bg-red-700 text-white"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Adicionar
+                  {exerciciosJaAdicionados.length > 0 ? 'Mais Exercício(s)' : 'Exercício(s)'}
                 </Button>
               </div>
               <div className="text-sm text-gray-600 h-5">{selecaoTexto}</div>

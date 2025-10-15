@@ -19,6 +19,7 @@ import { Label } from '@/components/ui/label';
 import { ExercicioModelo } from './RotinaCriacao';
 import CustomSelect from '@/components/ui/CustomSelect';
 import type { Tables } from '@/integrations/supabase/types';
+import { FILTRO_FREQUENCIAS_OPTIONS, FILTRO_OBJETIVOS_OPTIONS } from '@/constants/rotinas';
 
 type AlunoInfo = {
   id: string;
@@ -60,12 +61,6 @@ interface RotinasAgrupadas {
     rotinas: RotinaCardProps[];
   };
 }
-
-const OBJETIVOS = ['Ganho de massa', 'Emagrecimento', 'Definição muscular', 'Condicionamento físico', 'Reabilitação', 'Performance esportiva'];
-const FREQUENCIAS = [1, 2, 3, 4, 5, 6, 7];
-
-const OBJETIVOS_OPTIONS = [{ value: 'todos', label: 'Todos' }, ...OBJETIVOS.map(o => ({ value: o, label: o }))];
-const FREQUENCIAS_OPTIONS = [{ value: 'todos', label: 'Todas' }, ...FREQUENCIAS.map(f => ({ value: String(f), label: `${f}x / semana` }))];
 
 const RotinasPT = () => {
   const { user } = useAuth();
@@ -466,10 +461,12 @@ const RotinasPT = () => {
                 <div className="space-y-2 flex-1">
                   <Label htmlFor="filtro-objetivo">Objetivo</Label>
                   <CustomSelect inputId="filtro-objetivo" value={OBJETIVOS_OPTIONS.find(opt => opt.value === filtros.objetivo)} onChange={(option) => setFiltros(prev => ({ ...prev, objetivo: option ? String(option.value) : 'todos' }))} options={OBJETIVOS_OPTIONS} />
+                  <CustomSelect inputId="filtro-objetivo" value={FILTRO_OBJETIVOS_OPTIONS.find(opt => opt.value === filtros.objetivo)} onChange={(option) => setFiltros(prev => ({ ...prev, objetivo: option ? String(option.value) : 'todos' }))} options={FILTRO_OBJETIVOS_OPTIONS} />
                 </div>
                 <div className="space-y-2 flex-1">
                   <Label htmlFor="filtro-frequencia">Frequência</Label>
                   <CustomSelect inputId="filtro-frequencia" value={FREQUENCIAS_OPTIONS.find(opt => opt.value === filtros.frequencia)} onChange={(option) => setFiltros(prev => ({ ...prev, frequencia: option ? String(option.value) : 'todos' }))} options={FREQUENCIAS_OPTIONS} />
+                  <CustomSelect inputId="filtro-frequencia" value={FILTRO_FREQUENCIAS_OPTIONS.find(opt => opt.value === filtros.frequencia)} onChange={(option) => setFiltros(prev => ({ ...prev, frequencia: option ? String(option.value) : 'todos' }))} options={FILTRO_FREQUENCIAS_OPTIONS} />
                 </div>
                 {temFiltrosAtivos && ( // O botão de limpar continua usando a mesma lógica
                   <Button variant="outline" size="sm" onClick={limparFiltros} className="flex items-center gap-2 w-full sm:w-auto flex-shrink-0"><X className="h-4 w-4" /> Limpar</Button>

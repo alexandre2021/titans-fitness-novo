@@ -1,9 +1,9 @@
 // src/components/layout/ProtectedRoutes.tsx
-import React, { useState, useEffect, Suspense, lazy } from "react";
+import { useState, useEffect, Suspense, lazy } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { useMediaQuery } from '@/hooks/use-media-query';
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 // Import all layout components
 import AlunoSidebar from "./AlunoSidebar";
@@ -16,6 +16,8 @@ import PTBottomNav from "./PTBottomNav";
 // Lazy load message components for better performance
 const MessagesDrawer = lazy(() => import('@/components/messages/MessageDrawer'));
 const MessagesButton = lazy(() => import('@/components/messages/MessageButton'));
+// A funcionalidade do assistente de IA foi pausada, então o componente não é mais renderizado.
+// import HelpChat from "@/pages/HelpChat";
 
 const ProtectedRoutes = () => {
   const { user, loading: authLoading } = useAuth();
@@ -119,6 +121,7 @@ const ProtectedRoutes = () => {
             direction="left" 
             onUnreadCountChange={setUnreadCount} />
         </Suspense>
+        {/* <HelpChat /> */}
       </div>
     );
   }
@@ -137,6 +140,7 @@ const ProtectedRoutes = () => {
           direction="right" 
           onUnreadCountChange={setUnreadCount} />
       </Suspense>
+      {/* <HelpChat /> */}
     </div>
   );
 };

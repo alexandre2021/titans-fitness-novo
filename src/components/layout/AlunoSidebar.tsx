@@ -1,5 +1,5 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Dumbbell, BarChart3, LogOut, User, Home, Copy } from "lucide-react";
+import { LayoutDashboard, Dumbbell, BarChart3, LogOut, User, Home, Copy, LifeBuoy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
@@ -41,6 +41,11 @@ const AlunoSidebar = () => {
       title: "Avaliações",
       href: "/avaliacoes-aluno",
       icon: BarChart3,
+    },
+    {
+      title: "Central de Ajuda",
+      href: "/app/ajuda",
+      icon: LifeBuoy,
     },
     {
       title: "Home",
@@ -142,7 +147,7 @@ const AlunoSidebar = () => {
                     <div className="w-full pt-2">
                       <p className="text-xs text-muted-foreground mb-2">Identificação</p>
                       <div className="flex items-center justify-center gap-2">
-                        <div className="text-base font-mono bg-muted px-3 py-1.5 rounded-md select-all truncate">{profile.codigo_vinculo}</div>
+                        <div className="text-base font-mono bg-muted px-3 py-1.5 rounded-md select-all truncate">{String(profile.codigo_vinculo)}</div>
                         <Button variant="outline" size="icon" className="h-9 w-9 flex-shrink-0" onClick={handleCopyCode}><Copy className="h-4 w-4" /></Button>
                       </div>
                     </div>

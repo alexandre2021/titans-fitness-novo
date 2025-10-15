@@ -32,28 +32,7 @@ import { SerieSimples } from "@/components/rotina/criacao/SerieSimples";
 import { SerieCombinada } from "@/components/rotina/criacao/SerieCombinada";
 import { ExercicioModal } from "@/components/rotina/criacao/ExercicioModal";
 import CustomSelect from "@/components/ui/CustomSelect";
-
-// --- Constantes ---
-const OBJETIVOS = ['Ganho de massa', 'Emagrecimento', 'Definição muscular', 'Condicionamento físico', 'Reabilitação', 'Performance esportiva'];
-const DIFICULDADES = ['Baixa', 'Média', 'Alta'];
-const FREQUENCIAS = [1, 2, 3, 4, 5, 6, 7];
-const GRUPOS_MUSCULARES = ['Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Abdômen', 'Pernas', 'Glúteos', 'Panturrilha'];
-const CORES_GRUPOS_MUSCULARES: { [key: string]: string } = {
-  'Peito': 'bg-red-100 text-red-800',
-  'Costas': 'bg-blue-100 text-blue-800',
-  'Pernas': 'bg-green-100 text-green-800',
-  'Ombros': 'bg-yellow-100 text-yellow-800',
-  'Bíceps': 'bg-purple-100 text-purple-800',
-  'Tríceps': 'bg-pink-100 text-pink-800',
-  'Abdômen': 'bg-orange-100 text-orange-800',
-  'Glúteos': 'bg-violet-100 text-violet-800',
-  'Panturrilha': 'bg-indigo-100 text-indigo-800'
-};
-
-const OBJETIVOS_OPTIONS = OBJETIVOS.map(o => ({ value: o, label: o }));
-const DIFICULDADES_OPTIONS = DIFICULDADES.map(d => ({ value: d, label: d }));
-const FREQUENCIAS_OPTIONS = FREQUENCIAS.map(f => ({ value: String(f), label: `${f}x / semana` }));
-const DURACAO_OPTIONS = Array.from({ length: 52 }, (_, i) => i + 1).map(semana => ({ value: String(semana), label: `${semana} semana${semana > 1 ? 's' : ''}` }));
+import { OBJETIVOS_OPTIONS, DIFICULDADES_OPTIONS, FREQUENCIAS_OPTIONS, DURACAO_OPTIONS, GRUPOS_MUSCULARES, CORES_GRUPOS_MUSCULARES, STORAGE_KEY_NOVO_MODELO } from "@/constants/rotinas";
 
 type ModeloConfiguracaoData = {
   nome: string;
@@ -676,7 +655,6 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
 
 // --- Tipos e Componente Principal ---
 type Etapa = "configuracao" | "treinos" | "exercicios";
-const STORAGE_KEY = 'modelo_em_criacao';
 
 interface ModeloEmCriacao {
   configuracao?: ModeloConfiguracaoData;
@@ -695,7 +673,7 @@ const NovoModelo = () => {
 
   // Carregar dados do sessionStorage ao montar
   useEffect(() => {
-    const savedData = sessionStorage.getItem(STORAGE_KEY);
+    const savedData = sessionStorage.getItem(STORAGE_KEY_NOVO_MODELO);
     if (savedData) {
       const parsedData = JSON.parse(savedData);
       setModeloEmCriacao(parsedData);
@@ -708,7 +686,7 @@ const NovoModelo = () => {
     return new Promise((resolve) => {
       setModeloEmCriacao(prev => {
         const newData = { ...prev, ...data };
-        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+        sessionStorage.setItem(STORAGE_KEY_NOVO_MODELO, JSON.stringify(newData));
         resolve();
         return newData;
       });
@@ -754,31 +732,33 @@ const NovoModelo = () => {
 
   const handleAvancarTreinos = (data: TreinoTemp[]) => {
     const oldTreinos = modeloEmCriacao.treinos || [];
-    const todosOldTreinosVazios = oldTreinos.every(t => t.grupos_musculares.length === 0);
-    const isPrimeiraVez = oldTreinos.length === 0 || todosOldTreinosVazios;
+    const oldExercicios = modeloEmCriacao.exercicios || {};
+    const newExercicios = { ...oldExercicios };
+    let exerciciosForamResetados = false;
 
-    // ✅ CORRIGIDO: Verifica mudanças APENAS nos grupos musculares, IGNORANDO ordem/nome
-    const mudouAlgoNosTreinos = data.length !== oldTreinos.length || data.some((newTreino) => {
+    data.forEach(newTreino => {
       const oldTreino = oldTreinos.find(t => t.id === newTreino.id);
-      if (!oldTreino) return true; // Treino novo ou ID mudou
       
-      const oldGrupos = oldTreino.grupos_musculares.slice().sort();
-      const newGrupos = newTreino.grupos_musculares.slice().sort();
-      
-      // ✅ Compara APENAS grupos musculares (ignora nome/ordem)
-      return JSON.stringify(oldGrupos) !== JSON.stringify(newGrupos);
+      // Compara os grupos musculares, ignorando a ordem
+      const oldGrupos = oldTreino ? [...oldTreino.grupos_musculares].sort() : [];
+      const newGrupos = [...newTreino.grupos_musculares].sort();
+
+      if (JSON.stringify(oldGrupos) !== JSON.stringify(newGrupos)) {
+        // Se os grupos musculares mudaram, zera os exercícios APENAS para este treino
+        if (newExercicios[newTreino.id] && newExercicios[newTreino.id].length > 0) {
+          exerciciosForamResetados = true;
+        }
+        delete newExercicios[newTreino.id];
+      }
     });
 
-    if (mudouAlgoNosTreinos) {
-      if (!isPrimeiraVez) {
-        toast.info("A estrutura dos treinos foi alterada.", {
-          description: "Todos os exercícios foram reiniciados para garantir a consistência."
-        });
-      }
-      updateStorage({ treinos: data, exercicios: {}, etapaAtual: 'exercicios' }); // Zera exercícios
-    } else {
-      updateStorage({ treinos: data, etapaAtual: 'exercicios' }); // Mantém exercícios
+    if (exerciciosForamResetados) {
+      toast.info("Exercícios reiniciados", {
+        description: "Os exercícios de alguns treinos foram reiniciados devido à mudança nos grupos musculares."
+      });
     }
+
+    updateStorage({ treinos: data, exercicios: newExercicios, etapaAtual: 'exercicios' });
     setEtapa('exercicios');
   };
 
@@ -787,7 +767,7 @@ const NovoModelo = () => {
   };
 
   const confirmarDescarte = () => {
-    sessionStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(STORAGE_KEY_NOVO_MODELO);
     navigate('/meus-modelos', { replace: true });
   };
 
@@ -878,7 +858,7 @@ const NovoModelo = () => {
         }
       }
 
-      sessionStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem(STORAGE_KEY_NOVO_MODELO);
       toast.success("Modelo salvo com sucesso!");
       navigate('/meus-modelos', { replace: true });
     } catch (error) {

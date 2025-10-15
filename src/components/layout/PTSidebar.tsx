@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, Dumbbell, LogOut, User, Settings, BookCopy, SquarePen, Home, Copy, MessageCircle, FileText } from "lucide-react";
+import { LayoutDashboard, Users, Dumbbell, LogOut, User, Settings, BookCopy, SquarePen, Home, Copy, MessageCircle, FileText, LifeBuoy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
@@ -51,6 +51,11 @@ const PTSidebar = () => {
       icon: BookCopy,
     },
     {
+      title: "Central de Ajuda",
+      href: "/app/ajuda",
+      icon: LifeBuoy,
+    },
+    {
       title: "Home",
       href: "/",
       icon: Home,
@@ -58,11 +63,14 @@ const PTSidebar = () => {
   ];
 
   if (user?.email === ADMIN_EMAIL) {
-    navigationItems.push({
+    const meusModelosIndex = navigationItems.findIndex(item => item.href === "/meus-modelos");
+    if (meusModelosIndex !== -1) {
+      navigationItems.splice(meusModelosIndex + 1, 0, {
       title: "Meus Posts",
       href: "/meus-posts",
       icon: SquarePen,
     });
+  }
   }
 
   const isActive = (path: string) => location.pathname === path;

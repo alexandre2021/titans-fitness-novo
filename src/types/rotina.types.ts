@@ -21,37 +21,13 @@ export type ExercicioRotina = Tables<'exercicios_rotina'>;
 export type Serie = Tables<'series'>;
 export type Aluno = Tables<'alunos'>;
 export type professor = Tables<'professores'>;
-
-// Constantes do sistema
-export const OBJETIVOS = [
-  'Perda de peso',
-  'Ganho de massa', 
-  'Condicionamento',
-  'Reabilitação',
-  'Performance'
-] as const;
-
-export const DIFICULDADES = [
-  'Baixa',
-  'Média', 
-  'Alta'
-] as const;
-
-export const STATUS_ROTINA = [
-  'Ativa',
-  'Rascunho',
-  'Bloqueada',
-  'Concluída',
-  'Cancelada'
-] as const;
-
-export const FORMAS_PAGAMENTO = [
-  'Dinheiro',
-  'PIX',
-  'Cartão de Débito',
-  'Cartão de Crédito',
-  'Transferência Bancária'
-] as const;
+import {
+  OBJETIVOS,
+  DIFICULDADES,
+  STATUS_ROTINA,
+  FORMAS_PAGAMENTO,
+  LIMITES
+} from '@/constants/rotinas';
 
 // Tipos derivados
 export type Objetivo = typeof OBJETIVOS[number];
@@ -181,25 +157,5 @@ export interface OptionType {
   value: string;
   label: string;
 }
-
-// Constantes para validação
-export const LIMITES = {
-  NOME_MIN: 3,
-  NOME_MAX: 100,
-  DURACAO_MIN: 1,
-  DURACAO_MAX: 52,
-  TREINOS_MIN: 1,
-  TREINOS_MAX: 7,
-  VALOR_MIN: 0,
-  EXERCICIOS_MIN_POR_TREINO: 1,
-  SERIES_MIN_POR_EXERCICIO: 1,
-  SERIES_MAX_POR_EXERCICIO: 10,
-  REPETICOES_MIN: 1,
-  REPETICOES_MAX: 100,
-  CARGA_MIN: 0,
-  CARGA_MAX: 999,
-  INTERVALO_MIN: 0,
-  INTERVALO_MAX: 600
-} as const;
 
 export default {};

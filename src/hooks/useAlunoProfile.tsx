@@ -19,6 +19,7 @@ interface AlunoProfile {
   avatar_image_url?: string;
   avatar_letter?: string;
   avatar_color: string;
+  codigo_vinculo: string;
 }
 
 export const useAlunoProfile = () => {

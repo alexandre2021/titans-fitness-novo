@@ -7,11 +7,11 @@ import { useNavigate, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
-  Users,
-  Target,
-  ClipboardList,
+  Users, // Mantido para Alunos
+  BookCopy, // Novo para Modelos
+  FileText, // Novo para Rotinas
   Calendar,
-  Dumbbell,
+  Dumbbell, // Novo para Exercícios
   BarChart3,
   MoreVertical,
   RefreshCw,
@@ -269,7 +269,7 @@ const IndexProfessor = () => {
           <Card className="cursor-pointer hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Exercícios</CardTitle>
-              <ClipboardList className="h-4 w-4 text-muted-foreground" />
+              <Dumbbell className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.exerciciosPersonalizados}</div>
@@ -283,7 +283,7 @@ const IndexProfessor = () => {
           <Card className="cursor-pointer hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Modelos</CardTitle>
-              <Target className="h-4 w-4 text-muted-foreground" />
+              <BookCopy className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.meusModelos}</div>
@@ -297,7 +297,7 @@ const IndexProfessor = () => {
           <Card className="cursor-pointer hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Rotinas</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.rotinasAtivas}</div>

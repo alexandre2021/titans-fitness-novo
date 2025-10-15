@@ -415,12 +415,8 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   const handleVerDetalhes = (rotinaId: string) => {
     const rotinaSelecionada = rotinasAtivas.find(r => r.id === rotinaId);
     setSelectedRotina(rotinaSelecionada || null);
-    if (modo === 'professor') {
-      // Para o PT, "Detalhes" leva à página de gerenciamento da rotina.
-      navigate(`/alunos-rotinas/${alunoId}/${rotinaId}`);
-    } else {
-      setShowDetalhesModal(true);
-    }
+    // ✅ ALTERAÇÃO: Unifica o comportamento para ambos os perfis.
+    navigate(`/alunos-rotinas/${alunoId}/${rotinaId}`);
   };
 
   const handleTreinar = (rotinaId: string) => {

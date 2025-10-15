@@ -14,16 +14,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Tables } from "@/integrations/supabase/types";
 import CustomSelect from "@/components/ui/CustomSelect";
+import { FILTRO_DIFICULDADES_OPTIONS, FILTRO_FREQUENCIAS_OPTIONS, FILTRO_OBJETIVOS_OPTIONS } from "@/constants/rotinas";
 
 type ModeloRotina = Tables<'modelos_rotina'>;
-
-const OBJETIVOS = ['Ganho de massa', 'Emagrecimento', 'Definição muscular', 'Condicionamento físico', 'Reabilitação', 'Performance esportiva'];
-const DIFICULDADES = ['Baixa', 'Média', 'Alta'];
-const FREQUENCIAS = [1, 2, 3, 4, 5, 6, 7];
-
-const OBJETIVOS_OPTIONS = [{ value: 'todos', label: 'Todos' }, ...OBJETIVOS.map(o => ({ value: o, label: o }))];
-const DIFICULDADES_OPTIONS = [{ value: 'todos', label: 'Todas' }, ...DIFICULDADES.map(d => ({ value: d, label: d }))];
-const FREQUENCIAS_OPTIONS = [{ value: 'todos', label: 'Todas' }, ...FREQUENCIAS.map(f => ({ value: String(f), label: `${f}x / semana` }))];
 
 // Main component
 const MeusModelos = () => {
@@ -189,27 +182,27 @@ const MeusModelos = () => {
                 <Label htmlFor="filtro-objetivo">Objetivo</Label>
                 <CustomSelect
                   inputId="filtro-objetivo"
-                  value={OBJETIVOS_OPTIONS.find(opt => opt.value === filtros.objetivo)}
+                  value={FILTRO_OBJETIVOS_OPTIONS.find(opt => opt.value === filtros.objetivo)}
                   onChange={(option) => setFiltros(prev => ({ ...prev, objetivo: option ? String(option.value) : 'todos' }))}
-                  options={OBJETIVOS_OPTIONS}
+                  options={FILTRO_OBJETIVOS_OPTIONS}
                 />
               </div>
               <div className="space-y-2 flex-1">
                 <Label htmlFor="filtro-dificuldade">Dificuldade</Label>
                 <CustomSelect
                   inputId="filtro-dificuldade"
-                  value={DIFICULDADES_OPTIONS.find(opt => opt.value === filtros.dificuldade)}
+                  value={FILTRO_DIFICULDADES_OPTIONS.find(opt => opt.value === filtros.dificuldade)}
                   onChange={(option) => setFiltros(prev => ({ ...prev, dificuldade: option ? String(option.value) : 'todos' }))}
-                  options={DIFICULDADES_OPTIONS}
+                  options={FILTRO_DIFICULDADES_OPTIONS}
                 />
               </div>
               <div className="space-y-2 flex-1">
                 <Label htmlFor="filtro-frequencia">Frequência</Label>
                 <CustomSelect
                   inputId="filtro-frequencia"
-                  value={FREQUENCIAS_OPTIONS.find(opt => opt.value === filtros.frequencia)}
+                  value={FILTRO_FREQUENCIAS_OPTIONS.find(opt => opt.value === filtros.frequencia)}
                   onChange={(option) => setFiltros(prev => ({ ...prev, frequencia: option ? String(option.value) : 'todos' }))}
-                  options={FREQUENCIAS_OPTIONS}
+                  options={FILTRO_FREQUENCIAS_OPTIONS}
                 />
               </div>
               {temFiltrosAtivos && (

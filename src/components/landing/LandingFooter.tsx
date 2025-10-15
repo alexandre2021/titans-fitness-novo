@@ -31,7 +31,7 @@ const LandingFooter = () => {
           </div>
           
           <div>
-            <h3 className="font-semibold mb-4 text-gray-800">Produto</h3>
+            <h3 className="font-semibold mb-4 text-gray-800">Aplicativo</h3>
             <ul className="space-y-2">
               <li>
                 <Link
@@ -39,17 +39,32 @@ const LandingFooter = () => {
                   onClick={() => window.scrollTo(0, 0)} 
                   className="text-gray-600 hover:text-gray-800 transition-colors">Funcionalidades</Link>
               </li>
-              <li><a href="#planos" className="text-gray-600 hover:text-gray-800 transition-colors">Plano</a></li>
-              <li><a href="#" className="text-gray-600 hover:text-gray-800 transition-colors">API</a></li>
-              <li><a href="#" className="text-gray-600 hover:text-gray-800 transition-colors">Integrações</a></li>
+              <li>
+                <Link to="/faq" onClick={() => window.scrollTo(0, 0)} className="text-gray-600 hover:text-gray-800 transition-colors">
+                  Perguntas frequentes
+                </Link>
+              </li>
+              <li>
+                <Link to="/sobre" onClick={() => window.scrollTo(0, 0)} className="text-gray-600 hover:text-gray-800 transition-colors">
+                  Sobre Nós
+                </Link>
+              </li>
             </ul>
           </div>
           
           <div>
             <h3 className="font-semibold mb-4 text-gray-800">Suporte</h3>
             <ul className="space-y-2">
-              <li><a href="#" className="text-gray-600 hover:text-gray-800 transition-colors">Central de Ajuda</a></li>
-              <li><a href="#" className="text-gray-600 hover:text-gray-800 transition-colors">Contato</a></li>
+              <li>
+                <Link to="/central-de-ajuda" onClick={() => window.scrollTo(0, 0)} className="text-gray-600 hover:text-gray-800 transition-colors">
+                  Central de Ajuda
+                </Link>
+              </li>
+              <li>
+                <Link to="/contato" onClick={() => window.scrollTo(0, 0)} className="text-gray-600 hover:text-gray-800 transition-colors">
+                  Contato
+                </Link>
+              </li>
               <li>
                 <Link to="/termos" onClick={() => window.scrollTo(0, 0)} className="text-gray-600 hover:text-gray-800 transition-colors">
                   Termos de Uso
@@ -69,7 +84,7 @@ const LandingFooter = () => {
             © 2025 Titans.fitness. Todos os direitos reservados.
           </p>
           <p className="text-gray-600 text-sm mt-4 md:mt-0">
-            Feito com ❤️ para você
+            Feito com 💪🏾 para os Titans
           </p>
         </div>
       </div>

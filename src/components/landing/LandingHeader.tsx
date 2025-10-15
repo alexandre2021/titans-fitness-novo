@@ -31,7 +31,7 @@ const LandingHeader = () => {
               <Button variant="ghost">Funcionalidades</Button>
             </Link>
           )}
-          {location.pathname.startsWith("/funcionalidades") && (
+          {(location.pathname.startsWith("/funcionalidades") || location.pathname.startsWith("/faq") || location.pathname.startsWith("/sobre") || location.pathname.startsWith("/termos") || location.pathname.startsWith("/privacidade") || location.pathname.startsWith("/central-de-ajuda") || location.pathname.startsWith("/contato")) && (
             <Link to="/">
               <Button variant="ghost">Home</Button>
             </Link>

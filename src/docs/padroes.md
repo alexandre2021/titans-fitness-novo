@@ -79,8 +79,8 @@ const CORES_STATUS_SESSAO = {
 ### **Objetivos:**
 ```typescript
 const OBJETIVOS = [
-  'Emagrecimento',
   'Ganho de massa',
+  'Emagrecimento',
   'Definição muscular',
   'Condicionamento físico',
   'Reabilitação',

@@ -1,44 +1,28 @@
-import { Link, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import LandingHeader from "@/components/landing/LandingHeader";
+import LandingFooter from "@/components/landing/LandingFooter";
 
 const Termos = () => {
-  const navigate = useNavigate();
-
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="border-b border-border py-4">
-        <div className="flex items-center justify-center relative px-6">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(-1)}
-            className="h-10 w-10 p-0 absolute left-6"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <img
-            src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal.png"
-            alt="Titans.fitness"
-            className="h-12"
-          />
-        </div>
-      </header>
+    <div className="min-h-screen bg-background">
+      <LandingHeader />
 
       {/* Main Content */}
-      <main className="flex-1 container mx-auto px-6 py-12 max-w-4xl">
-        <h1 className="text-4xl font-bold text-text-primary mb-8">
-          Termos de Uso
-        </h1>
-        
-        <div className="prose prose-gray max-w-none">
-          <p className="text-text-secondary text-lg mb-8">
-            Última atualização: 29 de agosto de 2025
-          </p>
+      <main>
+        <section className="py-12 md:py-20">
+          <div className="container mx-auto px-4 max-w-4xl">
+            <div className="text-center mb-12">
+              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tighter">
+                Termos de Uso
+              </h1>
+              <p className="mt-4 text-lg text-muted-foreground">
+                Última atualização: 29 de agosto de 2025
+              </p>
+            </div>
 
-          <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-text-primary mb-4">1. Aceitação dos Termos</h2>
-            <p className="text-text-secondary mb-4">
+            <div className="prose prose-lg max-w-none mx-auto text-foreground">
+              <section className="mb-8">
+                <h2 className="text-2xl font-semibold text-text-primary mb-4">1. Aceitação dos Termos</h2>
+                <p className="text-text-secondary mb-4">
               Ao acessar e usar a plataforma Titans.fitness, você concorda em estar vinculado a estes 
               Termos de Uso e a todas as leis e regulamentos aplicáveis. Estes termos se aplicam tanto 
               a Professores quanto a Alunos que utilizam nossa plataforma.
@@ -218,8 +202,11 @@ const Termos = () => {
               <li><strong>Email:</strong> contato@titans.fitness</li>
             </ul>
           </section>
-        </div>
+            </div>
+          </div>
+        </section>
       </main>
+      <LandingFooter />
     </div>
   );
 };

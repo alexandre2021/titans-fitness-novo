@@ -4,8 +4,8 @@
 // Ela serve para agrupar links de navegação adicionais que não cabem no menu principal.
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { Link, useNavigate } from 'react-router-dom';
-import { ChevronRight, Newspaper, BookCopy, SquarePen, Home, User, Settings, LogOut } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ChevronRight, BookCopy, SquarePen, Home, LifeBuoy } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const Mais = () => {
@@ -13,7 +13,6 @@ const Mais = () => {
   const [userType, setUserType] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const navigate = useNavigate();
   useEffect(() => {
     const determineUserType = async () => {
       if (authLoading) return;
@@ -43,6 +42,7 @@ const Mais = () => {
 
   const baseProfessorLinks = [
     { href: "/meus-modelos", label: "Meus Modelos", icon: BookCopy },
+    { href: "/app/ajuda", label: "Central de Ajuda", icon: LifeBuoy },
     { href: "/", label: "Home", icon: Home },
   ];
 
@@ -53,7 +53,8 @@ const Mais = () => {
   const professorLinks = baseProfessorLinks;
 
   const alunoLinks = [
-    { href: '/', label: 'Home', icon: Home },
+    { href: "/app/ajuda", label: "Central de Ajuda", icon: LifeBuoy },
+    { href: "/", label: "Home", icon: Home },
   ];
 
   const links = userType === 'professor' ? professorLinks : userType === 'aluno' ? alunoLinks : [];

@@ -25,28 +25,7 @@ import { SerieSimples } from "@/components/rotina/criacao/SerieSimples";
 import { SerieCombinada } from "@/components/rotina/criacao/SerieCombinada";
 import { ExercicioModal } from "@/components/rotina/criacao/ExercicioModal";
 import CustomSelect from "@/components/ui/CustomSelect";
-
-// --- Constantes ---
-const OBJETIVOS = ['Ganho de massa', 'Emagrecimento', 'Definição muscular', 'Condicionamento físico', 'Reabilitação', 'Performance esportiva'];
-const DIFICULDADES = ['Baixa', 'Média', 'Alta'];
-const FREQUENCIAS = [1, 2, 3, 4, 5, 6, 7];
-const GRUPOS_MUSCULARES = ['Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Abdômen', 'Pernas', 'Glúteos', 'Panturrilha'];
-const CORES_GRUPOS_MUSCULARES: { [key: string]: string } = {
-  'Peito': 'bg-red-100 text-red-800',
-  'Costas': 'bg-blue-100 text-blue-800',
-  'Pernas': 'bg-green-100 text-green-800',
-  'Ombros': 'bg-yellow-100 text-yellow-800',
-  'Bíceps': 'bg-purple-100 text-purple-800',
-  'Tríceps': 'bg-pink-100 text-pink-800',
-  'Abdômen': 'bg-orange-100 text-orange-800',
-  'Glúteos': 'bg-violet-100 text-violet-800',
-  'Panturrilha': 'bg-indigo-100 text-indigo-800'
-};
-
-const OBJETIVOS_OPTIONS = OBJETIVOS.map(o => ({ value: o, label: o }));
-const DIFICULDADES_OPTIONS = DIFICULDADES.map(d => ({ value: d, label: d }));
-const FREQUENCIAS_OPTIONS = FREQUENCIAS.map(f => ({ value: String(f), label: `${f}x / semana` }));
-const DURACAO_OPTIONS = Array.from({ length: 52 }, (_, i) => i + 1).map(semana => ({ value: String(semana), label: `${semana} semana${semana > 1 ? 's' : ''}` }));
+import { OBJETIVOS_OPTIONS, DIFICULDADES_OPTIONS, FREQUENCIAS_OPTIONS, DURACAO_OPTIONS, GRUPOS_MUSCULARES, CORES_GRUPOS_MUSCULARES } from "@/constants/rotinas";
 
 // --- Tipos ---
 type ModeloConfiguracaoData = {
@@ -594,7 +573,13 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
             </div>
           </div>
         </div>
-        {isModalOpen && <ExercicioModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onAdd={handleAdicionarExercicios} gruposMuscularesFiltro={treinoAtual?.grupos_musculares || []} />}
+        {isModalOpen && <ExercicioModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onAdd={handleAdicionarExercicios}
+          gruposMuscularesFiltro={treinoAtual?.grupos_musculares || []}
+          exerciciosJaAdicionados={treinoAtual ? (exercicios[treinoAtual.id] || []).flatMap(ex => [ex.exercicio_1_id, ex.exercicio_2_id]).filter(Boolean) as string[] : []}
+        />}
       </CardContent>
     </Card>
   );
@@ -813,48 +798,30 @@ const EditarModelo = () => {
   };
 
   const handleAvancarTreinos = (data: TreinoTemp[]) => {
+    const oldTreinos = modeloEmEdicao.treinos || [];
     const oldExercicios = modeloEmEdicao.exercicios || {};
     const newExercicios = { ...oldExercicios };
-    let hasChanges = false;
-
-    // Helper to compare muscle group arrays regardless of order
-    const compareMuscleGroups = (arr1: string[], arr2: string[]) => {
-      if (arr1.length !== arr2.length) return false;
-      const sorted1 = [...arr1].sort();
-      const sorted2 = [...arr2].sort();
-      return sorted1.every((value, index) => value === sorted2[index]);
-    };
-
+    let exerciciosForamResetados = false;
+    
     data.forEach(newTreino => {
-      const oldTreino = modeloEmEdicao.treinos?.find(t => t.id === newTreino.id);
+      const oldTreino = oldTreinos.find(t => t.id === newTreino.id);
+      
+      const oldGrupos = oldTreino ? [...oldTreino.grupos_musculares].sort() : [];
+      const newGrupos = [...newTreino.grupos_musculares].sort();
 
-      // Check if muscle groups have actually changed
-      if (oldTreino && !compareMuscleGroups(oldTreino.grupos_musculares, newTreino.grupos_musculares)) {
-        const exercisesForThisTreino = newExercicios[newTreino.id] || [];
-
-        if (exercisesForThisTreino.length > 0) {
-          const filteredExercises = exercisesForThisTreino.filter(ex => {
-            const info1 = getExercicioInfo(ex.exercicio_1_id);
-            if (info1.grupo_muscular && newTreino.grupos_musculares.includes(info1.grupo_muscular)) return true;
-            
-            if (ex.exercicio_2_id) {
-              const info2 = getExercicioInfo(ex.exercicio_2_id);
-              if (info2.grupo_muscular && newTreino.grupos_musculares.includes(info2.grupo_muscular)) return true;
-            }
-            return false;
-          });
-
-          if (filteredExercises.length < exercisesForThisTreino.length) {
-            toast.info(`Exercícios removidos do Treino ${newTreino.nome}`, { description: "Alguns exercícios foram removidos por não pertencerem mais aos grupos musculares selecionados." });
-          }
-
-          newExercicios[newTreino.id] = filteredExercises;
-          hasChanges = true;
+      if (JSON.stringify(oldGrupos) !== JSON.stringify(newGrupos)) {
+        if (newExercicios[newTreino.id] && newExercicios[newTreino.id].length > 0) {
+          exerciciosForamResetados = true;
         }
+        delete newExercicios[newTreino.id];
       }
     });
 
-    updateState({ treinos: data, exercicios: hasChanges ? newExercicios : oldExercicios });
+    if (exerciciosForamResetados) {
+      toast.info("Exercícios reiniciados", { description: "Os exercícios de alguns treinos foram reiniciados devido à mudança nos grupos musculares." });
+    }
+
+    updateState({ treinos: data, exercicios: newExercicios });
     setEtapa('exercicios');
   };
 

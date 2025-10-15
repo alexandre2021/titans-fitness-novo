@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Dumbbell, BarChart3, MoreHorizontal, User } from "lucide-react";
+import { LayoutDashboard, Dumbbell, MoreHorizontal, User, BarChart3 } from "lucide-react";
 
 const AlunoBottomNav = () => {
   const navigationItems = [

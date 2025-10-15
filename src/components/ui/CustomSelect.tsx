@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
 import Select, {
-  type Props as SelectProps,
+  Props as SelectProps,
   type GroupBase,
   type ClassNamesConfig,
   type StylesConfig,
 } from 'react-select';
+import CreatableSelect from 'react-select/creatable';
 import { cn } from '@/lib/utils';
 
 // Define a standard option type
@@ -18,7 +19,10 @@ export type CustomSelectProps<
   Option extends CustomSelectOption,
   IsMulti extends boolean = false,
   Group extends GroupBase<Option> = GroupBase<Option>,
-> = SelectProps<Option, IsMulti, Group>;
+> = SelectProps<Option, IsMulti, Group> & {
+  isCreatable?: boolean;
+  formatCreateLabel?: (inputValue: string) => React.ReactNode;
+};
 
 function CustomSelectComponent<
   Option extends CustomSelectOption,
@@ -26,6 +30,7 @@ function CustomSelectComponent<
   Group extends GroupBase<Option> = GroupBase<Option>,
 >({
   className,
+  isCreatable,
   ...props
 }: CustomSelectProps<Option, IsMulti, Group>) {
   const classNames: ClassNamesConfig<Option, IsMulti, Group> = useMemo(
@@ -65,19 +70,27 @@ function CustomSelectComponent<
     []
   );
 
-  return (
-    <Select
-      unstyled
-      classNames={classNames}
-      styles={customStyles}
-      isSearchable={false}
-      blurInputOnSelect={true}
-      captureMenuScroll={false}
-      menuPosition="fixed"
-      menuPortalTarget={document.body}
-      {...props}
-    />
-  );
+  const commonProps = {
+    unstyled: true,
+    classNames: classNames,
+    styles: customStyles,
+    isSearchable: false,
+    blurInputOnSelect: true,
+    captureMenuScroll: false,
+    menuPosition: "fixed" as const,
+    menuPortalTarget: document.body,
+    ...props,
+  };
+
+  if (isCreatable) {
+    return (
+      <CreatableSelect
+        {...commonProps}
+      />
+    );
+  }
+
+  return <Select {...commonProps} />;
 }
 
 const CustomSelect = React.memo(CustomSelectComponent) as typeof CustomSelectComponent;

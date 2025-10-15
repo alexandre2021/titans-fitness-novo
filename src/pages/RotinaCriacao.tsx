@@ -30,10 +30,9 @@ import {
 import { 
   Objetivo, 
   Dificuldade, 
-  OBJETIVOS, 
-  DIFICULDADES,
   Aluno
 } from '@/types/rotina.types';
+import { OBJETIVOS_OPTIONS, DIFICULDADES_OPTIONS, DURACAO_OPTIONS, GRUPOS_MUSCULARES, CORES_GRUPOS_MUSCULARES, STORAGE_KEY_ROTINA_CRIACAO } from '@/constants/rotinas';
 import { Tables } from '@/integrations/supabase/types';
 
 // Reusable Components
@@ -93,25 +92,7 @@ interface RotinaEmCriacao {
 }
 
 // --- Constantes ---
-const OBJETIVOS_OPTIONS = OBJETIVOS.map(o => ({ value: o, label: o }));
-const DIFICULDADES_OPTIONS = DIFICULDADES.map(d => ({ value: d, label: d }));
-const DURACAO_OPTIONS = Array.from({ length: 52 }, (_, i) => ({ value: String(i + 1), label: `${i + 1} semana${i > 0 ? 's' : ''}` }));
 const TREINOS_OPTIONS = Array.from({ length: 7 }, (_, i) => ({ value: String(i + 1), label: `${i + 1}x / semana` }));
-const GRUPOS_MUSCULARES = [
-  'Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Abdômen', 'Pernas', 'Glúteos', 'Panturrilha'
-];
-const CORES_GRUPOS_MUSCULARES: { [key: string]: string } = {
-  'Peito': 'bg-red-100 text-red-800',
-  'Costas': 'bg-blue-100 text-blue-800',
-  'Pernas': 'bg-green-100 text-green-800',
-  'Ombros': 'bg-yellow-100 text-yellow-800',
-  'Bíceps': 'bg-purple-100 text-purple-800',
-  'Tríceps': 'bg-pink-100 text-pink-800',
-  'Abdômen': 'bg-orange-100 text-orange-800',
-  'Glúteos': 'bg-violet-100 text-violet-800',
-  'Panturrilha': 'bg-indigo-100 text-indigo-800'
-};
-const STORAGE_KEY = 'rotina_em_criacao';
 
 type Etapa = "configuracao" | "treinos" | "exercicios";
 
@@ -135,9 +116,9 @@ interface RotinaTreinosStepProps {
 interface RotinaExerciciosStepProps {
   onFinalizar: () => void;
   onVoltar: () => void;
-  initialData?: Record<string, ExercicioModelo[]>;
+  exercicios: Record<string, ExercicioModelo[]>; // Alterado de initialData
   treinos: TreinoTemp[];
-  onUpdate: (data: Partial<RotinaEmCriacao>) => void;
+  setExercicios: (exercicios: Record<string, ExercicioModelo[]>) => void; // Alterado de onUpdate
   onCancelar: () => void;
   isSaving: boolean;
 }
@@ -413,22 +394,15 @@ const RotinaTreinosStep = ({ onAvancar, onVoltar, initialData, configuracao, onC
 };
 
 // --- Etapa 3: Componente de Exercícios ---
-const RotinaExerciciosStep = ({ onFinalizar, onVoltar, initialData, treinos, onUpdate, onCancelar, isSaving }: RotinaExerciciosStepProps) => {
-  const [exercicios, setExercicios] = useState<Record<string, ExercicioModelo[]>>(initialData || {});
+const RotinaExerciciosStep = ({ onFinalizar, onVoltar, exercicios, treinos, setExercicios, onCancelar, isSaving }: RotinaExerciciosStepProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [treinoAtual, setTreinoAtual] = useState<TreinoTemp | null>(null);
   const { getExercicioInfo } = useExercicioLookup();
 
-  // ✅ NOVO: Sincroniza com initialData quando ele muda
-  useEffect(() => {
-    console.log('🔄 useEffect RotinaExerciciosStep - initialData mudou:', initialData);
-    setExercicios(initialData || {});
-  }, [initialData]);
-
   // ✅ NOVO: Salvar exercícios ao voltar
   const handleVoltarClick = () => {
     console.log('💾 Salvando exercícios antes de voltar:', exercicios);
-    onUpdate({ exercicios }); // ← SALVA os exercícios!
+    // Não precisa mais chamar onUpdate aqui, o estado já é o do pai.
     onVoltar();
   };
 
@@ -457,36 +431,36 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, initialData, treinos, onU
       exerciciosParaAdicionar = exerciciosSelecionados.map(ex => ({ id: `ex_modelo_${Date.now()}_${Math.random()}`, exercicio_1_id: ex.id, tipo: 'simples', series: [{ id: `serie_${Date.now()}`, numero_serie: 1, repeticoes: 0, carga: 0, intervalo_apos_serie: 60 }], intervalo_apos_exercicio: 90 }));
     }
 
-    setExercicios(prev => ({ ...prev, [treinoAtual.id]: [...(prev[treinoAtual.id] || []), ...exerciciosParaAdicionar] }));
+    setExercicios({
+      ...exercicios,
+      [treinoAtual.id]: [...(exercicios[treinoAtual.id] || []), ...exerciciosParaAdicionar],
+    });
     // Não fecha o modal, permitindo adicionar mais exercícios
   };
 
   const handleRemoverExercicio = (treinoId: string, exercicioId: string) => {
-    setExercicios(prev => ({ ...prev, [treinoId]: (prev[treinoId] || []).filter(ex => ex.id !== exercicioId) }));
+    const novosExercicios = { ...exercicios, [treinoId]: (exercicios[treinoId] || []).filter(ex => ex.id !== exercicioId) };
+    setExercicios(novosExercicios);
   };
 
   const handleAtualizarExercicio = (treinoId: string, exercicioId: string, dados: Partial<ExercicioModelo>) => {
-    setExercicios(prev => ({ ...prev, [treinoId]: (prev[treinoId] || []).map(ex => ex.id === exercicioId ? { ...ex, ...dados } : ex) }));
+    const novosExercicios = { ...exercicios, [treinoId]: (exercicios[treinoId] || []).map(ex => ex.id === exercicioId ? { ...ex, ...dados } : ex) };
+    setExercicios(novosExercicios);
   };
 
   const handleMoverExercicio = (treinoId: string, exercicioIndex: number, direcao: 'cima' | 'baixo') => {
-    setExercicios(prev => {
-      const treinoExercicios = prev[treinoId] || [];
-      if (treinoExercicios.length < 2) return prev;
+    const treinoExercicios = [...(exercicios[treinoId] || [])];
+    if (treinoExercicios.length < 2) return;
 
-      const newIndex = direcao === 'cima' ? exercicioIndex - 1 : exercicioIndex + 1;
+    const newIndex = direcao === 'cima' ? exercicioIndex - 1 : exercicioIndex + 1;
+    if (newIndex < 0 || newIndex >= treinoExercicios.length) return;
 
-      if (newIndex < 0 || newIndex >= treinoExercicios.length) {
-        return prev;
-      }
+    // Troca os exercícios de posição
+    const temp = treinoExercicios[exercicioIndex];
+    treinoExercicios[exercicioIndex] = treinoExercicios[newIndex];
+    treinoExercicios[newIndex] = temp;
 
-      const novosExercicios = [...treinoExercicios];
-      const temp = novosExercicios[exercicioIndex];
-      novosExercicios[exercicioIndex] = novosExercicios[newIndex];
-      novosExercicios[newIndex] = temp;
-
-      return { ...prev, [treinoId]: novosExercicios };
-    });
+    setExercicios({ ...exercicios, [treinoId]: treinoExercicios });
   };
 
   const requisitosAtendidos = treinos.every(t => exercicios[t.id] && exercicios[t.id].length > 0);
@@ -527,7 +501,7 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, initialData, treinos, onU
               </Button>
               {/* Botão para Desktop: com ícone e texto */}
               <Button type="button" variant="default" onClick={() => handleAbrirModal(treino)} size="sm" className="hidden md:flex">
-                <Plus className="h-4 w-4 mr-2" /> Exercício(s)
+                <Plus className="h-4 w-4 mr-2" /> Exercício
               </Button>
             </CardHeader>
             <CardContent>
@@ -640,7 +614,7 @@ const RotinaCriacao = () => {
         }
         setAluno(data);
 
-        const savedData = sessionStorage.getItem(`${STORAGE_KEY}_${alunoId}`);
+        const savedData = sessionStorage.getItem(`${STORAGE_KEY_ROTINA_CRIACAO}_${alunoId}`);
         if (savedData) {
           const parsedData = JSON.parse(savedData);
           setRotinaEmCriacao(parsedData);
@@ -661,7 +635,7 @@ const RotinaCriacao = () => {
     return new Promise((resolve) => {
       setRotinaEmCriacao(prev => {
         const newData = { ...prev, ...data };
-        sessionStorage.setItem(`${STORAGE_KEY}_${alunoId}`, JSON.stringify(newData));
+        sessionStorage.setItem(`${STORAGE_KEY_ROTINA_CRIACAO}_${alunoId}`, JSON.stringify(newData));
         resolve();
         return newData;
       });
@@ -711,73 +685,31 @@ const RotinaCriacao = () => {
 
   const handleAvancarTreinos = (data: TreinoTemp[]) => {
     const oldTreinos = rotinaEmCriacao.treinos || [];
-    
-    console.log('🔍 DEBUG handleAvancarTreinos DETALHADO:');
-    console.log('📊 Treinos antigos:', JSON.stringify(oldTreinos, null, 2));
-    console.log('📊 Treinos novos:', JSON.stringify(data, null, 2));
-    console.log('🆔 IDs dos treinos antigos:', oldTreinos.map(t => t.id));
-    console.log('🆔 IDs dos treinos novos:', data.map(t => t.id));
-    console.log('📦 Exercícios atuais no storage:', rotinaEmCriacao.exercicios);
-    
-    // ✅ Verifica se é primeira vez OU se todos os treinos antigos estavam vazios
-    const todosOldTreinosVazios = oldTreinos.every(t => t.grupos_musculares.length === 0);
-    const isPrimeiraVez = oldTreinos.length === 0 || todosOldTreinosVazios;
+    const oldExercicios = rotinaEmCriacao.exercicios || {};
+    const newExercicios = { ...oldExercicios };
+    let exerciciosForamResetados = false;
 
-    // console.log('🔍 DEBUG handleAvancarTreinos DETALHADO:');
-    // console.log('📊 Treinos antigos:', JSON.stringify(oldTreinos, null, 2));
-    // console.log('📊 Treinos novos:', JSON.stringify(data, null, 2));
-    console.log('🆕 É primeira vez (ou todos vazios)?', isPrimeiraVez);
+    data.forEach(newTreino => {
+      const oldTreino = oldTreinos.find(t => t.id === newTreino.id);
+      
+      const oldGrupos = oldTreino ? [...oldTreino.grupos_musculares].sort() : [];
+      const newGrupos = [...newTreino.grupos_musculares].sort();
 
-    // Comparação detalhada
-    console.log('📏 Quantidade de treinos:', {
-      antigos: oldTreinos.length,
-      novos: data.length,
-      mudou: data.length !== oldTreinos.length
+      if (JSON.stringify(oldGrupos) !== JSON.stringify(newGrupos)) {
+        if (newExercicios[newTreino.id] && newExercicios[newTreino.id].length > 0) {
+          exerciciosForamResetados = true;
+        }
+        delete newExercicios[newTreino.id];
+      }
     });
 
-    // ✅ CORRIGIDO: Verifica mudanças APENAS nos grupos musculares, IGNORANDO ordem/nome
-    const mudouAlgoNosTreinos = data.length !== oldTreinos.length || data.some((newTreino) => {
-      const oldTreino = oldTreinos.find(t => t.id === newTreino.id); // ✅ CORREÇÃO: Encontrar treino antigo pelo ID
-      if (!oldTreino) { // Se o treino novo não foi encontrado no array antigo (pelo ID), é uma mudança
-        console.log(`✨ Treino ${newTreino.nome} (ID: ${newTreino.id}) é NOVO ou seu ID mudou`);
-        return true;
-      }
-      
-      const oldGrupos = oldTreino.grupos_musculares.slice().sort();
-      const newGrupos = newTreino.grupos_musculares.slice().sort();
-      
-      const gruposMudaram = JSON.stringify(oldGrupos) !== JSON.stringify(newGrupos);
-      
-      const index = data.findIndex(t => t.id === newTreino.id);
-      console.log(`🔎 Treino ${index} (${newTreino.nome}):`, {
-        'grupos antigos': oldGrupos,
-        'grupos novos': newGrupos,
-        'mudou': gruposMudaram
+    if (exerciciosForamResetados) {
+      toast.info("Exercícios reiniciados", {
+        description: "Os exercícios de alguns treinos foram reiniciados devido à mudança nos grupos musculares."
       });
-      
-      // ✅ Compara APENAS grupos musculares (ignora nome/ordem)
-      return gruposMudaram;
-    });
-
-    console.log('🎯 Resultado final: mudouAlgoNosTreinos =', mudouAlgoNosTreinos);
-
-    if (mudouAlgoNosTreinos) {
-      console.log('✅ RESETANDO EXERCÍCIOS!');
-      
-      // ✅ SÓ mostra toast se NÃO for a primeira vez E se os treinos não estavam todos vazios
-      if (!isPrimeiraVez) {
-        toast.info("A estrutura dos treinos foi alterada.", {
-          description: "Todos os exercícios foram reiniciados para garantir a consistência."
-        });
-      }
-      
-      updateStorage({ treinos: data, exercicios: {}, etapaAtual: 'exercicios' });
-    } else {
-      console.log('⚠️ MANTENDO EXERCÍCIOS');
-      
-      updateStorage({ treinos: data, etapaAtual: 'exercicios' });
     }
 
+    updateStorage({ treinos: data, exercicios: newExercicios, etapaAtual: 'exercicios' });
     setEtapa('exercicios');
   };
 
@@ -786,7 +718,7 @@ const RotinaCriacao = () => {
   };
 
   const confirmarDescarte = () => {
-    sessionStorage.removeItem(`${STORAGE_KEY}_${alunoId}`);
+    sessionStorage.removeItem(`${STORAGE_KEY_ROTINA_CRIACAO}_${alunoId}`);
     navigate(`/alunos-rotinas/${alunoId}`, { replace: true });
   };
 
@@ -908,7 +840,7 @@ const RotinaCriacao = () => {
         }
       }
 
-      sessionStorage.removeItem(`${STORAGE_KEY}_${alunoId}`);
+      sessionStorage.removeItem(`${STORAGE_KEY_ROTINA_CRIACAO}_${alunoId}`);
       toast.success("Rascunho salvo com sucesso!");
       
       const from = location.state?.from;
@@ -1118,7 +1050,7 @@ const RotinaCriacao = () => {
       }
 
       // 5. Limpeza e navegação
-      sessionStorage.removeItem(`${STORAGE_KEY}_${alunoId}`);
+      sessionStorage.removeItem(`${STORAGE_KEY_ROTINA_CRIACAO}_${alunoId}`);
 
       const from = location.state?.from;
       if (from === '/rotinas') {
@@ -1142,7 +1074,7 @@ const RotinaCriacao = () => {
       case 'treinos':
         return <RotinaTreinosStep onAvancar={handleAvancarTreinos} onVoltar={handleVoltar} initialData={rotinaEmCriacao.treinos} configuracao={rotinaEmCriacao.configuracao} onCancelar={handleCancelar} onUpdate={updateStorage} />;
       case 'exercicios':
-        return <RotinaExerciciosStep onFinalizar={handleFinalizar} onVoltar={handleVoltar} initialData={rotinaEmCriacao.exercicios} treinos={rotinaEmCriacao.treinos || []} onUpdate={updateStorage} onCancelar={handleCancelar} isSaving={isSaving} />;
+        return <RotinaExerciciosStep onFinalizar={handleFinalizar} onVoltar={handleVoltar} exercicios={rotinaEmCriacao.exercicios || {}} treinos={rotinaEmCriacao.treinos || []} setExercicios={(novosExercicios) => updateStorage({ exercicios: novosExercicios })} onCancelar={handleCancelar} isSaving={isSaving} />;
       default:
         return <RotinaConfiguracaoStep onAvancar={handleAvancarConfiguracao} initialData={rotinaEmCriacao.configuracao} onCancelar={handleCancelar} aluno={aluno} onUpdate={updateStorage} />;
     }

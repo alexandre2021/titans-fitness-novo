@@ -113,31 +113,34 @@ export default function ExecucaoSelecionarTreino() {
       }
       setRotina(rotinaData);
 
-      // Buscar aluno
+      // ✅ CORREÇÃO: Adicionar a busca pelos dados do aluno.
       const { data: alunoData, error: alunoError } = await supabase
         .from('alunos')
-        .select('nome_completo, email')
+        .select('id, nome_completo, email')
         .eq('id', rotinaData.aluno_id)
         .single();
 
       if (alunoError || !alunoData) {
-        throw new Error("Dados do aluno não encontrados");
+        throw new Error("Aluno da rotina não encontrado");
       }
       setAluno(alunoData);
 
-      // Buscar todas as sessões da rotina com o nome do treino
-      const { data: sessoesData, error: sessoesError } = await supabase
+      // ✅ CORREÇÃO: Revertido para a busca direta e funcional das sessões.
+      const { data: sessoesData, error: rpcError } = await supabase
         .from('execucoes_sessao')
         .select('id, sessao_numero, status, data_execucao, modo_execucao, treinos(nome)')
         .eq('rotina_id', currentRotinaId)
+        .eq('aluno_id', rotinaData.aluno_id) // ✅ CORREÇÃO: Usar o ID do aluno da rotina
         .order('sessao_numero', { ascending: true });
 
-      if (sessoesError) throw sessoesError;
+      if (rpcError) {
+        console.error("Erro ao buscar treinos e sessões:", rpcError);
+        toast.error("Erro ao carregar as sessões da rotina.");
+        setSessoes([]);
+      } else {
+        setSessoes((sessoesData as SessaoParaLista[]) || []);
+      }
 
-      setSessoes(sessoesData as SessaoParaLista[] || []);
-
-      // Buscar última sessão e calcular sugestão
-      await buscarUltimaSessao(rotinaData.aluno_id, currentRotinaId);
 
     } catch (error: unknown) {
       console.error('Erro ao carregar dados:', error);
@@ -152,7 +155,7 @@ export default function ExecucaoSelecionarTreino() {
     } finally {
       setLoading(false);
     }
-  }, [navigate, buscarUltimaSessao]);
+  }, [navigate]);
 
   // ✅ INICIAR SESSÃO
   const handleIniciarSessao = async (sessao: SessaoParaLista) => {

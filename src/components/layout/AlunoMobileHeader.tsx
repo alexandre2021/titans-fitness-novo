@@ -29,6 +29,10 @@ const AlunoMobileHeader = () => {
       return { title: 'Execução de Treino', subtitle: 'Siga as instruções e registre seu progresso', showBackButton: true };
     }
 
+    if (path.startsWith('/alunos-rotinas/')) {
+      return { title: 'Detalhes da Rotina', showBackButton: true };
+    }
+
     // ✅ Adicionando rota do Calendário
     if (path.startsWith('/calendario')) return { title: 'Agenda', showBackButton: true };
 

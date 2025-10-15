@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Clock, Play, Pause, Square, X } from 'lucide-react';
+import { Clock, Play, Pause, Square, X, History, Info } from 'lucide-react';
 import Modal from 'react-modal';
 import { EXERCICIO_CONSTANTS, MENSAGENS } from '@/constants/exercicio.constants';
 import { useExercicioExecucao } from '@/hooks/useExercicioExecucao';
@@ -348,11 +348,9 @@ export const Executor = ({
                             setModalHistoricoVisible(true);
                           }}
                           className="h-8 w-8 p-0"
+                          aria-label="Ver histórico do exercício"
                         >
-                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M3 3v18h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            <path d="M7 16l4-4 4 4 4-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
+                          <History className="h-4 w-4" />
                         </Button>
                       )}
                       <Button
@@ -363,12 +361,9 @@ export const Executor = ({
                           setModalDetalhesVisible(true);
                         }}
                         className="h-8 w-8 p-0"
+                        aria-label="Ver detalhes do exercício"
                       >
-                        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-                          <path d="M12 6h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                          <path d="M12 10v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
+                        <Info className="h-4 w-4" />
                       </Button>
                     </div>
                   )}

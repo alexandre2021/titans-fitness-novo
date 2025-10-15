@@ -2,6 +2,8 @@
 
 Este documento serve como o rascunho inicial para a nossa base de conhecimento. Cada seção representa uma categoria e cada tópico será um artigo na tabela `knowledge_base_articles`.
 
+**Convenção de Títulos:** Títulos prefixados com `[Professor]` ou `[Aluno]` indicam que o conteúdo do artigo é específico para aquele tipo de usuário. Artigos sem prefixo são de interesse geral.
+
 ---
 
 ## Categoria: Acesso e Cadastro
@@ -9,7 +11,7 @@ Este documento serve como o rascunho inicial para a nossa base de conhecimento. 
 Esta categoria aborda as dúvidas mais comuns relacionadas à criação e acesso de contas na plataforma.
 
 ### Título: Como faço para acessar minha conta (Login)?
-*   **Conteúdo:** Para acessar sua conta, vá para a página de Login, insira o e-mail e a senha que você usou no cadastro e clique em "Entrar". Se você se cadastrou usando uma conta do Google, clique no botão correspondente.
+*   **Conteúdo:** Para acessar sua conta, vá para a página de Login, insira o e-mail e a senha que você usou no cadastro e clique em "Entrar".
 *   **Tags:** `login`, `entrar`, `acessar`, `conta`
 
 ### Título: Esqueci minha senha, o que eu faço?
@@ -71,11 +73,11 @@ Esta categoria esclarece pontos importantes dos nossos documentos legais.
 *   **Conteúdo:** Após a exclusão de uma conta, seja por inatividade ou por solicitação do usuário, todos os dados pessoais associados (perfil, treinos, histórico, avaliações) são **permanentemente removidos** de nossos sistemas e não podem ser recuperados.
 *   **Tags:** `exclusão`, `dados`, `privacidade`, `LGPD`, `apagar dados`
 
-### Título: Quais são minhas responsabilidades como Professor na plataforma?
+### Título: [Professor] Quais são minhas responsabilidades como Professor na plataforma?
 *   **Conteúdo:** Como Professor, você é responsável por possuir as qualificações necessárias para prescrever treinos, criar programas seguros e adequados para seus alunos, e manter a confidencialidade das informações deles. O Titans.fitness é uma ferramenta para facilitar seu trabalho, mas a responsabilidade profissional sobre o serviço prestado é sua.
 *   **Tags:** `responsabilidade`, `professor`, `CREF`, `termos de uso`, `obrigações`
 
-### Título: Quais são minhas responsabilidades como Aluno?
+### Título: [Aluno] Quais são minhas responsabilidades como Aluno?
 *   **Conteúdo:** Como Aluno, sua responsabilidade é fornecer informações de saúde precisas ao seu professor, seguir as orientações de treino de forma segura e comunicar qualquer dor ou desconforto. Lembre-se de respeitar seus limites e usar a plataforma de forma adequada.
 *   **Tags:** `responsabilidade`, `aluno`, `termos de uso`, `obrigações`, `segurança`
 
@@ -177,8 +179,8 @@ Esta categoria detalha o funcionamento do sistema de chat e das notificações d
 *   **Conteúdo:** O ícone de Mensagens exibirá um contador vermelho com o número total de mensagens não lidas. Dentro do painel, cada conversa com novas mensagens também terá seu próprio contador.
 *   **Tags:** `mensagens não lidas`, `contador`, `notificação`, `aviso`
 
-### Título: O que é a conversa com o "Administrador"?
-*   **Conteúdo:** A conversa com o "Administrador" é o seu canal oficial de notificações do sistema. Usamos este chat para enviar avisos importantes, como a confirmação de um novo vínculo com um professor/aluno, alertas sobre inatividade da sua conta ou o cancelamento de uma rotina. Não é possível responder a estas mensagens.
+### Título: O que são as "Notificações do Administrador"?
+*   **Conteúdo:** A conversa "Notificações" é o seu canal oficial de notificações do sistema. Usamos este chat para enviar avisos importantes, como a confirmação de um novo vínculo com um professor/aluno, alertas sobre inatividade da sua conta ou o cancelamento de uma rotina. Não é possível responder a estas mensagens.
 *   **Tags:** `administrador`, `notificações do sistema`, `avisos`, `chat`
 
 ### Título: Posso enviar imagens ou arquivos no chat?
@@ -212,7 +214,7 @@ Esta categoria explica como gerenciar sessões de treino e avaliações físicas
 *   **Tags:** `reagendar`, `excluir agendamento`, `cancelar`, `alterar horário`, `professor`
 
 ### Título: [Aluno] Como respondo a um convite de agendamento?
-*   **Conteúdo:** Novos convites de agendamento aparecerão no seu painel inicial e na sua agenda com o status "pendente". Você pode clicar em "Confirmar" para aceitar o horário, ou "Recusar" para informar ao professor que não poderá comparecer. Ao recusar, é importante deixar uma mensagem explicando o motivo.
+*   **Conteúdo:** Novos convites de agendamento aparecerão no seu painel inicial e na sua agenda com o status "Pendente". Você pode clicar em "Confirmar" para aceitar o horário, ou "Recusar" para informar ao professor que não poderá comparecer. Ao recusar, é importante deixar uma mensagem explicando o motivo.
 *   **Tags:** `confirmar agendamento`, `recusar`, `aceitar convite`, `aluno`
 
 ### Título: [Aluno] Posso cancelar um agendamento que já confirmei?
@@ -258,6 +260,28 @@ Esta categoria detalha as funcionalidades do painel inicial do professor.
 ### Título: [Professor] O que é a página "Rotinas Ativas"?
 *   **Conteúdo:** A página "Rotinas" é um painel central que lista todas as rotinas em andamento, agrupadas por aluno. Ela oferece uma visão rápida de quem está treinando e permite acesso direto ao gerenciamento de cada rotina individual.
 *   **Tags:** `rotinas`, `gerenciamento`, `painel`, `dashboard`
+
+---
+
+## Categoria: Painel do Aluno
+
+Esta categoria explica os elementos e funcionalidades do painel inicial do aluno.
+
+### Título: [Aluno] O que são os cards no meu painel inicial?
+*   **Conteúdo:** Os cards na sua tela inicial são um resumo rápido e atalhos para as principais seções do aplicativo. Cada card mostra uma contagem e, ao clicar nele, você é levado diretamente para a página correspondente.
+*   **Tags:** `dashboard`, `painel inicial`, `cards`, `estatísticas`, `atalhos`, `aluno`
+
+### Título: [Aluno] O que significa cada card de estatística?
+*   **Conteúdo:**
+    *   **Rotinas:** Mostra se você tem uma rotina ativa no momento. Clicar aqui leva para a página "Minhas Rotinas", onde você pode ver os detalhes do seu treino.
+    *   **Sessões:** Exibe o número total de sessões de treino que você já concluiu na sua rotina ativa. Clicar aqui leva para a tela de seleção de treino.
+    *   **Professores:** Mostra o número total de professores que você está seguindo. Clicar aqui leva para a sua lista de professores.
+    *   **Avaliações:** Indica quantas avaliações físicas você já realizou. Clicar aqui leva para a sua página de histórico de avaliações.
+*   **Tags:** `estatísticas`, `cards`, `rotinas`, `sessões`, `professores`, `avaliações`, `aluno`
+
+### Título: [Aluno] O que é a seção "Próximos Agendamentos"?
+*   **Conteúdo:** Esta seção mostra seus próximos compromissos agendados pelo seu professor, como sessões de treino presenciais ou avaliações físicas. Você pode ver os agendamentos de hoje, da semana e os futuros, além de poder confirmar ou recusar convites pendentes.
+*   **Tags:** `agendamentos`, `agenda`, `calendário`, `próximos treinos`, `aluno`
 
 ---
 
@@ -327,7 +351,138 @@ Esta categoria aborda as dúvidas sobre a criação e gerenciamento de rotinas.
     3.  **Repetições zeradas ou em branco:** O campo "Meta" não será exibido. Use esta opção para dar liberdade ao aluno, permitindo que ele decida e registre as repetições e a carga que conseguiu executar na hora do treino.
 *   **Tags:** `meta`, `execução`, `treino`, `repetições`, `carga`, `configurar série`, `livre`
 
+### Título: Qual a diferença entre 'Modo Aluno' e 'Modo Assistido' na execução do treino?
+*   **Conteúdo:** A plataforma oferece duas formas de registrar uma sessão de treino, identificadas no histórico como "Modo Aluno" ou "Modo Assistido":
+    *   **Modo Aluno:** É o modo padrão, onde o próprio aluno acessa o aplicativo e registra suas séries, repetições e cargas. Ideal para consultorias online ou quando o aluno treina sozinho.
+    *   **Modo Assistido:** Ocorre quando o professor, logado em sua própria conta, inicia e registra o treino para o aluno. É perfeito para sessões de personal training presenciais, garantindo que o professor tenha controle total sobre os dados registrados.
+    Ambos os modos atualizam o progresso da rotina do aluno, e o histórico indica quem realizou o registro.
+*   **Tags:** `execução`, `modo de treino`, `modo aluno`, `modo assistido`, `registrar treino`, `personal trainer`
+
 ---
+
+---
+title: Como organizo a ordem dos treinos e exercícios?
+category: Rotinas e Modelos
+tags: ordem, reordenar, treino, exercício, setas, organizar, sequência
+---
+
+### Organizando a Sequência do seu Plano de Treino
+
+A ordem em que os treinos e os exercícios são apresentados é fundamental para a progressão do aluno. Nossa plataforma oferece uma maneira simples de organizar essa sequência durante a criação de uma rotina ou modelo.
+
+#### 1. Reordenando os Treinos (Etapa 2)
+
+Na Etapa 2, onde você define os grupos musculares para cada treino da semana, você verá setas para cima (🔼) e para baixo (🔽) ao lado do nome de cada treino (Treino A, Treino B, etc.).
+
+-   **Como funciona:** Clique nas setas para mover um treino para cima ou para baixo na lista.
+-   **O que acontece:** Ao reordenar, o sistema automaticamente renomeia os treinos para manter a sequência lógica (A, B, C...). Por exemplo, se você mover o "Treino C" para a segunda posição, ele se tornará o novo "Treino B".
+
+#### 2. Reordenando os Exercícios (Etapa 3)
+
+Na Etapa 3, dentro de cada card de treino, você encontrará as mesmas setas para cima e para baixo ao lado de cada exercício que você adicionou.
+
+-   **Como funciona:** Use as setas para ajustar a ordem dos exercícios dentro daquele treino específico.
+-   **Importância:** Isso permite que você defina a sequência exata de execução, por exemplo, começando com exercícios compostos e finalizando com isolados.
+
+Essa funcionalidade garante que você tenha controle total sobre a estrutura e a progressão do plano de treino, de forma rápida e intuitiva.
+
+---
+
+---
+title: Como adiciono exercícios aos meus treinos?
+category: Rotinas e Modelos
+tags: exercícios, adicionar, selecionar, série simples, série combinada, superset, modal
+---
+
+### Adicionando Exercícios: Série Simples vs. Série Combinada
+
+Ao clicar no botão "+ Exercício" em um treino, um modal se abrirá para você selecionar os exercícios da nossa biblioteca. O comportamento de seleção muda dependendo do tipo de série que você deseja criar:
+
+#### 1. Adicionando uma Série Simples
+
+Este é o modo padrão. Para adicionar um exercício que será executado de forma isolada:
+1.  **Selecione 1 exercício** na lista.
+2.  Clique no botão **"+ Exercício(s)"**.
+3.  O exercício será adicionado ao seu treino e o modal permanecerá aberto, permitindo que você adicione o próximo exercício de forma rápida.
+4.  Quando terminar de adicionar todos os exercícios para aquele treino, clique em **"Concluir"** para fechar o modal.
+
+#### 2. Adicionando uma Série Combinada (Superset)
+
+Para criar um superset onde dois exercícios são executados em sequência:
+1.  Primeiro, clique no botão **"Série Combinada"** no topo do modal.
+2.  **Selecione exatamente 2 exercícios** na lista. O contador no rodapé te ajudará a acompanhar.
+3.  Com os dois exercícios selecionados, clique no botão **"+ Exercício(s)"**.
+4.  A série combinada será adicionada ao seu treino, e o modal ficará pronto para a próxima adição.
+5.  Clique em **"Concluir"** quando terminar.
+
+Essa funcionalidade foi desenhada para otimizar seu tempo, permitindo que você adicione múltiplos exercícios ou séries combinadas em sequência sem precisar reabrir o modal a cada vez.
+---
+
+---
+title: Otimizando seu tempo com Modelos de Rotina
+category: Rotinas e Modelos
+tags: modelos, templates, produtividade, eficiência, padronização, agilizar
+---
+
+### Por que usar Modelos de Rotina?
+
+Criar um plano de treino detalhado para cada aluno é um processo que exige tempo e atenção. Muitas vezes, alunos com perfis e objetivos semelhantes recebem rotinas com estruturas parecidas. A funcionalidade de **Modelos de Rotina** foi criada para transformar esse trabalho repetitivo em um processo rápido, eficiente e padronizado.
+
+Um modelo é um "esqueleto" de uma rotina de treino completa que você cria e salva para usar quantas vezes quiser.
+
+#### Principais Vantagens:
+
+1.  **Economia de Tempo Massiva:** Em vez de começar do zero, você aplica um modelo pré-pronto e faz apenas os ajustes finos para cada aluno. O que levava horas agora pode ser feito em minutos.
+
+2.  **Padronização e Qualidade:** Garanta que todos os seus alunos com objetivos parecidos recebam a mesma base de treinamento de alta qualidade, seguindo sua metodologia. Isso cria consistência e profissionalismo no seu serviço.
+
+3.  **Escalabilidade do seu Negócio:** Com a agilidade proporcionada pelos modelos, você consegue atender mais alunos com a mesma qualidade, permitindo que seu negócio de consultoria cresça de forma sustentável.
+
+4.  **Flexibilidade Total:** Um modelo não é uma regra fixa. Após aplicá-lo a um aluno, você tem total liberdade para editar qualquer detalhe da rotina — desde a frequência semanal até a carga de um exercício específico — para adaptá-la perfeitamente às necessidades individuais daquele aluno.
+
+Em resumo, usar modelos é a forma mais inteligente de otimizar seu fluxo de trabalho, manter um alto padrão de qualidade e focar no que realmente importa: o acompanhamento e a evolução dos seus alunos.
+
+---
+
+---
+title: Como executo meu treino diário?
+category: Rotinas de Treino
+tags: execução, treino, registrar, série, cronômetro, histórico, pausar, finalizar
+---
+
+### Entendendo a Tela de Execução de Treino
+
+A tela de execução é o seu ambiente de treino digital. Ela foi projetada para ser simples e eficiente, permitindo que você se concentre no seu exercício enquanto registra seu progresso.
+
+#### 1. Cronômetro Geral
+
+No topo da tela, um cronômetro geral marca o tempo total da sua sessão de treino, começando a contar assim que você entra na tela.
+
+#### 2. Registrando Cada Série
+
+Para cada exercício, você encontrará cards para registrar suas séries.
+*   **Série Simples:** Insira o número de repetições e a carga (em kg) que você realizou.
+*   **Série Combinada (Superset):** Você terá campos para registrar as repetições e cargas para os dois exercícios da série.
+
+Ao clicar em **"Salvar"**, a série é marcada como concluída e o sistema automaticamente inicia o cronômetro de intervalo para o seu descanso.
+
+#### 3. Cronômetros de Intervalo
+
+Após salvar uma série, um modal de cronômetro aparecerá:
+*   **Intervalo entre Séries:** Um contador regressivo para o seu descanso antes da próxima série do mesmo exercício.
+*   **Intervalo entre Exercícios:** Ao finalizar a última série de um exercício, um cronômetro maior aparecerá, mostrando o tempo de descanso e qual será o próximo exercício a ser executado.
+
+#### 4. Ações e Informações Adicionais
+
+Ao lado de cada exercício, você encontrará ícones úteis:
+*   **Histórico (ícone de gráfico):** Permite ver seu histórico de cargas e repetições para aquele exercício específico em treinos anteriores.
+*   **Detalhes (ícone de "i"):** Abre um modal com as instruções de execução, fotos e vídeos do exercício.
+
+#### 5. Pausar e Finalizar
+
+Na parte inferior da tela, você tem dois botões principais:
+*   **Pausar:** Se precisar interromper o treino, use este botão. Seu progresso será salvo e você poderá continuar mais tarde. A sessão ficará com o status "Pausada".
+*   **Finalizar:** Ao concluir todos os exercícios, clique aqui para encerrar a sessão. O sistema salvará todos os dados e marcará o treino como "Concluído".
 
 ## Categoria: Meu Perfil (Professor)
 

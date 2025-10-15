@@ -16,6 +16,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from "sonner";
+import { useMediaQuery } from '@/hooks/use-media-query';
 import { useExercicioLookup } from '@/hooks/useExercicioLookup';
 import { formatters } from '@/utils/formatters';
 
@@ -98,16 +99,21 @@ const AlunosRotinaDetalhes = () => {
   const [rotina, setRotina] = useState<RotinaDetalhada | null>(null);
   const [evolucao, setEvolucao] = useState<EvolucaoRotina>({ concluidas: 0, total: 0 });
   const [loading, setLoading] = useState(true);
+  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   useEffect(() => {
     const fetchDados = async () => {
       if (!alunoId || !rotinaId || !user) return;
 
       try {
-        // MUDANÇA: Verificar se o professor tem permissão para ver este aluno (se o aluno o segue)
-        const { data: relacao, error: relacaoError } = await supabase.from('alunos_professores').select('aluno_id').eq('aluno_id', alunoId).eq('professor_id', user.id).single();
+        // ✅ CORREÇÃO: Lógica unificada para Aluno e Professor
+        const { data: profile } = await supabase.from('user_profiles').select('user_type').eq('id', user.id).single();
+        const userType = profile?.user_type;
 
-        if (relacaoError || !relacao) throw new Error("Você não tem permissão para ver este aluno.");
+        if (userType === 'professor') {
+          const { data: relacao, error: relacaoError } = await supabase.from('alunos_professores').select('aluno_id').eq('aluno_id', alunoId).eq('professor_id', user.id).single();
+          if (relacaoError || !relacao) throw new Error("Você não tem permissão para ver este aluno.");
+        }
 
         // Buscar informações do aluno
         const { data: alunoData, error: alunoError } = await supabase
@@ -127,97 +133,30 @@ const AlunosRotinaDetalhes = () => {
 
         setAluno(alunoData);
 
-        // Buscar rotina
-        const { data: rotinaData, error: rotinaError } = await supabase
+        // ✅ CORREÇÃO: Busca todos os dados aninhados em uma única consulta.
+        // Adicionado um alias 'exercicios:exercicios_rotina(*, series(*))' para simplificar.
+        const { data: rotinaData, error: rotinaCompletaError } = await supabase
           .from('rotinas')
-          .select('*')
+          .select('*, treinos(*, exercicios:exercicios_rotina(*, series:series!exercicio_id(*)))')
           .eq('id', rotinaId)
-          .eq('aluno_id', alunoId)
-          .eq('professor_id', user.id)
           .single();
+        
+        if (rotinaCompletaError) throw rotinaCompletaError;
+        
+        // ✅ CONSOLE.LOG ADICIONADO PARA DEBUG
+        console.log("🔍 DADOS BRUTOS DA ROTINA (DO BANCO):", rotinaData);
 
-        if (rotinaError) {
-          console.error('Erro ao buscar rotina:', rotinaError);
-          toast.error("Erro", {
-            description: "Rotina não encontrada."
-          })
-          navigate(`/alunos-rotinas/${alunoId}`);
-          return;
-        }
-
-        // Buscar evolução da rotina (sessões)
-        const { data: sessoesData, error: sessoesError } = await supabase
-          .from('execucoes_sessao')
-          .select('status')
-          .eq('rotina_id', rotinaId);
-
-        if (!sessoesError && sessoesData) {
-          const concluidas = sessoesData.filter(s => s.status === 'concluida').length;
-          const total = sessoesData.length;
-          setEvolucao({ concluidas, total });
-        }
-
-        // Buscar treinos da rotina
-        const { data: treinosData, error: treinosError } = await supabase
-          .from('treinos')
-          .select('*')
-          .eq('rotina_id', rotinaId)
-          .order('ordem');
-
-        if (treinosError) {
-          console.error('Erro ao buscar treinos:', treinosError);
-          throw treinosError;
-        }
-
-        const treinosDetalhados: TreinoDetalhado[] = [];
-
-        // Para cada treino, buscar exercícios e séries
-        for (const treino of treinosData || []) {
-          const { data: exerciciosData, error: exerciciosError } = await supabase
-            .from('exercicios_rotina')
-            .select('*')
-            .eq('treino_id', treino.id)
-            .order('ordem');
-
-          if (exerciciosError) {
-            console.error('Erro ao buscar exercícios:', exerciciosError);
-            throw exerciciosError;
-          }
-
-          const exerciciosComSeries = [];
-
-          // Para cada exercício, buscar suas séries
-          for (const exercicio of exerciciosData || []) {
-            const { data: seriesData, error: seriesError } = await supabase
-              .from('series')
-              .select('*')
-              .eq('exercicio_id', exercicio.id)
-              .order('numero_serie');
-
-            if (seriesError) {
-              console.error('Erro ao buscar séries:', seriesError);
-              throw seriesError;
-            }
-
-            exerciciosComSeries.push({
-              ...exercicio,
-              series: seriesData || []
-            });
-          }
-
-          treinosDetalhados.push({
-            ...treino,
-            exercicios: exerciciosComSeries
+        // Ordena os dados aninhados
+        rotinaData.treinos.sort((a, b) => a.ordem - b.ordem);
+        rotinaData.treinos.forEach(treino => {
+          treino.exercicios.sort((a, b) => a.ordem - b.ordem);
+          treino.exercicios.forEach(exercicio => {
+            exercicio.series.sort((a, b) => a.numero_serie - b.numero_serie);
           });
-        }
+        });
 
-        // Montar rotina completa
-        const rotinaCompleta: RotinaDetalhada = {
-          ...rotinaData,
-          treinos: treinosDetalhados
-        };
-
-        setRotina(rotinaCompleta);
+        console.log("✅ DADOS FINAIS (APÓS ORDENAÇÃO) PARA O ESTADO:", rotinaData);
+        setRotina(rotinaData as unknown as RotinaDetalhada);
 
       } catch (error) {
         console.error('Erro ao buscar dados:', error);
@@ -229,7 +168,6 @@ const AlunosRotinaDetalhes = () => {
         setLoading(false);
       }
     };
-
     fetchDados();
   }, [alunoId, rotinaId, user, navigate]);
 
@@ -380,19 +318,21 @@ const AlunosRotinaDetalhes = () => {
   return (
     <div className="space-y-6">
       {/* Cabeçalho */}
-      <div className="flex items-center gap-4">
-        <Button 
-          variant="ghost" 
-          onClick={handleVoltar}
-          className="h-10 w-10 p-0"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold">Detalhes da Rotina</h1>
-          <p className="text-muted-foreground">Detalhes da rotina '{rotina.nome}'</p>
+      {isDesktop && (
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="ghost" 
+            onClick={handleVoltar}
+            className="h-10 w-10 p-0"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">Detalhes da Rotina</h1>
+            <p className="text-muted-foreground">Detalhes da rotina '{rotina.nome}'</p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Informações do Aluno */}
       <Card>
@@ -474,171 +414,122 @@ const AlunosRotinaDetalhes = () => {
                 <CardTitle className="text-base">{treino.nome}</CardTitle>
               </div>
               <div className="flex flex-wrap gap-2">
-                {getGruposMuscularesColors(treino.grupos_musculares.split(','))}
+                {getGruposMuscularesColors(treino.grupos_musculares ? treino.grupos_musculares.split(',') : [])}
               </div>
             </CardHeader>
             
             <CardContent className="space-y-4">
               {/* Lista de exercícios */}
               {treino.exercicios.map((exercicio, exercicioIndex) => {
-                const exercicio1Info = getExercicioInfo(exercicio.exercicio_1_id);
-                const exercicio2Info = exercicio.exercicio_2_id ? getExercicioInfo(exercicio.exercicio_2_id) : null;
-                
-                const nomeExercicio = exercicio2Info 
-                  ? `${exercicio1Info.nome} + ${exercicio2Info.nome}`
-                  : exercicio1Info.nome;
+                  const exercicio1Info = getExercicioInfo(exercicio.exercicio_1_id);
+                  const exercicio2Info = exercicio.exercicio_2_id ? getExercicioInfo(exercicio.exercicio_2_id) : null;
+                  
+                  const nomeExercicio = exercicio2Info 
+                    ? `${exercicio1Info.nome} + ${exercicio2Info.nome}`
+                    : exercicio1Info.nome;
 
-                return (
-                  <div key={exercicio.id} className="border-l-4 border-gray-200 pl-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="font-medium">{exercicioIndex + 1}. {nomeExercicio}</span>
-                      {exercicio2Info && (
-                        <Badge variant="outline" className="bg-purple-100 text-purple-800 text-xs">
-                          Combinada
-                        </Badge>
+                  return (
+                    <div key={exercicio.id} className="border-t pt-4 first:border-t-0 first:pt-0">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="font-medium">{exercicioIndex + 1}. {nomeExercicio}</span>
+                        {exercicio2Info && (
+                          <Badge variant="outline" className="bg-purple-100 text-purple-800 text-xs">
+                            Combinada
+                          </Badge>
+                        )}
+                      </div>
+
+                      {/* SÉRIES */}
+                      <div className="space-y-2 ml-4">
+                        <p className="text-sm font-medium text-muted-foreground">
+                          <span className="hidden md:inline">Séries ({exercicio.series.length}):</span>
+                          <span className="md:hidden">{exercicio.series.length} séries:</span>
+                        </p>
+                        
+                        {exercicio.series.map((serie, serieIndex) => (
+                          <div key={serie.id}>
+                            <div className="bg-muted/30 rounded p-2">
+                              {/* LAYOUT DESKTOP */}
+                              <div className="hidden md:flex md:items-center md:gap-4 text-sm">
+                                <span className="font-medium">Série {serie.numero_serie}:</span>
+                                {exercicio2Info ? (
+                                  <div className="flex gap-4">
+                                    <span>{serie.repeticoes_1 || 12} repetições</span>
+                                    {serie.carga_1 && <span>{serie.carga_1}kg</span>}
+                                    <span>+</span>
+                                    <span>{serie.repeticoes_2 || 12} repetições</span>
+                                    {serie.carga_2 && <span>{serie.carga_2}kg</span>}
+                                  </div>
+                                ) : (
+                                  <div className="flex gap-4">
+                                    <span>{serie.repeticoes || 12} repetições</span>
+                                    {serie.carga && <span>{serie.carga}kg</span>}
+                                    {serie.tem_dropset && (
+                                      <Badge variant="outline" className="bg-orange-100 text-orange-800 text-xs">Drop Set</Badge>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* LAYOUT MOBILE */}
+                              <div className="md:hidden">
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="font-semibold text-blue-600">{serie.numero_serie}</span>
+                                  <div className="flex items-center gap-2 text-xs">
+                                    {exercicio2Info ? (
+                                      <div className="flex items-center gap-1">
+                                        <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">{serie.repeticoes_1 || 12} rep</span>
+                                        {serie.carga_1 && <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded">{serie.carga_1}kg</span>}
+                                        <span className="text-gray-500">+</span>
+                                        <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">{serie.repeticoes_2 || 12} rep</span>
+                                        {serie.carga_2 && <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded">{serie.carga_2}kg</span>}
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center gap-1">
+                                        <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">{serie.repeticoes || 12} rep</span>
+                                        {serie.carga && <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded">{serie.carga}kg</span>}
+                                        {serie.tem_dropset && <span className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-xs">Drop</span>}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* LINHA SEPARADORA COM INTERVALO */}
+                            {serie.intervalo_apos_serie && serieIndex < exercicio.series.length - 1 && (
+                              <div className="flex items-center justify-center py-2">
+                                <div className="hidden md:flex md:items-center md:gap-2 text-sm text-muted-foreground">
+                                  <div className="h-px bg-border flex-1"></div>
+                                  <span className="bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-xs font-medium">⏱️ Intervalo: {serie.intervalo_apos_serie} segundos</span>
+                                  <div className="h-px bg-border flex-1"></div>
+                                </div>
+                                <div className="md:hidden flex items-center gap-2 w-full">
+                                  <div className="h-px bg-border flex-1"></div>
+                                  <span className="bg-purple-50 text-purple-700 px-2 py-1 rounded text-xs font-medium">⏱️ {serie.intervalo_apos_serie}s</span>
+                                  <div className="h-px bg-border flex-1"></div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Intervalo entre exercícios */}
+                      {exercicio.intervalo_apos_exercicio && exercicioIndex < treino.exercicios.length - 1 && (
+                        <div className="mt-2 text-sm text-muted-foreground">
+                          <span className="hidden md:inline">Intervalo para próximo exercício: {exercicio.intervalo_apos_exercicio}s</span>
+                          <span className="md:hidden bg-green-50 text-green-700 px-2 py-1 rounded text-xs inline-block">⏭️ {exercicio.intervalo_apos_exercicio}s para próximo exercício</span>
+                        </div>
+                      )}
+
+                      {/* Observações do exercício */}
+                      {exercicio.observacoes && (
+                        <div className="mt-2 text-sm"><span className="font-medium">Observações:</span> {exercicio.observacoes}</div>
                       )}
                     </div>
-
-                    {/* ✅ SÉRIES COM ESTRUTURA CORRIGIDA */}
-                    <div className="space-y-2 ml-4">
-                      {/* Header das séries - Responsivo */}
-                      <p className="text-sm font-medium text-muted-foreground">
-                        <span className="hidden md:inline">Séries ({exercicio.series.length}):</span>
-                        <span className="md:hidden">{exercicio.series.length} séries:</span>
-                      </p>
-                      
-                      {exercicio.series.map((serie, serieIndex) => (
-                        <div key={serie.id}>
-                          {/* ✅ SÉRIE SEM INTERVALO DENTRO */}
-                          <div className="bg-muted/30 rounded p-2">
-                            {/* 🖥️ LAYOUT DESKTOP */}
-                            <div className="hidden md:flex md:items-center md:gap-4 text-sm">
-                              <span className="font-medium">Série {serie.numero_serie}:</span>
-                              
-                              {exercicio2Info ? (
-                                // Série combinada - Desktop
-                                <div className="flex gap-4">
-                                  <span>{serie.repeticoes_1 || 12} repetições</span>
-                                  {serie.carga_1 && <span>{serie.carga_1}kg</span>}
-                                  <span>+</span>
-                                  <span>{serie.repeticoes_2 || 12} repetições</span>
-                                  {serie.carga_2 && <span>{serie.carga_2}kg</span>}
-                                </div>
-                              ) : (
-                                // Série simples - Desktop
-                                <div className="flex gap-4">
-                                  <span>{serie.repeticoes || 12} repetições</span>
-                                  {serie.carga && <span>{serie.carga}kg</span>}
-                                  {serie.tem_dropset && (
-                                    <Badge variant="outline" className="bg-orange-100 text-orange-800 text-xs">
-                                      Drop Set
-                                    </Badge>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-
-                            {/* 📱 LAYOUT MOBILE */}
-                            <div className="md:hidden">
-                              <div className="flex items-center justify-between text-sm">
-                                {/* Número da série compacto */}
-                                <span className="font-semibold text-blue-600">{serie.numero_serie}</span>
-                                
-                                {/* Dados da série em linha */}
-                                <div className="flex items-center gap-2 text-xs">
-                                  {exercicio2Info ? (
-                                    // Série combinada - Mobile
-                                    <div className="flex items-center gap-1">
-                                      <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
-                                        {serie.repeticoes_1 || 12} rep
-                                      </span>
-                                      {serie.carga_1 && (
-                                        <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded">
-                                          {serie.carga_1}kg
-                                        </span>
-                                      )}
-                                      <span className="text-gray-500">+</span>
-                                      <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
-                                        {serie.repeticoes_2 || 12} rep
-                                      </span>
-                                      {serie.carga_2 && (
-                                        <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded">
-                                          {serie.carga_2}kg
-                                        </span>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    // Série simples - Mobile
-                                    <div className="flex items-center gap-1">
-                                      <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
-                                        {serie.repeticoes || 12} rep
-                                      </span>
-                                      {serie.carga && (
-                                        <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded">
-                                          {serie.carga}kg
-                                        </span>
-                                      )}
-                                      {serie.tem_dropset && (
-                                        <span className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-xs">
-                                          Drop
-                                        </span>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* ✅ LINHA SEPARADORA COM INTERVALO - Apenas entre séries */}
-                          {serie.intervalo_apos_serie && serieIndex < exercicio.series.length - 1 && (
-                            <div className="flex items-center justify-center py-2">
-                              {/* Desktop */}
-                              <div className="hidden md:flex md:items-center md:gap-2 text-sm text-muted-foreground">
-                                <div className="h-px bg-border flex-1"></div>
-                                <span className="bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-xs font-medium">
-                                  ⏱️ Intervalo: {serie.intervalo_apos_serie} segundos
-                                </span>
-                                <div className="h-px bg-border flex-1"></div>
-                              </div>
-                              
-                              {/* Mobile */}
-                              <div className="md:hidden flex items-center gap-2 w-full">
-                                <div className="h-px bg-border flex-1"></div>
-                                <span className="bg-purple-50 text-purple-700 px-2 py-1 rounded text-xs font-medium">
-                                  ⏱️ {serie.intervalo_apos_serie}s
-                                </span>
-                                <div className="h-px bg-border flex-1"></div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* ✅ Intervalo entre exercícios - Responsivo (já estava correto) */}
-                    {exercicio.intervalo_apos_exercicio && exercicioIndex < treino.exercicios.length - 1 && (
-                      <div className="mt-2 text-sm text-muted-foreground">
-                        {/* Desktop */}
-                        <span className="hidden md:inline">
-                          Intervalo para próximo exercício: {exercicio.intervalo_apos_exercicio}s
-                        </span>
-                        {/* Mobile */}
-                        <span className="md:hidden bg-green-50 text-green-700 px-2 py-1 rounded text-xs inline-block">
-                          ⏭️ {exercicio.intervalo_apos_exercicio}s para próximo exercício
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Observações do exercício */}
-                    {exercicio.observacoes && (
-                      <div className="mt-2 text-sm">
-                        <span className="font-medium">Observações:</span> {exercicio.observacoes}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                  );
+                })}
 
               {/* Observações do treino */}
               {treino.observacoes && (

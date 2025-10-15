@@ -55,6 +55,10 @@ import EditarPost from "./pages/EditarPost";
 import PostPage from "./pages/Post";
 import MeusPosts from "./pages/MeusPosts";
 import EditarExercicioPadrao from "./pages/EditarExercicioPadrao";
+import CentralDeAjuda from "./pages/CentralDeAjuda";
+import CentralDeAjudaPublica from "./pages/CentralDeAjudaPublica"; // Importar o novo componente
+import Contato from "./pages/Contato";
+import PerguntasFrequentes from "./pages/PerguntasFrequentes";
 import NovoExercicioPadrao from "./pages/NovoExercicioPadrao";
 
 // NOVAS IMPORTAÇÕES PARA EXECUÇÃO
@@ -69,6 +73,7 @@ import AdminPostGuard from "./components/auth/AdminPostGuard";
 import Calendario from "./pages/Calendario";
 import Professores from "./pages/Professores";
 import DetalhesProfessor from "./pages/DetalhesProfessor";
+import SobreNos from "./pages/SobreNos";
 
 const queryClient = new QueryClient();
 
@@ -86,6 +91,10 @@ const router = createBrowserRouter([
   { path: "/termos", element: <Termos /> },
   { path: "/privacidade", element: <Privacidade /> },
   { path: "/esqueci-senha", element: <EsqueciSenha /> },
+  { path: "/contato", element: <Contato /> },
+  { path: "/sobre", element: <SobreNos /> },
+  { path: "/central-de-ajuda", element: <CentralDeAjudaPublica /> }, // Usar o novo componente aqui
+  { path: "/faq", element: <PerguntasFrequentes /> },
   { path: "/resetar-senha", element: <ResetarSenha /> },
   { path: "/blog/:slug", element: <PostPage /> },
   {
@@ -126,13 +135,15 @@ const router = createBrowserRouter([
               { path: "/meus-posts", element: <MeusPosts /> },
               { path: "/posts/novo", element: <NovoPost /> },
               { path: "/posts/editar/:slug", element: <EditarPost /> },
+              { path: "/admin/ajuda", element: <CentralDeAjuda /> },
             ],
           },
           { path: "/mensagens-pt", element: <MensagensPT /> },
           { path: "/perfil-pt", element: <PerfilPT /> },
           { path: "/meus-modelos", element: <MeusModelos /> },
           { path: "/configuracoes-pt", element: <ConfiguracoesPT /> },
-          { path: "/rotinas", element: <RotinasPT /> },
+          { path: "/rotinas", element: <RotinasPT /> }, 
+          { path: "/app/ajuda", element: <CentralDeAjuda /> },
           // Rota para a nova página "Mais"
           { path: "/mais", element: <Mais /> },
           { path: "/detalhes-aluno/:id", element: <DetalhesAluno /> },
@@ -158,7 +169,7 @@ const router = createBrowserRouter([
           { path: "/execucao-rotina/selecionar-treino/:rotinaId", element: <ExecucaoSelecionarTreino /> },
           { path: "/execucao-rotina/executar-treino/:sessaoId", element: <ExecucaoExecutarTreino /> },
         ]
-      }
+      },
     ]
   },
   {

@@ -40,7 +40,10 @@ const PTMobileHeader = () => {
     
     // Páginas de Rotina com botão de info
     if (path.startsWith('/rotinas')) return { title: 'Rotinas', showBackButton: false, showInfoButton: true };
-    if (path.startsWith('/alunos-rotinas/')) return { title: 'Rotinas do Aluno', showBackButton: true, showInfoButton: true };
+    // Regex para /alunos-rotinas/{uuid}/{uuid} (página de detalhes)
+    if (/^\/alunos-rotinas\/[a-zA-Z0-9-]+\/[a-zA-Z0-9-]+\/?$/.test(path)) {
+      return { title: 'Detalhes da Rotina', showBackButton: true };
+    }
 
     // ✅ Lógica específica para Avaliações (mais específicas primeiro)
     if (path.includes('/nova') && path.startsWith('/alunos-avaliacoes/')) {

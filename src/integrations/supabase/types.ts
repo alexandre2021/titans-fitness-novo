@@ -664,6 +664,39 @@ export type Database = {
           },
         ]
       }
+      knowledge_base_articles: {
+        Row: {
+          article_order: number | null
+          category: string
+          category_order: number | null
+          content: string
+          created_at: string
+          id: string
+          title: string
+          user_type: string
+        }
+        Insert: {
+          article_order?: number | null
+          category: string
+          category_order?: number | null
+          content: string
+          created_at?: string
+          id?: string
+          title: string
+          user_type?: string
+        }
+        Update: {
+          article_order?: number | null
+          category?: string
+          category_order?: number | null
+          content?: string
+          created_at?: string
+          id?: string
+          title?: string
+          user_type?: string
+        }
+        Relationships: []
+      }
       mensagens: {
         Row: {
           conteudo: string
@@ -926,6 +959,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      perguntas_nao_respondidas: {
+        Row: {
+          created_at: string
+          id: string
+          question_text: string
+          status: string
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          question_text: string
+          status?: string
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          question_text?: string
+          status?: string
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       planos: {
         Row: {
@@ -1374,6 +1434,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      binary_quantize: {
+        Args: { "": string } | { "": unknown }
+        Returns: unknown
+      }
       bytea_to_text: {
         Args: { data: string }
         Returns: string
@@ -1431,25 +1495,51 @@ export type Database = {
         Args: { user_id_1: string; user_id_2: string }
         Returns: string
       }
-      get_rotinas_ativas_por_professor: {
-        Args: Record<PropertyKey, never>
+      get_my_claim: {
+        Args: { claim: string }
+        Returns: Json
+      }
+      get_top_similarity: {
+        Args: { query_embedding: string }
         Returns: {
-          aluno_avatar_color: string
-          aluno_avatar_image_url: string
-          aluno_avatar_letter: string
-          aluno_avatar_type: string
-          aluno_id: string
-          aluno_nome_completo: string
-          data_inicio: string
-          duracao_semanas: number
-          rotina_id: string
-          rotina_nome: string
-          rotina_status: string
+          similarity: number
         }[]
       }
       get_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      halfvec_avg: {
+        Args: { "": number[] }
+        Returns: unknown
+      }
+      halfvec_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      halfvec_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      halfvec_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
+      hnsw_bit_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnsw_halfvec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnsw_sparsevec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnswhandler: {
+        Args: { "": unknown }
+        Returns: unknown
       }
       http: {
         Args: { request: Database["public"]["CompositeTypes"]["http_request"] }
@@ -1506,9 +1596,41 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      ivfflat_bit_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflat_halfvec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflathandler: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      l2_norm: {
+        Args: { "": unknown } | { "": unknown }
+        Returns: number
+      }
+      l2_normalize: {
+        Args: { "": string } | { "": unknown } | { "": unknown }
+        Returns: unknown
+      }
       marcar_convites_expirados: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      match_knowledge_base: {
+        Args: {
+          match_count: number
+          match_threshold: number
+          query_embedding: string
+        }
+        Returns: {
+          content: string
+          id: string
+          similarity: number
+        }[]
       }
       remove_aluno_from_all_groups: {
         Args: { p_aluno_id: string; p_professor_id: string }
@@ -1517,6 +1639,18 @@ export type Database = {
       run_inactive_users_check: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      sparsevec_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      sparsevec_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      sparsevec_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
       }
       test_checkmail_validation: {
         Args: Record<PropertyKey, never>
@@ -1529,6 +1663,12 @@ export type Database = {
         Args: { data: string }
         Returns: string
       }
+      update_articles_order: {
+        Args: {
+          updates: Database["public"]["CompositeTypes"]["article_order_update"][]
+        }
+        Returns: undefined
+      }
       urlencode: {
         Args: { data: Json } | { string: string } | { string: string }
         Returns: string
@@ -1536,6 +1676,30 @@ export type Database = {
       validate_email_with_checkmail: {
         Args: { email_to_validate: string }
         Returns: Json
+      }
+      vector_avg: {
+        Args: { "": number[] }
+        Returns: string
+      }
+      vector_dims: {
+        Args: { "": string } | { "": unknown }
+        Returns: number
+      }
+      vector_norm: {
+        Args: { "": string }
+        Returns: number
+      }
+      vector_out: {
+        Args: { "": string }
+        Returns: unknown
+      }
+      vector_send: {
+        Args: { "": string }
+        Returns: string
+      }
+      vector_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
       }
       verify_user_password: {
         Args: { password: string }
@@ -1553,6 +1717,11 @@ export type Database = {
       tipo_agendamento: "sessao_treino" | "avaliacao_fisica"
     }
     CompositeTypes: {
+      article_order_update: {
+        id: string | null
+        category_order: number | null
+        article_order: number | null
+      }
       http_header: {
         field: string | null
         value: string | null

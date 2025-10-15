@@ -1,21 +1,17 @@
-// src/hooks/useExercicioLookup.ts
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { ExercicioInfo } from '@/types/rotina.types';
 
 // Cache global para persistir entre remontagens
-let exerciciosCache: ExercicioInfo[] = [];
-let cacheCarregado = false;
-let promiseCarregamento: Promise<void> | null = null;
+const exerciciosCache = new Map<string, ExercicioInfo>();
+let cachePromise: Promise<void> | null = null;
 
-const carregarExerciciosGlobal = async (): Promise<void> => {
-  if (cacheCarregado) return;
-  
-  if (promiseCarregamento) {
-    return promiseCarregamento;
+const carregarExercicios = () => {
+  if (cachePromise) {
+    return cachePromise;
   }
 
-  promiseCarregamento = (async () => {
+  cachePromise = (async () => {
     try {
       console.log('🔄 Carregando exercícios do Supabase...');
       const { data, error } = await supabase
@@ -26,64 +22,48 @@ const carregarExerciciosGlobal = async (): Promise<void> => {
 
       if (error) throw error;
 
-      exerciciosCache = (data || []).map(ex => ({
-        id: ex.id,
-        nome: ex.nome,
-        equipamento: ex.equipamento || 'Desconhecido',
-        grupo_muscular: ex.grupo_muscular || 'Desconhecido',
-        dificuldade: ex.dificuldade || 'Desconhecida',
-        tipo: ex.tipo || 'padrao',
-        descricao: ex.descricao || ''
-      }));
-
-      cacheCarregado = true;
-      console.log('✅ Cache de exercícios carregado:', exerciciosCache.length);
+      exerciciosCache.clear();
+      (data || []).forEach(e => {
+        exerciciosCache.set(e.id, {
+          id: e.id,
+          nome: e.nome || 'Exercício sem nome',
+          equipamento: e.equipamento || 'Desconhecido',
+          grupo_muscular: e.grupo_muscular || 'Desconhecido',
+          dificuldade: e.dificuldade || 'Desconhecida',
+          tipo: e.tipo || 'padrao',
+          descricao: e.descricao || '',
+        });
+      });
+      console.log(`✅ Cache de exercícios carregado: ${exerciciosCache.size} exercícios`);
     } catch (error) {
       console.error('Erro ao carregar exercícios:', error);
-      exerciciosCache = [];
-    } finally {
-      promiseCarregamento = null;
+      exerciciosCache.clear();
     }
   })();
 
-  return promiseCarregamento;
+  return cachePromise;
 };
 
 export function useExercicioLookup() {
-  const [loading, setLoading] = useState(!cacheCarregado);
+  const [loading, setLoading] = useState(exerciciosCache.size === 0);
 
   useEffect(() => {
-    if (!cacheCarregado) {
-      carregarExerciciosGlobal().finally(() => {
+    if (exerciciosCache.size === 0) {
+      carregarExercicios().finally(() => {
         setLoading(false);
       });
     }
   }, []);
 
-  const getExercicioInfo = (id: string): ExercicioInfo => {
-    if (!cacheCarregado) {
-      return {
-        id,
-        nome: 'Carregando...',
-        equipamento: 'Carregando...',
-        grupo_muscular: 'Carregando...',
-        dificuldade: 'Carregando...',
-      };
-    }
+  const getExercicioInfo = useCallback((id: string | null | undefined): ExercicioInfo => {
+    if (!id) return { id: '', nome: 'Exercício inválido', equipamento: '', grupo_muscular: '', dificuldade: '', tipo: 'padrao', descricao: '' };
+    return exerciciosCache.get(id) || { id, nome: 'Exercício não encontrado', equipamento: 'Desconhecido', grupo_muscular: 'Desconhecido', dificuldade: 'Desconhecida', tipo: 'padrao', descricao: '' };
+  }, []);
 
-    const exercicio = exerciciosCache.find(ex => ex.id === id);
-    if (exercicio) {
-      return exercicio;
-    }
+  const allExercicios = useMemo(() => Array.from(exerciciosCache.values()), []);
 
-    return {
-      id,
-      nome: 'Exercício não encontrado',
-      equipamento: 'Desconhecido',
-      grupo_muscular: 'Desconhecido',
-      dificuldade: 'Desconhecida',
-    };
-  };
-
-  return { getExercicioInfo, loading };
+  return { getExercicioInfo, allExercicios, loading };
 }
+
+// Inicia o carregamento assim que o módulo é importado
+carregarExercicios();
