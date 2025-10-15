@@ -366,17 +366,10 @@ const AlunosPT = () => {
         <DialogTrigger asChild>
           <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
             <Button
-              className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
+              className="rounded-full h-12 w-12 p-0 shadow-lg flex items-center justify-center [&_svg]:size-7"
               aria-label="Novo Aluno"
             >
               <Plus />
-            </Button>
-            <Button
-              className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6"
-              size="lg"
-            >
-              <Plus />
-              Novo Aluno
             </Button>
           </div>
         </DialogTrigger>

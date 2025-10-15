@@ -1173,22 +1173,13 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
       {/* Botão Flutuante para Nova Rotina (Apenas para Professor) */}
       {modo === 'professor' && activeTab === 'atual' && (
         <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
-          {/* Mobile: Round floating button */}
-          <Button onClick={handleNovaRotinaClick}
-            disabled={navegandoNovaRotina}
-            className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
-            aria-label="Nova Rotina"
-          >
-            <Plus />
-          </Button>
-          {/* Desktop: Standard floating button */}
           <Button
             onClick={handleNovaRotinaClick}
             disabled={navegandoNovaRotina}
-            className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6"
-            size="lg"
-      >
-            <Plus /> Nova Rotina
+            className="rounded-full h-12 w-12 p-0 shadow-lg flex items-center justify-center [&_svg]:size-7"
+            aria-label="Nova Rotina"
+          >
+            <Plus />
           </Button>
         </div>
       )}

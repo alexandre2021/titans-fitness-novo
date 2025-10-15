@@ -180,8 +180,11 @@ const MeusPosts = () => {
       </div>
 
       <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
-        <Button onClick={() => navigate('/posts/novo')} className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8" aria-label="Novo Post"><Plus /></Button>
-        <Button onClick={() => navigate('/posts/novo')} className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6" size="lg"><Plus />Novo Post</Button>
+        <Button
+          onClick={() => navigate('/posts/novo')}
+          className="rounded-full h-12 w-12 p-0 shadow-lg flex items-center justify-center [&_svg]:size-7"
+          aria-label="Novo Post"
+        ><Plus /></Button>
       </div>
 
       <Modal isOpen={showDeleteDialog} onRequestClose={() => {}} shouldCloseOnOverlayClick={false} shouldCloseOnEsc={false} className="bg-white rounded-lg p-6 max-w-md w-full mx-4 outline-none" overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50">

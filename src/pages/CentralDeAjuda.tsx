@@ -17,10 +17,15 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { ShieldAlert, Plus, GripVertical, Edit, Trash2, Loader2, Pencil, FolderPlus, Search, Filter, ImagePlus } from "lucide-react";
+import { ShieldAlert, Plus, GripVertical, Edit, Trash2, Loader2, Pencil, FolderPlus, Search, Filter, ImagePlus, MessageSquare, Calendar, FilePlus, Save } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Underline from '@tiptap/extension-underline';
+import { Color } from '@tiptap/extension-color';
+import Image from '@tiptap/extension-image';
+import { TextStyle } from '@tiptap/extension-text-style';
+import { TiptapToolbar } from '@/components/editor/TiptapToolbar';
 import { useAuth } from "@/hooks/useAuth"; 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { MoreVertical as MoreVerticalIcon } from 'lucide-react';
@@ -66,7 +71,6 @@ const highlightText = (text: string, query: string) => {
 // --- Componente do Formulário de Edição/Criação ---
 const ArticleForm = ({ article, onOpenChange, categories }: { article?: Article | null, onOpenChange: (open: boolean) => void, categories: string[] }) => {
   const queryClient = useQueryClient();
-  const quillRef = useRef<ReactQuill>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isIconModalOpen, setIsIconModalOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -74,6 +78,36 @@ const ArticleForm = ({ article, onOpenChange, categories }: { article?: Article 
     content: article?.content || '',
     category: article?.category || '',
     user_type: article?.user_type || 'ambos',
+  });
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: {
+          levels: [1, 2, 3],
+        },
+      }),
+      Underline,
+      TextStyle,
+      // Permite a inserção de imagens e, por extensão, SVGs como se fossem imagens.
+      Image.configure({
+        inline: true, // Permite que a imagem (SVG) fique no meio do texto.
+        HTMLAttributes: {
+          class: 'inline-block h-[1.2em] w-auto -translate-y-px', // Estilos para o SVG se comportar como um ícone de texto.
+        },
+      }),
+      Color,
+    ],
+    content: formData.content,
+    onUpdate: ({ editor }) => {
+      setFormData(p => ({ ...p, content: editor.getHTML() }));
+    },
+    editorProps: {
+      attributes: {
+        // Adicionado estilo para os títulos (h2, h3) dentro do editor
+        class: 'prose dark:prose-invert prose-sm sm:prose-base max-w-none focus:outline-none p-4 border rounded-md min-h-[250px] bg-white [&_h1]:font-bold [&_h1]:text-3xl [&_h2]:font-bold [&_h2]:text-2xl [&_h3]:font-semibold [&_h3]:text-xl',
+      },
+    },
   });
 
   const mutation = useMutation({
@@ -105,49 +139,71 @@ const ArticleForm = ({ article, onOpenChange, categories }: { article?: Article 
   };
 
   const handleEmojiSelect = useCallback((emojiData: EmojiClickData) => {
-    const quill = quillRef.current?.getEditor();
-    if (quill) {
-      const range = quill.getSelection(true);
-      quill.insertText(range.index, emojiData.emoji);
-      quill.setSelection(range.index + emojiData.emoji.length, 0);
+    if (editor) {
+      editor.chain().focus().insertContent(emojiData.emoji).run();
     }
     setShowEmojiPicker(false);
-  }, []);
+  }, [editor]);
 
   const handleInsertIcon = useCallback((closeModal: () => void) => {
-    const quill = quillRef.current?.getEditor();
-    if (quill) {
-      const range = quill.getSelection(true);
-      // HTML com estilo para deixar o ícone maior e mais destacado
-      const iconHtml = `<span style="font-size: 1.2em; font-weight: bold; line-height: 1; vertical-align: middle;">⋮</span>`;
-      quill.clipboard.dangerouslyPasteHTML(range.index, iconHtml, 'user');
-      // Move o cursor para depois do ícone inserido
-      quill.setSelection(range.index + 1, 0);
+    if (editor) {
+      // SVG do ícone de 3 pontos com fundo cinza claro e formato redondo
+      const moreVerticalIconSvg = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#f3f4f6"/><g transform="translate(4, 4)" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></g></svg>')}`;
+      // Insere o SVG como uma imagem
+      editor.chain().focus().setImage({ src: moreVerticalIconSvg, alt: 'Ícone de Menu' }).run();
       closeModal();
     }
-  }, []);
+  }, [editor]);
 
   const handleInsertFilterIcon = useCallback((closeModal: () => void) => {
-    const quill = quillRef.current?.getEditor();
-    if (quill) {
-      const range = quill.getSelection(true);
-      const iconHtml = `<span style="font-size: 1.2em; font-weight: bold; line-height: 1; vertical-align: middle;">🝖</span>`;
-      quill.clipboard.dangerouslyPasteHTML(range.index, iconHtml, 'user');
-      quill.setSelection(range.index + 1, 0);
+    if (editor) {
+      // SVG do ícone de filtro com fundo cinza claro e formato redondo
+      const filterIconSvg = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#f3f4f6"/><g transform="translate(4, 4)" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></g></svg>')}`;
+      // Insere o SVG como uma imagem
+      editor.chain().focus().setImage({ src: filterIconSvg, alt: 'Ícone de Filtro' }).run();
       closeModal();
     }
-  }, []);
+  }, [editor]);
 
-  const quillModules = useMemo(() => ({
-    toolbar: {
-      container: [
-        [{ 'header': [2, 3, false] }],
-        ['bold', 'italic', 'underline', { 'color': customColors }, { 'background': customColors }],
-        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-        ['link', 'clean'],
-      ],
+  const handleInsertMessageIcon = useCallback((closeModal: () => void) => {
+    if (editor) {
+      // SVG do ícone de mensagem com fundo cinza claro e formato redondo
+      const messageIconSvg = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#f3f4f6"/><g transform="translate(4, 4)" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></g></svg>')}`;
+      // Insere o SVG como uma imagem
+      editor.chain().focus().setImage({ src: messageIconSvg, alt: 'Ícone de Mensagem' }).run();
+      closeModal();
     }
-  }), []);
+  }, [editor]);
+
+  const handleInsertPlusIcon = useCallback((closeModal: () => void) => {
+    if (editor) {
+      // SVG do ícone de mais (+) com fundo cinza claro e formato redondo
+      const plusIconSvg = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#f3f4f6"/><g transform="translate(4, 4)" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M5 12h14"/><path d="M12 5v14"/></g></svg>')}`;
+      // Insere o SVG como uma imagem
+      editor.chain().focus().setImage({ src: plusIconSvg, alt: 'Ícone de Adicionar' }).run();
+      closeModal();
+    }
+  }, [editor]);
+
+  const handleInsertCalendarIcon = useCallback((closeModal: () => void) => {
+    if (editor) {
+      // SVG do ícone de agenda (calendar) com fundo cinza claro e formato redondo
+      const calendarIconSvg = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#f3f4f6"/><g transform="translate(4, 4)" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></g></svg>')}`;
+      // Insere o SVG como uma imagem
+      editor.chain().focus().setImage({ src: calendarIconSvg, alt: 'Ícone de Agenda' }).run();
+      closeModal();
+    }
+  }, [editor]);
+
+  const handleInsertSaveIcon = useCallback((closeModal: () => void) => {
+    if (editor) {
+      // SVG do ícone de salvar (save) com fundo cinza claro e formato redondo
+      const saveIconSvg = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#f3f4f6"/><g transform="translate(4, 4)" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></g></svg>')}`;
+      // Insere o SVG como uma imagem
+      editor.chain().focus().setImage({ src: saveIconSvg, alt: 'Ícone de Salvar' }).run();
+      closeModal();
+    }
+  }, [editor]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -171,23 +227,8 @@ const ArticleForm = ({ article, onOpenChange, categories }: { article?: Article 
       <div className="space-y-2">
         <Label htmlFor="content">Conteúdo</Label>
         <div className="relative">
-          <ReactQuill
-            ref={quillRef}
-            theme="snow"
-            value={formData.content}
-            onChange={content => setFormData(p => ({ ...p, content }))}
-            readOnly={mutation.isPending}
-            modules={quillModules}
-            formats={[
-              'header',
-              'bold', 'italic', 'underline',
-              'color',
-              'background',
-              'list', 'bullet',
-              'link',
-            ]}
-            className="bg-white [&&>.ql-container_.ql-editor]:min-h-[250px]"
-          />
+          <TiptapToolbar editor={editor} />
+          <EditorContent editor={editor} className="mt-2" />
           <div className="mt-2 flex items-center gap-2">
             <Dialog open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
               <DialogTrigger asChild>
@@ -209,18 +250,40 @@ const ArticleForm = ({ article, onOpenChange, categories }: { article?: Article 
                 <DialogHeader>
                   <DialogTitle>Inserir Ícone</DialogTitle>
                 </DialogHeader>
-                <div className="grid grid-cols-2 gap-4 py-4">
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-4 py-4">
                   <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleInsertIcon(() => setIsIconModalOpen(false))}>
                     <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
                       <MoreVerticalIcon className="h-5 w-5" />
                     </div>
-                    <span className="text-xs">Menu Opções</span>
+                    <span className="text-xs">Opções</span>
                   </Button>
                   <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleInsertFilterIcon(() => setIsIconModalOpen(false))}>
-                    <div className="w-8 h-8 rounded-md border flex items-center justify-center">
-                      <Filter className="h-5 w-5" />
-                    </div>
+                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center"><Filter className="h-5 w-5" /></div>
                     <span className="text-xs">Filtro</span>
+                  </Button>
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleInsertMessageIcon(() => setIsIconModalOpen(false))}>
+                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                      <MessageSquare className="h-5 w-5" />
+                    </div>
+                    <span className="text-xs">Mensagem</span>
+                  </Button>
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleInsertPlusIcon(() => setIsIconModalOpen(false))}>
+                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                      <Plus className="h-5 w-5" />
+                    </div>
+                    <span className="text-xs">Adicionar</span>
+                  </Button>
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleInsertCalendarIcon(() => setIsIconModalOpen(false))}>
+                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                      <Calendar className="h-5 w-5" />
+                    </div>
+                    <span className="text-xs">Agenda</span>
+                  </Button>
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleInsertSaveIcon(() => setIsIconModalOpen(false))}>
+                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                      <Save className="h-5 w-5" />
+                    </div>
+                    <span className="text-xs">Salvar</span>
                   </Button>
                 </div>
               </DialogContent>
@@ -304,7 +367,7 @@ const SortableArticleItem = ({ article, allCategories, isAdmin, searchTerm }: { 
           </div>
         </AccordionTrigger>
         <AccordionContent className="px-4 pt-0 pb-4 ml-10">
-          <div className="prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: highlightText(article.content, searchTerm) }} />
+          <div className="prose prose-sm max-w-none dark:prose-invert [&_h1]:font-bold [&_h1]:text-3xl [&_h2]:font-bold [&_h2]:text-2xl [&_h3]:font-semibold [&_h3]:text-xl" dangerouslySetInnerHTML={{ __html: highlightText(article.content, searchTerm) }} />
         </AccordionContent>
       </AccordionItem>
     </div>
@@ -686,24 +749,21 @@ const CentralDeAjuda = () => {
           {/* Botão Novo Artigo */}
           <Dialog open={isNewArticleOpen} onOpenChange={setIsNewArticleOpen}>
             <DialogTrigger asChild>
-              <div>
-                <Button className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8" aria-label="Artigo"><Plus /></Button>
-                <Button className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6" size="lg"><Plus /> Artigo</Button>
-              </div>
+              <Button className="rounded-full h-12 w-12 p-0 shadow-lg flex items-center justify-center [&_svg]:size-7" aria-label="Novo Artigo">
+                <FilePlus />
+              </Button>
             </DialogTrigger>
             <DialogContent className="max-h-[85vh] overflow-y-auto">
               <DialogHeader><DialogTitle>Criar Novo Artigo</DialogTitle></DialogHeader>
               <ArticleForm onOpenChange={setIsNewArticleOpen} categories={groupedArticles.map(g => g.category)} />
             </DialogContent>
           </Dialog>
-
           {/* Botão Nova Categoria */}
           <Dialog>
             <DialogTrigger asChild>
-              <div>
-                <Button variant="outline" className="md:hidden rounded-full h-12 w-12 p-0 shadow-lg flex items-center justify-center [&_svg]:size-7" aria-label="Categoria"><FolderPlus /></Button>
-                <Button variant="outline" className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-5" size="lg"><FolderPlus /> Categoria</Button>
-              </div>
+              <Button variant="outline" className="rounded-full h-12 w-12 p-0 shadow-lg flex items-center justify-center [&_svg]:size-7" aria-label="Nova Categoria">
+                <FolderPlus />
+              </Button>
             </DialogTrigger>
             <DialogContent><DialogHeader><DialogTitle>Criar Nova Categoria</DialogTitle></DialogHeader><NewCategoryForm onOpenChange={() => {}} /></DialogContent>
           </Dialog>

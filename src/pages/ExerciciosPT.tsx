@@ -601,21 +601,11 @@ const ExerciciosPT = () => {
         <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
           <Button
             onClick={handleNovoExercicioPadrao}
-            className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
+            className="rounded-full h-12 w-12 p-0 shadow-lg flex items-center justify-center [&_svg]:size-7"
             variant="secondary"
             aria-label="Novo Exercício Padrão"
           >
             <Plus />
-          </Button>
-
-          <Button
-            onClick={handleNovoExercicioPadrao}
-            className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6"
-            size="lg"
-            variant="secondary"
-          >
-            <Plus />
-            Novo Exercício Padrão
           </Button>
         </div>
       )}
@@ -625,20 +615,11 @@ const ExerciciosPT = () => {
         <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
           <Button
             onClick={canAddMore ? handleNovoExercicio : () => toast.error("Limite atingido", { description: `Você atingiu o limite de ${LIMITE_EXERCICIOS_PERSONALIZADOS} exercícios personalizados.` })}
-            className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
+            className="rounded-full h-12 w-12 p-0 shadow-lg flex items-center justify-center [&_svg]:size-7"
+            variant={canAddMore ? "default" : "outline"}
             aria-label={canAddMore ? "Novo Exercício" : "Limite de exercícios atingido"}
           >
             {canAddMore ? <Plus /> : <ShieldAlert />}
-          </Button>
-
-          <Button
-            onClick={canAddMore ? handleNovoExercicio : () => toast.error("Limite atingido", { description: `Você atingiu o limite de ${LIMITE_EXERCICIOS_PERSONALIZADOS} exercícios personalizados.` })}
-            className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6"
-            size="lg"
-            variant={canAddMore ? "default" : "outline"}
-          >
-            {canAddMore ? <Plus /> : <ShieldAlert />}
-            {canAddMore ? "Novo Exercício" : "Limite Atingido"}
           </Button>
         </div>
       )}

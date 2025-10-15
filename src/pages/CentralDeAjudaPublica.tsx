@@ -51,7 +51,7 @@ const ArticleItem = ({ article, searchTerm }: { article: Article, searchTerm: st
         </div>
       </AccordionTrigger>
       <AccordionContent className="px-4 pt-0 pb-4 ml-10">
-        <div className="prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: highlightText(article.content, searchTerm) }} />
+        <div className="prose prose-sm max-w-none dark:prose-invert [&_h1]:font-bold [&_h1]:text-3xl [&_h2]:font-bold [&_h2]:text-2xl [&_h3]:font-semibold [&_h3]:text-xl" dangerouslySetInnerHTML={{ __html: highlightText(article.content, searchTerm) }} />
       </AccordionContent>
     </AccordionItem>
   );

@@ -417,11 +417,14 @@ const EditarExercicioPadrao = () => {
       </div>
 
       <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
-        <Button onClick={handleSave} disabled={saving} variant="secondary" className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8">
-          {saving ? <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-foreground"></div> : <Save />}
-        </Button>
-        <Button onClick={handleSave} disabled={saving} variant="secondary" className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6" size="lg">
-          <Save />{saving ? "Salvando..." : "Salvar Alterações"}
+        <Button
+          onClick={handleSave}
+          disabled={saving}
+          variant="secondary"
+          className="rounded-full h-12 w-12 p-0 shadow-lg flex items-center justify-center [&_svg]:size-7"
+        >
+          {saving ? <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-primary-foreground"></div> : <Save />}
+          <span className="sr-only">{saving ? "Salvando..." : "Salvar Alterações"}</span>
         </Button>
       </div>
     </div>

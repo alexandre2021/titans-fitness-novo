@@ -704,21 +704,10 @@ const Calendario = () => {
               fetchAlunosSeguidores();
               setIsCreateModalOpen(true);
             }}
-            className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
-            aria-label="Agendamento"
+            className="rounded-full h-12 w-12 p-0 shadow-lg flex items-center justify-center [&_svg]:size-7"
+            aria-label="Novo Agendamento"
           >
             <Plus />
-          </Button>
-          <Button
-            onClick={() => {
-              fetchAlunosSeguidores();
-              setIsCreateModalOpen(true);
-            }}
-            className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6"
-            size="lg"
-          >
-            <Plus />
-            Agendamento
           </Button>
         </div>
       )}
