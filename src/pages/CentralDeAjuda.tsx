@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -17,13 +17,23 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { ShieldAlert, Plus, GripVertical, Edit, Trash2, Loader2, Pencil, FolderPlus, Search } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"; 
+import { ShieldAlert, Plus, GripVertical, Edit, Trash2, Loader2, Pencil, FolderPlus, Search, Filter, ImagePlus } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { useAuth } from "@/hooks/useAuth"; 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { MoreVertical as MoreVerticalIcon } from 'lucide-react';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
+
+// Paleta de cores customizada com um cinza mais claro
+const customColors: (string | boolean)[] = [
+  '#000000', '#e60000', '#ff9900', '#ffff00', '#008a00', '#0066cc', '#9933ff',
+  '#ffffff', '#facccc', '#ffebcc', '#ffffcc', '#cce8cc', '#cce0f5', '#ebd6ff',
+  '#e5e5e5', // Cinza claro (substituído de #bbbbbb)
+  '#888888', '#555555',
+  false // Adiciona a opção para remover a cor
+];
 
 type Article = {
   id: string;
@@ -58,6 +68,7 @@ const ArticleForm = ({ article, onOpenChange, categories }: { article?: Article 
   const queryClient = useQueryClient();
   const quillRef = useRef<ReactQuill>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isIconModalOpen, setIsIconModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: article?.title || '',
     content: article?.content || '',
@@ -103,14 +114,40 @@ const ArticleForm = ({ article, onOpenChange, categories }: { article?: Article 
     setShowEmojiPicker(false);
   }, []);
 
-  const quillModules = {
-    toolbar: [
-      [{ 'header': [2, 3, false] }],
-      ['bold', 'italic', 'underline'],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      ['link', 'clean'],
-    ],
-  };
+  const handleInsertIcon = useCallback((closeModal: () => void) => {
+    const quill = quillRef.current?.getEditor();
+    if (quill) {
+      const range = quill.getSelection(true);
+      // HTML com estilo para deixar o ícone maior e mais destacado
+      const iconHtml = `<span style="font-size: 1.2em; font-weight: bold; line-height: 1; vertical-align: middle;">⋮</span>`;
+      quill.clipboard.dangerouslyPasteHTML(range.index, iconHtml, 'user');
+      // Move o cursor para depois do ícone inserido
+      quill.setSelection(range.index + 1, 0);
+      closeModal();
+    }
+  }, []);
+
+  const handleInsertFilterIcon = useCallback((closeModal: () => void) => {
+    const quill = quillRef.current?.getEditor();
+    if (quill) {
+      const range = quill.getSelection(true);
+      const iconHtml = `<span style="font-size: 1.2em; font-weight: bold; line-height: 1; vertical-align: middle;">🝖</span>`;
+      quill.clipboard.dangerouslyPasteHTML(range.index, iconHtml, 'user');
+      quill.setSelection(range.index + 1, 0);
+      closeModal();
+    }
+  }, []);
+
+  const quillModules = useMemo(() => ({
+    toolbar: {
+      container: [
+        [{ 'header': [2, 3, false] }],
+        ['bold', 'italic', 'underline', { 'color': customColors }, { 'background': customColors }],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        ['link', 'clean'],
+      ],
+    }
+  }), []);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -144,12 +181,14 @@ const ArticleForm = ({ article, onOpenChange, categories }: { article?: Article 
             formats={[
               'header',
               'bold', 'italic', 'underline',
+              'color',
+              'background',
               'list', 'bullet',
               'link',
             ]}
             className="bg-white [&&>.ql-container_.ql-editor]:min-h-[250px]"
           />
-          <div className="mt-2">
+          <div className="mt-2 flex items-center gap-2">
             <Dialog open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
               <DialogTrigger asChild>
                 <Button type="button" variant="outline" size="sm">
@@ -158,6 +197,32 @@ const ArticleForm = ({ article, onOpenChange, categories }: { article?: Article 
               </DialogTrigger>
               <DialogContent className="w-auto p-0 border-0">
                 <EmojiPicker onEmojiClick={handleEmojiSelect} lazyLoadEmojis />
+              </DialogContent>
+            </Dialog>
+            <Dialog open={isIconModalOpen} onOpenChange={setIsIconModalOpen}>
+              <DialogTrigger asChild>
+                <Button type="button" variant="outline" size="sm">
+                  <ImagePlus className="h-4 w-4 mr-1" /> Adicionar Ícone
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Inserir Ícone</DialogTitle>
+                </DialogHeader>
+                <div className="grid grid-cols-2 gap-4 py-4">
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleInsertIcon(() => setIsIconModalOpen(false))}>
+                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                      <MoreVerticalIcon className="h-5 w-5" />
+                    </div>
+                    <span className="text-xs">Menu Opções</span>
+                  </Button>
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleInsertFilterIcon(() => setIsIconModalOpen(false))}>
+                    <div className="w-8 h-8 rounded-md border flex items-center justify-center">
+                      <Filter className="h-5 w-5" />
+                    </div>
+                    <span className="text-xs">Filtro</span>
+                  </Button>
+                </div>
               </DialogContent>
             </Dialog>
           </div>

@@ -39,7 +39,7 @@ const PTMobileHeader = () => {
     if (path.startsWith('/exercicios/detalhes')) return { title: 'Detalhes do Exercício', showBackButton: true };
     
     // Páginas de Rotina com botão de info
-    if (path.startsWith('/rotinas')) return { title: 'Rotinas', showBackButton: false, showInfoButton: true };
+    if (path.startsWith('/rotinas')) return { title: 'Rotinas', subtitle: "Gerencie as rotinas de todos os seus alunos", showBackButton: false, showInfoButton: true };
     // Regex para /alunos-rotinas/{uuid}/{uuid} (página de detalhes)
     if (/^\/alunos-rotinas\/[a-zA-Z0-9-]+\/[a-zA-Z0-9-]+\/?$/.test(path)) {
       return { title: 'Detalhes da Rotina', showBackButton: true };
@@ -81,6 +81,7 @@ const PTMobileHeader = () => {
       "/alunos": { title: "Alunos", subtitle: "Gerencie seus alunos e acompanhe seu progresso" },
       "/exercicios": { title: "Exercícios", subtitle: "Gerencie seus exercícios padrão e personalizados" },
       "/meus-modelos": { title: "Meus Modelos", subtitle: "Gerencie seus modelos de rotina" },
+      "/meus-posts": { title: "Meus Posts", subtitle: "Gerencie todos os seus artigos e publicações" },
       "/mais": { title: "Mais Opções", subtitle: "Navegue por outras seções e configurações" },
       "/agenda-pt": { title: "Agenda" },
       "/mensagens-pt": { title: "Mensagens" },

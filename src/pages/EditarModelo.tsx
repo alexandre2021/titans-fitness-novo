@@ -861,16 +861,8 @@ const EditarModelo = () => {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">Editar Modelo de Rotina</h1>
-            <p className="text-muted-foreground">Modifique o modelo de treino para reutilizar com seus alunos.</p>
-          </div>
-        </div>
-      </div>
-      <div className="mt-6">{renderEtapa()}</div>
+    <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto">
+      {renderEtapa()}
     </div>
   );
 };

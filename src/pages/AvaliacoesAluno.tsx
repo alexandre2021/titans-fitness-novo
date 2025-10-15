@@ -260,7 +260,7 @@ const AvaliacoesAluno = () => {
         <Card>
           <CardHeader><CardTitle>Medidas Principais</CardTitle></CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">Peso</p>
                 <p className="text-2xl font-bold">{avaliacaoSelecionada.peso} kg</p>
@@ -275,10 +275,6 @@ const AvaliacoesAluno = () => {
                   <p className="text-2xl font-bold">{avaliacaoSelecionada.imc.toFixed(1)}</p>
                   <Badge className={`${imcClass.color} text-white`}>{imcClass.text}</Badge>
                 </div>
-              </div>
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">Data</p>
-                <p className="text-lg font-semibold">{avaliacaoSelecionada.data_avaliacao.split('-').reverse().join('/')}</p>
               </div>
             </div>
           </CardContent>
@@ -445,11 +441,10 @@ const AvaliacoesAluno = () => {
                           </Button>
                         ) : (
                           <Button
-                            variant="outline"
+                            variant="default"
                             size="sm"
                             onClick={() => handleVerDetalhes(avaliacao)}
                           >
-                            <Eye className="mr-2 h-4 w-4" />
                             Detalhes
                           </Button>
                         )}

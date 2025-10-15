@@ -268,9 +268,9 @@ const AlunosPT = () => {
                 />
               </div>
               <Button
-                variant="default"
+                variant="outline"
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex-shrink-0 md:hidden relative h-10 w-10 rounded-full p-0 [&_svg]:size-6"
+                className="flex-shrink-0 md:hidden relative h-10 w-10 p-0 [&_svg]:size-6"
                 aria-label="Mostrar filtros"
               >
                 <Filter />

@@ -51,7 +51,7 @@ export const ProfessorCard = ({ professor, onDesvincular }: ProfessorCardProps) 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button 
-                variant="default" 
+                variant="ghost" 
                 size="icon" 
                 className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4" 
                 onClick={(e) => e.stopPropagation()}

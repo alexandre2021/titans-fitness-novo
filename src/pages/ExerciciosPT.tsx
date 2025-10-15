@@ -234,9 +234,9 @@ const ExerciciosPT = () => {
                 />
               </div>
               <Button
-                variant="default"
+                variant="outline"
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex-shrink-0 relative h-10 w-10 rounded-full p-0 [&_svg]:size-6"
+                className="flex-shrink-0 relative h-10 w-10 p-0 [&_svg]:size-6"
                 aria-label="Mostrar filtros"
               >
                 <Filter />
@@ -355,7 +355,7 @@ const ExerciciosPT = () => {
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="default" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4" onClick={(e) => e.stopPropagation()}><MoreVertical /></Button>
+                            <Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4" onClick={(e) => e.stopPropagation()}><MoreVertical /></Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/exercicios/detalhes/${exercicio.id}`, { state: { fromTab: 'padrao' } }); }}>
@@ -400,9 +400,9 @@ const ExerciciosPT = () => {
                 />
               </div>
               <Button
-                variant="default"
+                variant="outline"
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex-shrink-0 relative h-10 w-10 rounded-full p-0 [&_svg]:size-6"
+                className="flex-shrink-0 relative h-10 w-10 p-0 [&_svg]:size-6"
                 aria-label="Mostrar filtros"
               >
                 <Filter />
@@ -530,7 +530,7 @@ const ExerciciosPT = () => {
                             </div>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="default" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4" onClick={(e) => e.stopPropagation()}><MoreVertical /></Button>
+                                <Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4" onClick={(e) => e.stopPropagation()}><MoreVertical /></Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/exercicios/detalhes/${exercicio.id}`, { state: { fromTab: 'personalizados' } }); }}>

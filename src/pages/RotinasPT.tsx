@@ -433,9 +433,9 @@ const RotinasPT = () => {
               />
             </div>
             <Button
-              variant="default"
+              variant="outline"
               onClick={() => setShowFilters(!showFilters)}
-              className="flex-shrink-0 md:hidden relative h-10 w-10 rounded-full p-0 [&_svg]:size-6"
+              className="flex-shrink-0 md:hidden relative h-10 w-10 p-0 [&_svg]:size-6"
               aria-label="Mostrar filtros"
             >
               <Filter />
@@ -460,12 +460,10 @@ const RotinasPT = () => {
                 </div>
                 <div className="space-y-2 flex-1">
                   <Label htmlFor="filtro-objetivo">Objetivo</Label>
-                  <CustomSelect inputId="filtro-objetivo" value={OBJETIVOS_OPTIONS.find(opt => opt.value === filtros.objetivo)} onChange={(option) => setFiltros(prev => ({ ...prev, objetivo: option ? String(option.value) : 'todos' }))} options={OBJETIVOS_OPTIONS} />
                   <CustomSelect inputId="filtro-objetivo" value={FILTRO_OBJETIVOS_OPTIONS.find(opt => opt.value === filtros.objetivo)} onChange={(option) => setFiltros(prev => ({ ...prev, objetivo: option ? String(option.value) : 'todos' }))} options={FILTRO_OBJETIVOS_OPTIONS} />
                 </div>
                 <div className="space-y-2 flex-1">
                   <Label htmlFor="filtro-frequencia">Frequência</Label>
-                  <CustomSelect inputId="filtro-frequencia" value={FREQUENCIAS_OPTIONS.find(opt => opt.value === filtros.frequencia)} onChange={(option) => setFiltros(prev => ({ ...prev, frequencia: option ? String(option.value) : 'todos' }))} options={FREQUENCIAS_OPTIONS} />
                   <CustomSelect inputId="filtro-frequencia" value={FILTRO_FREQUENCIAS_OPTIONS.find(opt => opt.value === filtros.frequencia)} onChange={(option) => setFiltros(prev => ({ ...prev, frequencia: option ? String(option.value) : 'todos' }))} options={FILTRO_FREQUENCIAS_OPTIONS} />
                 </div>
                 {temFiltrosAtivos && ( // O botão de limpar continua usando a mesma lógica
@@ -527,7 +525,7 @@ const RotinasPT = () => {
                             </div>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="default" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4" onClick={(e) => e.stopPropagation()} disabled={isUpdatingStatus}><MoreVertical /></Button>
+                                <Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4" onClick={(e) => e.stopPropagation()} disabled={isUpdatingStatus}><MoreVertical /></Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 {isRascunho ? (

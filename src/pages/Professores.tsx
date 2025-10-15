@@ -223,9 +223,9 @@ const Professores = () => {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 pb-20 md:pb-0">
               {professores.map((professor) => (
-                <ProfessorCard 
-                  key={professor.id} 
-                  professor={professor} 
+                <ProfessorCard
+                  key={professor.id}
+                  professor={professor}
                   onDesvincular={() => handleDesvincularClick(professor.id)} />
               ))}
             </div>

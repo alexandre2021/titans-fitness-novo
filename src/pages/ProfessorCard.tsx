@@ -49,10 +49,10 @@ export const ProfessorCard = ({ professor, onDesvincular }: ProfessorCardProps) 
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 rounded-full p-0 flex-shrink-0"
+                className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4"
                 onClick={(e) => e.stopPropagation()}
               >
-                <MoreVertical className="h-4 w-4" />
+                <MoreVertical />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
