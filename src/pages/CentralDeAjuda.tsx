@@ -105,7 +105,7 @@ const ArticleForm = ({ article, onOpenChange, categories }: { article?: Article 
     editorProps: {
       attributes: {
         // Adicionado estilo para os títulos (h2, h3) dentro do editor
-        class: 'prose dark:prose-invert prose-sm sm:prose-base max-w-none focus:outline-none p-4 border rounded-md min-h-[250px] bg-white [&_h1]:font-bold [&_h1]:text-3xl [&_h2]:font-bold [&_h2]:text-2xl [&_h3]:font-semibold [&_h3]:text-xl',
+        class: 'prose max-w-none dark:prose-invert focus:outline-none p-4 border rounded-md min-h-[250px] bg-white text-base [&_h1]:text-3xl [&_h2]:text-2xl [&_h3]:text-xl',
       },
     },
   });
@@ -338,14 +338,14 @@ const SortableArticleItem = ({ article, allCategories, isAdmin, searchTerm }: { 
   return (
     <div ref={setNodeRef} style={style}>
       <AccordionItem value={article.id} className="border rounded-md bg-background">
-        <AccordionTrigger className="px-3 py-2 hover:no-underline">
+        <AccordionTrigger className="px-3 py-2 hover:no-underline text-base">
           <div className="flex items-center gap-2 w-full">
             {isAdmin && (
               <div {...attributes} {...listeners} className="cursor-grab p-1 text-muted-foreground" onClick={(e) => e.stopPropagation()}>
                 <GripVertical className="h-5 w-5" />
               </div>
             )}
-            <span className="flex-1 truncate text-left" dangerouslySetInnerHTML={{ __html: highlightText(article.title, searchTerm) }} />
+            <span className="flex-1 text-left font-medium" dangerouslySetInnerHTML={{ __html: highlightText(article.title, searchTerm) }} />
             {isAdmin && (
               <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                 <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
@@ -366,8 +366,8 @@ const SortableArticleItem = ({ article, allCategories, isAdmin, searchTerm }: { 
             )}
           </div>
         </AccordionTrigger>
-        <AccordionContent className="px-4 pt-0 pb-4 ml-10">
-          <div className="prose prose-sm max-w-none dark:prose-invert [&_h1]:font-bold [&_h1]:text-3xl [&_h2]:font-bold [&_h2]:text-2xl [&_h3]:font-semibold [&_h3]:text-xl" dangerouslySetInnerHTML={{ __html: highlightText(article.content, searchTerm) }} />
+        <AccordionContent className="px-4 pt-0 pb-4">
+          <div className="prose max-w-none dark:prose-invert text-base [&_h1]:text-3xl [&_h2]:text-2xl [&_h3]:text-xl" dangerouslySetInnerHTML={{ __html: highlightText(article.content, searchTerm) }} />
         </AccordionContent>
       </AccordionItem>
     </div>
@@ -685,7 +685,7 @@ const CentralDeAjuda = () => {
 
   return (
     <div className="space-y-6 pb-40 md:pb-24">
-      <div className="flex justify-between items-center">
+      <div className="hidden md:flex justify-between items-center">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold">Central de Ajuda</h1>
           <p className="text-muted-foreground">
@@ -694,7 +694,7 @@ const CentralDeAjuda = () => {
         </div>
       </div>
 
-      <div className="relative max-w-lg">
+      <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
         <Input
           type="text"

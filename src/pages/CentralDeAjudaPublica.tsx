@@ -45,13 +45,13 @@ const highlightText = (text: string, query: string) => {
 const ArticleItem = ({ article, searchTerm }: { article: Article, searchTerm: string }) => {
   return (
     <AccordionItem value={article.id} className="border rounded-md bg-background">
-      <AccordionTrigger className="px-3 py-2 hover:no-underline">
+      <AccordionTrigger className="px-3 py-2 hover:no-underline text-base">
         <div className="flex items-center gap-2 w-full">
-          <span className="flex-1 truncate text-left" dangerouslySetInnerHTML={{ __html: highlightText(article.title, searchTerm) }} />
+          <span className="flex-1 text-left font-medium" dangerouslySetInnerHTML={{ __html: highlightText(article.title, searchTerm) }} />
         </div>
       </AccordionTrigger>
-      <AccordionContent className="px-4 pt-0 pb-4 ml-10">
-        <div className="prose prose-sm max-w-none dark:prose-invert [&_h1]:font-bold [&_h1]:text-3xl [&_h2]:font-bold [&_h2]:text-2xl [&_h3]:font-semibold [&_h3]:text-xl" dangerouslySetInnerHTML={{ __html: highlightText(article.content, searchTerm) }} />
+      <AccordionContent className="px-4 pt-0 pb-4">
+        <div className="prose max-w-none dark:prose-invert text-base [&_h1]:text-3xl [&_h2]:text-2xl [&_h3]:text-xl" dangerouslySetInnerHTML={{ __html: highlightText(article.content, searchTerm) }} />
       </AccordionContent>
     </AccordionItem>
   );
@@ -163,7 +163,7 @@ const CentralDeAjudaPublica = () => {
       <LandingHeader />
       <main>
         <section className="py-12 md:py-20">
-          <div className="container mx-auto px-4 max-w-4xl space-y-6">
+          <div className="container mx-auto px-4 max-w-6xl space-y-6">
             {/* Seletor movido para o topo e centralizado */}
             <Tabs
               value={userTypeFilter}
@@ -176,7 +176,7 @@ const CentralDeAjudaPublica = () => {
               </TabsList>
             </Tabs>
 
-            <div className="text-center pt-4">
+            <div className="text-center pt-4 hidden md:block">
               <h1 className="text-4xl md:text-5xl font-extrabold tracking-tighter">
                 Central de Ajuda
               </h1>

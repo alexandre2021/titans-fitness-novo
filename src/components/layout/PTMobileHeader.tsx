@@ -84,6 +84,7 @@ const PTMobileHeader = () => {
       "/meus-posts": { title: "Meus Posts", subtitle: "Gerencie todos os seus artigos e publicações" },
       "/mais": { title: "Mais Opções", subtitle: "Navegue por outras seções e configurações" },
       "/agenda-pt": { title: "Agenda" },
+      "/app/ajuda": { title: "Central de Ajuda", subtitle: "Encontre respostas para suas dúvidas" },
       "/mensagens-pt": { title: "Mensagens" },
       "/perfil-pt": { title: "Meu Perfil" },
       "/configuracoes-pt": { title: "Configurações" },

@@ -43,6 +43,7 @@ const AlunoMobileHeader = () => {
       "/professores": { title: "Professores", subtitle: "Veja os profissionais que você segue" },
       "/avaliacoes-aluno": { title: "Avaliações", subtitle: "Acompanhe sua evolução física" },
       "/perfil-aluno": { title: "Meu Perfil", subtitle: "Gerencie suas informações e avatar" },
+      "/app/ajuda": { title: "Central de Ajuda", subtitle: "Encontre respostas para suas dúvidas" },
       "/mais": { title: "Mais Opções", subtitle: "Navegue por outras seções" },
     };
 
