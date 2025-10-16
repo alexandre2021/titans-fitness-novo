@@ -10,14 +10,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import CustomSelect from "@/components/ui/CustomSelect";
+import CustomSelect from "@/components/ui/CustomSelect"; // Mantido
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { ShieldAlert, Plus, GripVertical, Edit, Trash2, Loader2, Pencil, FolderPlus, Search, Filter, ImagePlus, MessageSquare, Calendar, FilePlus, Save } from "lucide-react";
+import { ShieldAlert, Plus, GripVertical, Edit, Trash2, Loader2, Pencil, FolderPlus, Search, Filter, ImagePlus, MessageSquare, Calendar, FilePlus, Save, RefreshCw, ChevronUp, ChevronDown, History, Info } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -86,12 +86,19 @@ const ArticleForm = ({ article, onOpenChange, categories }: { article?: Article 
         heading: {
           levels: [1, 2, 3],
         },
+        // ✅ Adiciona margem vertical padrão aos parágrafos no editor
+        paragraph: {
+          HTMLAttributes: {
+            class: 'my-4',
+          },
+        },
       }),
       Underline,
       TextStyle,
       // Permite a inserção de imagens e, por extensão, SVGs como se fossem imagens.
       Image.configure({
         inline: true, // Permite que a imagem (SVG) fique no meio do texto.
+        allowBase64: true, // ✅ CORREÇÃO: Permite que imagens embutidas (data:image) sejam salvas e carregadas.
         HTMLAttributes: {
           class: 'inline-block h-[1.2em] w-auto -translate-y-px', // Estilos para o SVG se comportar como um ícone de texto.
         },
@@ -105,7 +112,7 @@ const ArticleForm = ({ article, onOpenChange, categories }: { article?: Article 
     editorProps: {
       attributes: {
         // Adicionado estilo para os títulos (h2, h3) dentro do editor
-        class: 'prose max-w-none dark:prose-invert focus:outline-none p-4 border rounded-md min-h-[250px] bg-white text-base [&_h1]:text-3xl [&_h2]:text-2xl [&_h3]:text-xl',
+        class: 'prose max-w-none dark:prose-invert focus:outline-none p-4 border rounded-md min-h-[250px] bg-white text-base [&_h1]:text-3xl [&_h2]:text-2xl [&_h3]:text-xl [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6',
       },
     },
   });
@@ -205,6 +212,38 @@ const ArticleForm = ({ article, onOpenChange, categories }: { article?: Article 
     }
   }, [editor]);
 
+  const handleInsertChevronUpIcon = useCallback((closeModal: () => void) => {
+    if (editor) {
+      const chevronUpIconSvg = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#f3f4f6"/><g transform="translate(4, 4)" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="m18 15-6-6-6 6"/></g></svg>')}`;
+      editor.chain().focus().setImage({ src: chevronUpIconSvg, alt: 'Ícone Seta para Cima' }).run();
+      closeModal();
+    }
+  }, [editor]);
+
+  const handleInsertChevronDownIcon = useCallback((closeModal: () => void) => {
+    if (editor) {
+      const chevronDownIconSvg = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#f3f4f6"/><g transform="translate(4, 4)" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="m6 9 6 6 6-6"/></g></svg>')}`;
+      editor.chain().focus().setImage({ src: chevronDownIconSvg, alt: 'Ícone Seta para Baixo' }).run();
+      closeModal();
+    }
+  }, [editor]);
+
+  const handleInsertHistoryIcon = useCallback((closeModal: () => void) => {
+    if (editor) {
+      const historyIconSvg = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#f3f4f6"/><g transform="translate(4, 4)" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></g></svg>')}`;
+      editor.chain().focus().setImage({ src: historyIconSvg, alt: 'Ícone de Histórico' }).run();
+      closeModal();
+    }
+  }, [editor]);
+
+  const handleInsertInfoIcon = useCallback((closeModal: () => void) => {
+    if (editor) {
+      const infoIconSvg = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#f3f4f6"/><g transform="translate(4, 4)" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></g></svg>')}`;
+      editor.chain().focus().setImage({ src: infoIconSvg, alt: 'Ícone de Informação' }).run();
+      closeModal();
+    }
+  }, [editor]);
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-1">
@@ -285,6 +324,33 @@ const ArticleForm = ({ article, onOpenChange, categories }: { article?: Article 
                     </div>
                     <span className="text-xs">Salvar</span>
                   </Button>
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleInsertChevronUpIcon(() => setIsIconModalOpen(false))}>
+                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                      <ChevronUp className="h-5 w-5" />
+                    </div>
+                    <span className="text-xs">Cima</span>
+                  </Button>
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleInsertChevronDownIcon(() => setIsIconModalOpen(false))}>
+                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                      <ChevronDown className="h-5 w-5" />
+                    </div>
+                    <span className="text-xs">Baixo</span>
+                  </Button>
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleInsertHistoryIcon(() => setIsIconModalOpen(false))}>
+                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                      <History className="h-5 w-5" />
+                    </div>
+                    <span className="text-xs">Histórico</span>
+                  </Button>
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleInsertInfoIcon(() => setIsIconModalOpen(false))}>
+                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                      <Info className="h-5 w-5" />
+                    </div>
+                    <span className="text-xs">Info</span>
+                  </Button>
+                  {/* Placeholders para completar a linha de 6 */}
+                  <div className="h-20"></div>
+                  <div className="h-20"></div>
                 </div>
               </DialogContent>
             </Dialog>
@@ -352,7 +418,12 @@ const SortableArticleItem = ({ article, allCategories, isAdmin, searchTerm }: { 
                   <DialogTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8"><Edit className="h-4 w-4" /></Button>
                   </DialogTrigger>
-                  <DialogContent className="max-h-[85vh] overflow-y-auto w-[calc(100%-2rem)] sm:max-w-2xl rounded-md">
+                  <DialogContent 
+                    className="max-h-[85vh] overflow-y-auto w-[calc(100%-2rem)] sm:max-w-2xl rounded-md"
+                    onInteractOutside={(e) => {
+                      e.preventDefault();
+                    }}
+                  >
                     <DialogHeader>
                       <DialogTitle>Editar Artigo</DialogTitle>
                     </DialogHeader>
@@ -367,7 +438,10 @@ const SortableArticleItem = ({ article, allCategories, isAdmin, searchTerm }: { 
           </div>
         </AccordionTrigger>
         <AccordionContent className="px-4 pt-0 pb-4">
-          <div className="prose max-w-none dark:prose-invert text-base [&_h1]:text-3xl [&_h2]:text-2xl [&_h3]:text-xl" dangerouslySetInnerHTML={{ __html: highlightText(article.content, searchTerm) }} />
+          <div 
+            className="prose max-w-none dark:prose-invert text-base [&_h1]:text-3xl [&_h2]:text-2xl [&_h3]:text-xl [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6" 
+            dangerouslySetInnerHTML={{ __html: highlightText(article.content, searchTerm) }} 
+          />
         </AccordionContent>
       </AccordionItem>
     </div>
@@ -554,18 +628,70 @@ const CentralDeAjuda = () => {
     isAdmin ? 'todos' : user?.user_metadata?.user_type || 'professor'
   );
 
+  const handleNormalizeOrder = () => {
+    if (!articles || articles.length === 0) {
+      toast.info("Nenhum artigo para normalizar.");
+      return;
+    }
+
+    toast.info("Normalizando a ordem dos artigos...");
+
+    // Re-agrupa e re-ordena com base na estrutura atual
+    const updates = groupedArticles.flatMap((group, categoryIndex) => 
+      group.articles.map((article, articleIndex) => ({
+        id: article.id,
+        category_order: categoryIndex,
+        article_order: articleIndex,
+      }))
+    );
+
+    updateOrderMutation.mutate(updates, {
+      onSuccess: () => {
+        toast.success("Ordem dos artigos normalizada com sucesso!");
+        // A invalidação no onSettled cuidará de recarregar os dados.
+      }
+    });
+  };
+
+  // ✅ CORREÇÃO: Implementação de atualização otimista para o drag & drop.
   const updateOrderMutation = useMutation({
     mutationFn: async (updates: { id: string; category_order: number; article_order: number }[]) => {
-      // Chama a nova função RPC do Supabase para atualizar a ordem
       const { error } = await supabase.rpc('update_articles_order', { updates });
       if (error) throw error;
     },
-    onSuccess: () => {
+    onMutate: async (newOrderUpdates) => {
+      // Cancela queries em andamento para evitar conflitos
+      await queryClient.cancelQueries({ queryKey: ['knowledge_base_articles'] });
+      // Salva o estado anterior para rollback em caso de erro
+      const previousArticles = queryClient.getQueryData<Article[]>(['knowledge_base_articles']);
+
+      // Atualiza o cache otimisticamente com a nova ordem
+      queryClient.setQueryData<Article[]>(['knowledge_base_articles'], (old) => {
+        if (!old) return [];
+        const newArticles = [...old];
+        newOrderUpdates.forEach(update => {
+          const article = newArticles.find(a => a.id === update.id);
+          if (article) {
+            article.category_order = update.category_order;
+            article.article_order = update.article_order;
+          }
+        });
+        return newArticles;
+      });
+
+      return { previousArticles };
+    },
+    onError: (err, _newOrder, context) => {
+      // Reverte para o estado anterior em caso de erro
+      if (context?.previousArticles) {
+        queryClient.setQueryData(['knowledge_base_articles'], context.previousArticles);
+      }
+      toast.error(`Erro ao salvar a ordem: ${(err as Error).message}`);
+    },
+    onSettled: () => {
+      // Sincroniza com o banco de dados após a mutação (sucesso ou falha)
       queryClient.invalidateQueries({ queryKey: ['knowledge_base_articles'] });
     },
-    onError: (error) => {
-      toast.error(`Erro ao salvar a ordem: ${error.message}`);
-    }
   });
 
   const { data: articles, isLoading } = useQuery<Article[]>({
@@ -575,6 +701,9 @@ const CentralDeAjuda = () => {
       if (error) throw new Error(error.message);
       return (data as Article[]) || [];
     },
+    // ✅ CORREÇÃO: Prevenção de refetch desnecessários
+    staleTime: 10000, // Considera os dados frescos por 10 segundos
+    refetchOnWindowFocus: false, // Não recarrega ao focar na janela
   });
 
   useEffect(() => {
@@ -623,6 +752,8 @@ const CentralDeAjuda = () => {
         }, {} as Record<string, GroupedArticles>);
 
         const sortedGroups = Object.values(grouped).sort((a, b) => a.order - b.order);
+        // ✅ CORREÇÃO: Garante a ordenação correta dos artigos
+        sortedGroups.forEach(group => group.articles.sort((a, b) => (a.article_order ?? 999) - (b.article_order ?? 999)));
         setGroupedArticles(sortedGroups);
       }
     }
@@ -651,12 +782,18 @@ const CentralDeAjuda = () => {
           const oldIndex = items.findIndex(g => g.category === active.id);
           const newIndex = items.findIndex(g => g.category === over.id);
           const newOrder = arrayMove(items, oldIndex, newIndex);
-          
+
+          const updatedGroupsWithOrder = newOrder.map((group, index) => ({
+            ...group,
+            order: index,
+          }));
+
+          // ✅ CORREÇÃO: A mutação é chamada após a atualização do estado local
           const updates = newOrder.flatMap((group, index) =>
             group.articles.map(article => ({ id: article.id, category_order: index, article_order: article.article_order }))
           );
           updateOrderMutation.mutate(updates);
-          return newOrder;
+          return updatedGroupsWithOrder; // Retorna o estado local atualizado com a nova ordem
         });
       }
       else if (!activeIsCategory && !overIsCategory) {
@@ -667,7 +804,13 @@ const CentralDeAjuda = () => {
 
             if (oldIndex > -1 && newIndex > -1) {
               const reorderedArticles = arrayMove(group.articles, oldIndex, newIndex);
-              const updates = reorderedArticles.map((article, index) => ({ id: article.id, article_order: index, category_order: group.order }));
+
+              const updates = reorderedArticles.map((article, index) => ({
+                id: article.id, 
+                article_order: index,
+                category_order: group.order
+              }));
+              // ✅ CORREÇÃO: A mutação é chamada após a atualização do estado local
               updateOrderMutation.mutate(updates);
               return { ...group, articles: reorderedArticles };
             }
@@ -724,6 +867,16 @@ const CentralDeAjuda = () => {
             <TabsTrigger value="aluno">Para Alunos</TabsTrigger>
           </TabsList>
         </Tabs>
+      )}
+
+      {/* ✅ NOVO: Botão de Normalização para Admin */}
+      {isAdmin && (
+        <div className="flex justify-end">
+          <Button onClick={handleNormalizeOrder} variant="secondary" size="sm" disabled={updateOrderMutation.isPending}>
+            {updateOrderMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+            Normalizar Ordem
+          </Button>
+        </div>
       )}
 
 

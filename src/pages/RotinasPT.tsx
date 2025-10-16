@@ -70,7 +70,7 @@ const RotinasPT = () => {
   const [loading, setLoading] = useState(true);
   const [allRotinas, setAllRotinas] = useState<Rotina[]>([]);
   const [alunos, setAlunos] = useState<AlunoInfo[]>([]);
-  const [activeTab, setActiveTab] = useState<'atual' | 'rascunho' | 'encerradas'>('rascunho');
+  const [activeTab, setActiveTab] = useState<'atual' | 'rascunho' | 'encerradas'>('atual');
   const [rotinasEncerradas, setRotinasEncerradas] = useState<Rotina[]>([]);
   const [alunoFiltro, setAlunoFiltro] = useState<string>('todos');
   const [busca, setBusca] = useState('');
@@ -128,12 +128,6 @@ const RotinasPT = () => {
 
         setAllRotinas((rotinasData as Rotina[]) || []);
         setRotinasEncerradas((rotinasData?.filter(r => r.status === 'Concluída' || r.status === 'Cancelada') as Rotina[]) || []);
-
-        // Define a aba inicial
-        const rascunhos = rotinasData?.filter(r => r.status === 'Rascunho');
-        if (!rascunhos || rascunhos.length === 0) {
-          setActiveTab('atual');
-        }
 
       } catch (error) {
         console.error("Erro ao buscar rotinas ativas:", error);

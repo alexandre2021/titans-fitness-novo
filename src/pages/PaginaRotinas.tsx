@@ -316,12 +316,6 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         setRotinasRascunho(rotinasDoAluno.filter(r => r.status === 'Rascunho' && r.professor_id === user.id));
         setRotinasEncerradas(rotinasDoAluno.filter(r => r.status === 'Concluída' || r.status === 'Cancelada')); // Mantém a lógica correta aqui
 
-        // Define a aba inicial
-        const rascunhos = rotinasDoAluno.filter(r => r.status === 'Rascunho' && r.professor_id === user.id);
-        if (rascunhos.length > 0) {
-          setActiveTab('rascunho');
-        }
-
       } catch (error) {
         console.error('Erro ao buscar dados:', error);
         toast.error("Erro", {
