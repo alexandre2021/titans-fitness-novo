@@ -78,13 +78,13 @@ O novo modelo distingue claramente entre dois tipos de relacionamento:
     - `aluno_A` tem rotina ativa do `professor_Y`
     - `professor_Z` (que `aluno_A` também segue) cria nova rotina para `aluno_A`
     - Sistema verifica se `aluno_A` já tem rotina ativa
-    - Rotina do `professor_Y` é automaticamente cancelada e arquivada
+    - Rotina do `professor_Y` tem seu status alterado para 'Cancelada'
     - Nova rotina do `professor_Z` se torna ativa
     - `professor_Y` perde acesso aos dados de `aluno_A`
 
 - **Cenário 3: Parar de Seguir**
     - `aluno_A` decide parar de seguir `professor_Y`
-    - Se `professor_Y` tinha a rotina ativa: rotina é cancelada e arquivada
+    - Se `professor_Y` tinha a rotina ativa: a rotina tem seu status alterado para 'Cancelada'
     - Relacionamento é removido da tabela `alunos_professores`
     - `professor_Y` perde acesso a todos os dados de `aluno_A`
 
@@ -113,11 +113,12 @@ O novo modelo distingue claramente entre dois tipos de relacionamento:
     - **Ação em Conflito:** Exibe mensagem informativa: "Este aluno já possui uma rotina ativa criada pelo Professor [Nome]. Para criar uma nova rotina, a atual será automaticamente encerrada."
 
 - **REGRA 4.7 (Substituição Automática):** Ao ativar nova rotina, a rotina ativa anterior (de qualquer professor) é automaticamente cancelada e arquivada.
+- **REGRA 4.7 (Substituição Automática):** Ao ativar uma nova rotina, a rotina ativa anterior (de qualquer professor) tem seu status alterado para 'Cancelada'.
 
 ### 4.3. Ciclo de Vida Mantido
 
 - **REGRA 4.8:** Mantêm-se todas as regras existentes do ciclo de vida (4.5 a 4.7.5 do documento original)
-- **REGRA 4.9:** Limite de 4 rotinas arquivadas por aluno mantido (FIFO)
+- **REGRA 4.9 (Histórico de Rotinas):** Todas as rotinas encerradas (Concluídas ou Canceladas) são mantidas no histórico do aluno, sem limite de quantidade.
 
 ## 5. Gestão de Contas de Usuário
 
@@ -163,7 +164,7 @@ O sistema de convites foi adaptado para o novo modelo de "seguir".
 
 - **REGRA 6.2.3 (Consequências de Parar de Seguir):**
     - Remove relacionamento da tabela `alunos_professores`
-    - Se professor tinha rotina ativa do aluno: rotina é cancelada/arquivada
+    - Se professor tinha rotina ativa do aluno: a rotina tem seu status alterado para 'Cancelada'
     - Campo `alunos.professor_id` volta a ser NULL se era deste professor
     - Professor perde acesso imediato a todos os dados do aluno
 
@@ -178,8 +179,7 @@ O sistema de convites foi adaptado para o novo modelo de "seguir".
 ## 7. Gestão de Avaliações
 
 ### 7.1. Regras Mantidas
-
-- **REGRA 7.1 (Limite de Avaliações):** Mantém-se limite de 4 avaliações físicas por aluno (FIFO).
+- **REGRA 7.1 (Limite de Avaliações):** Mantém-se o limite de 4 avaliações físicas por aluno (FIFO).
 
 ### 7.2. Novas Regras de Acesso
 

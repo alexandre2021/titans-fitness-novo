@@ -1202,6 +1202,7 @@ export type Database = {
           professor_id: string | null
           status: string | null
           treinos_por_semana: number
+          updated_at: string | null
           valor_total: number
         }
         Insert: {
@@ -1222,6 +1223,7 @@ export type Database = {
           professor_id?: string | null
           status?: string | null
           treinos_por_semana: number
+          updated_at?: string | null
           valor_total: number
         }
         Update: {
@@ -1242,6 +1244,7 @@ export type Database = {
           professor_id?: string | null
           status?: string | null
           treinos_por_semana?: number
+          updated_at?: string | null
           valor_total?: number
         }
         Relationships: [

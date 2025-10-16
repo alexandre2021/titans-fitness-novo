@@ -42,6 +42,7 @@ interface Rotina {
   valor_total: number;
   forma_pagamento: string;
   created_at: string;
+  updated_at: string;
 }
 
 interface Treino {
@@ -191,7 +192,10 @@ const AlunosRotinaDetalhes = () => {
   const getStatusBadge = (status: string) => {
     const statusColors = {
       'Ativa': 'bg-green-100 text-green-800',
-      'Concluída': 'bg-gray-100 text-gray-800'
+      'Rascunho': 'bg-gray-100 text-gray-800',
+      'Bloqueada': 'bg-red-100 text-red-800',
+      'Concluída': 'bg-blue-100 text-blue-800',
+      'Cancelada': 'bg-orange-100 text-orange-800'
     };
     
     const colorClass = statusColors[status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800';

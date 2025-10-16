@@ -202,7 +202,7 @@ Este documento descreve a estrutura completa das tabelas do banco de dados no no
 | `observacoes_rotina` | 18 | `text` | True | `` | `` | `` |  |
 
 **Status Possíveis**: Rascunho, Ativa, Bloqueada, Concluída, Cancelada  
-**Objetivos Comuns**: Emagrecimento, Ganho de Massa, Condicionamento, Reabilitação  
+**Objetivos Comuns**: Emagrecimento, Ganho de massa, Condicionamento, Reabilitação  
 **MUDANÇA**: Professor pode criar rotina para qualquer aluno que o segue
 
 ---
@@ -361,22 +361,7 @@ Este documento descreve a estrutura completa das tabelas do banco de dados no no
 | `updated_at` | 23 | `timestamp with time zone` | True | `now()` | `` | `` |  |
 
 ### Tabela: `public.rotinas_arquivadas`
-**Descrição**: Arquivo de rotinas finalizadas com PDFs gerados para histórico.
-
-| Coluna | Posição | Tipo de Dado | Nulável | Padrão | Tipo de Restrição | Nome da Restrição | Chave Estrangeira |
-|---|---|---|---|---|---|---|---|
-| `id` | 1 | `uuid` | False | `gen_random_uuid()` | `PRIMARY KEY` | `rotinas_arquivadas_pkey` |  |
-| `aluno_id` | 2 | `uuid` | False | `` | `FOREIGN KEY` | `rotinas_arquivadas_aluno_id_fkey` | `public.alunos(id)` |
-| `nome_rotina` | 3 | `character varying` | False | `` | `` | `` |  |
-| `objetivo` | 4 | `character varying` | False | `` | `` | `` |  |
-| `treinos_por_semana` | 5 | `integer` | False | `` | `` | `` |  |
-| `duracao_semanas` | 6 | `integer` | False | `` | `` | `` |  |
-| `data_inicio` | 7 | `date` | False | `` | `` | `` |  |
-| `data_conclusao` | 8 | `date` | False | `` | `` | `` |  |
-| `pdf_url` | 9 | `text` | False | `` | `` | `` |  |
-| `created_at` | 10 | `timestamp with time zone` | True | `now()` | `` | `` |  |
-
----
+**Descrição**: (OBSOLETA) Esta tabela foi removida. O histórico de rotinas agora é gerenciado pela coluna `status` na tabela `rotinas`.
 
 ### Tabela: `public.modelos_rotina`
 **Descrição**: Armazena os modelos de rotina (templates) criados pelos Professores.

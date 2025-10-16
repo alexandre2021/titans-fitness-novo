@@ -10,8 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge'; 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ArrowLeft, Users, Target, Clock, Plus, FileText, MoreVertical, Eye, Play, Ban, Activity, Trash2, BicepsFlexed, Repeat, User as UserIcon, Info, Search, Filter, X, Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ArrowLeft, Users, Target, Clock, Plus, FileText, MoreVertical, Eye, Play, Ban, Activity, Trash2, BicepsFlexed, Repeat, User as UserIcon, Info, Search, Filter, X, Loader2, CalendarCheck } from 'lucide-react';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
@@ -46,6 +46,7 @@ interface RotinaCardProps {
   dificuldade: string | null;
   descricao: string | null;
   treinos_por_semana: number;
+  updated_at: string;
 }
 
 interface RotinasAgrupadas {
@@ -69,7 +70,8 @@ const RotinasPT = () => {
   const [loading, setLoading] = useState(true);
   const [allRotinas, setAllRotinas] = useState<Rotina[]>([]);
   const [alunos, setAlunos] = useState<AlunoInfo[]>([]);
-  const [activeTab, setActiveTab] = useState<'atual' | 'rascunho'>('atual');
+  const [activeTab, setActiveTab] = useState<'atual' | 'rascunho' | 'encerradas'>('rascunho');
+  const [rotinasEncerradas, setRotinasEncerradas] = useState<Rotina[]>([]);
   const [alunoFiltro, setAlunoFiltro] = useState<string>('todos');
   const [busca, setBusca] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -120,11 +122,18 @@ const RotinasPT = () => {
           .from('rotinas')
           .select('*, alunos(id, nome_completo, avatar_image_url, avatar_type, avatar_letter, avatar_color)')
           .in('aluno_id', alunoIds)
-          .order('created_at', { ascending: false });
+          .order('updated_at', { ascending: false });
 
         if (rotinasError) throw rotinasError;
 
         setAllRotinas((rotinasData as Rotina[]) || []);
+        setRotinasEncerradas((rotinasData?.filter(r => r.status === 'Concluída' || r.status === 'Cancelada') as Rotina[]) || []);
+
+        // Define a aba inicial
+        const rascunhos = rotinasData?.filter(r => r.status === 'Rascunho');
+        if (!rascunhos || rascunhos.length === 0) {
+          setActiveTab('atual');
+        }
 
       } catch (error) {
         console.error("Erro ao buscar rotinas ativas:", error);
@@ -156,10 +165,11 @@ const RotinasPT = () => {
   }, [showCriarOpcoesModal, user]);
 
   const rotinasFiltradas = useMemo(() => {
-    let rotinas: RotinaCardProps[] = [];
+    const rotinas: RotinaCardProps[] = [];
     const statusMap = {
       atual: ['Ativa', 'Bloqueada'],
       rascunho: ['Rascunho'],
+      encerradas: ['Concluída', 'Cancelada'],
     };
 
     const rotinasAtuais = allRotinas
@@ -182,11 +192,10 @@ const RotinasPT = () => {
         dificuldade: r.dificuldade,
         treinos_por_semana: r.treinos_por_semana,
         descricao: r.descricao,
+        updated_at: r.updated_at,
       }));
 
-    rotinas = rotinasAtuais;
-
-    return rotinas.reduce((acc, rotina) => {
+    return rotinasAtuais.reduce((acc, rotina) => {
       const { aluno_id, aluno } = rotina;
       if (!acc[aluno_id]) {
         acc[aluno_id] = {
@@ -207,6 +216,10 @@ const RotinasPT = () => {
 
   const rotinasRascunhoCount = useMemo(() => {
     return allRotinas.filter(r => r.status === 'Rascunho').length;
+  }, [allRotinas]);
+
+  const rotinasEncerradasCount = useMemo(() => {
+    return allRotinas.filter(r => r.status === 'Concluída' || r.status === 'Cancelada').length;
   }, [allRotinas]);
 
   const ALUNOS_OPTIONS = useMemo(() => {
@@ -293,7 +306,7 @@ const RotinasPT = () => {
     const temRascunho = allRotinas.some(r => r.aluno_id === alunoId && r.status === 'Rascunho');
 
     if (temRotinaAtiva) {
-      toast.error("Aluno já possui uma rotina ativa.", { description: "Finalize ou exclua a rotina atual antes de criar uma nova para este aluno." });
+      toast.error("Aluno já possui uma rotina.", { description: "Este aluno já possui uma rotina (ativa ou bloqueada). Finalize ou exclua a rotina atual antes de criar uma nova." });
       setIsCheckingRotina(null);
       return;
     }
@@ -382,6 +395,15 @@ const RotinasPT = () => {
     }
   };
 
+  const handleVerDetalhesEncerrada = (rotina: RotinaCardProps) => {
+    try {
+      // Navega para a página de detalhes da rotina, que pode lidar com rotinas de qualquer status
+      navigate(`/alunos-rotinas/${rotina.aluno_id}/${rotina.id}`);
+    } catch (error) {
+      toast.error("Erro ao carregar rascunho", { description: "Não foi possível carregar os dados do rascunho. Tente novamente." });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -413,11 +435,12 @@ const RotinasPT = () => {
         </div>
       )}
 
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'atual' | 'rascunho')} className="w-full space-y-4">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'atual' | 'rascunho' | 'encerradas')} className="w-full space-y-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="atual">Atual ({rotinasAtuaisCount})</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="rascunho">Rascunho ({rotinasRascunhoCount})</TabsTrigger>
+            <TabsTrigger value="atual">Atual ({rotinasAtuaisCount})</TabsTrigger>
+            <TabsTrigger value="encerradas">Encerradas ({rotinasEncerradasCount})</TabsTrigger>
           </TabsList>
         </div>
 
@@ -508,6 +531,7 @@ const RotinasPT = () => {
                       const isRascunho = rotina.status === 'Rascunho';
                       const isAtiva = rotina.status === 'Ativa';
                       const isBloqueada = rotina.status === 'Bloqueada';
+                      const isEncerrada = rotina.status === 'Concluída' || rotina.status === 'Cancelada';
                       return (
                         <div key={rotina.id} className="border rounded-lg p-6 hover:bg-muted/50 transition-colors">
                           <div className="flex items-start justify-between mb-4">
@@ -517,9 +541,15 @@ const RotinasPT = () => {
                                 <UserIcon className="h-3 w-3" />
                                 <span>Criada por você</span>
                               </div>
-                              <div className="flex items-center gap-2 mb-2">
-                                <Badge className={isAtiva ? 'bg-green-100 text-green-800' : isBloqueada ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}>
-                                  {rotina.status}
+                              <div className="flex items-center gap-2 mb-2 mt-2">
+                                <Badge className={
+                                  isAtiva ? 'bg-green-100 text-green-800' :
+                                  isBloqueada ? 'bg-red-100 text-red-800' :
+                                  isRascunho ? 'bg-gray-100 text-gray-800' :
+                                  rotina.status === 'Concluída' ? 'bg-blue-100 text-blue-800' :
+                                  'bg-orange-100 text-orange-800'
+                                }>
+                                  {rotina.status} 
                                 </Badge>
                               </div>
                             </div>
@@ -529,7 +559,9 @@ const RotinasPT = () => {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 {isRascunho ? (
-                                  <DropdownMenuItem onClick={() => handleContinuarRascunho(rotina)}><Play className="mr-2 h-5 w-5" /><span className="text-base">Continuar</span></DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleContinuarRascunho(rotina)}><Play className="mr-2 h-5 w-5" /><span className="text-base">Continuar Edição</span></DropdownMenuItem>
+                                ) : isEncerrada ? (
+                                  <DropdownMenuItem onClick={() => handleVerDetalhesEncerrada(rotina)}><Eye className="mr-2 h-5 w-5" /><span className="text-base">Ver Detalhes</span></DropdownMenuItem>
                                 ) : (
                                   <DropdownMenuItem onClick={() => navigate(`/alunos-rotinas/${rotina.aluno_id}/${rotina.id}`)}><Eye className="mr-2 h-5 w-5" /><span className="text-base">Detalhes</span></DropdownMenuItem>
                                 )}
@@ -547,6 +579,15 @@ const RotinasPT = () => {
                             <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /><div><p className="text-sm text-muted-foreground">Duração</p><p className="font-medium">{rotina.duracao_semanas} semanas</p></div></div>
                             <div className="flex items-center gap-2"><Repeat className="h-4 w-4 text-muted-foreground" /><div><p className="text-sm text-muted-foreground">Frequência</p><p className="font-medium">{rotina.treinos_por_semana}x por semana</p></div></div>
                           </div>
+                          
+                          {isEncerrada && (
+                            <div className="mt-4 pt-4 border-t">
+                              <div className="flex items-center gap-2 text-sm">
+                                <CalendarCheck className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-muted-foreground">Encerrada em:</span><span className="font-medium">{new Date(rotina.updated_at).toLocaleDateString('pt-BR')}</span>
+                              </div>
+                            </div>
+                          )}
 
                           {rotina.descricao && (
                             <div className="pt-3 border-t">
@@ -563,6 +604,66 @@ const RotinasPT = () => {
             </div>
           )}
         </TabsContent>
+        <TabsContent value="encerradas">
+          {Object.keys(rotinasFiltradas).length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Nenhuma rotina encerrada</h3>
+                <p className="text-muted-foreground mb-6 max-w-md">
+                  Não há rotinas com o status "Encerrada" para o filtro selecionado.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-6 pb-32 md:pb-20">
+              {Object.values(rotinasFiltradas).map(({ aluno, rotinas }) => (
+                <Card key={aluno.id}>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8">
+                        {aluno.avatar_type === 'image' && aluno.avatar_image_url ? (
+                          <AvatarImage src={aluno.avatar_image_url} alt={aluno.nome_completo} />
+                        ) : (
+                          <AvatarFallback style={{ backgroundColor: aluno.avatar_color || '#ccc' }} className="text-white font-semibold">
+                            {aluno.avatar_letter}
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
+                      {aluno.nome_completo}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {rotinas.map(rotina => (
+                      <div key={rotina.id} className="border rounded-lg p-6 hover:bg-muted/50 transition-colors">
+                        <div className="flex items-start justify-between mb-4">
+                          <div>
+                            <h4 className="text-lg font-semibold">{rotina.nome}</h4>
+                            <div className="flex items-center gap-2 mb-2 mt-2">
+                              <Badge className={rotina.status === 'Concluída' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}>
+                                {rotina.status}
+                              </Badge>
+                            </div>
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4" onClick={(e) => e.stopPropagation()}><MoreVertical /></Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => navigate(`/alunos-rotinas/${rotina.aluno_id}/${rotina.id}`)}><Eye className="mr-2 h-5 w-5" /><span className="text-base">Ver Detalhes</span></DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleExcluirRotina(rotina)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-5 w-5" /><span className="text-base">Excluir</span></DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+        {/* O conteúdo da aba 'encerradas' já foi adicionado na alteração anterior, então está correto. */}
       </Tabs>
 
       {/* Botão Flutuante para Nova Rotina */}
@@ -618,15 +719,12 @@ const RotinasPT = () => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Situação das Rotinas</AlertDialogTitle>
-            <AlertDialogDescription>
-              Entenda o significado de cada status das rotinas de treino.
-            </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-4 pt-2">
             <div className="flex items-start gap-3">
-              <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+              <div className="w-2 h-2 rounded-full bg-gray-500 mt-2 flex-shrink-0"></div>
               <div>
-                <p className="font-medium text-blue-800 mb-1">Rascunho</p>
+                <p className="font-medium text-gray-800 mb-1">Rascunho</p>
                 <p className="text-sm text-muted-foreground">
                   Rotina em processo de criação pelo professor, ainda não finalizada.
                 </p>
@@ -637,7 +735,7 @@ const RotinasPT = () => {
               <div>
                 <p className="font-medium text-green-800 mb-1">Ativa</p>
                 <p className="text-sm text-muted-foreground">
-                  Aluno pode acessar e executar os treinos normalmente.
+                  Aluno pode acessar e executar os treinos normalmente. A rotina é exibida na aba "Atual".
                 </p>
               </div>
             </div>
@@ -646,16 +744,25 @@ const RotinasPT = () => {
               <div>
                 <p className="font-medium text-red-800 mb-1">Bloqueada</p>
                 <p className="text-sm text-muted-foreground">
-                  Acesso aos treinos foi suspenso temporariamente pelo professor.
+                  Acesso aos treinos foi suspenso temporariamente pelo professor. A rotina é exibida na aba "Atual".
                 </p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="w-2 h-2 rounded-full bg-gray-500 mt-2 flex-shrink-0"></div>
+              <div className="w-2 h-2 rounded-full bg-orange-500 mt-2 flex-shrink-0"></div>
               <div>
-                <p className="font-medium text-gray-800 mb-1">Encerrada</p>
+                <p className="font-medium text-orange-800 mb-1">Cancelada</p>
                 <p className="text-sm text-muted-foreground">
-                  Rotina concluída ou cancelada, movida para o histórico do aluno.
+                  Rotina interrompida por uma ação administrativa, como a exclusão da conta do Professor. A rotina é movida para a aba "Encerradas" como parte do histórico.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+              <div>
+                <p className="font-medium text-blue-800 mb-1">Concluída</p>
+                <p className="text-sm text-muted-foreground">
+                  Todas as sessões da rotina foram executadas. A rotina é movida para a aba "Encerradas" como parte do histórico.
                 </p>
               </div>
             </div>

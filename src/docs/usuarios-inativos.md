@@ -79,12 +79,6 @@ A função coleta e remove todos os arquivos pessoais do aluno dos seus respecti
     -   Busca na tabela `alunos` os campos `avatar_type` e `avatar_image_url`.
     -   Se `avatar_type = 'image'`, o arquivo é removido do Supabase Storage.
 
-2.  **Fotos de avaliações físicas** (bucket: `avaliacoes` no Cloudflare R2)
-    -   Busca na tabela `avaliacoes_fisicas`: `foto_frente_url`, `foto_lado_url`, `foto_costas_url`.
-
-3.  **PDFs de rotinas** (bucket: `rotinas` no Cloudflare R2)
-    -   Busca na tabela `rotinas_arquivadas`: `pdf_url`.
-
 ##### Etapa 2: Exclusão do Usuário
 - Remove o registro do usuário do `auth.users`
 - As políticas `ON DELETE CASCADE` removem automaticamente todos os dados relacionados
@@ -102,10 +96,11 @@ A função coleta e remove todos os arquivos pessoais do aluno dos seus respecti
     -   Remove todas as mídias associadas aos exercícios criados pelo PT.
 
 ##### Etapa 2: Desvinculação de Alunos
-- Remove todos os registros da tabela `alunos_professores` onde o `professor_id` corresponde ao do PT que está sendo excluído.
-- Isso preserva os dados dos alunos, removendo apenas a relação de "seguir".
-
-
+- **Desvinculação:** Remove todos os registros da tabela `alunos_professores` onde o `professor_id` corresponde ao do PT que está sendo excluído.
+- **Cancelamento de Rotinas:** Todas as rotinas ativas criadas por este professor têm seu status alterado para `'Cancelada'`.
+    - Isso preserva o histórico do aluno, mas impede a continuidade do treino.
+    - O campo `professor_id` na tabela `rotinas` é definido como `NULL` (`ON DELETE SET NULL`).
+    
 ##### Etapa 3: Exclusão do Usuário
 - Remove o registro do usuário do `auth.users`
 - As políticas `ON DELETE CASCADE` removem automaticamente os dados do PT (como `professores` e `user_profiles`).
@@ -115,12 +110,12 @@ A função coleta e remove todos os arquivos pessoais do aluno dos seus respecti
 #### Processo de Exclusão de Arquivos
 
 O processo varia conforme o local de armazenamento:
-
 -   **Para arquivos no Cloudflare R2 (`avaliacoes`, `rotinas`, `exercicios`):**
     1.  A função `check-inactive-users` extrai o nome do arquivo da URL completa.
     2.  Invoca a **Edge Function** do Supabase (`delete-media`) passando o `filename` e o `bucket_type`.
     3.  A Edge Function `delete-media` executa a exclusão diretamente no Cloudflare R2.
 
+-   **Para fotos de avaliações físicas no Cloudflare R2 (`avaliacoes`):** O processo de exclusão de arquivos de avaliação física do aluno é mantido.
 -   **Para avatares no Supabase Storage (`avatars`):**
     1.  A função `check-inactive-users` extrai o nome do arquivo da URL.
     2.  A exclusão é feita diretamente através da API do Supabase Storage (`supabase.storage.from('avatars').remove(...)`).
@@ -136,7 +131,6 @@ O sistema utiliza diferentes serviços de armazenamento para otimizar custos e p
 ### Cloudflare R2
 
 -   **`avaliacoes`**: Fotos de avaliações físicas dos alunos.
--   **`rotinas`**: PDFs de rotinas de treino arquivadas.
 -   **`exercicios`**: Imagens e vídeos de exercícios criados por Professores.
 
 
@@ -175,6 +169,6 @@ Lista hardcoded de emails que nunca são processados:
    - Atualiza `last_warning_email_sent_at`
 4. **Para usuários com 90+ dias de inatividade**:
    - **Alunos**: Remove avatars, fotos de avaliação e PDFs de rotina
-   - **Professores**: Remove avatars, mídias de exercícios e desvincula alunos
+   - **Professores**: Remove avatars, mídias de exercícios, desvincula alunos e cancela suas rotinas ativas.
    - **Para ambos**: Deleta usuário do `auth.users` (cascata remove dados restantes)
 5. **Retorna estatísticas**: Usuários avisados, excluídos e arquivos removidos

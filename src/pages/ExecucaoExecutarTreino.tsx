@@ -310,6 +310,20 @@ export default function ExecucaoExecutarTreino() {
     return true;
   }, [sessaoData, navigate]);
 
+  const handleFinalizarRotina = useCallback(async () => {
+    if (!sessaoData?.rotina_id) return;
+
+    const { error } = await supabase
+      .from('rotinas')
+      .update({ status: 'Concluída' })
+      .eq('id', sessaoData.rotina_id);
+
+    if (error) {
+      toast.error("Erro ao finalizar rotina", { description: "Não foi possível atualizar o status da rotina." });
+    }
+  }, [sessaoData]);
+
+
   const handleSessaoFinalizada = useCallback(() => {
     if (hasNavigated.current) return;
     hasNavigated.current = true;
@@ -319,7 +333,19 @@ export default function ExecucaoExecutarTreino() {
     } else {
       navigate('/index-aluno');
     }
-  }, [userProfile, sessaoData, navigate]);
+
+    // Verifica se esta era a última sessão da rotina
+    const verificarUltimaSessao = async () => {
+      if (!sessaoData?.rotina_id) return;
+      const { count } = await supabase.from('execucoes_sessao').select('*', { count: 'exact', head: true }).eq('rotina_id', sessaoData.rotina_id).in('status', ['em_aberto', 'pausada']);
+      
+      if (count === 0) {
+        toast.success("Rotina Concluída!", { description: "Parabéns, você finalizou todos os treinos desta rotina." });
+        await handleFinalizarRotina();
+      }
+    }
+    void verificarUltimaSessao();
+  }, [userProfile, sessaoData, navigate, handleFinalizarRotina]);
 
   // ✅ EFEITO PARA INTERCEPTAR O BOTÃO "VOLTAR" DO NAVEGADOR
   useEffect(() => {

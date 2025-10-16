@@ -223,9 +223,6 @@ const PTMobileHeader = () => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Situação das Rotinas</AlertDialogTitle>
-            <AlertDialogDescription>
-              Entenda o significado de cada status das rotinas de treino.
-            </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-4 pt-2">
             <div className="flex items-start gap-3">

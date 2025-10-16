@@ -472,248 +472,6 @@ export const useExercicioExecucao = (
     }
   }, []);
 
-  // Arquivar rotina completa
-  const arquivarRotinaCompleta = useCallback(async (rotinaId: string): Promise<boolean> => {
-    try {
-      console.log('🚨 ATENÇÃO: A função arquivarRotinaCompleta foi chamada com o rotinaId:', rotinaId);
-      console.log('🗄️ Iniciando processo de arquivamento da rotina...');
-      
-      // 1. Buscar dados completos da rotina para gerar PDF
-      const { data: rotinaCompleta, error: rotinaError } = await supabase
-        .from('rotinas')
-        .select(`
-          *,
-          alunos (nome_completo, email),
-          professores (nome_completo),
-          treinos (
-            *,
-            exercicios_rotina (
-              *,
-              series (*),
-              exercicio_1:exercicios!exercicio_1_id(id, nome, equipamento),
-              exercicio_2:exercicios!exercicio_2_id(id, nome, equipamento)
-            )
-          )
-        `)
-        .eq('id', rotinaId)
-        .single();
-
-      if (rotinaError || !rotinaCompleta) {
-        console.error('❌ Erro ao buscar dados da rotina:', rotinaError);
-        return false;
-      }
-
-      // --- LÓGICA FIFO PARA ROTINAS ARQUIVADAS ---
-      const alunoId = rotinaCompleta.aluno_id;
-      console.log(`🔍 Verificando rotinas arquivadas para o aluno: ${alunoId}`);
-      const { data: rotinasArquivadas, error: countError } = await supabase
-        .from('rotinas_arquivadas')
-        .select('id, pdf_url, created_at')
-        .eq('aluno_id', alunoId);
-
-      if (countError) {
-        console.error('⚠️ Erro ao buscar rotinas arquivadas, o processo de arquivamento continuará, mas a limpeza pode não ocorrer.', countError);
-      }
-
-      // ✅ CORREÇÃO FINAL: Lógica FIFO robusta que deleta todos os excedentes de uma vez
-      if (rotinasArquivadas && rotinasArquivadas.length >= 4) {
-        console.log(`--- INÍCIO LÓGICA FIFO ---`);
-        console.log(`Total de rotinas arquivadas encontradas: ${rotinasArquivadas.length}. Limite é 4.`);
-
-        const rotinasOrdenadas = rotinasArquivadas.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-        const LIMITE_ROTINAS = 4;
-        
-        // Calcula quantas rotinas precisam ser removidas para ficar com (LIMITE - 1) antes de adicionar a nova.
-        const numeroParaDeletar = rotinasOrdenadas.length - (LIMITE_ROTINAS - 1);
-        
-        if (numeroParaDeletar > 0) {
-          const rotinasParaDeletar = rotinasOrdenadas.slice(0, numeroParaDeletar);
-          console.log(`Calculado que ${numeroParaDeletar} rotina(s) precisam ser deletadas.`);
-          console.log('Rotinas a serem deletadas:', rotinasParaDeletar.map(r => ({ id: r.id, created_at: r.created_at })));
-
-          const idsParaDeletar = rotinasParaDeletar.map(r => r.id);
-          const urlsPdfParaDeletar = rotinasParaDeletar.map(r => r.pdf_url).filter((url): url is string => !!url);
-
-          // 1. Deletar os PDFs associados do Cloudflare
-          if (urlsPdfParaDeletar.length > 0) {
-            console.log(`Deletando ${urlsPdfParaDeletar.length} PDFs do Cloudflare...`);
-            const { data: { session } } = await supabase.auth.getSession();
-            const accessToken = session?.access_token;
-
-            if (accessToken) {
-              const deletePdfPromises = urlsPdfParaDeletar.map(async (pdfUrl) => {
-                const filename = pdfUrl.split('/').pop()?.split('?')[0];
-                if (!filename) {
-                  console.warn(`⚠️ Não foi possível extrair nome do arquivo de: ${pdfUrl}`);
-                  return;
-                }
-                try {
-                  const response = await fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/delete-media', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
-                    body: JSON.stringify({ filename, bucket_type: 'rotinas' })
-                  });
-                  if (!response.ok) {
-                    console.error(`Falha ao deletar PDF ${filename}: ${await response.text()}`);
-                  } else {
-                    console.log(`✅ PDF ${filename} deletado.`);
-                  }
-                } catch (e) {
-                  console.error(`❌ Erro na chamada para deletar PDF ${filename}:`, e);
-                }
-              });
-              await Promise.allSettled(deletePdfPromises);
-            } else {
-              console.warn('⚠️ Usuário não autenticado, pulando deleção de PDFs.');
-            }
-          }
-
-          // 2. Deletar os registros do banco de dados de uma só vez
-          if (idsParaDeletar.length > 0) {
-            console.log(`Deletando ${idsParaDeletar.length} registros da tabela 'rotinas_arquivadas'...`);
-            const { error: deleteError } = await supabase.from('rotinas_arquivadas').delete().in('id', idsParaDeletar);
-
-            if (deleteError) {
-              console.error('❌ Erro ao deletar registros do banco:', deleteError);
-              throw new Error("Falha ao limpar rotinas antigas do banco de dados.");
-            } else {
-              console.log('✅ Registros antigos deletados do banco com sucesso.');
-            }
-          }
-        }
-        console.log(`--- FIM LÓGICA FIFO ---`);
-      }
-      // --- FIM DA LÓGICA FIFO ---
-
-      // 2. Buscar execuções da rotina
-      const { data: execucoes, error: execucoesError } = await supabase
-        .from('execucoes_sessao')
-        .select('*, execucoes_series(*)')
-        .eq('rotina_id', rotinaId)
-        .order('created_at');
-
-      if (execucoesError) {
-        console.error('❌ Erro ao buscar execuções:', execucoesError);
-        return false;
-      }
-
-      // 3. Gerar PDF de conclusão
-      console.log('📄 Gerando PDF de conclusão...');
-      const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token;
-      
-      if (!accessToken) {
-        console.error('❌ Usuário não autenticado para gerar PDF');
-        return false;
-      }
-
-      // ✅ CORREÇÃO: A função de PDF espera um objeto com a chave "rotina".
-      const payloadParaPDF = {
-        rotina: rotinaCompleta, // `rotinaCompleta` já contém os dados do PT
-        execucoes: execucoes || []
-      };
-
-      const pdfResponse = await fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/gerar-pdf-conclusao', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        },
-        body: JSON.stringify(payloadParaPDF)
-      });
-
-      if (!pdfResponse.ok) {
-        console.error('❌ Erro ao gerar PDF:', await pdfResponse.text());
-        return false;
-      }
-
-      const { pdf_base64 } = (await pdfResponse.json()) as PdfResponse;
-      console.log('✅ PDF gerado com sucesso!');
-
-      // 4. ✅ CORREÇÃO: Upload do PDF para Cloudflare R2 usando a função 'upload-media'
-      console.log('☁️ Fazendo upload do PDF para Cloudflare...');
-      const filename = `rotina_${rotinaId}_${Date.now()}.pdf`;
-      
-      // Converter base64 para Blob
-      const pdfBlob = await (await fetch(`data:application/pdf;base64,${pdf_base64}`)).blob();
-
-      // Obter URL pré-assinada da função 'upload-media'
-      const { data: presignedData, error: presignedError } = await supabase.functions.invoke('upload-media', {
-        body: {
-          action: 'generate_upload_url',
-          filename: filename,
-          contentType: 'application/pdf',
-          bucket_type: 'rotinas'
-        }
-      });
-
-      if (presignedError || !presignedData.signedUrl) {
-        throw new Error(presignedError?.message || 'Não foi possível obter URL de upload para o PDF.');
-      }
-
-      // Upload direto para Cloudflare R2
-      const uploadResponse = await fetch(presignedData.signedUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/pdf' },
-        body: pdfBlob
-      });
-
-      if (!uploadResponse.ok) {
-        const errorBody = await uploadResponse.text();
-        console.error('Erro no corpo da resposta do upload do PDF:', errorBody);
-        throw new Error(`Erro no upload do PDF: ${uploadResponse.status}`);
-      }
-
-      const pdfUrl = presignedData.path; // Usar o caminho retornado pela função
-      console.log('✅ PDF uploaded com sucesso:', pdfUrl);
-
-      // 5. Calcular estatísticas para arquivamento
-      const dataInicio = rotinaCompleta.data_inicio;
-      const dataConclusao = new Date().toISOString().split('T')[0];
-
-      // 6. Inserir na tabela rotinas_arquivadas
-      console.log('🗄️ Salvando dados arquivados...');
-      const { error: arquivoError } = await supabase
-        .from('rotinas_arquivadas')
-        .insert({
-          aluno_id: rotinaCompleta.aluno_id,
-          nome_rotina: rotinaCompleta.nome,
-          objetivo: rotinaCompleta.objetivo,
-          treinos_por_semana: rotinaCompleta.treinos_por_semana,
-          duracao_semanas: rotinaCompleta.duracao_semanas,
-          data_inicio: dataInicio,
-          data_conclusao: dataConclusao,
-          pdf_url: pdfUrl
-        });
-
-      if (arquivoError) {
-        console.error('❌ Erro ao arquivar rotina:', arquivoError);
-        return false;
-      }
-
-      console.log('✅ Rotina arquivada com sucesso!');
-
-      // 7. Deletar rotina e dados relacionados (cascata)
-      console.log('🗑️ Removendo rotina da base ativa...');
-
-      // ✅ MELHORIA: A exclusão em cascata deve ser feita no banco de dados (ON DELETE CASCADE).
-      // Esta única chamada deletará a rotina e todos os seus dados relacionados (treinos, exercícios, séries, sessões, etc.).
-      const { error: deleteError } = await supabase
-        .from('rotinas')
-        .delete()
-        .eq('id', rotinaId);
-
-      if (deleteError) throw new Error(`Falha ao remover a rotina da base ativa: ${deleteError.message}`);
-
-      console.log('🎉 Processo de arquivamento concluído com sucesso!');
-      return true;
-
-    } catch (error) {
-      console.error('❌ Erro no processo de arquivamento:', error);
-      return false;
-    }
-  }, []);
-
   // ✅ CORREÇÃO: Finalizar sessão completa COM arquivamento automático
   const salvarExecucaoCompleta = useCallback(async (): Promise<boolean> => {
     if (sessaoInvalida || !sessaoData) return false;
@@ -758,23 +516,13 @@ export const useExercicioExecucao = (
       // 3. ✅ CORREÇÃO: Verificar se a rotina inteira foi concluída e processar arquivamento
       const rotinaCompleta = await verificarRotinaCompleta(sessaoData.rotina_id, sessaoData.id);
       if (rotinaCompleta) {
-        console.log('🎉 Rotina completa detectada! Iniciando processo completo...');
+        console.log('🎉 Rotina completa detectada! Atualizando status...');
         
         // Atualizar status primeiro
         const statusAtualizado = await atualizarStatusRotina(sessaoData.rotina_id);
-        if (statusAtualizado) {
-          console.log('✅ Status atualizado, iniciando arquivamento...');
-          
-          // 🚨 CORREÇÃO PRINCIPAL: Executar arquivamento automático
-          const arquivamentoConcluido = await arquivarRotinaCompleta(sessaoData.rotina_id);
-          if (arquivamentoConcluido) {
-            console.log('🎉 Rotina arquivada automaticamente com sucesso!');
-          } else {
-            console.error('❌ Falha no arquivamento automático da rotina');
-            // Não falha a finalização da sessão por causa do arquivamento
-          }
-        } else {
+        if (!statusAtualizado) {
           console.error('❌ Falha ao atualizar status da rotina');
+          // Não falha a finalização da sessão por causa disso, mas loga o erro.
         }
       }
 
@@ -789,7 +537,7 @@ export const useExercicioExecucao = (
     } finally {
       setLoading(false);
     }
-  }, [exercicios, sessaoData, tempoSessao, modoExecucao, verificarRotinaCompleta, atualizarStatusRotina, arquivarRotinaCompleta, sessaoInvalida]);
+  }, [exercicios, sessaoData, tempoSessao, modoExecucao, verificarRotinaCompleta, atualizarStatusRotina, sessaoInvalida]);
 
   return {
     exercicios,

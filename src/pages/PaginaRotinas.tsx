@@ -115,27 +115,13 @@ interface Rotina {
   valor_total: number;
   forma_pagamento: string;
   created_at: string;
+  updated_at: string;
   professor_id: string;
   aluno_id: string;
   professores: {
     id: string;
     nome_completo: string;
   } | null;
-}
-
-interface RotinaArquivada {
-  id: string;
-  aluno_id: string;
-  nome_rotina: string;
-  objetivo: string;
-  treinos_por_semana: number;
-  duracao_semanas: number;
-  data_inicio: string;
-  data_conclusao: string;
-  sessoes_executadas: number;
-  tempo_total_minutos: number;
-  pdf_url: string;
-  created_at: string;
 }
 
 interface PaginaRotinasProps {
@@ -156,8 +142,8 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   // Estados permanecem os mesmos
   const [aluno, setAluno] = useState<AlunoInfo | null>(null);
   const [rotinasAtivas, setRotinasAtivas] = useState<Rotina[]>([]);
-  const [rotinasArquivadas, setRotinasArquivadas] = useState<RotinaArquivada[]>([]);
-  const [rotinasRascunho, setRotinasRascunho] = useState<Rotina[]>([]);
+  const [rotinasEncerradas, setRotinasEncerradas] = useState<Rotina[]>([]);
+  const [rotinasRascunho, setRotinasRascunho] = useState<Rotina[]>([]); // Mantém a lógica correta aqui
   const [activeTab, setActiveTab] = useState<"atual" | "rascunho" | "encerradas">("atual");
   const [showConcluidaDialog, setShowConcluidaDialog] = useState(false);
   const [showStatusInfoDialog, setShowStatusInfoDialog] = useState(false);
@@ -176,7 +162,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
     // ✅ NOVA VERIFICAÇÃO: Checar se já existe uma rotina ativa ou bloqueada
     if (rotinasAtivas.some(r => r.status === 'Ativa' || r.status === 'Bloqueada')) {
       toast.error("Rotina já existe", {
-        description: "Este aluno já possui uma rotina ativa. Finalize ou exclua a rotina atual antes de criar uma nova.",
+        description: "Este aluno já possui uma rotina (ativa ou bloqueada). Finalize ou exclua a rotina atual antes de criar uma nova.",
       });
       return;
     }
@@ -307,10 +293,9 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
       // ... resto da função
       try {
         // Otimização: Buscar todos os dados em paralelo
-        const [alunoResult, rotinasResult, arquivadasResult] = await Promise.all([
+        const [alunoResult, rotinasResult] = await Promise.all([
           supabase.from('alunos').select('id, nome_completo, email, avatar_type, avatar_image_url, avatar_letter, avatar_color').eq('id', alunoId).single(),
-          supabase.from('rotinas').select('*, professores(id, nome_completo)').eq('aluno_id', alunoId).order('created_at', { ascending: false }),
-          supabase.from('rotinas_arquivadas').select('*').eq('aluno_id', alunoId).order('created_at', { ascending: false })
+          supabase.from('rotinas').select('*, professores(id, nome_completo)').eq('aluno_id', alunoId).order('created_at', { ascending: false })
         ]);
 
         // Checar erros e tratar
@@ -327,9 +312,15 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         
         // ✅ Separar rotinas por status
         const rotinasDoAluno = (rotinasResult.data as Rotina[] || []);
-        setRotinasAtivas(rotinasDoAluno.filter(r => r.status === 'Ativa' || r.status === 'Bloqueada' || r.status === 'Cancelada'));
+        setRotinasAtivas(rotinasDoAluno.filter(r => r.status === 'Ativa' || r.status === 'Bloqueada'));
         setRotinasRascunho(rotinasDoAluno.filter(r => r.status === 'Rascunho' && r.professor_id === user.id));
-        setRotinasArquivadas((arquivadasResult.data as RotinaArquivada[]) || []);
+        setRotinasEncerradas(rotinasDoAluno.filter(r => r.status === 'Concluída' || r.status === 'Cancelada')); // Mantém a lógica correta aqui
+
+        // Define a aba inicial
+        const rascunhos = rotinasDoAluno.filter(r => r.status === 'Rascunho' && r.professor_id === user.id);
+        if (rascunhos.length > 0) {
+          setActiveTab('rascunho');
+        }
 
       } catch (error) {
         console.error('Erro ao buscar dados:', error);
@@ -364,9 +355,9 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   const getStatusBadge = (status: string) => {
     const statusColors = {
       'Ativa': 'bg-green-100 text-green-800',
-      'Rascunho': 'bg-blue-100 text-blue-800',
+      'Rascunho': 'bg-gray-100 text-gray-800',
       'Bloqueada': 'bg-red-100 text-red-800',      
-      'Concluída': 'bg-gray-100 text-gray-800',
+      'Concluída': 'bg-blue-100 text-blue-800',
       'Cancelada': 'bg-orange-100 text-orange-800'
     };
     const colorClass = statusColors[status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800';
@@ -413,7 +404,10 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   };
 
   const handleVerDetalhes = (rotinaId: string) => {
-    const rotinaSelecionada = rotinasAtivas.find(r => r.id === rotinaId);
+    // ✅ CORREÇÃO: Busca a rotina em todas as listas para garantir que os detalhes de rotinas encerradas também possam ser vistos.
+    const rotinaSelecionada = [...rotinasAtivas, ...rotinasEncerradas, ...rotinasRascunho].find(
+      (r) => r.id === rotinaId
+    );
     setSelectedRotina(rotinaSelecionada || null);
     // ✅ ALTERAÇÃO: Unifica o comportamento para ambos os perfis.
     navigate(`/alunos-rotinas/${alunoId}/${rotinaId}`);
@@ -424,49 +418,6 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
     navigate(`/execucao-rotina/selecionar-treino/${rotinaId}`, {
       state: { modo: modo }
     });
-  };
-
-  const handleVisualizarPDF = async (pdfUrl: string, nomeRotina: string) => {
-    try {
-      // Extrair filename do URL
-      const urlParts = pdfUrl.split('/');
-      const filename = urlParts[urlParts.length - 1];
-
-      // Obter URL assinada do Cloudflare
-      const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token;
-
-      if (!accessToken) {
-        throw new Error('Usuário não autenticado');
-      }
-
-      const response = await fetch('https://prvfvlyzfyprjliqniki.supabase.co/functions/v1/get-image-url', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        },
-        body: JSON.stringify({
-          filename,
-          bucket_type: 'rotinas'
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao gerar URL do PDF');
-      }
-
-      const { url: signedUrl } = await response.json();
-      
-      // Abrir PDF em nova aba
-      window.open(signedUrl, '_blank');
-
-    } catch (error) {
-      console.error('Erro ao visualizar PDF:', error);
-      toast.error("Erro", {
-        description: "Não foi possível abrir o PDF da rotina.",
-      });
-    }
   };
 
   const handleUpdateRotinaStatus = async (rotina: Rotina, novoStatus: 'Ativa' | 'Bloqueada') => {
@@ -588,36 +539,30 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   };
   const handleConcluidaClick = (rotina: Rotina) => {
     setSelectedRotina(rotina);
-    setShowConcluidaDialog(true);
+    // ✅ ALTERAÇÃO: Reutiliza o modal de detalhes da rotina em vez de um diálogo específico.
+    navigate(`/alunos-rotinas/${alunoId}/${rotina.id}`);
   };
 
   const renderMenuOpcoes = (rotina: Rotina) => {
-    if (rotina.status === 'Concluída') {
+    // ✅ ALTERAÇÃO: Unifica o menu para rotinas Concluídas e Canceladas
+    if (rotina.status === 'Concluída' || rotina.status === 'Cancelada') {
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4"><MoreVertical /></Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleConcluidaClick(rotina)}>
+            <DropdownMenuItem onClick={() => handleVerDetalhes(rotina.id)}>
               <Eye className="mr-2 h-5 w-5" />
-              <span className="text-base">Ver Informações</span>
+              <span className="text-base">Ver Detalhes</span>
             </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    }
-
-    if (rotina.status === 'Cancelada') {
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-10 w-10 rounded-full p-0 flex-shrink-0" disabled>
-              <MoreVertical className="h-4 w-4 text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem disabled><span className="text-base">Rotina Cancelada</span></DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => handleExcluirRotina(rotina)}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="mr-2 h-5 w-5" />
+              <span className="text-base">Excluir</span>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );
@@ -797,12 +742,6 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "atual" | "rascunho" | "encerradas")}>
           <TabsList className={`grid w-full ${modo === 'professor' ? 'grid-cols-3' : 'grid-cols-2'}`}>
-            <TabsTrigger 
-              value="atual"
-              onClick={() => console.log('📌 Clicou tab Atual')}
-            >
-              Atual ({rotinasAtivas.length})
-            </TabsTrigger>
             {modo === 'professor' && (
               <TabsTrigger 
                 value="rascunho"
@@ -812,10 +751,16 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
               </TabsTrigger>
             )}
             <TabsTrigger 
+              value="atual"
+              onClick={() => console.log('📌 Clicou tab Atual')}
+            >
+              Atual ({rotinasAtivas.length})
+            </TabsTrigger>
+            <TabsTrigger 
               value="encerradas"
               onClick={() => console.log('📌 Clicou tab Encerradas')}
             >
-              Encerradas ({rotinasArquivadas.length})
+              Encerradas ({rotinasEncerradas.length})
             </TabsTrigger>
           </TabsList>
 
@@ -979,64 +924,84 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {rotinasArquivadas.length === 0 ? (
+                {rotinasEncerradas.length === 0 ? (
                   <div className="text-center py-12">
                     <Dumbbell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                     <h3 className="text-lg font-semibold mb-2">Nenhuma rotina encerrada</h3>
                     <p className="text-muted-foreground mb-6">
-                      As rotinas concluídas aparecerão aqui com relatórios em PDF disponíveis para download.
+                      As rotinas concluídas ou canceladas aparecerão aqui como histórico.
                     </p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {rotinasArquivadas.map((rotina) => (
-                      <div key={rotina.id} className="border rounded-lg p-4 md:p-6 hover:bg-muted/50 transition-colors">
-                        {/* Header da rotina com título e badge de conclusão */}
+                    {rotinasEncerradas.map((rotina) => (
+                      <div key={rotina.id} className="border rounded-lg p-6 hover:bg-muted/50 transition-colors">
+                        {/* Header da rotina */}
                         <div className="flex items-start justify-between mb-4">
-                          <div className="flex-1">
-                            <h4 className="text-lg font-semibold mb-2">{rotina.nome_rotina}</h4>
-                            <div className="flex items-center gap-2">
-                              {getObjetivoBadge(rotina.objetivo)}
+                          <div>
+                            <h4 className="text-lg font-semibold">{rotina.nome}</h4>
+                            {rotina.professores && (
+                              <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1 mb-2">
+                                <User className="h-3 w-3" />
+                                <span>
+                                  {modo === 'professor' && rotina.professor_id === user?.id
+                                    ? 'Criada por você'
+                                    : `Criada por ${rotina.professores.nome_completo}`}
+                                </span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2 mb-2">
+                              {getStatusBadge(rotina.status)}
                             </div>
                           </div>
-                          <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-1" />
+                          
+                          {renderMenuOpcoes(rotina)}
                         </div>
 
-                        {/* ✅ INFORMAÇÕES RESPONSIVAS - Desktop: 3 colunas, Mobile: 3 linhas */}
-                        <div className="space-y-3 md:space-y-0 md:grid md:grid-cols-3 md:gap-4 text-sm mb-4">
+                        {/* Informações principais */}
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                          {/* Objetivo */}
+                          <div className="flex items-center gap-2">
+                            <Target className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm text-muted-foreground">Objetivo</p>
+                              <p className="font-medium capitalize">{rotina.objetivo}</p>
+                            </div>
+                          </div>
+                          {/* Dificuldade */}
+                          <div className="flex items-center gap-2">
+                            <BicepsFlexed className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm text-muted-foreground">Dificuldade</p>
+                              <p className="font-medium capitalize">{rotina.dificuldade}</p>
+                            </div>
+                          </div>
                           {/* Duração */}
-                          <div className="flex items-center gap-2 md:justify-center">
-                            <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            <span className="text-muted-foreground">Duração:</span>
-                            <span className="font-medium">{rotina.duracao_semanas} semanas</span>
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm text-muted-foreground">Duração</p>
+                              <p className="font-medium">{rotina.duracao_semanas} semanas</p>
+                            </div>
                           </div>
-                          
                           {/* Frequência */}
-                          <div className="flex items-center gap-2 md:justify-center">
-                            <Dumbbell className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            <span className="text-muted-foreground">Frequência:</span>
-                            <span className="font-medium">{rotina.treinos_por_semana}x/semana</span>
-                          </div>
-                          
-                          {/* Conclusão */}
-                          <div className="flex items-center gap-2 md:justify-center">
-                            <CalendarCheck className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            <span className="text-muted-foreground">Conclusão:</span>
-                            <span className="font-medium">
-                              {new Date(rotina.data_conclusao).toLocaleDateString('pt-BR')}
-                            </span>
+                          <div className="flex items-center gap-2">
+                            <Dumbbell className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-sm text-muted-foreground">Frequência</p>
+                              <p className="font-medium">{rotina.treinos_por_semana}x por semana</p>
+                            </div>
                           </div>
                         </div>
 
-                        {/* Botão Ver Relatório PDF */}
-                        <Button
-                          onClick={() => handleVisualizarPDF(rotina.pdf_url, rotina.nome_rotina)}
-                          className="w-full mt-4"
-                          variant="outline"
-                        >
-                          <FileText className="h-4 w-4 mr-2" />
-                          Detalhes (PDF)
-                        </Button>
+                        {/* ✅ NOVO: Data de encerramento, igual ao RotinasPT.tsx */}
+                        <div className="mt-4 pt-4 border-t">
+                          <div className="flex items-center gap-2 text-sm">
+                            <CalendarCheck className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-muted-foreground">Encerrada em:</span>
+                            <span className="font-medium">{new Date(rotina.updated_at).toLocaleDateString('pt-BR')}</span>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1079,16 +1044,11 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   onOpenChange={setShowStatusInfoDialog}
   title="Situação das Rotinas"
 >
-  <div className="space-y-1 mb-4">
-    <p className="text-sm text-muted-foreground">
-      Entenda o significado de cada status das rotinas de treino.
-    </p>
-  </div>  
-  <div className="space-y-4">
+  <div className="space-y-4 pt-2">
     <div className="flex items-start gap-3">
-        <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+        <div className="w-2 h-2 rounded-full bg-gray-500 mt-2 flex-shrink-0"></div>
         <div>
-          <p className="font-medium text-blue-800 mb-1">Rascunho</p>
+          <p className="font-medium text-gray-800 mb-1">Rascunho</p>
           <p className="text-sm text-muted-foreground">
             Rotina em processo de criação pelo professor, ainda não finalizada.
           </p>
@@ -1100,7 +1060,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         <div>
           <p className="font-medium text-green-800 mb-1">Ativa</p>
           <p className="text-sm text-muted-foreground">
-            Aluno pode acessar e executar os treinos normalmente.
+            Aluno pode acessar e executar os treinos normalmente. A rotina é exibida na aba "Atual".
           </p>
         </div>
       </div>
@@ -1110,7 +1070,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         <div>
           <p className="font-medium text-red-800 mb-1">Bloqueada</p>
           <p className="text-sm text-muted-foreground">
-            Acesso aos treinos foi suspenso temporariamente pelo professor.
+            Acesso aos treinos foi suspenso temporariamente pelo professor. A rotina é exibida na aba "Atual".
           </p>
         </div>
       </div>
@@ -1120,17 +1080,17 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         <div>
           <p className="font-medium text-orange-800 mb-1">Cancelada</p>
           <p className="text-sm text-muted-foreground">
-            Rotina interrompida por uma ação administrativa, como a exclusão da conta do Professor.
+            Rotina interrompida por uma ação administrativa, como a exclusão da conta do Professor. A rotina é movida para a aba "Encerradas" como parte do histórico.
           </p>
         </div>
       </div>
 
       <div className="flex items-start gap-3">
-        <div className="w-2 h-2 rounded-full bg-gray-500 mt-2 flex-shrink-0"></div>
+        <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
         <div>
-          <p className="font-medium text-gray-800 mb-1">Concluída</p>
+          <p className="font-medium text-blue-800 mb-1">Concluída</p>
           <p className="text-sm text-muted-foreground">
-            Todas as sessões da rotina foram executadas. Rotina finalizada automaticamente.
+            Todas as sessões da rotina foram executadas. A rotina é movida para a aba "Encerradas" como parte do histórico.
           </p>
         </div>
       </div>

@@ -325,98 +325,21 @@ async function processPTDeletion(user: UserProfile): Promise<number> {
   let filesDeletedCount = 0;
   const hoje = new Date().toISOString().split('T')[0];
 
-  // 1. Finalizar Sessões Pendentes
-  const { data: rotinasData } = await supabase
+  // 1. Cancelar Rotinas Ativas/Bloqueadas
+  const { data: rotinasAtualizadas, error: updateError } = await supabase
     .from('rotinas')
-    .select('id')
-    .eq('professor_id', user.id);
-
-  const rotinaIds = rotinasData?.map(r => r.id) || [];
-
-  if (rotinaIds.length > 0) {
-    const { data: updatedSessions, error: sessaoError } = await supabase
-      .from('execucoes_sessao')
-      .update({
-        status: 'cancelada',
-        observacoes: `Sessão cancelada automaticamente em ${hoje} devido à exclusão da conta do professor por inatividade.`
-      })
-      .in('rotina_id', rotinaIds)
-      .in('status', ['em_aberto', 'em_andamento', 'pausada']) // Apenas sessões pendentes
-      .select('id'); // Seleciona os IDs das sessões atualizadas para log
-
-    if (sessaoError) {
-      console.error(`Error finalizing sessions for PT ${user.id}:`, sessaoError);
-    } else {
-      console.log(`[PT Deletion] ${updatedSessions?.length || 0} sessões pendentes foram canceladas para o PT ${user.id}`);
-    }
-  }
-
-  // 2. Arquivar Rotinas Ativas/Bloqueadas em vez de apenas cancelar
-  const { data: rotinasParaArquivar, error: fetchRotinasError } = await supabase
-    .from('rotinas')
-    .select('*') // Seleciona todos os dados necessários para o arquivamento
+    .update({ status: 'Cancelada' })
     .eq('professor_id', user.id)
-    .in('status', ['Ativa', 'Bloqueada']);
+    .in('status', ['Ativa', 'Bloqueada'])
+    .select('id');
 
-  if (fetchRotinasError) {
-    console.error(`[PT Deletion] Erro ao buscar rotinas para arquivar do PT ${user.id}:`, fetchRotinasError);
-  } else if (rotinasParaArquivar && rotinasParaArquivar.length > 0) {
-    console.log(`[PT Deletion] Encontradas ${rotinasParaArquivar.length} rotinas para arquivar do PT ${user.id}`);
-    const motivo = `Rotina encerrada automaticamente em ${hoje} devido à exclusão da conta do professor por inatividade.`;
-
-    for (const rotina of rotinasParaArquivar as Rotina[]) {
-      try {
-        // Lógica FIFO: Manter no máximo 4 rotinas arquivadas por aluno
-        const { data: archived, error: fetchArchivedError } = await supabase
-          .from('rotinas_arquivadas')
-          .select('id, pdf_url')
-          .eq('aluno_id', rotina.aluno_id)
-          .order('created_at', { ascending: true });
-
-        if (fetchArchivedError) {
-          console.error(`[Archiving] Falha ao buscar rotinas arquivadas para o aluno ${rotina.aluno_id}`, fetchArchivedError);
-        }
-
-        if (archived && archived.length >= 4) {
-          const oldest = archived[0];
-          console.log(`[Archiving] Aluno ${rotina.aluno_id} tem ${archived.length} rotinas arquivadas. Removendo a mais antiga: ${oldest.id}`);
-          if (oldest.pdf_url) {
-            await deleteCloudflareFile(oldest.pdf_url.split('/').pop()!, 'rotinas');
-          }
-          await supabase.from('rotinas_arquivadas').delete().eq('id', oldest.id);
-        }
-
-        // Gerar PDF (assumindo que a edge function existe)
-        const { data: pdfData } = await supabase.functions.invoke<{ pdf_base64: string }>('gerar-pdf-conclusao', {
-          body: { rotinaId: rotina.id, tipo: 'cancelamento', motivo }
-        });
-
-        // Salvar na tabela de arquivadas
-        await supabase.from('rotinas_arquivadas').insert({
-          aluno_id: rotina.aluno_id,
-          nome_rotina: rotina.nome,
-          objetivo: rotina.objetivo,
-          treinos_por_semana: rotina.treinos_por_semana,
-          duracao_semanas: rotina.duracao_semanas,
-          data_inicio: rotina.data_inicio,
-          data_conclusao: hoje,
-          pdf_url: pdfData?.pdf_base64, // Usando a base64 como placeholder, idealmente seria a URL do R2
-        });
-
-        // Deletar rotina original (o cascade cuidará do resto)
-        const { error: deleteError } = await supabase.from('rotinas').delete().eq('id', rotina.id);
-        if (deleteError) {
-          console.error(`[Archiving] Falha ao deletar rotina original ${rotina.id}:`, deleteError);
-        } else {
-          console.log(`[Archiving] Rotina ${rotina.id} arquivada e removida com sucesso.`);
-        }
-      } catch (archiveError) {
-        console.error(`[Archiving] Erro completo no processo de arquivamento para a rotina ${rotina.id}:`, archiveError);
-      }
-    }
+  if (updateError) {
+    console.error(`[PT Deletion] Erro ao cancelar rotinas do PT ${user.id}:`, updateError);
+  } else if (rotinasAtualizadas && rotinasAtualizadas.length > 0) {
+    console.log(`[PT Deletion] ${rotinasAtualizadas.length} rotinas foram canceladas para o PT ${user.id}`);
   }
 
-  // 3. Remover Avatar do PT (Supabase Storage)
+  // 2. Remover Avatar do PT (Supabase Storage)
   if (user.avatar_type === 'image' && user.avatar_image_url) {
     const filePath = getStoragePathFromUrl(user.avatar_image_url, 'avatars');
     if (filePath) {
@@ -429,7 +352,7 @@ async function processPTDeletion(user: UserProfile): Promise<number> {
     }
   }
 
-  // 4. Remover Mídias de Exercícios (Cloudflare)
+  // 3. Remover Mídias de Exercícios (Cloudflare)
   const fileDeletionPromises: Promise<boolean>[] = [];
   const { data: exerciciosData } = await supabase
         .from('exercicios')
@@ -445,7 +368,7 @@ async function processPTDeletion(user: UserProfile): Promise<number> {
   const results = await Promise.allSettled(fileDeletionPromises);
   filesDeletedCount += results.filter(r => r.status === 'fulfilled' && r.value).length;
 
-  // 6. Deletar Usuário
+  // 4. Deletar Usuário
   const { error: deleteUserError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
   if (deleteUserError) console.error(`Falha ao deletar PT ${user.email}:`, deleteUserError);
   else console.log(`PT ${user.email} deletado com sucesso.`);

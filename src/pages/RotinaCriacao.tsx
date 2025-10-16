@@ -138,6 +138,12 @@ const RotinaConfiguracaoStep = ({ onAvancar, initialData, onCancelar, aluno, onU
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // ✅ CORREÇÃO: Sincroniza o estado local do formulário com o estado principal da página
+  // em tempo real, garantindo que os dados estejam sempre atualizados para salvar o rascunho.
+  useEffect(() => {
+    onUpdate({ configuracao: formData });
+  }, [formData, onUpdate]);
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.nome || formData.nome.trim().length < 3) newErrors.nome = "O nome da rotina deve ter pelo menos 3 caracteres.";
@@ -714,6 +720,12 @@ const RotinaCriacao = () => {
   };
 
   const handleCancelar = () => {
+    // ✅ CORREÇÃO: Se estiver na etapa de configuração, atualiza o estado principal
+    // com os dados do formulário ANTES de abrir o modal de cancelamento.
+    if (etapa === 'configuracao' && rotinaEmCriacao.configuracao) {
+      // Esta chamada silenciosa garante que o `handleSaveAsDraft` terá os dados corretos.
+      updateStorage({ configuracao: rotinaEmCriacao.configuracao });
+    }
     setIsCancelModalOpen(true);
   };
 
@@ -874,33 +886,6 @@ const RotinaCriacao = () => {
     }
 
     try {
-      // 1. VERIFICA SE JÁ EXISTE ROTINA ATIVA (NOVA REGRA DE NEGÓCIO)
-      // A verificação só é necessária se NÃO estivermos finalizando um rascunho,
-      // pois a finalização de um rascunho é uma atualização, não uma criação de conflito.
-      if (!draftId) {
-        const { data: rotinaAtivaExistente, error: checkError } = await supabase
-          .from('rotinas')
-          .select('id, professores(nome_completo)')
-          .eq('aluno_id', alunoId)
-          .eq('status', 'Ativa')
-          .maybeSingle(); // Usar maybeSingle para não dar erro se não encontrar nada
-
-        // Ignora o erro se for 'PGRST116' (nenhuma linha encontrada), que é o cenário esperado.
-        if (checkError && checkError.code !== 'PGRST116') {
-          throw new Error(`Erro ao verificar rotina ativa: ${checkError.message}`);
-        }
-
-        if (rotinaAtivaExistente) {
-          const nomeProfessor = rotinaAtivaExistente.professores?.nome_completo || 'outro professor';
-          toast.error("Não é possível criar a rotina", {
-            description: `Este aluno já possui uma rotina ativa criada por ${nomeProfessor}. Peça para o aluno cancelar a rotina atual antes de criar uma nova.`,
-            duration: 6000,
-          });
-          setIsSaving(false);
-          return;
-        }
-      }
-
       let rotinaId: string;
 
       if (draftId) {
