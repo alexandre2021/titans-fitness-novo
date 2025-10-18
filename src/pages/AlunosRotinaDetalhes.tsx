@@ -138,7 +138,7 @@ const AlunosRotinaDetalhes = () => {
         // Adicionado um alias 'exercicios:exercicios_rotina(*, series(*))' para simplificar.
         const { data: rotinaData, error: rotinaCompletaError } = await supabase
           .from('rotinas')
-          .select('*, treinos(*, exercicios:exercicios_rotina(*, series:series!exercicio_id(*)))')
+          .select('*, treinos(*, exercicios:exercicios_rotina(*, series(*)))')
           .eq('id', rotinaId)
           .single();
         

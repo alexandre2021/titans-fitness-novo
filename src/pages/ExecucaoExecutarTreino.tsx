@@ -13,6 +13,7 @@ import {
   UserProfile 
 } from '@/types/exercicio.types';
 
+// ✅ CORREÇÃO: Interface para tipar o retorno bruto do Supabase, incluindo o professor_id
 interface SessaoSupabase {
   id: string;
   rotina_id: string;
@@ -25,12 +26,12 @@ interface SessaoSupabase {
   rotinas: {
     nome: string;
     permite_execucao_aluno: boolean;
+    professor_id: string; 
   } | null;
   treinos: {
     nome: string;
   } | null;
 }
-
 interface AlunoSupabase {
   nome_completo: string;
 }
@@ -45,10 +46,11 @@ export default function ExecucaoExecutarTreino() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [sessaoData, setSessaoData] = useState<SessaoData | null>(null);
   const [modoExecucao, setModoExecucao] = useState<'professor' | 'aluno' | null>(null);
+  const [professorId, setProfessorId] = useState<string | null>(null); // ✅ Estado separado para o ID do professor
   const [showPauseDialog, setShowPauseDialog] = useState(false);
   const hasNavigated = useRef(false);
   const tempoSessaoRef = useRef(0); // ✅ NOVO: Ref para armazenar o tempo atual
-
+  
   const shallowCompareSessao = useCallback((a: SessaoData | null, b: SessaoData | null): boolean => {
     if (!a || !b) return false;
     return (
@@ -73,15 +75,15 @@ export default function ExecucaoExecutarTreino() {
       id: sessaoData.id,
       rotina_id: sessaoData.rotina_id,
       treino_id: sessaoData.treino_id,
-      aluno_id: sessaoData.aluno_id,
+      aluno_id: sessaoData.aluno_id,      
       status: sessaoData.status,
       data_execucao: sessaoData.data_execucao,
       tempo_total_minutos: sessaoData.tempo_total_minutos,
       tempo_decorrido: sessaoData.tempo_decorrido,
-      rotinas: sessaoData.rotinas ? { 
-        nome: sessaoData.rotinas.nome, 
-        permite_execucao_aluno: sessaoData.rotinas.permite_execucao_aluno 
-      } : undefined,
+      rotinas: sessaoData.rotinas ? ({ 
+        nome: sessaoData.rotinas.nome,
+        permite_execucao_aluno: sessaoData.rotinas.permite_execucao_aluno,
+      }) : undefined,
       treinos: sessaoData.treinos ? { nome: sessaoData.treinos.nome } : undefined,
       alunos: sessaoData.alunos ? { nome_completo: sessaoData.alunos.nome_completo } : undefined,
     };
@@ -195,7 +197,8 @@ export default function ExecucaoExecutarTreino() {
           tempo_decorrido,
           rotinas!inner (
             nome,
-            permite_execucao_aluno
+            permite_execucao_aluno,
+            professor_id
           ),
           treinos!inner (
             nome
@@ -214,6 +217,11 @@ export default function ExecucaoExecutarTreino() {
       }
 
       const sessao = sessaoRaw as SessaoSupabase;
+
+      // ✅ Salva o professor_id separadamente
+      if (sessao.rotinas?.professor_id) {
+        setProfessorId(sessao.rotinas.professor_id);
+      }
 
       if (sessao.status === 'pausada') {
         console.log('🔄 Sessão pausada detectada na execução, reativando...');
@@ -251,25 +259,26 @@ export default function ExecucaoExecutarTreino() {
 
       const alunoData = alunoRaw as AlunoSupabase;
 
+      // ✅ Monta o SessaoData SEM o professor_id (mantém o tipo original)
       const sessaoCompleta: SessaoData = {
         id: sessao.id,
         rotina_id: sessao.rotina_id,
-        treino_id: sessao.treino_id,
+        treino_id: sessao.treino_id,        
         aluno_id: sessao.aluno_id,
-        status: sessao.status,
         data_execucao: sessao.data_execucao,
         tempo_total_minutos: sessao.tempo_total_minutos,
         tempo_decorrido: sessao.tempo_decorrido,
         rotinas: sessao.rotinas ? {
           nome: sessao.rotinas.nome,
-          permite_execucao_aluno: sessao.rotinas.permite_execucao_aluno
+          permite_execucao_aluno: sessao.rotinas.permite_execucao_aluno,
         } : undefined,
         treinos: sessao.treinos ? {
           nome: sessao.treinos.nome
         } : undefined,
         alunos: {
           nome_completo: alunoData.nome_completo
-        }
+        },
+        status: sessao.status,
       };
 
       setSessaoData(prev => shallowCompareSessao(prev, sessaoCompleta) ? prev : sessaoCompleta);
@@ -328,7 +337,7 @@ export default function ExecucaoExecutarTreino() {
     if (hasNavigated.current) return;
     hasNavigated.current = true;
     
-    if (userProfile?.user_type === 'professor') {
+    if (userProfile?.user_type === 'professor' && sessaoData?.aluno_id) {
       navigate(`/alunos-rotinas/${sessaoData?.aluno_id}`);
     } else {
       navigate('/index-aluno');
@@ -336,16 +345,35 @@ export default function ExecucaoExecutarTreino() {
 
     // Verifica se esta era a última sessão da rotina
     const verificarUltimaSessao = async () => {
-      if (!sessaoData?.rotina_id) return;
+      if (!sessaoData?.rotina_id || !sessaoData.rotinas) return;
       const { count } = await supabase.from('execucoes_sessao').select('*', { count: 'exact', head: true }).eq('rotina_id', sessaoData.rotina_id).in('status', ['em_aberto', 'pausada']);
       
       if (count === 0) {
         toast.success("Rotina Concluída!", { description: "Parabéns, você finalizou todos os treinos desta rotina." });
         await handleFinalizarRotina();
+
+        // ✅ Notificar o professor que a rotina foi concluída (apenas se for aluno executando)
+        if (
+          userProfile?.user_type === 'aluno' && 
+          professorId && 
+          userProfile?.nome_completo &&
+          sessaoData.rotinas?.nome
+        ) {
+          try {
+            await supabase.functions.invoke('enviar-notificacao', {
+              body: {
+                destinatario_id: professorId,
+                conteudo: `O aluno ${userProfile.nome_completo} concluiu a rotina de treino "${sessaoData.rotinas?.nome}".`
+              }
+            });
+            console.log('✅ Notificação de conclusão enviada ao professor');
+          } catch (notificationError) {
+            console.error("❌ Falha ao enviar notificação de conclusão de rotina:", notificationError);
+          }
+        }
       }
     }
-    void verificarUltimaSessao();
-  }, [userProfile, sessaoData, navigate, handleFinalizarRotina]);
+    void verificarUltimaSessao();  }, [userProfile, sessaoData, professorId, navigate, handleFinalizarRotina]);
 
   // ✅ EFEITO PARA INTERCEPTAR O BOTÃO "VOLTAR" DO NAVEGADOR
   useEffect(() => {

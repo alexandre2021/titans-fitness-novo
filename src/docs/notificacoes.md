@@ -86,3 +86,9 @@ Atualmente, o sistema envia notificações para os seguintes eventos:
     -   **Gatilho:** Professor exclui uma rotina (rascunho ou ativa).
     -   **Destinatário:** O Aluno associado à rotina.
     -   **Mensagem:** `O professor [Nome do Professor] excluiu sua rotina de treino "[Nome da Rotina]".`
+
+5.  **Aluno conclui uma Rotina de Treino:**
+    -   **Gatilho:** Aluno finaliza a última sessão de treino de uma rotina.
+    -   **Destinatário:** O Professor que criou a rotina.
+    -   **Mensagem:** `O aluno [Nome do Aluno] concluiu a rotina de treino "[Nome da Rotina]".`
+    -   **Observação:** Esta notificação só é enviada se a rotina for concluída pelo próprio aluno (modo de execução independente).

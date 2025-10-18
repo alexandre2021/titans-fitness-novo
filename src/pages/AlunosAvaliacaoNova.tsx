@@ -3,7 +3,7 @@
 // Ao criar uma nova avaliação (a 5ª ou mais), a avaliação mais antiga é automaticamente excluída.
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, FieldErrors } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -293,43 +293,39 @@ const AlunosAvaliacaoNova = () => {
     setSaving(true);
     toast.info("Processando", { description: "Salvando avaliação e otimizando imagens..." });
 
+    // ✅ NOVO: Validação para garantir que as 3 imagens foram adicionadas
+    if (!imageFiles.frente || !imageFiles.lado || !imageFiles.costas) {
+      toast.error("Fotos Obrigatórias", {
+        description: "É necessário adicionar as fotos de frente, lado e costas para salvar a avaliação.",
+      });
+      setSaving(false);
+      return;
+    }
+
+    // ✅ VALIDAÇÃO NO FRONTEND
+    const peso = parseFloat(String(data.peso));
+    const altura = parseFloat(String(data.altura));
+
+    if (isNaN(peso) || peso < 20 || peso > 300) {
+      toast.error("Valor de Peso Inválido", {
+        description: "Por favor, insira um peso entre 20kg e 300kg.",
+      });
+      setSaving(false);
+      return;
+    }
+
+    if (isNaN(altura) || altura < 100 || altura > 250) {
+      toast.error("Valor de Altura Inválido", {
+        description: "Por favor, insira uma altura entre 100cm e 250cm.",
+      });
+      setSaving(false);
+      return;
+    }
+    // ✅ FIM DA VALIDAÇÃO
+
     try {
       const imc = calcularIMC(data.peso, data.altura);
       const hoje = new Date().toISOString().split('T')[0];
-
-      // Lógica FIFO Robusta: buscar avaliações e remover o excedente para manter o limite de 4.
-      const { data: avaliacoesAtuais, error: fetchError } = await supabase
-        .from('avaliacoes_fisicas')
-        .select('*')
-        .eq('aluno_id', id)
-        .order('created_at', { ascending: true }); // Mais antigas primeiro
-
-      if (fetchError) throw fetchError;
-
-      if (avaliacoesAtuais && avaliacoesAtuais.length >= 4) {
-        const LIMITE_AVALIACOES = 4;
-        // Calcula quantas avaliações precisam ser removidas para, após adicionar a nova, o total ser 4.
-        const numeroParaDeletar = avaliacoesAtuais.length - (LIMITE_AVALIACOES - 1);
-
-        if (numeroParaDeletar > 0) {
-          const avaliacoesParaDeletar = avaliacoesAtuais.slice(0, numeroParaDeletar);
-          console.log(`🗑️ Limite de ${LIMITE_AVALIACOES} atingido. Deletando ${numeroParaDeletar} avaliação(ões) mais antigas.`);
-
-          // Deleta as imagens associadas em paralelo
-          const deletePromises = avaliacoesParaDeletar.map(avaliacao => deletarImagensDaAvaliacao(avaliacao));
-          await Promise.all(deletePromises);
-
-          // Deleta os registros do banco de dados de uma só vez
-          const idsParaDeletar = avaliacoesParaDeletar.map(a => a.id);
-          const { error: deleteError } = await supabase.from('avaliacoes_fisicas').delete().in('id', idsParaDeletar);
-
-          if (deleteError) {
-            console.error('❌ Erro ao deletar registros antigos do banco:', deleteError);
-            throw new Error("Falha ao limpar avaliações antigas do banco de dados.");
-          }
-          console.log('✅ Registros antigos de avaliação deletados com sucesso.');
-        }
-      }
 
       // ✅ NOVO: Upload das imagens otimizadas
       const [foto_frente_url, foto_lado_url, foto_costas_url] = await Promise.all([
@@ -378,6 +374,13 @@ const AlunosAvaliacaoNova = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  // ✅ NOVA FUNÇÃO: Exibe um toast quando o formulário é inválido.
+  const onFormError = (errors: FieldErrors<NovaAvaliacaoForm>) => {
+    toast.error("Campos obrigatórios", {
+      description: "Por favor, preencha todos os campos marcados com * antes de salvar.",
+    });
   };
 
   // ✅ ATUALIZADO: Otimiza a imagem antes de salvar no estado
@@ -472,7 +475,7 @@ const AlunosAvaliacaoNova = () => {
       </Card>
 
       {/* Formulário */}
-      <form onSubmit={form.handleSubmit(salvarAvaliacao)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(salvarAvaliacao, onFormError)} className="space-y-6">
         {/* Dados Básicos */}
         <Card>
           <CardHeader>
@@ -501,10 +504,138 @@ const AlunosAvaliacaoNova = () => {
           </CardContent>
         </Card>
 
+        {/* Medidas Corporais */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Medidas Corporais</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Tronco */}
+            <div>
+              <h4 className="font-medium mb-3">Tronco</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="peito_busto">Peito/Busto (cm) *</Label>
+                  <Input
+                    id="peito_busto"
+                    type="number"
+                    step="0.1"
+                    {...form.register('peito_busto', { required: true })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="cintura">Cintura (cm) *</Label>
+                  <Input
+                    id="cintura"
+                    type="number"
+                    step="0.1"
+                    {...form.register('cintura', { required: true })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="quadril">Quadril (cm) *</Label>
+                  <Input
+                    id="quadril"
+                    type="number"
+                    step="0.1"
+                    {...form.register('quadril', { required: true })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Membros Superiores */}
+            <div>
+              <h4 className="font-medium mb-3">Membros Superiores</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <Label htmlFor="braco_direito">Braço Direito (cm) *</Label>
+                  <Input
+                    id="braco_direito"
+                    type="number"
+                    step="0.1"
+                    {...form.register('braco_direito', { required: true })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="braco_esquerdo">Braço Esquerdo (cm) *</Label>
+                  <Input
+                    id="braco_esquerdo"
+                    type="number"
+                    step="0.1"
+                    {...form.register('braco_esquerdo', { required: true })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="antebraco_direito">Antebraço Direito (cm) *</Label>
+                  <Input
+                    id="antebraco_direito"
+                    type="number"
+                    step="0.1"
+                    {...form.register('antebraco_direito', { required: true })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="antebraco_esquerdo">Antebraço Esquerdo (cm) *</Label>
+                  <Input
+                    id="antebraco_esquerdo"
+                    type="number"
+                    step="0.1"
+                    {...form.register('antebraco_esquerdo', { required: true })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Membros Inferiores */}
+            <div>
+              <h4 className="font-medium mb-3">Membros Inferiores</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <Label htmlFor="coxa_direita">Coxa Direita (cm) *</Label>
+                  <Input
+                    id="coxa_direita"
+                    type="number"
+                    step="0.1"
+                    {...form.register('coxa_direita', { required: true })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="coxa_esquerda">Coxa Esquerda (cm) *</Label>
+                  <Input
+                    id="coxa_esquerda"
+                    type="number"
+                    step="0.1"
+                    {...form.register('coxa_esquerda', { required: true })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="panturrilha_direita">Panturrilha Direita (cm) *</Label>
+                  <Input
+                    id="panturrilha_direita"
+                    type="number"
+                    step="0.1"
+                    {...form.register('panturrilha_direita', { required: true })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="panturrilha_esquerda">Panturrilha Esquerda (cm) *</Label>
+                  <Input
+                    id="panturrilha_esquerda"
+                    type="number"
+                    step="0.1"
+                    {...form.register('panturrilha_esquerda', { required: true })}
+                  />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Fotos */}
         <Card>
           <CardHeader>
-            <CardTitle>Fotos (opcional)</CardTitle>
+            <CardTitle>Fotos</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -514,7 +645,7 @@ const AlunosAvaliacaoNova = () => {
 
                 return (
                   <div key={tipo}>
-                    <Label className="text-sm font-medium capitalize">Foto {tipo}</Label>
+                    <Label className="text-sm font-medium capitalize">Foto {tipo} *</Label>
                     <div className="mt-2 space-y-4">
                       {file && previewUrl ? (
                         <div className="space-y-3">
@@ -578,138 +709,10 @@ const AlunosAvaliacaoNova = () => {
           </CardContent>
         </Card>
 
-        {/* Medidas Corporais */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Medidas Corporais</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Tronco */}
-            <div>
-              <h4 className="font-medium mb-3">Tronco</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="peito_busto">Peito/Busto (cm)</Label>
-                  <Input
-                    id="peito_busto"
-                    type="number"
-                    step="0.1"
-                    {...form.register('peito_busto')}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="cintura">Cintura (cm)</Label>
-                  <Input
-                    id="cintura"
-                    type="number"
-                    step="0.1"
-                    {...form.register('cintura')}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="quadril">Quadril (cm)</Label>
-                  <Input
-                    id="quadril"
-                    type="number"
-                    step="0.1"
-                    {...form.register('quadril')}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Membros Superiores */}
-            <div>
-              <h4 className="font-medium mb-3">Membros Superiores</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                  <Label htmlFor="braco_direito">Braço Direito (cm)</Label>
-                  <Input
-                    id="braco_direito"
-                    type="number"
-                    step="0.1"
-                    {...form.register('braco_direito')}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="braco_esquerdo">Braço Esquerdo (cm)</Label>
-                  <Input
-                    id="braco_esquerdo"
-                    type="number"
-                    step="0.1"
-                    {...form.register('braco_esquerdo')}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="antebraco_direito">Antebraço Direito (cm)</Label>
-                  <Input
-                    id="antebraco_direito"
-                    type="number"
-                    step="0.1"
-                    {...form.register('antebraco_direito')}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="antebraco_esquerdo">Antebraço Esquerdo (cm)</Label>
-                  <Input
-                    id="antebraco_esquerdo"
-                    type="number"
-                    step="0.1"
-                    {...form.register('antebraco_esquerdo')}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Membros Inferiores */}
-            <div>
-              <h4 className="font-medium mb-3">Membros Inferiores</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                  <Label htmlFor="coxa_direita">Coxa Direita (cm)</Label>
-                  <Input
-                    id="coxa_direita"
-                    type="number"
-                    step="0.1"
-                    {...form.register('coxa_direita')}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="coxa_esquerda">Coxa Esquerda (cm)</Label>
-                  <Input
-                    id="coxa_esquerda"
-                    type="number"
-                    step="0.1"
-                    {...form.register('coxa_esquerda')}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="panturrilha_direita">Panturrilha Direita (cm)</Label>
-                  <Input
-                    id="panturrilha_direita"
-                    type="number"
-                    step="0.1"
-                    {...form.register('panturrilha_direita')}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="panturrilha_esquerda">Panturrilha Esquerda (cm)</Label>
-                  <Input
-                    id="panturrilha_esquerda"
-                    type="number"
-                    step="0.1"
-                    {...form.register('panturrilha_esquerda')}
-                  />
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Observações */}
         <Card>
           <CardHeader>
-            <CardTitle>Observações</CardTitle>
+            <CardTitle>Observações (opcional)</CardTitle>
           </CardHeader>
           <CardContent>
             <Textarea
@@ -726,11 +729,10 @@ const AlunosAvaliacaoNova = () => {
 
       {/* Botão Salvar Flutuante */}
       <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
-        {/* Mobile: Round floating button */}
         <Button
-          onClick={form.handleSubmit(salvarAvaliacao)}
+          onClick={form.handleSubmit(salvarAvaliacao, onFormError)}
           disabled={saving}
-          className="md:hidden rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
+          className="rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
         >
           {saving ? (
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-foreground"></div>
@@ -738,17 +740,6 @@ const AlunosAvaliacaoNova = () => {
             <Save />
           )}
           <span className="sr-only">Salvar Avaliação</span>
-        </Button>
-
-        {/* Desktop: Standard floating button */}
-        <Button
-          onClick={form.handleSubmit(salvarAvaliacao)}
-          disabled={saving}
-          className="hidden md:flex items-center gap-2 shadow-lg [&_svg]:size-6"
-          size="lg"
-        >
-          <Save />
-          {saving ? "Salvando..." : "Salvar Avaliação"}
         </Button>
       </div>
     </div>

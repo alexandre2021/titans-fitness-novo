@@ -341,7 +341,7 @@ Este documento descreve a estrutura completa das tabelas do banco de dados no no
 | `data_avaliacao` | 3 | `date` | False | `` | `` | `` |  |
 | `peso` | 4 | `numeric` | False | `` | `` | `` |  |
 | `altura` | 5 | `numeric` | False | `` | `` | `` |  |
-| `imc` | 6 | `numeric` | False | `` | `` | `` |  |
+| `imc` | 6 | `numeric(6,2)` | False | `` | `` | `` |  |
 | `peito_busto` | 7 | `numeric` | True | `` | `` | `` |  |
 | `cintura` | 8 | `numeric` | True | `` | `` | `` |  |
 | `quadril` | 9 | `numeric` | True | `` | `` | `` |  |

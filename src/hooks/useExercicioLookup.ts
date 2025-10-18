@@ -18,6 +18,7 @@ const carregarExercicios = () => {
         .from('exercicios')
         .select('id, nome, equipamento, grupo_muscular, dificuldade, tipo, descricao')
         .eq('is_ativo', true)
+        .eq('tipo', 'padrao')
         .order('nome');
 
       if (error) throw error;
@@ -45,15 +46,18 @@ const carregarExercicios = () => {
 };
 
 export function useExercicioLookup() {
-  const [loading, setLoading] = useState(exerciciosCache.size === 0);
+  // O estado de loading agora reflete se a promessa de carregamento está ativa.
+  const [loading, setLoading] = useState(() => exerciciosCache.size === 0 && cachePromise !== null);
 
   useEffect(() => {
+    // Inicia o carregamento apenas se o cache estiver vazio e não houver uma promessa em andamento.
     if (exerciciosCache.size === 0) {
+      setLoading(true);
       carregarExercicios().finally(() => {
         setLoading(false);
       });
     }
-  }, []);
+  }, []); // Executa apenas uma vez na montagem do primeiro componente que usar o hook.
 
   const getExercicioInfo = useCallback((id: string | null | undefined): ExercicioInfo => {
     if (!id) return { id: '', nome: 'Exercício inválido', equipamento: '', grupo_muscular: '', dificuldade: '', tipo: 'padrao', descricao: '' };
@@ -65,5 +69,5 @@ export function useExercicioLookup() {
   return { getExercicioInfo, allExercicios, loading };
 }
 
-// Inicia o carregamento assim que o módulo é importado
-carregarExercicios();
+// ❌ REMOVIDO: A chamada imediata que causava a "condição de corrida".
+// carregarExercicios();

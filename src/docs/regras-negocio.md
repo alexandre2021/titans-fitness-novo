@@ -178,14 +178,13 @@ O sistema de convites foi adaptado para o novo modelo de "seguir".
 
 ## 7. Gestão de Avaliações
 
-### 7.1. Regras Mantidas
-- **REGRA 7.1 (Limite de Avaliações):** Mantém-se o limite de 4 avaliações físicas por aluno (FIFO).
+### 7.1. Regras de Criação e Histórico
+- **REGRA 7.1 (Histórico Ilimitado):** O sistema armazena um histórico ilimitado de avaliações físicas para cada aluno. A regra anterior de limite de 4 avaliações (FIFO) foi removida.
+- **REGRA 7.2 (Intervalo Mínimo Recomendado):** Ao tentar criar uma nova avaliação em um intervalo inferior a 30 dias da última, o sistema exibe um alerta ao professor. O aviso informa que o ideal é aguardar para obter uma comparação de resultados mais precisa, mas permite que o professor prossiga com a criação se desejar.
 
-### 7.2. Novas Regras de Acesso
-
-- **REGRA 7.2 (Acesso Baseado em Rotina Ativa):** Apenas professor com rotina ativa do aluno pode visualizar avaliações físicas.
-
-- **REGRA 7.3 (Perda de Acesso):** Quando aluno para de seguir professor ou troca rotina ativa, professor anterior perde acesso às avaliações.
+### 7.2. Regras de Acesso
+- **REGRA 7.3 (Acesso Baseado em Rotina Ativa):** Apenas o professor que criou a rotina ativa do aluno pode visualizar as avaliações físicas.
+- **REGRA 7.4 (Perda de Acesso):** Quando um aluno para de seguir um professor ou troca de rotina ativa para uma de outro professor, o professor anterior perde o acesso às avaliações.
 
 ---
 

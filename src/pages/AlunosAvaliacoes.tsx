@@ -1,17 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Modal from 'react-modal';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, TooltipProps } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge'; 
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useMediaQuery } from '@/hooks/use-media-query';
-import { ArrowLeft, BarChart3, TrendingUp, Calendar, Plus, Eye, MoreVertical, Trash2, AlertTriangle, Info, ChevronDown, User } from 'lucide-react';
+import { ArrowLeft, BarChart3, TrendingUp, Calendar, Plus, Eye, MoreVertical, Trash2, AlertTriangle, Info, User, LineChart as LineChartIcon, Camera } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { formatters } from '@/utils/formatters';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface AlunoInfo {
   id: string;
@@ -50,6 +54,20 @@ interface AvaliacaoFisica {
     nome_completo: string;
   } | null;
 }
+
+type ActiveLinesState = {
+  pesoImc: string[];
+  tronco: string[];
+  superiores: string[];
+  inferiores: string[];
+};
+
+const lineOptions = {
+  pesoImc: [{ dataKey: 'peso', name: 'Peso (kg)', color: '#8884d8' }, { dataKey: 'imc', name: 'IMC', color: '#82ca9d' }],
+  tronco: [{ dataKey: 'peito', name: 'Peito', color: '#8884d8' }, { dataKey: 'cintura', name: 'Cintura', color: '#82ca9d' }, { dataKey: 'quadril', name: 'Quadril', color: '#ffc658' }],
+  superiores: [{ dataKey: 'braco_d', name: 'Braço D.', color: '#8884d8' }, { dataKey: 'braco_e', name: 'Braço E.', color: '#82ca9d' }, { dataKey: 'antebraco_d', name: 'Antebraço D.', color: '#ffc658' }, { dataKey: 'antebraco_e', name: 'Antebraço E.', color: '#ff7300' }],
+  inferiores: [{ dataKey: 'coxa_d', name: 'Coxa D.', color: '#8884d8' }, { dataKey: 'coxa_e', name: 'Coxa E.', color: '#82ca9d' }, { dataKey: 'panturrilha_d', name: 'Panturrilha D.', color: '#ffc658' }, { dataKey: 'panturrilha_e', name: 'Panturrilha E.', color: '#ff7300' }],
+};
 
 const AlunosAvaliacoes = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -134,6 +152,7 @@ const AlunosAvaliacoes = () => {
         // que deve verificar se o `professor_id` da avaliação é o mesmo do `auth.uid()`
 
       if (error) {
+        console.error('Erro ao excluir avaliação:', error);
         toast.error('Erro', {
           description: 'Não foi possível excluir a avaliação. Tente novamente.',
         });
@@ -171,6 +190,122 @@ const AlunosAvaliacoes = () => {
   const [aluno, setAluno] = useState<AlunoInfo | null>(null);
   const [avaliacoes, setAvaliacoes] = useState<AvaliacaoFisica[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // ✅ NOVO: Estado para o filtro de data inicial
+  const [startDateIndex, setStartDateIndex] = useState(0);
+  
+  // ✅ NOVO: Estados para a aba de comparação de imagens
+  const [avaliacaoInicialImagem, setAvaliacaoInicialImagem] = useState<AvaliacaoFisica | null>(null);
+  const [urlsAssinadas, setUrlsAssinadas] = useState<{
+    inicial: { frente?: string; lado?: string; costas?: string };
+    final: { frente?: string; lado?: string; costas?: string };
+  }>({
+    inicial: {},
+    final: {},
+  });
+
+  // ✅ NOVO: Estado para controlar as linhas visíveis nos gráficos
+  const [activeLines, setActiveLines] = useState<ActiveLinesState>({
+    pesoImc: ['peso', 'imc'],
+    tronco: ['peito', 'cintura', 'quadril'],
+    superiores: ['braco_d', 'braco_e', 'antebraco_d', 'antebraco_e'],
+    inferiores: ['coxa_d', 'coxa_e', 'panturrilha_d', 'panturrilha_e'],
+  });
+
+  // ✅ NOVO: Função para alternar a visibilidade de uma linha
+  const toggleLine = (chart: keyof ActiveLinesState, dataKey: string) => {
+    setActiveLines(prev => {
+      const currentLines = prev[chart];
+      const newLines = currentLines.includes(dataKey) ? currentLines.filter(line => line !== dataKey) : [...currentLines, dataKey];
+      return { ...prev, [chart]: newLines };
+    });
+  };
+
+  // ✅ CORREÇÃO: Memoiza a criação de chartData para evitar recálculos desnecessários
+  const chartData = useMemo(() => {
+    return avaliacoes.length > 1
+      ? [...avaliacoes].reverse().map(a => ({
+          name: formatters.date(a.data_avaliacao),
+          peso: a.peso,
+          imc: parseFloat(a.imc.toFixed(1)),
+          peito: a.peito_busto,
+          cintura: a.cintura,
+          quadril: a.quadril,
+          braco_d: a.braco_direito || 0,
+          braco_e: a.braco_esquerdo || 0,
+          antebraco_d: a.antebraco_direito || 0,
+          antebraco_e: a.antebraco_esquerdo || 0,
+          coxa_d: a.coxa_direita || 0,
+          coxa_e: a.coxa_esquerda || 0,
+          panturrilha_d: a.panturrilha_direita || 0,
+          panturrilha_e: a.panturrilha_esquerda || 0,
+        }))
+      : [];
+  }, [avaliacoes]);
+
+  // ✅ ATUALIZADO: Filtra os dados do gráfico com base na data inicial selecionada
+  const filteredChartData = useMemo(() => {
+    if (chartData.length < 2) return [];
+    return chartData.slice(startDateIndex);
+  }, [chartData, startDateIndex]);
+
+  // ✅ NOVO: Função para calcular e formatar a diferença total para uma medida
+  const renderTotalDifference = (dataKey: keyof typeof chartData[0], label: string, unit: string) => {
+    if (filteredChartData.length < 2) return null;
+
+    const firstValue = filteredChartData[0][dataKey] as number;
+    const lastValue = filteredChartData[filteredChartData.length - 1][dataKey] as number;
+
+    if (typeof firstValue !== 'number' || typeof lastValue !== 'number' || firstValue === 0 || lastValue === 0) return null;
+
+    const diff = lastValue - firstValue;
+    const sign = diff > 0 ? '+' : '';
+    // Para peso e IMC, aumento é ruim (vermelho). Para medidas, aumento é bom (verde).
+    const isBadGrowth = ['peso', 'imc'].includes(dataKey);
+    const color = diff > 0 ? (isBadGrowth ? 'text-red-600' : 'text-green-600') : (diff < 0 ? (isBadGrowth ? 'text-green-600' : 'text-red-600') : 'text-muted-foreground');
+
+    return (
+      <span className={`text-xs font-bold ${color}`}>
+        {label}: {sign}{diff.toFixed(1)} {unit}
+      </span>
+    );
+  };
+
+  // ✅ NOVO: Função para obter URL assinada da imagem
+  const getImageUrl = useCallback(async (filename: string): Promise<string | null> => {
+    if (!filename || typeof filename !== 'string') return null;
+    try {
+      const { data, error } = await supabase.functions.invoke('get-image-url', {
+        body: { filename, bucket_type: 'avaliacoes' },
+      });
+      if (error) throw error;
+      return data?.url || null;
+    } catch (error) {
+      console.error('Erro ao obter URL da imagem:', error);
+      return null;
+    }
+  }, []);
+
+  // ✅ NOVO: Efeito para carregar URLs assinadas quando as avaliações de imagem mudam
+  useEffect(() => {
+    const carregarUrls = async () => {
+      const ultimaAvaliacao = avaliacoes[0];
+      if (!ultimaAvaliacao && !avaliacaoInicialImagem) return;
+
+      const urlsFinais = {
+        frente: await getImageUrl(ultimaAvaliacao?.foto_frente_url || ''),
+        lado: await getImageUrl(ultimaAvaliacao?.foto_lado_url || ''),
+        costas: await getImageUrl(ultimaAvaliacao?.foto_costas_url || ''),
+      };
+      const urlsIniciais = {
+        frente: await getImageUrl(avaliacaoInicialImagem?.foto_frente_url || ''),
+        lado: await getImageUrl(avaliacaoInicialImagem?.foto_lado_url || ''),
+        costas: await getImageUrl(avaliacaoInicialImagem?.foto_costas_url || ''),
+      };
+      setUrlsAssinadas({ inicial: urlsIniciais, final: urlsFinais });
+    };
+    carregarUrls();
+  }, [avaliacaoInicialImagem, avaliacoes, getImageUrl]);
 
   // useEffect principal para buscar dados
   useEffect(() => {
@@ -214,6 +349,11 @@ const AlunosAvaliacoes = () => {
           setAvaliacoes((avaliacoesData as unknown as AvaliacaoFisica[]) || []);
         }
 
+        // ✅ NOVO: Define a avaliação inicial para comparação de imagens
+        if (avaliacoesData && avaliacoesData.length > 1) {
+          setAvaliacaoInicialImagem(avaliacoesData[avaliacoesData.length - 1]);
+        }
+
       } catch (error) {
         console.error('Erro ao buscar dados:', error);
         toast.error("Erro", {
@@ -250,20 +390,48 @@ const AlunosAvaliacoes = () => {
     return { text: 'Obesidade', color: 'bg-red-500' };
   };
 
-  const calcularProgressoPeso = () => {
+  // ✅ CORREÇÃO: Define a interface para as props do CustomTooltip
+  const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="p-2 bg-background/80 border rounded-md shadow-lg">
+          <p className="label text-sm font-bold">{`${label}`}</p>
+          {payload.map((pld) => <p key={pld.dataKey} style={{ color: pld.color }} className="text-sm">{`${pld.name}: ${pld.value}`}</p>)}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const calcularProgressoGeral = () => {
     if (avaliacoes.length < 2) return null;
     
     const primeira = avaliacoes[avaliacoes.length - 1];
     const ultima = avaliacoes[0];
-    const diferenca = ultima.peso - primeira.peso;
-    
+
     return {
-      diferenca,
-      percentual: ((diferenca / primeira.peso) * 100).toFixed(1)
+      primeiraData: primeira.data_avaliacao,
+      ultimaData: ultima.data_avaliacao,
+      peso: {
+        inicial: primeira.peso,
+        final: ultima.peso,
+        diferenca: ultima.peso - primeira.peso,
+      },
+      imc: {
+        inicial: primeira.imc,
+        final: ultima.imc,
+        diferenca: ultima.imc - primeira.imc,
+      },
+      medidasTronco: {
+        diferenca: ((ultima.peito_busto || 0) + (ultima.cintura || 0) + (ultima.quadril || 0)) - ((primeira.peito_busto || 0) + (primeira.cintura || 0) + (primeira.quadril || 0)),
+      },
+      medidasMembros: {
+        diferenca: ((ultima.braco_direito || 0) + (ultima.braco_esquerdo || 0) + (ultima.coxa_direita || 0) + (ultima.coxa_esquerda || 0)) - ((primeira.braco_direito || 0) + (primeira.braco_esquerdo || 0) + (primeira.coxa_direita || 0) + (primeira.coxa_esquerda || 0)),
+      },
     };
   };
 
-  const progressoPeso = calcularProgressoPeso();
+  const progressoGeral = calcularProgressoGeral();
 
   const handleNovaAvaliacao = () => {
     // Se existem avaliações, verificar o intervalo
@@ -324,7 +492,7 @@ const AlunosAvaliacoes = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 md:pb-8">
       {/* Cabeçalho da Página (Apenas para Desktop) */}
       {isDesktop && (
         <div className="flex items-center gap-4">
@@ -356,127 +524,361 @@ const AlunosAvaliacoes = () => {
         </CardHeader>
       </Card>
 
-      {/* Resumo de Progresso */}
-      {progressoPeso && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-3">
-              <TrendingUp className="h-5 w-5" />
-              Evolução de Peso
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4">
-              <div className="text-center">
-                <p className="text-2xl font-bold">
-                  {progressoPeso.diferenca > 0 ? '+' : ''}{progressoPeso.diferenca.toFixed(1)} kg
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {progressoPeso.percentual}% de variação
-                </p>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                <p>Primeira avaliação: {avaliacoes[avaliacoes.length - 1]?.peso}kg</p>
-                <p>Última avaliação: {avaliacoes[0]?.peso}kg</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <Tabs defaultValue="historico" className="w-full">
+        <TabsList>
+          <TabsTrigger value="historico">Histórico</TabsTrigger>
+          <TabsTrigger value="graficos">Evolução (Gráficos)</TabsTrigger>
+          <TabsTrigger value="imagem">Evolução (Fotos)</TabsTrigger>
+        </TabsList>
 
-      {/* Lista de Avaliações */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-3">
-            <BarChart3 className="h-5 w-5" />
-            Histórico de Avaliações
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {avaliacoes.length === 0 ? (
-            <div className="text-center py-12">
-              <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Nenhuma avaliação</h3>
-              <p className="text-muted-foreground mb-4">
-                Recomendamos um intervalo mínimo de 30 dias entre avaliações para resultados mais precisos.
-              </p>
+        {/* Aba de Histórico */}
+        <TabsContent value="historico">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3">
+                <BarChart3 className="h-5 w-5" />
+                Histórico de Avaliações
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pb-6">
+              {avaliacoes.length === 0 ? (
+                <div className="text-center py-12">
+                  <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Nenhuma avaliação</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Recomendamos um intervalo mínimo de 30 dias entre avaliações para resultados mais precisos.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {avaliacoes.map((avaliacao) => {
+                    const imcClass = getIMCClassification(avaliacao.imc);
+                    return (
+                      <div key={avaliacao.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                        <div className="flex items-center justify-between mb-3">
+                          {avaliacao.professores ? (
+                            <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                              <User className="h-3 w-3" />
+                              <span>
+                                Realizada por {user?.id === avaliacao.professor_id ? 'você' : avaliacao.professores.nome_completo}
+                              </span>
+                            </div>
+                          ) : <div />}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4"><MoreVertical /></Button></DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleVerDetalhes(avaliacao.id)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                Detalhes
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleExcluirAvaliacao(avaliacao)} 
+                                className="text-destructive focus:text-destructive"
+                                disabled={user?.id !== avaliacao.professor_id}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div><p className="text-sm text-muted-foreground">Data</p><p className="font-semibold">{formatters.date(avaliacao.data_avaliacao)}</p></div>
+                          <div><p className="text-sm text-muted-foreground">Peso</p><p className="font-semibold">{avaliacao.peso} kg</p></div>
+                          <div><p className="text-sm text-muted-foreground">Altura</p><p className="font-semibold">{avaliacao.altura} cm</p></div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">IMC</p>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold">{avaliacao.imc.toFixed(1)}</span>
+                              <Badge className={`${imcClass.color} text-white text-xs`}>{imcClass.text}</Badge>
+                            </div>
+                          </div>
+                        </div>
+                        {avaliacao.observacoes && (
+                          <div className="mt-3 pt-3 border-t"><p className="text-xs text-muted-foreground mb-1">Observações:</p><p className="text-sm text-muted-foreground line-clamp-2">{avaliacao.observacoes}</p></div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Aba de Evolução (Gráficos) */}
+        <TabsContent value="graficos">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3">
+                <LineChartIcon className="h-5 w-5" />
+                Evolução (Gráficos)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-8 pt-2">
+              {avaliacoes.length > 1 ? (
+                <>
+                  {/* ✅ NOVO: Dropdown para selecionar a data inicial */}
+                  <div className="space-y-2 rounded-lg border p-4 bg-muted/30">
+                    <Label htmlFor="date-range-select" className="font-medium">Período de Análise</Label>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={String(startDateIndex)}
+                        onValueChange={(value) => setStartDateIndex(Number(value))}
+                      >
+                        <SelectTrigger id="date-range-select" className="w-[180px]">
+                          <SelectValue placeholder="Data Inicial" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {chartData.slice(0, -1).map((data, index) => (
+                            <SelectItem key={index} value={String(index)}>{data.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <span className="text-muted-foreground">até</span>
+                      <div className="px-3 py-2 border rounded-md bg-background text-sm font-medium">
+                        {chartData[chartData.length - 1]?.name || '--'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-baseline gap-2">
+                      <h4 className="font-medium mb-2">Peso e IMC</h4>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {lineOptions.pesoImc.map(line => (
+                        <Badge
+                          key={line.dataKey}
+                          onClick={() => toggleLine('pesoImc', line.dataKey)}
+                          variant={activeLines.pesoImc.includes(line.dataKey) ? 'default' : 'outline'}
+                          className="cursor-pointer transition-all"
+                          style={activeLines.pesoImc.includes(line.dataKey) ? { backgroundColor: line.color, color: 'white' } : { borderColor: line.color, color: line.color }}
+                        >
+                          {line.name}
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mb-4">
+                      {activeLines.pesoImc.includes('peso') && renderTotalDifference('peso', 'Peso', 'kg')}
+                      {activeLines.pesoImc.includes('imc') && renderTotalDifference('imc', 'IMC', '')}
+                    </div>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={filteredChartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+                        <YAxis yAxisId="left" stroke="#8884d8" fontSize={12} tickLine={false} axisLine={false} />
+                        <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" fontSize={12} tickLine={false} axisLine={false} />
+                        <Tooltip content={<CustomTooltip />} />                        
+                        {activeLines.pesoImc.includes('peso') && <Line yAxisId="left" type="monotone" dataKey="peso" name="Peso (kg)" stroke="#8884d8" activeDot={{ r: 8 }} />}
+                        {activeLines.pesoImc.includes('imc') && <Line yAxisId="right" type="monotone" dataKey="imc" name="IMC" stroke="#82ca9d" />}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div>
+                    <div className="flex items-baseline gap-2">
+                      <h4 className="font-medium mb-2">Tronco (cm)</h4>
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mb-4">
+                      {activeLines.tronco.includes('peito') && renderTotalDifference('peito', 'Peito', 'cm')}
+                      {activeLines.tronco.includes('cintura') && renderTotalDifference('cintura', 'Cintura', 'cm')}
+                      {activeLines.tronco.includes('quadril') && renderTotalDifference('quadril', 'Quadril', 'cm')}
+                    </div>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {lineOptions.tronco.map(line => (
+                        <Badge
+                          key={line.dataKey}
+                          onClick={() => toggleLine('tronco', line.dataKey)}
+                          variant={activeLines.tronco.includes(line.dataKey) ? 'default' : 'outline'}
+                          className="cursor-pointer transition-all"
+                          style={activeLines.tronco.includes(line.dataKey) ? { backgroundColor: line.color, color: 'white' } : { borderColor: line.color, color: line.color }}
+                        >
+                          {line.name}
+                        </Badge>
+                      ))}
+                    </div>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={filteredChartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+                        <YAxis fontSize={12} tickLine={false} axisLine={false} />
+                        <Tooltip content={<CustomTooltip />} />
+                        {activeLines.tronco.includes('peito') && <Line type="monotone" dataKey="peito" name="Peito" stroke="#8884d8" />}
+                        {activeLines.tronco.includes('cintura') && <Line type="monotone" dataKey="cintura" name="Cintura" stroke="#82ca9d" />}
+                        {activeLines.tronco.includes('quadril') && <Line type="monotone" dataKey="quadril" name="Quadril" stroke="#ffc658" />}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div>
+                    <div className="flex items-baseline gap-2">
+                      <h4 className="font-medium mb-2">Membros Superiores (cm)</h4>
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mb-4">
+                      {activeLines.superiores.includes('braco_d') && renderTotalDifference('braco_d', 'Braço D.', 'cm')}
+                      {activeLines.superiores.includes('braco_e') && renderTotalDifference('braco_e', 'Braço E.', 'cm')}
+                      {activeLines.superiores.includes('antebraco_d') && renderTotalDifference('antebraco_d', 'Antebraço D.', 'cm')}
+                      {activeLines.superiores.includes('antebraco_e') && renderTotalDifference('antebraco_e', 'Antebraço E.', 'cm')}
+                    </div>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {lineOptions.superiores.map(line => (
+                        <Badge
+                          key={line.dataKey}
+                          onClick={() => toggleLine('superiores', line.dataKey)}
+                          variant={activeLines.superiores.includes(line.dataKey) ? 'default' : 'outline'}
+                          className="cursor-pointer transition-all"
+                          style={activeLines.superiores.includes(line.dataKey) ? { backgroundColor: line.color, color: 'white' } : { borderColor: line.color, color: line.color }}
+                        >
+                          {line.name}
+                        </Badge>
+                      ))}
+                    </div>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={filteredChartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+                        <YAxis fontSize={12} tickLine={false} axisLine={false} />
+                        <Tooltip content={<CustomTooltip />} />
+                        {activeLines.superiores.includes('braco_d') && <Line type="monotone" dataKey="braco_d" name="Braço D." stroke="#8884d8" />}
+                        {activeLines.superiores.includes('braco_e') && <Line type="monotone" dataKey="braco_e" name="Braço E." stroke="#82ca9d" />}
+                        {activeLines.superiores.includes('antebraco_d') && <Line type="monotone" dataKey="antebraco_d" name="Antebraço D." stroke="#ffc658" />}
+                        {activeLines.superiores.includes('antebraco_e') && <Line type="monotone" dataKey="antebraco_e" name="Antebraço E." stroke="#ff7300" />}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div>
+                    <div className="flex items-baseline gap-2">
+                      <h4 className="font-medium mb-2">Membros Inferiores (cm)</h4>
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mb-4">
+                      {activeLines.inferiores.includes('coxa_d') && renderTotalDifference('coxa_d', 'Coxa D.', 'cm')}
+                      {activeLines.inferiores.includes('coxa_e') && renderTotalDifference('coxa_e', 'Coxa E.', 'cm')}
+                      {activeLines.inferiores.includes('panturrilha_d') && renderTotalDifference('panturrilha_d', 'Panturrilha D.', 'cm')}
+                      {activeLines.inferiores.includes('panturrilha_e') && renderTotalDifference('panturrilha_e', 'Panturrilha E.', 'cm')}
+                    </div>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {lineOptions.inferiores.map(line => (
+                        <Badge
+                          key={line.dataKey}
+                          onClick={() => toggleLine('inferiores', line.dataKey)}
+                          variant={activeLines.inferiores.includes(line.dataKey) ? 'default' : 'outline'}
+                          className="cursor-pointer transition-all"
+                          style={activeLines.inferiores.includes(line.dataKey) ? { backgroundColor: line.color, color: 'white' } : { borderColor: line.color, color: line.color }}
+                        >
+                          {line.name}
+                        </Badge>
+                      ))}
+                    </div>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={filteredChartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+                        <YAxis fontSize={12} tickLine={false} axisLine={false} />
+                        <Tooltip content={<CustomTooltip />} />
+                        {activeLines.inferiores.includes('coxa_d') && <Line type="monotone" dataKey="coxa_d" name="Coxa D." stroke="#8884d8" />}
+                        {activeLines.inferiores.includes('coxa_e') && <Line type="monotone" dataKey="coxa_e" name="Coxa E." stroke="#82ca9d" />}
+                        {activeLines.inferiores.includes('panturrilha_d') && <Line type="monotone" dataKey="panturrilha_d" name="Panturrilha D." stroke="#ffc658" />}
+                        {activeLines.inferiores.includes('panturrilha_e') && <Line type="monotone" dataKey="panturrilha_e" name="Panturrilha E." stroke="#ff7300" />}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </>
+              ) : (
+                  <div className="text-center py-12">
+                    <LineChartIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Poucos dados para análise</h3>
+                    <p className="text-muted-foreground">
+                      É necessário ter pelo menos duas avaliações para exibir os gráficos de evolução.
+                    </p>
+                  </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Aba de Progresso Geral */}
+        <TabsContent value="imagem">
+          {avaliacoes.length > 1 ? (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3">
+                    <Camera className="h-5 w-5" />
+                    Evolução (Fotos)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6 pt-2">
+                  <div className="space-y-2 rounded-lg border p-4 bg-muted/30">
+                    <Label htmlFor="image-comparison-select" className="font-medium">Antes X Depois</Label>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={avaliacaoInicialImagem?.id || ''}
+                        onValueChange={(id) => {
+                          const avaliacaoSelecionada = avaliacoes.find(a => a.id === id);
+                          setAvaliacaoInicialImagem(avaliacaoSelecionada || null);
+                        }}
+                      >
+                        <SelectTrigger id="image-comparison-select" className="w-[180px]">
+                          <SelectValue placeholder="Data Inicial" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {avaliacoes.slice(1).map(a => (
+                            <SelectItem key={a.id} value={a.id}>
+                              {formatters.date(a.data_avaliacao)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <span className="text-muted-foreground">X</span>
+                      <div className="px-3 py-2 border rounded-md bg-background text-sm font-medium">
+                        {avaliacoes[0] ? formatters.date(avaliacoes[0].data_avaliacao) : '--'}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {(['frente', 'lado', 'costas'] as const).map(tipo => (
+                      <div key={tipo} className="space-y-4">
+                        <h4 className="font-semibold text-center capitalize">Foto de {tipo}</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {/* Imagem Inicial */}
+                          <div className="space-y-2">
+                            <div className="aspect-[3/4] bg-muted rounded-lg overflow-hidden flex items-center justify-center">
+                              {urlsAssinadas.inicial[tipo] ? <img src={urlsAssinadas.inicial[tipo]!} alt={`Inicial ${tipo}`} className="w-full h-full object-cover" /> : <span className="text-xs text-muted-foreground">Sem imagem</span>}
+                            </div>
+                            <p className="text-xs text-center text-muted-foreground">{avaliacaoInicialImagem ? formatters.date(avaliacaoInicialImagem.data_avaliacao) : 'N/A'}</p>
+                          </div>
+                          {/* Imagem Final */}
+                          <div className="space-y-2">
+                            <div className="aspect-[3/4] bg-muted rounded-lg overflow-hidden flex items-center justify-center">
+                              {urlsAssinadas.final[tipo] ? <img src={urlsAssinadas.final[tipo]!} alt={`Final ${tipo}`} className="w-full h-full object-cover" /> : <span className="text-xs text-muted-foreground">Sem imagem</span>}
+                            </div>
+                            <p className="text-xs text-center text-muted-foreground">{avaliacoes[0] ? formatters.date(avaliacoes[0].data_avaliacao) : 'N/A'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           ) : (
-            <div className="space-y-4 pb-20 md:pb-0">
-              {avaliacoes.map((avaliacao) => {
-                const imcClass = getIMCClassification(avaliacao.imc);
-                return (
-                  <div key={avaliacao.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center justify-between mb-3">
-                      {avaliacao.professores ? (
-                        <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-                          <User className="h-3 w-3" />
-                          <span>
-                            Realizada por {user?.id === avaliacao.professor_id ? 'você' : avaliacao.professores.nome_completo}
-                          </span>
-                        </div>
-                      ) : <div />} {/* Empty div to keep alignment */}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4"><MoreVertical /></Button></DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleVerDetalhes(avaliacao.id)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            Detalhes
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleExcluirAvaliacao(avaliacao)} 
-                            className="text-destructive focus:text-destructive"
-                            disabled={user?.id !== avaliacao.professor_id}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Data</p>
-                        <p className="font-semibold">{avaliacao.data_avaliacao.split('-').reverse().join('/')}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Peso</p>
-                        <p className="font-semibold">{avaliacao.peso} kg</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Altura</p>
-                        <p className="font-semibold">{avaliacao.altura} cm</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">IMC</p>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold">{avaliacao.imc.toFixed(1)}</span>
-                          <Badge className={`${imcClass.color} text-white text-xs`}>
-                            {imcClass.text}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Fotos disponíveis removidas */}
-
-                    {/* Observações preview */}
-                    {avaliacao.observacoes && (
-                      <div className="mt-3 pt-3 border-t">
-                        <p className="text-xs text-muted-foreground mb-1">Observações:</p>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {avaliacao.observacoes}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3">
+                  <Camera className="h-5 w-5" />
+                  Evolução (Fotos)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-12">
+                  <Camera className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Poucas avaliações</h3>
+                  <p className="text-muted-foreground">É necessário ter pelo menos duas avaliações com imagens para fazer a comparação.</p>
+                </div>
+                </CardContent>
+              </Card>
           )}
-        </CardContent>
-      </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Modal de Confirmação de Exclusão - React Modal BLOQUEADA */}
       <Modal
