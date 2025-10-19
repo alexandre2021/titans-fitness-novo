@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, Dumbbell, LogOut, User, Settings, BookCopy, SquarePen, Home, Copy, MessageCircle, FileText, LifeBuoy } from "lucide-react";
+import { LayoutDashboard, Users, Dumbbell, LogOut, User, Settings, BookCopy, SquarePen, Home, Copy, MessageCircle, FileText, LifeBuoy, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
@@ -31,19 +31,24 @@ const PTSidebar = () => {
       icon: LayoutDashboard,
     },
     {
-      title: "Exercícios",
-      href: "/exercicios",
-      icon: Dumbbell,
-    },
-    {
       title: "Alunos",
       href: "/alunos",
       icon: Users,
     },
     {
+      title: "Exercícios",
+      href: "/exercicios",
+      icon: Dumbbell,
+    },
+    {
       title: "Rotinas",
       href: "/rotinas",
       icon: FileText,
+    },
+    {
+      title: "Avaliações",
+      href: "/avaliacoes",
+      icon: BarChart3,
     },
     {
       title: "Meus Modelos",

@@ -1,18 +1,19 @@
 import { Button } from "@/components/ui/button";
 import { MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 interface MessagesButtonProps {
   onClick: () => void;
   unreadCount?: number;
-  isDesktop: boolean;
 }
 
-const MessagesButton = ({ onClick, unreadCount, isDesktop }: MessagesButtonProps) => {
+const MessagesButton = ({ onClick, unreadCount }: MessagesButtonProps) => {
+  const isDesktop = useMediaQuery("(min-width: 768px)");
   return (
     <div className={cn(
       "fixed z-50",
-      isDesktop ? "top-6 right-20" : "bottom-20 left-4 md:left-6"
+      isDesktop ? "top-6 right-6" : "bottom-20 left-4" // Mantém a lógica correta, agora com o hook interno
     )}>
       <Button
         variant="secondary"

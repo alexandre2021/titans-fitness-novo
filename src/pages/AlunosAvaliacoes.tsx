@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import Modal from 'react-modal';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, TooltipProps } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -184,11 +184,13 @@ const AlunosAvaliacoes = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const location = useLocation();
   const isDesktop = useMediaQuery("(min-width: 768px)");
   
   // Estados principais
   const [aluno, setAluno] = useState<AlunoInfo | null>(null);
   const [avaliacoes, setAvaliacoes] = useState<AvaliacaoFisica[]>([]);
+  const [historicoPeriodo, setHistoricoPeriodo] = useState<string>('1ano');
   const [loading, setLoading] = useState(true);
 
   // ✅ NOVO: Estado para o filtro de data inicial
@@ -463,7 +465,7 @@ const AlunosAvaliacoes = () => {
   };
 
   const handleVerDetalhes = (avaliacaoId: string) => {
-    navigate(`/alunos-avaliacoes/${id}/${avaliacaoId}`);
+    navigate(`/alunos-avaliacoes/${id}/${avaliacaoId}`, { state: { from: location.pathname } });
   };
 
   if (loading) {
@@ -492,7 +494,7 @@ const AlunosAvaliacoes = () => {
   }
 
   return (
-    <div className="space-y-6 pb-24 md:pb-8">
+    <div className="space-y-6 pb-40 md:pb-16">
       {/* Cabeçalho da Página (Apenas para Desktop) */}
       {isDesktop && (
         <div className="flex items-center gap-4">
@@ -525,97 +527,103 @@ const AlunosAvaliacoes = () => {
       </Card>
 
       <Tabs defaultValue="historico" className="w-full">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="historico">Histórico</TabsTrigger>
           <TabsTrigger value="graficos">Evolução (Gráficos)</TabsTrigger>
-          <TabsTrigger value="imagem">Evolução (Fotos)</TabsTrigger>
+          <TabsTrigger value="fotos">Evolução (Fotos)</TabsTrigger>
         </TabsList>
 
         {/* Aba de Histórico */}
         <TabsContent value="historico">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <BarChart3 className="h-5 w-5" />
-                Histórico de Avaliações
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pb-6">
-              {avaliacoes.length === 0 ? (
-                <div className="text-center py-12">
-                  <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Nenhuma avaliação</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Recomendamos um intervalo mínimo de 30 dias entre avaliações para resultados mais precisos.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {avaliacoes.map((avaliacao) => {
-                    const imcClass = getIMCClassification(avaliacao.imc);
-                    return (
-                      <div key={avaliacao.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
-                        <div className="flex items-center justify-between mb-3">
-                          {avaliacao.professores ? (
-                            <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-                              <User className="h-3 w-3" />
-                              <span>
-                                Realizada por {user?.id === avaliacao.professor_id ? 'você' : avaliacao.professores.nome_completo}
-                              </span>
-                            </div>
-                          ) : <div />}
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4"><MoreVertical /></Button></DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleVerDetalhes(avaliacao.id)}>
-                                <Eye className="mr-2 h-4 w-4" />
-                                Detalhes
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => handleExcluirAvaliacao(avaliacao)} 
-                                className="text-destructive focus:text-destructive"
-                                disabled={user?.id !== avaliacao.professor_id}
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Excluir
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <div><p className="text-sm text-muted-foreground">Data</p><p className="font-semibold">{formatters.date(avaliacao.data_avaliacao)}</p></div>
-                          <div><p className="text-sm text-muted-foreground">Peso</p><p className="font-semibold">{avaliacao.peso} kg</p></div>
-                          <div><p className="text-sm text-muted-foreground">Altura</p><p className="font-semibold">{avaliacao.altura} cm</p></div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">IMC</p>
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold">{avaliacao.imc.toFixed(1)}</span>
-                              <Badge className={`${imcClass.color} text-white text-xs`}>{imcClass.text}</Badge>
-                            </div>
-                          </div>
-                        </div>
-                        {avaliacao.observacoes && (
-                          <div className="mt-3 pt-3 border-t"><p className="text-xs text-muted-foreground mb-1">Observações:</p><p className="text-sm text-muted-foreground line-clamp-2">{avaliacao.observacoes}</p></div>
-                        )}
+          {avaliacoes.length === 0 ? (
+            <Card className="border-dashed min-h-[180px]">
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Nenhuma avaliação encontrada</h3>
+              </CardContent>
+            </Card>
+          ) : (
+            <Tabs value={historicoPeriodo} onValueChange={setHistoricoPeriodo} className="w-full">
+              <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0">
+                <TabsTrigger value="1ano" className="relative h-9 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none">Último ano</TabsTrigger>
+                <TabsTrigger value="2anos" className="relative h-9 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none">2 anos</TabsTrigger>
+                <TabsTrigger value="3anos" className="relative h-9 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none">3 anos</TabsTrigger>
+                <TabsTrigger value="todas" className="relative h-9 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none">Todas</TabsTrigger>
+              </TabsList>
+              {(['1ano', '2anos', '3anos', 'todas'] as const).map(periodo => {
+                const getFilteredAvaliacoes = () => {
+                  const now = new Date();
+                  if (periodo === '1ano') {
+                    const oneYearAgo = new Date(new Date().setFullYear(now.getFullYear() - 1));
+                    return avaliacoes.filter(a => new Date(a.data_avaliacao) >= oneYearAgo);
+                  }
+                  if (periodo === '2anos') {
+                    const twoYearsAgo = new Date(new Date().setFullYear(now.getFullYear() - 2));
+                    return avaliacoes.filter(a => new Date(a.data_avaliacao) >= twoYearsAgo);
+                  }
+                  if (periodo === '3anos') {
+                    const threeYearsAgo = new Date(new Date().setFullYear(now.getFullYear() - 3));
+                    return avaliacoes.filter(a => new Date(a.data_avaliacao) >= threeYearsAgo);
+                  }
+                  return avaliacoes;
+                };
+                const filteredAvaliacoes = getFilteredAvaliacoes();
+
+                return (
+                  <TabsContent key={periodo} value={periodo} className="mt-4">
+                    {filteredAvaliacoes.length === 0 ? (
+                      <div className="text-center py-10 text-muted-foreground">
+                        <BarChart3 className="h-12 w-12 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold">
+                          Nenhuma avaliação encontrada
+                        </h3>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    ) : (
+                      <div className="space-y-4">
+                        {filteredAvaliacoes.map(avaliacao => {
+                          const imcClass = getIMCClassification(avaliacao.imc);
+                          return (
+                            <div key={avaliacao.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                              <div className="flex items-center justify-between mb-3">
+                                {avaliacao.professores ? (
+                                  <div className="text-xs text-muted-foreground flex items-center gap-1.5"><User className="h-3 w-3" /><span>Realizada por {user?.id === avaliacao.professor_id ? 'você' : avaliacao.professores.nome_completo}</span></div>
+                                ) : <div />}
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4"><MoreVertical /></Button></DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                    <DropdownMenuItem onClick={() => handleVerDetalhes(avaliacao.id)} className="text-base md:text-sm"><Eye className="mr-2 h-4 w-4" /><span>Detalhes</span></DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleExcluirAvaliacao(avaliacao)} className="text-base md:text-sm text-destructive focus:text-destructive" disabled={user?.id !== avaliacao.professor_id}><Trash2 className="mr-2 h-4 w-4" /><span>Excluir</span></DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div><p className="text-sm text-muted-foreground">Data</p><p className="font-semibold">{formatters.date(avaliacao.data_avaliacao)}</p></div>
+                                <div><p className="text-sm text-muted-foreground">Peso</p><p className="font-semibold">{avaliacao.peso} kg</p></div>
+                                <div><p className="text-sm text-muted-foreground">Altura</p><p className="font-semibold">{avaliacao.altura} cm</p></div>
+                                <div>
+                                  <p className="text-sm text-muted-foreground">IMC</p>
+                                  <div className="flex items-center gap-2"><span className="font-semibold">{avaliacao.imc.toFixed(1)}</span><Badge className={`${imcClass.color} text-white text-xs`}>{imcClass.text}</Badge></div>
+                                </div>
+                              </div>
+                              {avaliacao.observacoes && (
+                                <div className="mt-3 pt-3 border-t"><p className="text-xs text-muted-foreground mb-1">Observações:</p><p className="text-sm text-muted-foreground line-clamp-2">{avaliacao.observacoes}</p></div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </TabsContent>
+                );
+              })}
+            </Tabs>
+          )}
         </TabsContent>
 
         {/* Aba de Evolução (Gráficos) */}
         <TabsContent value="graficos">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <LineChartIcon className="h-5 w-5" />
-                Evolução (Gráficos)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-8 pt-2">
+            <CardContent className="space-y-8 pt-6">
               {avaliacoes.length > 1 ? (
                 <>
                   {/* ✅ NOVO: Dropdown para selecionar a data inicial */}
@@ -785,10 +793,7 @@ const AlunosAvaliacoes = () => {
               ) : (
                   <div className="text-center py-12">
                     <LineChartIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Poucos dados para análise</h3>
-                    <p className="text-muted-foreground">
-                      É necessário ter pelo menos duas avaliações para exibir os gráficos de evolução.
-                    </p>
+                    <h3 className="text-lg font-semibold mb-2">Necessário pelo menos duas avaliações para comparar.</h3>
                   </div>
               )}
             </CardContent>
@@ -796,17 +801,11 @@ const AlunosAvaliacoes = () => {
         </TabsContent>
 
         {/* Aba de Progresso Geral */}
-        <TabsContent value="imagem">
-          {avaliacoes.length > 1 ? (
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <Camera className="h-5 w-5" />
-                    Evolução (Fotos)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6 pt-2">
+        <TabsContent value="fotos">
+          <Card>
+            <CardContent className="pt-6">
+              {avaliacoes.length > 1 ? (
+                <div className="space-y-6">
                   <div className="space-y-2 rounded-lg border p-4 bg-muted/30">
                     <Label htmlFor="image-comparison-select" className="font-medium">Antes X Depois</Label>
                     <div className="flex items-center gap-2">
@@ -857,26 +856,15 @@ const AlunosAvaliacoes = () => {
                       </div>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <Camera className="h-5 w-5" />
-                  Evolução (Fotos)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+                </div>
+              ) : (
                 <div className="text-center py-12">
                   <Camera className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Poucas avaliações</h3>
-                  <p className="text-muted-foreground">É necessário ter pelo menos duas avaliações com imagens para fazer a comparação.</p>
+                  <h3 className="text-lg font-semibold mb-2">Necessário pelo menos duas avaliações para comparar.</h3>
                 </div>
-                </CardContent>
-              </Card>
-          )}
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 

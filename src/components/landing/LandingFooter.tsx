@@ -56,11 +56,6 @@ const LandingFooter = () => {
             <h3 className="font-semibold mb-4 text-gray-800">Suporte</h3>
             <ul className="space-y-2">
               <li>
-                <Link to="/central-de-ajuda" onClick={() => window.scrollTo(0, 0)} className="text-gray-600 hover:text-gray-800 transition-colors">
-                  Central de Ajuda
-                </Link>
-              </li>
-              <li>
                 <Link to="/contato" onClick={() => window.scrollTo(0, 0)} className="text-gray-600 hover:text-gray-800 transition-colors">
                   Contato
                 </Link>

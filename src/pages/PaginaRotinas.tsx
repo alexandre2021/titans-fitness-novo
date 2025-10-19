@@ -146,6 +146,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   const [rotinasRascunho, setRotinasRascunho] = useState<Rotina[]>([]); // Mantém a lógica correta aqui
   const [activeTab, setActiveTab] = useState<"atual" | "rascunho" | "encerradas">("atual");
   const [showConcluidaDialog, setShowConcluidaDialog] = useState(false);
+  const [encerradasPeriodo, setEncerradasPeriodo] = useState<string>('1ano');
   const [showStatusInfoDialog, setShowStatusInfoDialog] = useState(false);
   const [selectedRotina, setSelectedRotina] = useState<Rotina | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -685,7 +686,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
 
   return (
     <>
-      <div className="space-y-6 pb-24 md:pb-8">
+      <div className="space-y-6 pb-40 md:pb-16">
         {/* Cabeçalho da Página (Apenas para Desktop) */}
         {isDesktop && (
           <div className="flex items-center justify-between">
@@ -734,8 +735,15 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         </Card>}
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "atual" | "rascunho" | "encerradas")}>
+        <div className="relative"> {/* Adicionado um container relativo */}
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "atual" | "rascunho" | "encerradas")}>
           <TabsList className={`grid w-full ${modo === 'professor' ? 'grid-cols-3' : 'grid-cols-2'}`}>
+            <TabsTrigger 
+              value="atual"
+              onClick={() => console.log('📌 Clicou tab Atual')}
+            >
+              Atual ({rotinasAtivas.length})
+            </TabsTrigger>
             {modo === 'professor' && (
               <TabsTrigger 
                 value="rascunho"
@@ -744,12 +752,6 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
                 Rascunho ({rotinasRascunho.length})
               </TabsTrigger>
             )}
-            <TabsTrigger 
-              value="atual"
-              onClick={() => console.log('📌 Clicou tab Atual')}
-            >
-              Atual ({rotinasAtivas.length})
-            </TabsTrigger>
             <TabsTrigger 
               value="encerradas"
               onClick={() => console.log('📌 Clicou tab Encerradas')}
@@ -760,23 +762,24 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
 
           {/* Tab Atual */}
           <TabsContent value="atual" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <FileText className="h-5 w-5" />
-                  Rotina Atual
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {rotinasAtivas.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Dumbbell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Nenhuma rotina</h3>
-                    <p className="text-muted-foreground mb-6">
-                      {modo === 'professor' ? 'Este aluno não possui nenhuma rotina no momento. Crie uma nova rotina personalizada.' : 'Você ainda não tem uma rotina. Fale com seu Professor.'}
-                    </p>
+            {rotinasAtivas.length === 0 ? (
+              <Card className="border-dashed relative min-h-[180px]">
+                <CardContent>
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Nenhuma rotina atual</h3>
                   </div>
-                ) : (
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3">
+                    <FileText className="h-5 w-5" />
+                    Rotina Atual
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
                   <div className="space-y-4">
                     {rotinasAtivas.map((rotina) => (
                       <div key={rotina.id} className="border rounded-lg p-6 hover:bg-muted/50 transition-colors">
@@ -850,31 +853,32 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
                       </div>
                     ))}
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* ✅ NOVA ABA: Rascunho */}
           {modo === 'professor' && (
             <TabsContent value="rascunho" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <FileText className="h-5 w-5" />
-                    Rotinas em Rascunho
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {rotinasRascunho.length === 0 ? (
+              {rotinasRascunho.length === 0 ? (
+                <Card className="border-dashed">
+                  <CardContent>
                     <div className="text-center py-12">
                       <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                       <h3 className="text-lg font-semibold mb-2">Nenhum rascunho</h3>
-                      <p className="text-muted-foreground mb-6">
-                        As rotinas que você começar a criar e salvar como rascunho aparecerão aqui.
-                      </p>
                     </div>
-                  ) : (
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-3">
+                      <FileText className="h-5 w-5" />
+                      Rotinas em Rascunho
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
                     <div className="space-y-4">
                       {rotinasRascunho.map((rotina) => (
                         <Card key={rotina.id}>
@@ -902,108 +906,116 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
                         </Card>
                       ))}
                     </div>
-                  )}
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
           )}
 
           {/* Tab Concluídas - Layout responsivo melhorado */}
           <TabsContent value="encerradas" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <FileText className="h-5 w-5" />
-                  Rotinas Encerradas
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {rotinasEncerradas.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Dumbbell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            {rotinasEncerradas.length === 0 ? (
+              <Card className="border-dashed">
+                <CardContent>
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                     <h3 className="text-lg font-semibold mb-2">Nenhuma rotina encerrada</h3>
-                    <p className="text-muted-foreground mb-6">
-                      As rotinas concluídas ou canceladas aparecerão aqui como histórico.
-                    </p>
                   </div>
-                ) : (
-                  <div className="space-y-4">
-                    {rotinasEncerradas.map((rotina) => (
-                      <div key={rotina.id} className="border rounded-lg p-6 hover:bg-muted/50 transition-colors">
-                        {/* Header da rotina */}
-                        <div className="flex items-start justify-between mb-4">
-                          <div>
-                            <h4 className="text-lg font-semibold">{rotina.nome}</h4>
-                            {rotina.professores && (
-                              <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1 mb-2">
-                                <User className="h-3 w-3" />
-                                <span>
-                                  {modo === 'professor' && rotina.professor_id === user?.id
-                                    ? 'Criada por você'
-                                    : `Criada por ${rotina.professores.nome_completo}`}
-                                </span>
+                </CardContent>
+              </Card>
+            ) : (
+              <Tabs value={encerradasPeriodo} onValueChange={setEncerradasPeriodo} className="w-full">
+                <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0">
+                  <TabsTrigger 
+                    value="1ano" 
+                    className="relative h-9 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none"
+                  >Último ano</TabsTrigger>
+                  <TabsTrigger 
+                    value="2anos" 
+                    className="relative h-9 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none"
+                  >2 anos</TabsTrigger>
+                  <TabsTrigger 
+                    value="3anos" 
+                    className="relative h-9 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none"
+                  >3 anos</TabsTrigger>
+                  <TabsTrigger 
+                    value="todas" 
+                    className="relative h-9 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none"
+                  >Todas</TabsTrigger>
+                </TabsList>
+                {(['1ano', '2anos', '3anos', 'todas'] as const).map(periodo => {
+                  const getFilteredRotinas = () => {
+                    const now = new Date();
+                    if (periodo === '1ano') {
+                      const oneYearAgo = new Date(new Date().setFullYear(now.getFullYear() - 1));
+                      return rotinasEncerradas.filter(r => new Date(r.updated_at) >= oneYearAgo);
+                    }
+                    if (periodo === '2anos') {
+                      const twoYearsAgo = new Date(new Date().setFullYear(now.getFullYear() - 2));
+                      return rotinasEncerradas.filter(r => new Date(r.updated_at) >= twoYearsAgo);
+                    }
+                    if (periodo === '3anos') {
+                      const threeYearsAgo = new Date(new Date().setFullYear(now.getFullYear() - 3));
+                      return rotinasEncerradas.filter(r => new Date(r.updated_at) >= threeYearsAgo);
+                    }
+                    return rotinasEncerradas;
+                  };
+                  
+                  const filteredRotinas = getFilteredRotinas();
+
+                  return (
+                    <TabsContent key={periodo} value={periodo} className="mt-4">
+                      {filteredRotinas.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <p>Nenhuma rotina encerrada neste período.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {filteredRotinas.map(rotina => (
+                            <div key={rotina.id} className="border rounded-lg p-6 hover:bg-muted/50 transition-colors">
+                              <div className="flex items-start justify-between mb-4">
+                                <div>
+                                  <h4 className="text-lg font-semibold">{rotina.nome}</h4>
+                                  {rotina.professores && (
+                                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1 mb-2">
+                                      <User className="h-3 w-3" />
+                                      <span>
+                                        {modo === 'professor' && rotina.professor_id === user?.id
+                                          ? 'Criada por você'
+                                          : `Criada por ${rotina.professores.nome_completo}`}
+                                      </span>
+                                    </div>
+                                  )}
+                                  <div className="flex items-center gap-2 mb-2">{getStatusBadge(rotina.status)}</div>
+                                </div>
+                                {renderMenuOpcoes(rotina)}
                               </div>
-                            )}
-                            <div className="flex items-center gap-2 mb-2">
-                              {getStatusBadge(rotina.status)}
+                              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                                <div className="flex items-center gap-2"><Target className="h-4 w-4 text-muted-foreground" /><div><p className="text-sm text-muted-foreground">Objetivo</p><p className="font-medium capitalize">{rotina.objetivo}</p></div></div>
+                                <div className="flex items-center gap-2"><BicepsFlexed className="h-4 w-4 text-muted-foreground" /><div><p className="text-sm text-muted-foreground">Dificuldade</p><p className="font-medium capitalize">{rotina.dificuldade}</p></div></div>
+                                <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /><div><p className="text-sm text-muted-foreground">Duração</p><p className="font-medium">{rotina.duracao_semanas} semanas</p></div></div>
+                                <div className="flex items-center gap-2"><Dumbbell className="h-4 w-4 text-muted-foreground" /><div><p className="text-sm text-muted-foreground">Frequência</p><p className="font-medium">{rotina.treinos_por_semana}x por semana</p></div></div>
+                              </div>
+                              <div className="mt-4 pt-4 border-t">
+                                <div className="flex items-center gap-2 text-sm">
+                                  <CalendarCheck className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-muted-foreground">Encerrada em:</span>
+                                  <span className="font-medium">{new Date(rotina.updated_at).toLocaleDateString('pt-BR')}</span>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                          
-                          {renderMenuOpcoes(rotina)}
+                          ))}
                         </div>
-
-                        {/* Informações principais */}
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                          {/* Objetivo */}
-                          <div className="flex items-center gap-2">
-                            <Target className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="text-sm text-muted-foreground">Objetivo</p>
-                              <p className="font-medium capitalize">{rotina.objetivo}</p>
-                            </div>
-                          </div>
-                          {/* Dificuldade */}
-                          <div className="flex items-center gap-2">
-                            <BicepsFlexed className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="text-sm text-muted-foreground">Dificuldade</p>
-                              <p className="font-medium capitalize">{rotina.dificuldade}</p>
-                            </div>
-                          </div>
-                          {/* Duração */}
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="text-sm text-muted-foreground">Duração</p>
-                              <p className="font-medium">{rotina.duracao_semanas} semanas</p>
-                            </div>
-                          </div>
-                          {/* Frequência */}
-                          <div className="flex items-center gap-2">
-                            <Dumbbell className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="text-sm text-muted-foreground">Frequência</p>
-                              <p className="font-medium">{rotina.treinos_por_semana}x por semana</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* ✅ NOVO: Data de encerramento, igual ao RotinasPT.tsx */}
-                        <div className="mt-4 pt-4 border-t">
-                          <div className="flex items-center gap-2 text-sm">
-                            <CalendarCheck className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-muted-foreground">Encerrada em:</span>
-                            <span className="font-medium">{new Date(rotina.updated_at).toLocaleDateString('pt-BR')}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      )}
+                    </TabsContent>
+                  )
+                })}
+              </Tabs>
+            )}
           </TabsContent>
         </Tabs>
+        </div>
+
       </div>
 
       <Modal
@@ -1124,20 +1136,6 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Botão Flutuante para Nova Rotina (Apenas para Professor) */}
-      {modo === 'professor' && activeTab === 'atual' && (
-        <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
-          <Button
-            onClick={handleNovaRotinaClick}
-            disabled={navegandoNovaRotina}
-            className="rounded-full h-12 w-12 p-0 shadow-lg flex items-center justify-center [&_svg]:size-7"
-            aria-label="Nova Rotina"
-          >
-            <Plus />
-          </Button>
-        </div>
-      )}
-
       {/* Modal de Criação de Rotina */}
       <ResponsiveModal
         open={showCriarModal}
@@ -1171,6 +1169,20 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
           )}
         </div>
       </ResponsiveModal>
+
+      {/* Botão para Nova Rotina (visível para o professor na aba 'atual') */}
+      {modo === 'professor' && activeTab === 'atual' && (
+        <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
+          <Button
+            onClick={handleNovaRotinaClick}
+            disabled={navegandoNovaRotina}
+            className="rounded-full h-12 w-12 p-0 shadow-lg flex items-center justify-center [&_svg]:size-7"
+            aria-label="Criar nova rotina"
+          >
+            {navegandoNovaRotina ? <Loader2 className="animate-spin" /> : <Plus />}
+          </Button>
+        </div>
+      )}
     </>
   );
 };

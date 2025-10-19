@@ -7,8 +7,9 @@ import { useMediaQuery } from '@/hooks/use-media-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge'; 
+import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ArrowLeft, Users, Target, Clock, Plus, FileText, MoreVertical, Eye, Play, Ban, Activity, Trash2, BicepsFlexed, Repeat, User as UserIcon, Info, Search, Filter, X, Loader2, CalendarCheck } from 'lucide-react';
@@ -49,20 +50,6 @@ interface RotinaCardProps {
   updated_at: string;
 }
 
-interface RotinasAgrupadas {
-  [alunoId: string]: {
-    aluno: {
-      id: string;
-      nome_completo: string;
-      avatar_image_url: string | null;
-      avatar_type: string | null;
-      avatar_letter: string | null;
-      avatar_color: string | null;
-    };
-    rotinas: RotinaCardProps[];
-  };
-}
-
 const RotinasPT = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -70,12 +57,9 @@ const RotinasPT = () => {
   const [loading, setLoading] = useState(true);
   const [allRotinas, setAllRotinas] = useState<Rotina[]>([]);
   const [alunos, setAlunos] = useState<AlunoInfo[]>([]);
-  const [activeTab, setActiveTab] = useState<'atual' | 'rascunho' | 'encerradas'>('atual');
-  const [rotinasEncerradas, setRotinasEncerradas] = useState<Rotina[]>([]);
-  const [alunoFiltro, setAlunoFiltro] = useState<string>('todos');
   const [busca, setBusca] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  const [filtros, setFiltros] = useState({ objetivo: 'todos', frequencia: 'todos' });
+  const [activeTabs, setActiveTabs] = useState<Record<string, string>>({});
+  const [nestedActiveTabs, setNestedActiveTabs] = useState<Record<string, string>>({});
 
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [showStatusInfoDialog, setShowStatusInfoDialog] = useState(false);
@@ -85,6 +69,7 @@ const RotinasPT = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [rotinaParaExcluir, setRotinaParaExcluir] = useState<RotinaCardProps | null>(null);
 
+  const [buscaAlunoModal, setBuscaAlunoModal] = useState('');
   // Estados para o novo fluxo de criação
   const [alunoSelecionado, setAlunoSelecionado] = useState<string | null>(null);
   const [showCriarOpcoesModal, setShowCriarOpcoesModal] = useState(false);
@@ -127,8 +112,6 @@ const RotinasPT = () => {
         if (rotinasError) throw rotinasError;
 
         setAllRotinas((rotinasData as Rotina[]) || []);
-        setRotinasEncerradas((rotinasData?.filter(r => r.status === 'Concluída' || r.status === 'Cancelada') as Rotina[]) || []);
-
       } catch (error) {
         console.error("Erro ao buscar rotinas ativas:", error);
       } finally {
@@ -158,75 +141,43 @@ const RotinasPT = () => {
     void checkForModels();
   }, [showCriarOpcoesModal, user]);
 
-  const rotinasFiltradas = useMemo(() => {
-    const rotinas: RotinaCardProps[] = [];
-    const statusMap = {
-      atual: ['Ativa', 'Bloqueada'],
-      rascunho: ['Rascunho'],
-      encerradas: ['Concluída', 'Cancelada'],
+  const alunosComRotinasFiltradas = useMemo(() => {
+    // 1. Filtra os alunos primeiro
+    const alunosFiltrados = alunos.filter(aluno => {
+      if (busca !== '' && !aluno.nome_completo.toLowerCase().includes(busca.toLowerCase())) return false;
+      return true;
+    });
+
+    // 2. Para cada aluno, agrupa e filtra suas rotinas
+    return alunosFiltrados.map(aluno => {
+      const rotinasDoAluno = allRotinas.filter(r => r.aluno_id === aluno.id);
+
+      const rotinasAgrupadas = {
+        rascunho: rotinasDoAluno.filter(r => r.status === 'Rascunho'),
+        atual: rotinasDoAluno.filter(r => ['Ativa', 'Bloqueada'].includes(r.status || '')),
+        encerradas: rotinasDoAluno.filter(r => ['Concluída', 'Cancelada'].includes(r.status || '')),
+      };
+
+      return { aluno, rotinas: rotinasAgrupadas };
+    }).filter(Boolean) as { aluno: AlunoInfo; rotinas: { rascunho: Rotina[]; atual: Rotina[]; encerradas: Rotina[] } }[];
+  }, [allRotinas, alunos, busca]);
+
+  const rotinaCounts = useMemo(() => {
+    return {
+      ativas: allRotinas.filter(r => r.status === 'Ativa').length,
+      bloqueadas: allRotinas.filter(r => r.status === 'Bloqueada').length,
+      rascunho: allRotinas.filter(r => r.status === 'Rascunho').length,
+      encerradas: allRotinas.filter(r => r.status === 'Concluída' || r.status === 'Cancelada').length,
     };
-
-    const rotinasAtuais = allRotinas
-      .filter(r => (statusMap[activeTab] || []).includes(r.status || ''))
-      .filter(r => alunoFiltro === 'todos' || r.aluno_id === alunoFiltro)
-      .filter(r => r.alunos) // Garante que o aluno existe
-      // Novos filtros
-      .filter(r => busca === '' || r.nome.toLowerCase().includes(busca.toLowerCase()))
-      .filter(r => filtros.objetivo === 'todos' || r.objetivo === filtros.objetivo)
-      .filter(r => filtros.frequencia === 'todos' || String(r.treinos_por_semana) === filtros.frequencia)
-      .map(r => ({
-        id: r.id,
-        nome: r.nome,
-        status: r.status!,
-        data_inicio: r.data_inicio,
-        duracao_semanas: r.duracao_semanas,
-        aluno_id: r.alunos!.id,
-        aluno: r.alunos!,
-        objetivo: r.objetivo,
-        dificuldade: r.dificuldade,
-        treinos_por_semana: r.treinos_por_semana,
-        descricao: r.descricao,
-        updated_at: r.updated_at,
-      }));
-
-    return rotinasAtuais.reduce((acc, rotina) => {
-      const { aluno_id, aluno } = rotina;
-      if (!acc[aluno_id]) {
-        acc[aluno_id] = {
-          aluno: {
-            ...aluno
-          },
-          rotinas: [],
-        };
-      }
-      acc[aluno_id].rotinas.push(rotina);
-      return acc;
-    }, {} as RotinasAgrupadas);
-  }, [allRotinas, activeTab, alunoFiltro, busca, filtros]);
-
-  const rotinasAtuaisCount = useMemo(() => {
-    return allRotinas.filter(r => r.status === 'Ativa' || r.status === 'Bloqueada').length;
   }, [allRotinas]);
 
-  const rotinasRascunhoCount = useMemo(() => {
-    return allRotinas.filter(r => r.status === 'Rascunho').length;
-  }, [allRotinas]);
+  const alunosFiltradosModal = useMemo(() => {
+    if (!buscaAlunoModal) return alunos;
+    return alunos.filter(aluno =>
+      aluno.nome_completo.toLowerCase().includes(buscaAlunoModal.toLowerCase())
+    );
+  }, [alunos, buscaAlunoModal]);
 
-  const rotinasEncerradasCount = useMemo(() => {
-    return allRotinas.filter(r => r.status === 'Concluída' || r.status === 'Cancelada').length;
-  }, [allRotinas]);
-
-  const ALUNOS_OPTIONS = useMemo(() => {
-    const options = alunos.map(a => ({ value: a.id, label: a.nome_completo }));
-    return [{ value: 'todos', label: 'Todos' }, ...options];
-  }, [alunos]);
-
-  const temFiltrosAtivos = filtros.objetivo !== 'todos' || filtros.frequencia !== 'todos' || busca !== '' || alunoFiltro !== 'todos';
-
-  // Apenas os filtros que estão dentro do painel colapsável
-  const temFiltrosAvancadosAtivos = filtros.objetivo !== 'todos' || filtros.frequencia !== 'todos' || alunoFiltro !== 'todos';
-
-  const limparFiltros = () => { setBusca(''); setAlunoFiltro('todos'); setFiltros({ objetivo: 'todos', frequencia: 'todos' }); };
 
   const handleUpdateRotinaStatus = async (rotina: RotinaCardProps, novoStatus: 'Ativa' | 'Bloqueada') => {
     setIsUpdatingStatus(true);
@@ -284,34 +235,33 @@ const RotinasPT = () => {
     }
   };
 
-  const handleAbrirModalSelecaoAluno = () => {
-    setIsCreateModalOpen(true);
+  const handleModalSelecaoAlunoOpenChange = (open: boolean) => {
+    setIsCreateModalOpen(open);
+    if (!open) {
+      setBuscaAlunoModal(''); // Limpa a busca ao fechar o modal
+    }
   };
 
-  const handleSelectAlunoParaNovaRotina = async (alunoId: string) => {
+  const handleNovaRotinaParaAluno = async (alunoId: string) => {
     if (isCheckingRotina) return; // Evita cliques duplos
     setIsCheckingRotina(alunoId);
-
-    // Simula uma pequena espera para melhorar a percepção do usuário
-    await new Promise(resolve => setTimeout(resolve, 300));
 
     // Verifica se o aluno selecionado já tem uma rotina ativa ou rascunho
     const temRotinaAtiva = allRotinas.some(r => r.aluno_id === alunoId && (r.status === 'Ativa' || r.status === 'Bloqueada'));
     const temRascunho = allRotinas.some(r => r.aluno_id === alunoId && r.status === 'Rascunho');
 
     if (temRotinaAtiva) {
-      toast.error("Aluno já possui uma rotina.", { description: "Este aluno já possui uma rotina (ativa ou bloqueada). Finalize ou exclua a rotina atual antes de criar uma nova." });
+      toast.error("Rotina já existente", { description: "Este aluno já possui uma rotina (ativa ou bloqueada). Finalize ou exclua a rotina atual antes de criar uma nova." });
       setIsCheckingRotina(null);
       return;
     }
     if (temRascunho) {
-      toast.error("Já existe um rascunho para este aluno.", { description: "Continue a edição do rascunho existente ou exclua-o para criar uma nova rotina." });
+      toast.error("Rascunho existente", { description: "Continue a edição do rascunho na aba 'Rascunho' ou exclua-o para criar uma nova rotina." });
       setIsCheckingRotina(null);
       return;
     }
 
-    // Em vez de navegar, fecha o primeiro modal, guarda o aluno e abre o segundo
-    setIsCreateModalOpen(false);
+    // Guarda o aluno e abre o modal de opções de criação
     setIsCheckingRotina(null); // Reseta o estado de verificação
     setAlunoSelecionado(alunoId);
     setShowCriarOpcoesModal(true);
@@ -409,412 +359,382 @@ const RotinasPT = () => {
     );
   }
 
-  return (
-    <div className="space-y-6">
-      {isDesktop && (
-        <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold">Rotinas</h1>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => setShowStatusInfoDialog(true)}
-                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                title="Informações sobre status das rotinas"
-              >
-                <Info className="h-4 w-4" />
-              </Button>
-            </div>
-            <p className="text-muted-foreground">Gerencie as rotinas de todos os seus alunos.</p>
-        </div>
-      )}
-
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'atual' | 'rascunho' | 'encerradas')} className="w-full space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="rascunho">Rascunho ({rotinasRascunhoCount})</TabsTrigger>
-            <TabsTrigger value="atual">Atual ({rotinasAtuaisCount})</TabsTrigger>
-            <TabsTrigger value="encerradas">Encerradas ({rotinasEncerradasCount})</TabsTrigger>
-          </TabsList>
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Buscar por nome da rotina..."
-                value={busca}
-                onChange={e => setBusca(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Button
-              variant="outline"
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex-shrink-0 md:hidden relative h-10 w-10 p-0 [&_svg]:size-6"
-              aria-label="Mostrar filtros"
+return (
+  <div className="space-y-6">
+    {isDesktop && (
+      <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold">Rotinas</h1>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setShowStatusInfoDialog(true)}
+              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+              title="Informações sobre status das rotinas"
             >
-              <Filter />
-              {temFiltrosAtivos && <span className="absolute top-[-2px] left-[-2px] block h-3 w-3 rounded-full bg-secondary ring-2 ring-white" />}
-            </Button>
-            <Button variant="outline" onClick={() => setShowFilters(!showFilters)} className="hidden md:flex items-center gap-2 relative">
-              <Filter className="h-4 w-4" /> Filtros
-              {temFiltrosAtivos && <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-secondary ring-1 ring-background" />}
+              <Info className="h-4 w-4" />
             </Button>
           </div>
+          <p className="text-muted-foreground">Gerencie as rotinas de todos os seus alunos.</p>
+      </div>
+    )}
 
-          {showFilters && (
-            <div className="p-4 border rounded-lg bg-background">
-              <div className="flex flex-col sm:flex-row sm:items-end gap-4">
-                <div className="space-y-2 flex-1">
-                  <Label htmlFor="filtro-aluno">Aluno</Label>
-                  <CustomSelect
-                    inputId="filtro-aluno"
-                    value={ALUNOS_OPTIONS.find(opt => opt.value === alunoFiltro)}
-                    onChange={(option) => setAlunoFiltro(option ? String(option.value) : 'todos')}
-                    options={ALUNOS_OPTIONS} />
-                </div>
-                <div className="space-y-2 flex-1">
-                  <Label htmlFor="filtro-objetivo">Objetivo</Label>
-                  <CustomSelect inputId="filtro-objetivo" value={FILTRO_OBJETIVOS_OPTIONS.find(opt => opt.value === filtros.objetivo)} onChange={(option) => setFiltros(prev => ({ ...prev, objetivo: option ? String(option.value) : 'todos' }))} options={FILTRO_OBJETIVOS_OPTIONS} />
-                </div>
-                <div className="space-y-2 flex-1">
-                  <Label htmlFor="filtro-frequencia">Frequência</Label>
-                  <CustomSelect inputId="filtro-frequencia" value={FILTRO_FREQUENCIAS_OPTIONS.find(opt => opt.value === filtros.frequencia)} onChange={(option) => setFiltros(prev => ({ ...prev, frequencia: option ? String(option.value) : 'todos' }))} options={FILTRO_FREQUENCIAS_OPTIONS} />
-                </div>
-                {temFiltrosAtivos && ( // O botão de limpar continua usando a mesma lógica
-                  <Button variant="outline" size="sm" onClick={limparFiltros} className="flex items-center gap-2 w-full sm:w-auto flex-shrink-0"><X className="h-4 w-4" /> Limpar</Button>
-                )}
-              </div>
-            </div>
-          )}
+    {/* Card de Estatísticas */}
+    <Card>
+      <CardContent className="p-4">
+        <div className="grid grid-cols-4 divide-x divide-border text-center">
+          <div className="px-2">
+            <p className="text-2xl font-bold">{rotinaCounts.ativas}</p>
+            <p className="text-xs font-medium text-muted-foreground">Ativas</p>
+          </div>
+          <div className="px-2">
+            <p className="text-2xl font-bold">{rotinaCounts.bloqueadas}</p>
+            <p className="text-xs font-medium text-muted-foreground">Bloqueadas</p>
+          </div>
+          <div className="px-2">
+            <p className="text-2xl font-bold">{rotinaCounts.rascunho}</p>
+            <p className="text-xs font-medium text-muted-foreground">Rascunhos</p>
+          </div>
+          <div className="px-2">
+            <p className="text-2xl font-bold">{rotinaCounts.encerradas}</p>
+            <p className="text-xs font-medium text-muted-foreground">Encerradas</p>
+          </div>
         </div>
+      </CardContent>
+    </Card>
 
-        <TabsContent value={activeTab} className="mt-0">
-          {Object.keys(rotinasFiltradas).length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                <FileText className="h-16 w-16 text-muted-foreground mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Nenhuma rotina encontrada</h3>
-                <p className="text-muted-foreground mb-6 max-w-md">
-                  Não há rotinas com o status "{activeTab}" para o filtro selecionado.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-6 pb-32 md:pb-20">
-              {Object.values(rotinasFiltradas).map(({ aluno, rotinas }) => (
-                <Card key={aluno.id}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        {aluno.avatar_type === 'image' && aluno.avatar_image_url ? (
-                          <AvatarImage src={aluno.avatar_image_url} alt={aluno.nome_completo} />
-                        ) : (
-                          <AvatarFallback style={{ backgroundColor: aluno.avatar_color || '#ccc' }} className="text-white font-semibold">
-                            {aluno.avatar_letter}
-                          </AvatarFallback>
-                        )}
-                      </Avatar>
-                      {aluno.nome_completo}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {rotinas.map(rotina => {
-                      const isRascunho = rotina.status === 'Rascunho';
-                      const isAtiva = rotina.status === 'Ativa';
-                      const isBloqueada = rotina.status === 'Bloqueada';
-                      const isEncerrada = rotina.status === 'Concluída' || rotina.status === 'Cancelada';
-                      return (
-                        <div key={rotina.id} className="border rounded-lg p-6 hover:bg-muted/50 transition-colors">
-                          <div className="flex items-start justify-between mb-4">
-                            <div>
-                              <h4 className="text-lg font-semibold">{rotina.nome}</h4>
-                              <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1 mb-2">
-                                <UserIcon className="h-3 w-3" />
-                                <span>Criada por você</span>
-                              </div>
-                              <div className="flex items-center gap-2 mb-2 mt-2">
-                                <Badge className={
-                                  isAtiva ? 'bg-green-100 text-green-800' :
-                                  isBloqueada ? 'bg-red-100 text-red-800' :
-                                  isRascunho ? 'bg-gray-100 text-gray-800' :
-                                  rotina.status === 'Concluída' ? 'bg-blue-100 text-blue-800' :
-                                  'bg-orange-100 text-orange-800'
-                                }>
-                                  {rotina.status} 
-                                </Badge>
-                              </div>
-                            </div>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4" onClick={(e) => e.stopPropagation()} disabled={isUpdatingStatus}><MoreVertical /></Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                {isRascunho ? (
-                                  <DropdownMenuItem onClick={() => handleContinuarRascunho(rotina)}><Play className="mr-2 h-5 w-5" /><span className="text-base">Continuar Edição</span></DropdownMenuItem>
-                                ) : isEncerrada ? (
-                                  <DropdownMenuItem onClick={() => handleVerDetalhesEncerrada(rotina)}><Eye className="mr-2 h-5 w-5" /><span className="text-base">Ver Detalhes</span></DropdownMenuItem>
-                                ) : (
-                                  <DropdownMenuItem onClick={() => navigate(`/alunos-rotinas/${rotina.aluno_id}/${rotina.id}`)}><Eye className="mr-2 h-5 w-5" /><span className="text-base">Detalhes</span></DropdownMenuItem>
-                                )}
-                                {isAtiva && <DropdownMenuItem onClick={() => navigate(`/execucao-rotina/selecionar-treino/${rotina.id}`, { state: { modo: 'professor' } })}><Play className="mr-2 h-5 w-5" /><span className="text-base">Treinar</span></DropdownMenuItem> }
-                                {isAtiva && <DropdownMenuItem onClick={() => handleUpdateRotinaStatus(rotina, 'Bloqueada')}><Ban className="mr-2 h-5 w-5" /><span className="text-base">Bloquear</span></DropdownMenuItem> }
-                                {isBloqueada && <DropdownMenuItem onClick={() => handleUpdateRotinaStatus(rotina, 'Ativa')}><Activity className="mr-2 h-5 w-5" /><span className="text-base">Reativar</span></DropdownMenuItem> }                                
-                                <DropdownMenuItem onClick={() => handleExcluirRotina(rotina)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-5 w-5" /><span className="text-base">Excluir</span></DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-                            <div className="flex items-center gap-2"><Target className="h-4 w-4 text-muted-foreground" /><div><p className="text-sm text-muted-foreground">Objetivo</p><p className="font-medium capitalize">{rotina.objetivo}</p></div></div>
-                            <div className="flex items-center gap-2"><BicepsFlexed className="h-4 w-4 text-muted-foreground" /><div><p className="text-sm text-muted-foreground">Dificuldade</p><p className="font-medium capitalize">{rotina.dificuldade}</p></div></div>
-                            <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /><div><p className="text-sm text-muted-foreground">Duração</p><p className="font-medium">{rotina.duracao_semanas} semanas</p></div></div>
-                            <div className="flex items-center gap-2"><Repeat className="h-4 w-4 text-muted-foreground" /><div><p className="text-sm text-muted-foreground">Frequência</p><p className="font-medium">{rotina.treinos_por_semana}x por semana</p></div></div>
-                          </div>
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Buscar por nome do aluno..."
+              value={busca}
+              onChange={e => setBusca(e.target.value)}
+              className="pl-10"
+            />
+        </div>
+      </div>
+    </div>
+
+    {alunosComRotinasFiltradas.length === 0 ? (
+      <Card className="border-dashed">
+        <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+          <Users className="h-16 w-16 text-muted-foreground mb-4" />
+          <h3 className="text-xl font-semibold mb-2">Nenhum aluno encontrado</h3>
+          <p className="text-muted-foreground mb-6 max-w-md">
+            {alunos.length === 0
+              ? 'Você ainda não tem alunos. Adicione alunos para começar a criar rotinas.'
+              : 'Nenhum aluno corresponde à sua busca.'}
+          </p>
+        </CardContent>
+      </Card>
+    ) : (
+      <div className="space-y-6 pb-32 md:pb-20 max-w-5xl mx-auto">
+        {alunosComRotinasFiltradas.map(({ aluno, rotinas }) => (
+          <Card key={aluno.id} className="relative">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3">
+                <Avatar className="h-8 w-8">
+                  {aluno.avatar_type === 'image' && aluno.avatar_image_url ? (
+                    <AvatarImage src={aluno.avatar_image_url} alt={aluno.nome_completo} />
+                  ) : (
+                    <AvatarFallback style={{ backgroundColor: aluno.avatar_color || '#ccc' }} className="text-white font-semibold">
+                      {aluno.avatar_letter}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+                <Link to={`/alunos-rotinas/${aluno.id}`} className="hover:underline">
+                  {aluno.nome_completo}
+                </Link>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pb-20">
+              <Tabs 
+                value={activeTabs[aluno.id] || 'atual'} 
+                onValueChange={(tab) => setActiveTabs(prev => ({ ...prev, [aluno.id]: tab }))}
+                className="w-full"
+              >
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="atual">Atual ({rotinas.atual.length})</TabsTrigger>
+                  <TabsTrigger value="rascunho">Rascunho ({rotinas.rascunho.length})</TabsTrigger>
+                  <TabsTrigger value="encerradas">Encerradas ({rotinas.encerradas.length})</TabsTrigger>
+                </TabsList>
+
+                {(['atual', 'rascunho', 'encerradas'] as const).map(tab => (
+                  <TabsContent key={tab} value={tab} className="mt-4">
+                    {rotinas[tab].length === 0 ? (
+                      <Card className="border-dashed min-h-[180px]">
+                        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                          <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                          <h3 className="text-lg font-semibold mb-2">
+                            {tab === 'atual' && 'Nenhuma rotina atual'}
+                            {tab === 'rascunho' && 'Nenhum rascunho'}
+                            {tab === 'encerradas' && 'Nenhuma rotina encerrada'}
+                          </h3>
+                        </CardContent>
+                      </Card>
+                    ) : tab === 'encerradas' ? (
+                      <Tabs 
+                        value={nestedActiveTabs[aluno.id] || '1ano'} 
+                        onValueChange={(nestedTab) => setNestedActiveTabs(prev => ({ ...prev, [aluno.id]: nestedTab }))}
+                        className="w-full"
+                      >
+                        <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0">
+                          <TabsTrigger 
+                            value="1ano" 
+                            className="relative h-9 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none"
+                          >Último ano</TabsTrigger>
+                          <TabsTrigger 
+                            value="2anos" 
+                            className="relative h-9 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none"
+                          >2 anos</TabsTrigger>
+                          <TabsTrigger 
+                            value="3anos" 
+                            className="relative h-9 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none"
+                          >3 anos</TabsTrigger>
+                          <TabsTrigger 
+                            value="todas" 
+                            className="relative h-9 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none"
+                          >Todas</TabsTrigger>
+                        </TabsList>
+                        {(['1ano', '2anos', '3anos', 'todas'] as const).map(periodo => {
+                          const getFilteredRotinas = () => {
+                            const now = new Date();
+                            if (periodo === '1ano') {
+                              const oneYearAgo = new Date(new Date().setFullYear(now.getFullYear() - 1));
+                              return rotinas.encerradas.filter(r => new Date(r.updated_at) >= oneYearAgo);
+                            }
+                            if (periodo === '2anos') {
+                              const twoYearsAgo = new Date(new Date().setFullYear(now.getFullYear() - 2));
+                              return rotinas.encerradas.filter(r => new Date(r.updated_at) >= twoYearsAgo);
+                            }
+                            if (periodo === '3anos') {
+                              const threeYearsAgo = new Date(new Date().setFullYear(now.getFullYear() - 3));
+                              return rotinas.encerradas.filter(r => new Date(r.updated_at) >= threeYearsAgo);
+                            }
+                            return rotinas.encerradas;
+                          };
                           
-                          {isEncerrada && (
-                            <div className="mt-4 pt-4 border-t">
-                              <div className="flex items-center gap-2 text-sm">
-                                <CalendarCheck className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-muted-foreground">Encerrada em:</span><span className="font-medium">{new Date(rotina.updated_at).toLocaleDateString('pt-BR')}</span>
+                          const filteredRotinas = getFilteredRotinas();
+                          
+                          return (
+                            <TabsContent key={periodo} value={periodo} className="mt-4">
+                              {filteredRotinas.length === 0 ? (
+                                <div className="text-center py-8 text-muted-foreground">
+                                  <p>Nenhuma rotina encerrada neste período.</p>
+                                </div>
+                              ) : (
+                                <div className="space-y-4">
+                                  {filteredRotinas.map(rotina => {
+                                    const rotinaCardProps: RotinaCardProps = { id: rotina.id, nome: rotina.nome, status: rotina.status!, data_inicio: rotina.data_inicio, duracao_semanas: rotina.duracao_semanas, aluno_id: aluno.id, aluno: aluno, objetivo: rotina.objetivo, dificuldade: rotina.dificuldade, treinos_por_semana: rotina.treinos_por_semana, descricao: rotina.descricao, updated_at: rotina.updated_at };
+                                    return (
+                                      <div key={rotina.id} className="border rounded-lg p-6 hover:bg-muted/50 transition-colors">
+                                        <div className="flex items-start justify-between mb-4">
+                                          <div className="flex-1 min-w-0">
+                                            <h4 className="text-lg font-semibold">{rotina.nome}</h4>
+                                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1 mb-2"><UserIcon className="h-3 w-3" /><span>Criada por você</span></div>
+                                            <div className="flex items-center gap-2 mb-2 mt-2">
+                                              <Badge className={rotina.status === 'Concluída' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'}>{rotina.status}</Badge>
+                                            </div>
+                                          </div>
+                                          <DropdownMenu>
+                                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4" onClick={(e) => e.stopPropagation()} disabled={isUpdatingStatus}><MoreVertical /></Button></DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                              <DropdownMenuItem onClick={() => handleVerDetalhesEncerrada(rotinaCardProps)}><Eye className="mr-2 h-5 w-5" /><span className="text-base">Ver Detalhes</span></DropdownMenuItem>
+                                              <DropdownMenuItem onClick={() => handleExcluirRotina(rotinaCardProps)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-5 w-5" /><span className="text-base">Excluir</span></DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                          </DropdownMenu>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                                          <div className="flex items-center gap-2"><Target className="h-4 w-4 text-muted-foreground" /><div><p className="text-sm text-muted-foreground">Objetivo</p><p className="font-medium capitalize">{rotina.objetivo}</p></div></div>
+                                          <div className="flex items-center gap-2"><BicepsFlexed className="h-4 w-4 text-muted-foreground" /><div><p className="text-sm text-muted-foreground">Dificuldade</p><p className="font-medium capitalize">{rotina.dificuldade}</p></div></div>
+                                          <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /><div><p className="text-sm text-muted-foreground">Duração</p><p className="font-medium">{rotina.duracao_semanas} semanas</p></div></div>
+                                          <div className="flex items-center gap-2"><Repeat className="h-4 w-4 text-muted-foreground" /><div><p className="text-sm text-muted-foreground">Frequência</p><p className="font-medium">{rotina.treinos_por_semana}x por semana</p></div></div>
+                                        </div>
+                                        <div className="mt-4 pt-4 border-t">
+                                          <div className="flex items-center gap-2 text-sm">
+                                            <CalendarCheck className="h-4 w-4 text-muted-foreground" />
+                                            <span className="text-muted-foreground">Encerrada em:</span><span className="font-medium">{new Date(rotina.updated_at).toLocaleDateString('pt-BR')}</span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </TabsContent>
+                          )
+                        })}
+                      </Tabs>
+                    ) : (
+                      <div className="space-y-4">
+                        {rotinas[tab].map(rotina => {
+                          const rotinaCardProps: RotinaCardProps = { id: rotina.id, nome: rotina.nome, status: rotina.status!, data_inicio: rotina.data_inicio, duracao_semanas: rotina.duracao_semanas, aluno_id: aluno.id, aluno: aluno, objetivo: rotina.objetivo, dificuldade: rotina.dificuldade, treinos_por_semana: rotina.treinos_por_semana, descricao: rotina.descricao, updated_at: rotina.updated_at };
+                          const isRascunho = rotina.status === 'Rascunho';
+                          const isAtiva = rotina.status === 'Ativa';
+                          const isBloqueada = rotina.status === 'Bloqueada';
+                        return (
+                            <div key={rotina.id} className="border rounded-lg p-6 hover:bg-muted/50 transition-colors">
+                              <div className="flex items-start justify-between mb-4">
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="text-lg font-semibold">{rotina.nome}</h4>
+                                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1 mb-2"><UserIcon className="h-3 w-3" /><span>Criada por você</span></div>
+                                  <div className="flex items-center gap-2 mb-2 mt-2"><Badge className={isAtiva ? 'bg-green-100 text-green-800' : isBloqueada ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}>{rotina.status}</Badge></div>
+                                </div>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4" onClick={(e) => e.stopPropagation()} disabled={isUpdatingStatus}><MoreVertical /></Button></DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    {isRascunho ? (<DropdownMenuItem onClick={() => handleContinuarRascunho(rotinaCardProps)}><Play className="mr-2 h-5 w-5" /><span className="text-base">Continuar Edição</span></DropdownMenuItem>) : (<DropdownMenuItem onClick={() => navigate(`/alunos-rotinas/${rotina.aluno_id}/${rotina.id}`)}><Eye className="mr-2 h-5 w-5" /><span className="text-base">Detalhes</span></DropdownMenuItem>)}
+                                    {isAtiva && <DropdownMenuItem onClick={() => navigate(`/execucao-rotina/selecionar-treino/${rotina.id}`, { state: { modo: 'professor' } })}><Play className="mr-2 h-5 w-5" /><span className="text-base">Treinar</span></DropdownMenuItem>}
+                                    {isAtiva && <DropdownMenuItem onClick={() => handleUpdateRotinaStatus(rotinaCardProps, 'Bloqueada')}><Ban className="mr-2 h-5 w-5" /><span className="text-base">Bloquear</span></DropdownMenuItem>}
+                                    {isBloqueada && <DropdownMenuItem onClick={() => handleUpdateRotinaStatus(rotinaCardProps, 'Ativa')}><Activity className="mr-2 h-5 w-5" /><span className="text-base">Reativar</span></DropdownMenuItem>}
+                                    <DropdownMenuItem onClick={() => handleExcluirRotina(rotinaCardProps)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-5 w-5" /><span className="text-base">Excluir</span></DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </div>
+                              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                                <div className="flex items-center gap-2"><Target className="h-4 w-4 text-muted-foreground" /><div><p className="text-sm text-muted-foreground">Objetivo</p><p className="font-medium capitalize">{rotina.objetivo}</p></div></div>
+                                <div className="flex items-center gap-2"><BicepsFlexed className="h-4 w-4 text-muted-foreground" /><div><p className="text-sm text-muted-foreground">Dificuldade</p><p className="font-medium capitalize">{rotina.dificuldade}</p></div></div>
+                                <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" /><div><p className="text-sm text-muted-foreground">Duração</p><p className="font-medium">{rotina.duracao_semanas} semanas</p></div></div>
+                                <div className="flex items-center gap-2"><Repeat className="h-4 w-4 text-muted-foreground" /><div><p className="text-sm text-muted-foreground">Frequência</p><p className="font-medium">{rotina.treinos_por_semana}x por semana</p></div></div>
+                              </div>
+                              {rotina.descricao && (<div className="pt-3 border-t"><p className="text-sm text-muted-foreground mb-1">Descrição:</p><p className="text-sm">{rotina.descricao}</p></div>)}
                             </div>
-                          )}
-
-                          {rotina.descricao && (
-                            <div className="pt-3 border-t">
-                              <p className="text-sm text-muted-foreground mb-1">Descrição:</p>
-                              <p className="text-sm">{rotina.descricao}</p>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-        <TabsContent value="encerradas">
-          {Object.keys(rotinasFiltradas).length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                <FileText className="h-16 w-16 text-muted-foreground mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Nenhuma rotina encerrada</h3>
-                <p className="text-muted-foreground mb-6 max-w-md">
-                  Não há rotinas com o status "Encerrada" para o filtro selecionado.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-6 pb-32 md:pb-20">
-              {Object.values(rotinasFiltradas).map(({ aluno, rotinas }) => (
-                <Card key={aluno.id}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        {aluno.avatar_type === 'image' && aluno.avatar_image_url ? (
-                          <AvatarImage src={aluno.avatar_image_url} alt={aluno.nome_completo} />
-                        ) : (
-                          <AvatarFallback style={{ backgroundColor: aluno.avatar_color || '#ccc' }} className="text-white font-semibold">
-                            {aluno.avatar_letter}
-                          </AvatarFallback>
-                        )}
-                      </Avatar>
-                      {aluno.nome_completo}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {rotinas.map(rotina => (
-                      <div key={rotina.id} className="border rounded-lg p-6 hover:bg-muted/50 transition-colors">
-                        <div className="flex items-start justify-between mb-4">
-                          <div>
-                            <h4 className="text-lg font-semibold">{rotina.nome}</h4>
-                            <div className="flex items-center gap-2 mb-2 mt-2">
-                              <Badge className={rotina.status === 'Concluída' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}>
-                                {rotina.status}
-                              </Badge>
-                            </div>
-                          </div>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4" onClick={(e) => e.stopPropagation()}><MoreVertical /></Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => navigate(`/alunos-rotinas/${rotina.aluno_id}/${rotina.id}`)}><Eye className="mr-2 h-5 w-5" /><span className="text-base">Ver Detalhes</span></DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleExcluirRotina(rotina)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-5 w-5" /><span className="text-base">Excluir</span></DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-        {/* O conteúdo da aba 'encerradas' já foi adicionado na alteração anterior, então está correto. */}
-      </Tabs>
-
-      {/* Botão Flutuante para Nova Rotina */}
-      <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
-        <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-          <DialogTrigger asChild>
-            <Button
-              onClick={handleAbrirModalSelecaoAluno}
-              className="rounded-full h-12 w-12 p-0 shadow-lg flex items-center justify-center [&_svg]:size-7"
-              aria-label="Nova Rotina"
-            >
-              <Plus />
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[425px] rounded-md">
-            <DialogHeader>
-              <DialogTitle>Criar Nova Rotina</DialogTitle>
-              <p className="text-sm text-muted-foreground pt-1">Selecione o aluno para quem você deseja criar a nova rotina.</p>
-            </DialogHeader>
-            <div className="py-4 max-h-[60vh] overflow-y-auto">
-              <div className="space-y-2">
-                {alunos.map(aluno => (
-                  <button
-                    key={aluno.id}
-                    onClick={() => handleSelectAlunoParaNovaRotina(aluno.id)}
-                    disabled={!!isCheckingRotina}
-                    className="w-full flex items-center p-3 hover:bg-muted/50 rounded-lg cursor-pointer transition-colors text-left disabled:cursor-not-allowed disabled:opacity-70">
-                    <Avatar className="h-10 w-10 mr-4">
-                      {aluno.avatar_type === 'image' && aluno.avatar_image_url ? (
-                        <AvatarImage src={aluno.avatar_image_url} alt={aluno.nome_completo} />
-                      ) : (
-                        <AvatarFallback style={{ backgroundColor: aluno.avatar_color || '#ccc' }} className="text-white font-semibold">
-                          {aluno.avatar_letter}
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
-                    <p className="font-medium flex-1">{aluno.nome_completo}</p>
-                    {isCheckingRotina === aluno.id && (
-                      <div className="ml-4">
-                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                          );
+                        })}
                       </div>
                     )}
-                  </button>
+                  </TabsContent>
                 ))}
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Modal de Informações sobre Status */}
-      <AlertDialog open={showStatusInfoDialog} onOpenChange={setShowStatusInfoDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Situação das Rotinas</AlertDialogTitle>
-          </AlertDialogHeader>
-          <div className="space-y-4 pt-2">
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 rounded-full bg-gray-500 mt-2 flex-shrink-0"></div>
-              <div>
-                <p className="font-medium text-gray-800 mb-1">Rascunho</p>
-                <p className="text-sm text-muted-foreground">
-                  Rotina em processo de criação pelo professor, ainda não finalizada.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
-              <div>
-                <p className="font-medium text-green-800 mb-1">Ativa</p>
-                <p className="text-sm text-muted-foreground">
-                  Aluno pode acessar e executar os treinos normalmente. A rotina é exibida na aba "Atual".
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 rounded-full bg-red-500 mt-2 flex-shrink-0"></div>
-              <div>
-                <p className="font-medium text-red-800 mb-1">Bloqueada</p>
-                <p className="text-sm text-muted-foreground">
-                  Acesso aos treinos foi suspenso temporariamente pelo professor. A rotina é exibida na aba "Atual".
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 rounded-full bg-orange-500 mt-2 flex-shrink-0"></div>
-              <div>
-                <p className="font-medium text-orange-800 mb-1">Cancelada</p>
-                <p className="text-sm text-muted-foreground">
-                  Rotina interrompida por uma ação administrativa, como a exclusão da conta do Professor. A rotina é movida para a aba "Encerradas" como parte do histórico.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
-              <div>
-                <p className="font-medium text-blue-800 mb-1">Concluída</p>
-                <p className="text-sm text-muted-foreground">
-                  Todas as sessões da rotina foram executadas. A rotina é movida para a aba "Encerradas" como parte do histórico.
-                </p>
-              </div>
-            </div>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Fechar</AlertDialogCancel>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Modal de Confirmação de Exclusão */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Rotina?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir a rotina "{rotinaParaExcluir?.nome}"? Esta ação não pode ser desfeita e todos os dados associados (treinos, exercícios, séries) serão removidos permanentemente.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setRotinaParaExcluir(null)} disabled={isUpdatingStatus}>Cancelar</AlertDialogCancel>
-            <Button variant="destructive" onClick={handleConfirmarExclusao} disabled={isUpdatingStatus}>
-              {isUpdatingStatus ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Excluindo...</> : 'Excluir'}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Modal de Opções de Criação */}
-      <Dialog open={showCriarOpcoesModal} onOpenChange={setShowCriarOpcoesModal}>
-        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[425px] rounded-md">
-          <DialogHeader>
-            <DialogTitle>Como criar a rotina?</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <Button onClick={handleCriarDoZero} className="w-full" size="lg">
-              Rotina em Branco
-            </Button>
-            {loadingModelos ? (
-              <Button disabled className="w-full" size="lg">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Verificando modelos...
-              </Button>
-            ) : temModelos ? (
-              <Button onClick={handleUsarModelo} className="w-full" variant="outline" size="lg">
-                Usar um Modelo
-              </Button>
-            ) : (
-              <div className="text-center text-sm text-muted-foreground pt-2">
-                Dica: Crie modelos de rotina para agilizar seu trabalho.
+              </Tabs>
+            </CardContent>
+            {/* Botão Flutuante para Nova Rotina (visível apenas na aba 'atual') */}
+            {(activeTabs[aluno.id] || 'atual') === 'atual' && (
+              <div className="absolute bottom-4 right-4">
+                  <Button
+                    onClick={() => handleNovaRotinaParaAluno(aluno.id)}
+                    disabled={!!isCheckingRotina}
+                    className="rounded-full h-12 w-12 p-0 shadow-lg flex items-center justify-center [&_svg]:size-7"
+                    aria-label="Nova Rotina"
+                    title="Nova Rotina"
+                  >
+                    {isCheckingRotina === aluno.id ? <Loader2 className="animate-spin" /> : <Plus />}
+                  </Button>
               </div>
             )}
-          </div>
-        </DialogContent>
-      </Dialog>
+          </Card>
+        ))}
+      </div>
+    )}
 
-    </div>
-  );
+    {/* Modal de Informações sobre Status */}
+    <AlertDialog open={showStatusInfoDialog} onOpenChange={setShowStatusInfoDialog}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Situação das Rotinas</AlertDialogTitle>
+        </AlertDialogHeader>
+        <div className="space-y-4 pt-2">
+          <div className="flex items-start gap-3">
+            <div className="w-2 h-2 rounded-full bg-gray-500 mt-2 flex-shrink-0"></div>
+            <div>
+              <p className="font-medium text-gray-800 mb-1">Rascunho</p>
+              <p className="text-sm text-muted-foreground">
+                Rotina em processo de criação pelo professor, ainda não finalizada.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
+            <div>
+              <p className="font-medium text-green-800 mb-1">Ativa</p>
+              <p className="text-sm text-muted-foreground">
+                Aluno pode acessar e executar os treinos normalmente. A rotina é exibida na aba "Atual".
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <div className="w-2 h-2 rounded-full bg-red-500 mt-2 flex-shrink-0"></div>
+            <div>
+              <p className="font-medium text-red-800 mb-1">Bloqueada</p>
+              <p className="text-sm text-muted-foreground">
+                Acesso aos treinos foi suspenso temporariamente pelo professor. A rotina é exibida na aba "Atual".
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <div className="w-2 h-2 rounded-full bg-orange-500 mt-2 flex-shrink-0"></div>
+            <div>
+              <p className="font-medium text-orange-800 mb-1">Cancelada</p>
+              <p className="text-sm text-muted-foreground">
+                Rotina interrompida por uma ação administrativa, como a exclusão da conta do Professor. A rotina é movida para a aba "Encerradas" como parte do histórico.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+            <div>
+              <p className="font-medium text-blue-800 mb-1">Concluída</p>
+              <p className="text-sm text-muted-foreground">
+                Todas as sessões da rotina foram executadas. A rotina é movida para a aba "Encerradas" como parte do histórico.
+              </p>
+            </div>
+          </div>
+        </div>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Fechar</AlertDialogCancel>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    {/* Modal de Confirmação de Exclusão */}
+    <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Excluir Rotina?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Tem certeza que deseja excluir a rotina "{rotinaParaExcluir?.nome}"? Esta ação não pode ser desfeita e todos os dados associados (treinos, exercícios, séries) serão removidos permanentemente.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setRotinaParaExcluir(null)} disabled={isUpdatingStatus}>Cancelar</AlertDialogCancel>
+          <Button variant="destructive" onClick={handleConfirmarExclusao} disabled={isUpdatingStatus}>
+            {isUpdatingStatus ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Excluindo...</> : 'Excluir'}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    {/* Modal de Opções de Criação */}
+    <Dialog open={showCriarOpcoesModal} onOpenChange={setShowCriarOpcoesModal}>
+      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[425px] rounded-md">
+        <DialogHeader>
+          <DialogTitle>Como criar a rotina?</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <Button onClick={handleCriarDoZero} className="w-full" size="lg">
+            Rotina em Branco
+          </Button>
+          {loadingModelos ? (
+            <Button disabled className="w-full" size="lg">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Verificando modelos...
+            </Button>
+          ) : temModelos ? (
+            <Button onClick={handleUsarModelo} className="w-full" variant="outline" size="lg">
+              Usar um Modelo
+            </Button>
+          ) : (
+            <div className="text-center text-sm text-muted-foreground pt-2">
+              Dica: Crie modelos de rotina para agilizar seu trabalho.
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  </div>
+);
 };
 
 export default RotinasPT;

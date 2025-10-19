@@ -316,18 +316,12 @@ const ExerciciosPT = () => {
 
           {exerciciosFiltrados.length === 0 ? (
             <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Dumbbell className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">
-                  {exerciciosPadrao.length === 0 ? 'Nenhum exercício padrão disponível' : 'Nenhum exercício encontrado'}
+              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                <Dumbbell className="h-16 w-16 text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold mb-2">
+                  Nenhum exercício encontrado
                 </h3>
-                <p className="text-muted-foreground text-center">
-                  {exerciciosPadrao.length === 0 
-                    ? 'Os exercícios padrão ainda não foram carregados no sistema'
-                    : 'Tente ajustar os filtros ou termos de busca'
-                  }
-                </p>
-                {exerciciosPadrao.length === 0 && (
+                {exerciciosPadrao.length === 0 && !initialLoadComplete && (
                   <Button onClick={refetch} variant="outline" className="mt-4">
                     Tentar Novamente
                   </Button>
@@ -478,12 +472,9 @@ const ExerciciosPT = () => {
 
           {exerciciosPersonalizados.length === 0 && busca === '' && filtros.grupoMuscular === 'todos' ? (
             <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-16">
+              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
                 <Dumbbell className="h-16 w-16 text-muted-foreground mb-4" />
                 <h3 className="text-xl font-semibold mb-2">Nenhum exercício personalizado</h3>
-                <p className="text-muted-foreground text-center mb-6 max-w-md">
-                  Crie exercícios personalizados a partir dos exercícios padrão ou do zero
-                </p>
               </CardContent>
             </Card>
           ) : (
@@ -501,12 +492,9 @@ const ExerciciosPT = () => {
 
               {exerciciosFiltrados.length === 0 ? (
                 <Card className="border-dashed">
-                  <CardContent className="flex flex-col items-center justify-center py-12">
-                    <Dumbbell className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Nenhum exercício encontrado</h3>
-                    <p className="text-muted-foreground text-center">
-                      Tente ajustar os filtros ou termos de busca
-                    </p>
+                  <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                    <Dumbbell className="h-16 w-16 text-muted-foreground mb-4" />
+                    <h3 className="text-xl font-semibold mb-2">Nenhum exercício encontrado</h3>
                   </CardContent>
                 </Card>
             ) : (

@@ -30,8 +30,6 @@ const faqItems = [
         </p>
         <ul className="list-disc pl-6 mt-2 space-y-1">
           <li><strong>Exercícios Personalizados:</strong> Você pode criar até 100 exercícios próprios, com suas fotos e vídeos.</li>
-          <li><strong>Histórico de Rotinas:</strong> O sistema armazena o histórico das últimas 4 rotinas finalizadas por aluno.</li>
-          <li><strong>Histórico de Avaliações:</strong> O sistema armazena o histórico das últimas 4 avaliações físicas por aluno.</li>
           <li><strong>Rotina Ativa:</strong> Cada aluno pode ter apenas uma rotina de treino ativa por vez.</li>
         </ul>
       </>

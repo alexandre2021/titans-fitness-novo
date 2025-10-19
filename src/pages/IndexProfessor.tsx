@@ -47,8 +47,8 @@ type Agendamento = Tables<'agendamentos'> & {
 interface DashboardStats {
   alunosAtivos: number;
   rotinasAtivas: number;
-  meusModelos: number;
   exerciciosPersonalizados: number;
+  avaliacoesUltimoAno: number;
 }
 
 const reagendarSchema = z.object({
@@ -75,8 +75,8 @@ const IndexProfessor = () => {
   const [stats, setStats] = useState<DashboardStats>({
     alunosAtivos: 0,
     rotinasAtivas: 0,
-    meusModelos: 0,
     exerciciosPersonalizados: 0,
+    avaliacoesUltimoAno: 0,
   });
   const [proximosAgendamentos, setProximosAgendamentos] = useState<Agendamento[]>([]);
   const [agendamentoParaReagendar, setAgendamentoParaReagendar] = useState<Agendamento | null>(null);
@@ -110,16 +110,21 @@ const IndexProfessor = () => {
 
       if (deleteError) console.error("Erro ao excluir agendamentos recusados:", deleteError);
 
+      const umAnoAtras = new Date();
+      umAnoAtras.setFullYear(umAnoAtras.getFullYear() - 1);
+
       const [
         { count: seguidores },
         { count: rotinasAtivas },
-        { count: meusModelos },
-        { count: exerciciosPersonalizados }
+        { count: exerciciosPersonalizados },
+        { count: avaliacoesUltimoAno }
       ] = await Promise.all([
         supabase.from('alunos_professores').select('aluno_id', { count: 'exact', head: true }).eq('professor_id', user.id),
         supabase.from('rotinas').select('id', { count: 'exact', head: true }).eq('professor_id', user.id).eq('status', 'Ativa'),
-        supabase.from('modelos_rotina').select('id', { count: 'exact', head: true }).eq('professor_id', user.id),
         supabase.from('exercicios').select('id', { count: 'exact', head: true }).eq('professor_id', user.id).eq('is_ativo', true),
+        supabase.from('avaliacoes_fisicas').select('id', { count: 'exact', head: true })
+          .eq('professor_id', user.id)
+          .gte('data_avaliacao', umAnoAtras.toISOString()),
       ]);
       
       // Busca apenas os próximos agendamentos
@@ -138,8 +143,8 @@ const IndexProfessor = () => {
       setStats({
         alunosAtivos: seguidores || 0,
         rotinasAtivas: rotinasAtivas || 0,
-        meusModelos: meusModelos || 0,
         exerciciosPersonalizados: exerciciosPersonalizados || 0,
+        avaliacoesUltimoAno: avaliacoesUltimoAno || 0,
       });
       setProximosAgendamentos(agendamentosData as Agendamento[] || []);
 
@@ -257,6 +262,20 @@ const IndexProfessor = () => {
 
       {/* Cards de Estatísticas */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Link to="/alunos">
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Alunos</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.alunosAtivos}</div>
+              <p className="text-xs text-muted-foreground">
+                total de alunos que te seguem
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
         <Link to="/exercicios" state={{ activeTab: 'personalizados' }}>
           <Card className="cursor-pointer hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -267,20 +286,6 @@ const IndexProfessor = () => {
               <div className="text-2xl font-bold">{stats.exerciciosPersonalizados}</div>
               <p className="text-xs text-muted-foreground">
                 exercícios personalizados
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link to="/meus-modelos">
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Modelos</CardTitle>
-              <BookCopy className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.meusModelos}</div>
-              <p className="text-xs text-muted-foreground">
-                modelos de rotina de treino
               </p>
             </CardContent>
           </Card>
@@ -299,16 +304,16 @@ const IndexProfessor = () => {
             </CardContent>
           </Card>
         </Link>
-        <Link to="/alunos">
+        <Link to="/avaliacoes">
           <Card className="cursor-pointer hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Alunos</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Avaliações</CardTitle>
+              <BarChart3 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.alunosAtivos}</div>
+              <div className="text-2xl font-bold">{stats.avaliacoesUltimoAno}</div>
               <p className="text-xs text-muted-foreground">
-                total de alunos que te seguem
+                realizadas no último ano
               </p>
             </CardContent>
           </Card>
@@ -384,9 +389,10 @@ const IndexProfessor = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                Nenhum agendamento para este período.
-              </p>
+              <div className="text-center py-10 text-muted-foreground">
+                <Calendar className="h-12 w-12 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold">Nenhum agendamento encontrado</h3>
+              </div>
             )}
             </Tabs>
           </CardContent>

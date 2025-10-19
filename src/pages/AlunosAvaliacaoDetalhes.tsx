@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -52,6 +52,7 @@ const AlunosAvaliacaoDetalhes = () => {
 
   const { id, avaliacaoId } = useParams<{ id: string; avaliacaoId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   
   // Estados principais
@@ -66,6 +67,11 @@ const AlunosAvaliacaoDetalhes = () => {
     costas?: string; 
   }>({});
   const [isLoadingImages, setIsLoadingImages] = useState(false);
+
+  const handleVoltar = () => {
+    // Volta para a página de origem se a informação estiver disponível, senão, volta uma página no histórico.
+    navigate(location.state?.from || -1);
+  };
 
   // Função para obter URL assinada da imagem
   async function getImageUrl(filename: string): Promise<string> {
@@ -328,7 +334,7 @@ const AlunosAvaliacaoDetalhes = () => {
       <div className="hidden md:flex items-center gap-4">
         <Button 
           variant="ghost" 
-          onClick={() => navigate(`/alunos-avaliacoes/${id}`)}
+          onClick={handleVoltar}
           className="h-10 w-10 p-0"
         >
           <ArrowLeft className="h-4 w-4" />

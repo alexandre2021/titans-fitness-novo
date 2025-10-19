@@ -9,14 +9,14 @@ const PTBottomNav = () => {
       icon: LayoutDashboard,
     },
     {
-      title: "Exercícios",
-      href: "/exercicios",
-      icon: Dumbbell,
-    },
-    {
       title: "Alunos",
       href: "/alunos",
       icon: Users,
+    },
+    {
+      title: "Exercícios",
+      href: "/exercicios",
+      icon: Dumbbell,
     },
     {
       title: "Rotinas",

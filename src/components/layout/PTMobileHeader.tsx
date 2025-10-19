@@ -15,14 +15,22 @@ import { LogOut, User, Settings, ArrowLeft, Copy, Info } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfessorProfile } from "@/hooks/useProfessorProfile";
 import { toast } from "sonner";
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from '@/components/ui/alert-dialog';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 
 const PTMobileHeader = () => {
   const { user, signOut } = useAuth();
   const { profile } = useProfessorProfile();
   const location = useLocation();
   const navigate = useNavigate();
-  const [showStatusInfoDialog, setShowStatusInfoDialog] = useState(false);
+  const [showRotinaStatusInfo, setShowRotinaStatusInfo] = useState(false);
+  const [showAlunoStatusInfo, setShowAlunoStatusInfo] = useState(false);
 
   const getPageConfig = (): { 
     title: React.ReactNode; 
@@ -40,6 +48,10 @@ const PTMobileHeader = () => {
     
     // Páginas de Rotina com botão de info
     if (path.startsWith('/rotinas')) return { title: 'Rotinas', subtitle: "Gerencie as rotinas de todos os seus alunos", showBackButton: false, showInfoButton: true };
+    
+    // Página de Alunos com botão de info
+    if (path.startsWith('/alunos')) return { title: 'Alunos', subtitle: "Gerencie seus alunos e acompanhe seu progresso", showBackButton: false, showInfoButton: true };
+
     // Regex para /alunos-rotinas/{uuid}/{uuid} (página de detalhes)
     if (/^\/alunos-rotinas\/[a-zA-Z0-9-]+\/[a-zA-Z0-9-]+\/?$/.test(path)) {
       return { title: 'Detalhes da Rotina', showBackButton: true };
@@ -78,7 +90,6 @@ const PTMobileHeader = () => {
     // Páginas Principais (sem botão de voltar)
     const mainPages: { [key: string]: { title: string; subtitle?: string } } = {
       "/index-professor": { title: "Painel", subtitle: `Bem-vindo, ${profile?.nome_completo?.split(' ')[0] || 'Professor(a)'}!` },
-      "/alunos": { title: "Alunos", subtitle: "Gerencie seus alunos e acompanhe seu progresso" },
       "/exercicios": { title: "Exercícios", subtitle: "Gerencie seus exercícios padrão e personalizados" },
       "/meus-modelos": { title: "Meus Modelos", subtitle: "Gerencie seus modelos de rotina" },
       "/meus-posts": { title: "Meus Posts", subtitle: "Gerencie todos os seus artigos e publicações" },
@@ -156,7 +167,10 @@ const PTMobileHeader = () => {
               <Button 
                 variant="ghost" 
                 size="sm"
-                onClick={() => setShowStatusInfoDialog(true)}
+                onClick={() => {
+                  if (location.pathname.startsWith('/rotinas')) setShowRotinaStatusInfo(true);
+                  if (location.pathname.startsWith('/alunos')) setShowAlunoStatusInfo(true);
+                }}
                 className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground flex-shrink-0"
               >
                 <Info className="h-4 w-4" />
@@ -218,8 +232,8 @@ const PTMobileHeader = () => {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Modal de Informações sobre Status */}
-      <AlertDialog open={showStatusInfoDialog} onOpenChange={setShowStatusInfoDialog}>
+      {/* Modal de Informações sobre Status das Rotinas */}
+      <AlertDialog open={showRotinaStatusInfo} onOpenChange={setShowRotinaStatusInfo}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Situação das Rotinas</AlertDialogTitle>
@@ -265,6 +279,36 @@ const PTMobileHeader = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Fechar</AlertDialogCancel>
           </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Modal de Informações sobre Status dos Alunos */}
+      <AlertDialog open={showAlunoStatusInfo} onOpenChange={setShowAlunoStatusInfo}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Situação dos Alunos</AlertDialogTitle>
+          </AlertDialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
+              <div>
+                <p className="font-medium text-green-800 mb-1">Ativo</p>
+                <p className="text-sm text-muted-foreground">
+                  O aluno completou o cadastro inicial (onboarding) e está pronto para receber rotinas e avaliações.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 rounded-full bg-yellow-500 mt-2 flex-shrink-0"></div>
+              <div>
+                <p className="font-medium text-yellow-800 mb-1">Pendente</p>
+                <p className="text-sm text-muted-foreground">
+                  O aluno se cadastrou na plataforma, mas ainda não finalizou a configuração inicial do seu perfil.
+                </p>
+              </div>
+            </div>
+          </div>
+          <AlertDialogFooter><AlertDialogCancel>Fechar</AlertDialogCancel></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </header>

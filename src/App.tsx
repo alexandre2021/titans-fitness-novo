@@ -63,6 +63,7 @@ import NovoExercicioPadrao from "./pages/NovoExercicioPadrao";
 
 // NOVAS IMPORTAÇÕES PARA EXECUÇÃO
 import RotinasPT from "./pages/RotinasPT.tsx";
+import AvaliacoesPT from "./pages/AvaliacoesPT.tsx";
 import ExecucaoSelecionarTreino from "./pages/ExecucaoSelecionarTreino";
 import ExecucaoExecutarTreino from "./pages/ExecucaoExecutarTreino";
 
@@ -142,6 +143,7 @@ const router = createBrowserRouter([
           { path: "/perfil-pt", element: <PerfilPT /> },
           { path: "/meus-modelos", element: <MeusModelos /> },
           { path: "/configuracoes-pt", element: <ConfiguracoesPT /> },
+          { path: "/avaliacoes", element: <AvaliacoesPT /> },
           { path: "/rotinas", element: <RotinasPT /> }, 
           { path: "/app/ajuda", element: <CentralDeAjuda /> },
           // Rota para a nova página "Mais"

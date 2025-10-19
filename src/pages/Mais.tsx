@@ -5,7 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Link } from 'react-router-dom';
-import { ChevronRight, BookCopy, SquarePen, Home, LifeBuoy } from 'lucide-react';
+import { ChevronRight, BookCopy, SquarePen, Home, LifeBuoy, BarChart3 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const Mais = () => {
@@ -41,14 +41,19 @@ const Mais = () => {
   }, [user, authLoading]);
 
   const baseProfessorLinks = [
+    { href: "/avaliacoes", label: "Avaliações", icon: BarChart3 },
     { href: "/meus-modelos", label: "Meus Modelos", icon: BookCopy },
-    { href: "/app/ajuda", label: "Central de Ajuda", icon: LifeBuoy },
-    { href: "/", label: "Home", icon: Home },
   ];
 
   if (user?.email === 'contato@titans.fitness') {
-    baseProfessorLinks.push({ href: "/meus-posts", label: "Meus Posts", icon: SquarePen });
+    const meusModelosIndex = baseProfessorLinks.findIndex(
+      (link) => link.href === "/meus-modelos"
+    );
+    if (meusModelosIndex !== -1) {
+      baseProfessorLinks.splice(meusModelosIndex + 1, 0, { href: "/meus-posts", label: "Meus Posts", icon: SquarePen });
+    }
   }
+  baseProfessorLinks.push({ href: "/app/ajuda", label: "Central de Ajuda", icon: LifeBuoy }, { href: "/", label: "Home", icon: Home });
   
   const professorLinks = baseProfessorLinks;
 

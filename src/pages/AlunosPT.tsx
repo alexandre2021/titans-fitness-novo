@@ -19,6 +19,14 @@ import {
   DialogTrigger
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Form,
   FormControl,
   FormField,
@@ -33,6 +41,7 @@ import {
   Search,
   Filter,
   X,
+  Info,
   Loader2,
 } from "lucide-react";
 import { useAlunos } from "@/hooks/useAlunos";
@@ -88,6 +97,7 @@ const AlunosPT = () => {
   const [alunoEncontrado, setAlunoEncontrado] = useState<AlunoEncontrado | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [showStatusInfoDialog, setShowStatusInfoDialog] = useState(false);
 
   const refetchAlunos = () => {
     setFetchTrigger(prev => prev + 1);
@@ -222,11 +232,17 @@ const AlunosPT = () => {
       {/* Cabeçalho */}
       {isDesktop && (
         <div className="items-center justify-between">
-          <div>
+          <div className="flex items-center gap-2">
             <h1 className="text-3xl font-bold">Alunos</h1>
-            <p className="text-muted-foreground">
-              Gerencie seus alunos e acompanhe seu progresso
-            </p>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setShowStatusInfoDialog(true)}
+              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+              title="Informações sobre status dos alunos"
+            >
+              <Info className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       )}
@@ -423,6 +439,36 @@ const AlunosPT = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Informações sobre Status */}
+      <AlertDialog open={showStatusInfoDialog} onOpenChange={setShowStatusInfoDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Situação dos Alunos</AlertDialogTitle>
+          </AlertDialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
+              <div>
+                <p className="font-medium text-green-800 mb-1">Ativo</p>
+                <p className="text-sm text-muted-foreground">
+                  O aluno completou o cadastro inicial (onboarding) e está pronto para receber rotinas e avaliações.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 rounded-full bg-yellow-500 mt-2 flex-shrink-0"></div>
+              <div>
+                <p className="font-medium text-yellow-800 mb-1">Pendente</p>
+                <p className="text-sm text-muted-foreground">
+                  O aluno se cadastrou na plataforma, mas ainda não finalizou a configuração inicial do seu perfil.
+                </p>
+              </div>
+            </div>
+          </div>
+          <AlertDialogFooter><AlertDialogCancel>Fechar</AlertDialogCancel></AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
