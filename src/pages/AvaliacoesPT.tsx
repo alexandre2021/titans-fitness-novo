@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useMediaQuery } from '@/hooks/use-media-query';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -32,7 +32,7 @@ type AlunoInfo = {
 type Avaliacao = Tables<'avaliacoes_fisicas'> & {
   aluno: AlunoInfo | null;
 };
-
+ 
 type ActiveLinesState = {
   pesoImc: string[];
   tronco: string[];
@@ -147,6 +147,11 @@ const AvaliacoesPT = () => {
   const [avaliacaoParaExcluir, setAvaliacaoParaExcluir] = useState<Avaliacao | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Estados para o novo fluxo de criação
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [buscaAlunoModal, setBuscaAlunoModal] = useState('');
+  const [isCheckingAvaliacao, setIsCheckingAvaliacao] = useState<string | null>(null);
+
 
   useEffect(() => {
     const fetchDados = async () => {
@@ -191,27 +196,34 @@ const AvaliacoesPT = () => {
   }, [user]);
 
   const alunosComAvaliacoesFiltradas = useMemo(() => {
+    // 1. Filtra os alunos pelo nome
     const alunosFiltrados = alunos.filter(aluno => {
       if (busca !== '' && !aluno.nome_completo.toLowerCase().includes(busca.toLowerCase())) return false;
       return true;
     });
 
+    // 2. Mapeia e agrupa as avaliações, retornando apenas alunos que possuem avaliações
     return alunosFiltrados.map(aluno => {
       const avaliacoesDoAluno = allAvaliacoes.filter(a => a.aluno_id === aluno.id);
 
-      // Inicializa estados para cada aluno
+      // Se o aluno não tem avaliações, não o exibe na lista principal
+      if (avaliacoesDoAluno.length === 0) {
+        return null;
+      }
+
+      // Inicializa estados para gráficos e fotos apenas para alunos que serão exibidos
       if (!activeLines[aluno.id]) {
         setActiveLines(prev => ({ ...prev, [aluno.id]: { pesoImc: ['peso', 'imc'], tronco: ['peito', 'cintura', 'quadril'], superiores: ['braco_d', 'braco_e'], inferiores: ['coxa_d', 'coxa_e'] } }));
       }
       if (avaliacoesDoAluno.length > 1 && startDateIndex[aluno.id] === undefined) {
         setStartDateIndex(prev => ({ ...prev, [aluno.id]: 0 }));
       }
-      if (avaliacoesDoAluno.length > 1 && avaliacaoInicialImagem[aluno.id] === undefined) {
+      if (avaliacoesDoAluno.length > 1 && !avaliacaoInicialImagem[aluno.id]) {
         setAvaliacaoInicialImagem(prev => ({ ...prev, [aluno.id]: avaliacoesDoAluno[avaliacoesDoAluno.length - 1] }));
       }
 
       return { aluno, avaliacoes: avaliacoesDoAluno };
-    });
+    }).filter(Boolean) as { aluno: AlunoInfo; avaliacoes: Avaliacao[] }[];
   }, [alunos, busca, allAvaliacoes, activeLines, startDateIndex, avaliacaoInicialImagem]);
 
   const getIMCClassification = (imc: number) => {
@@ -221,9 +233,23 @@ const AvaliacoesPT = () => {
     return { text: 'Obesidade', color: 'bg-red-500' };
   };
 
-  const handleNovaAvaliacao = (alunoId: string) => {
-    navigate(`/alunos-avaliacoes/${alunoId}/nova`);
+  const handleNovaAvaliacaoParaAluno = (alunoId: string) => {
+    setIsCheckingAvaliacao(alunoId);
+    // A lógica de verificação de intervalo de 30 dias foi movida para a página de nova avaliação
+    // para simplificar este componente.
+    navigate(`/alunos-avaliacoes/${alunoId}/nova`, { state: { from: '/avaliacoes' } });
+    setIsCheckingAvaliacao(null);
   };
+
+  const handleModalSelecaoAlunoOpenChange = (open: boolean) => {
+    setIsCreateModalOpen(open);
+    if (!open) setBuscaAlunoModal('');
+  };
+
+  const alunosFiltradosModal = useMemo(() => {
+    if (!buscaAlunoModal) return alunos;
+    return alunos.filter(aluno => aluno.nome_completo.toLowerCase().includes(buscaAlunoModal.toLowerCase()));
+  }, [alunos, buscaAlunoModal]);
 
   const toggleLine = (alunoId: string, chart: keyof ActiveLinesState, dataKey: string) => {
     setActiveLines(prev => {
@@ -356,14 +382,18 @@ const AvaliacoesPT = () => {
         </div>
       </div>
 
-      {alunosComAvaliacoesFiltradas.length === 0 ? (
+      {alunos.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <Users className="h-16 w-16 text-muted-foreground mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Nenhum aluno encontrado</h3>
+          </CardContent>
+        </Card>
+      ) : alunosComAvaliacoesFiltradas.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <BarChart3 className="h-16 w-16 text-muted-foreground mb-4" />
             <h3 className="text-xl font-semibold mb-2">Nenhuma avaliação encontrada</h3>
-            {alunos.length === 0 && (
-              <p className="text-muted-foreground mb-6 max-w-md">Você ainda não tem alunos com avaliações. Adicione alunos e realize avaliações para começar.</p>
-            )}
           </CardContent>
         </Card>
       ) : (
@@ -570,16 +600,6 @@ const AvaliacoesPT = () => {
                   </TabsContent>
                 </Tabs>
               </CardContent>
-              <div className="absolute bottom-4 right-4">
-                <Button
-                  onClick={() => handleNovaAvaliacao(aluno.id)}
-                  className="rounded-full h-12 w-12 p-0 shadow-lg flex items-center justify-center [&_svg]:size-7"
-                  aria-label="Nova Avaliação"
-                  title="Nova Avaliação"
-                >
-                  <Plus />
-                </Button>
-              </div>
             </Card>
           ))}
         </div>
@@ -611,6 +631,59 @@ const AvaliacoesPT = () => {
               ) : 'Excluir'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Botão FAB Global para Nova Avaliação */}
+      {alunos.length > 0 && (
+        <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-40">
+          <Button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
+            aria-label="Criar nova avaliação"
+            title="Criar nova avaliação"
+          >
+            <Plus />
+          </Button>
+        </div>
+      )}
+
+      {/* Modal de Seleção de Aluno para Nova Avaliação */}
+      <Dialog open={isCreateModalOpen} onOpenChange={handleModalSelecaoAlunoOpenChange}>
+        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[425px] rounded-md flex flex-col max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Nova Avaliação</DialogTitle>
+            <p className="text-sm text-muted-foreground">Selecione um aluno para criar uma nova avaliação física.</p>
+          </DialogHeader>
+          <div className="relative flex-1 flex flex-col">
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Buscar por nome..."
+                value={buscaAlunoModal}
+                onChange={e => setBuscaAlunoModal(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex-1 overflow-y-auto -mx-6 px-6">
+              <div className="space-y-2">
+                {alunosFiltradosModal.length > 0 ? (
+                  alunosFiltradosModal.map(aluno => (
+                    <button
+                      key={aluno.id}
+                      onClick={() => handleNovaAvaliacaoParaAluno(aluno.id)}
+                      disabled={isCheckingAvaliacao === aluno.id}
+                      className={buttonVariants({ variant: 'ghost', className: 'w-full h-auto justify-start p-2 text-left' })}
+                    >
+                      <Avatar className="h-9 w-9 mr-3"><AvatarImage src={aluno.avatar_image_url || undefined} /><AvatarFallback style={{ backgroundColor: aluno.avatar_color || '#ccc' }} className="text-white font-semibold">{aluno.avatar_letter}</AvatarFallback></Avatar>
+                      <span className="flex-1">{aluno.nome_completo}</span>
+                      {isCheckingAvaliacao === aluno.id && <Loader2 className="h-4 w-4 animate-spin" />}
+                    </button>
+                  ))
+                ) : (<p className="text-sm text-muted-foreground text-center py-4">Nenhum aluno encontrado.</p>)}
+              </div>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

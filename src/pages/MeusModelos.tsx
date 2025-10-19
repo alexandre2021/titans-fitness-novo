@@ -221,7 +221,7 @@ const MeusModelos = () => {
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <BookCopy className="h-16 w-16 text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Nenhum modelo de rotina</h3>
+            <h3 className="text-xl font-semibold mb-2">Nenhum modelo encontrado</h3>
             {modelos.length > 0 && (
               <p className="text-muted-foreground mb-6 max-w-md">Tente ajustar os filtros ou o termo de busca.</p>
             )}

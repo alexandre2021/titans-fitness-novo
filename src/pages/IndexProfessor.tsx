@@ -389,10 +389,10 @@ const IndexProfessor = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-10 text-muted-foreground">
-                <Calendar className="h-12 w-12 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold">Nenhum agendamento encontrado</h3>
-              </div>
+              <div className="text-center py-12">
+                  <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">Nenhum agendamento encontrado</h3>
+                </div>
             )}
             </Tabs>
           </CardContent>

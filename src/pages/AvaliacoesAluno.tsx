@@ -455,7 +455,7 @@ const AvaliacoesAluno = () => {
       )}
 
       <Tabs defaultValue="historico" className="w-full">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="historico">Histórico</TabsTrigger>
           <TabsTrigger value="graficos">Evolução (Gráficos)</TabsTrigger>
           <TabsTrigger value="fotos">Evolução (Fotos)</TabsTrigger>
@@ -463,20 +463,11 @@ const AvaliacoesAluno = () => {
 
         <TabsContent value="historico">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <BarChart3 className="h-5 w-5" />
-                Histórico de Avaliações
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               {avaliacoes.length === 0 ? (
                 <div className="text-center py-12">
                   <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Nenhuma avaliação</h3>
-                  <p className="text-muted-foreground">
-                    Suas avaliações físicas aparecerão aqui.
-                  </p>
+                  <h3 className="text-xl font-semibold mb-2">Nenhuma avaliação encontrada</h3>
                 </div>
               ) : (
                 <div className="space-y-4">

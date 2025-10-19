@@ -5,17 +5,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { useMediaQuery } from '@/hooks/use-media-query';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ArrowLeft, Users, Target, Clock, Plus, FileText, MoreVertical, Eye, Play, Ban, Activity, Trash2, BicepsFlexed, Repeat, User as UserIcon, Info, Search, Filter, X, Loader2, CalendarCheck } from 'lucide-react';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+
 import { Label } from '@/components/ui/label';
 import { ExercicioModelo } from './RotinaCriacao';
 import CustomSelect from '@/components/ui/CustomSelect';
@@ -63,14 +65,14 @@ const RotinasPT = () => {
 
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [showStatusInfoDialog, setShowStatusInfoDialog] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false); // Controla o modal de seleção de aluno
   
   // Estados para exclusão
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [rotinaParaExcluir, setRotinaParaExcluir] = useState<RotinaCardProps | null>(null);
 
   const [buscaAlunoModal, setBuscaAlunoModal] = useState('');
-  // Estados para o novo fluxo de criação
+  // Estados para o novo fluxo de criação (consolidados)
   const [alunoSelecionado, setAlunoSelecionado] = useState<string | null>(null);
   const [showCriarOpcoesModal, setShowCriarOpcoesModal] = useState(false);
   const [loadingModelos, setLoadingModelos] = useState(false);
@@ -78,6 +80,10 @@ const RotinasPT = () => {
   const [isCheckingRotina, setIsCheckingRotina] = useState<string | null>(null); // ID do aluno sendo verificado
 
   useEffect(() => {
+    // Limpa o sessionStorage ao montar a página para evitar carregar rascunhos de outros contextos
+    Object.keys(sessionStorage).forEach(key => {
+      if (key.startsWith('rotina_em_criacao_')) sessionStorage.removeItem(key);
+    });
     const fetchRotinasAtivas = async () => {
       if (!user) return;
 
@@ -152,6 +158,11 @@ const RotinasPT = () => {
     return alunosFiltrados.map(aluno => {
       const rotinasDoAluno = allRotinas.filter(r => r.aluno_id === aluno.id);
 
+      // Se o aluno não tem nenhuma rotina, não o exibe na lista.
+      if (rotinasDoAluno.length === 0) {
+        return null;
+      }
+
       const rotinasAgrupadas = {
         rascunho: rotinasDoAluno.filter(r => r.status === 'Rascunho'),
         atual: rotinasDoAluno.filter(r => ['Ativa', 'Bloqueada'].includes(r.status || '')),
@@ -159,7 +170,7 @@ const RotinasPT = () => {
       };
 
       return { aluno, rotinas: rotinasAgrupadas };
-    }).filter(Boolean) as { aluno: AlunoInfo; rotinas: { rascunho: Rotina[]; atual: Rotina[]; encerradas: Rotina[] } }[];
+    }).filter(Boolean) as { aluno: AlunoInfo; rotinas: { rascunho: Rotina[]; atual: Rotina[]; encerradas: Rotina[] } }[]; // filter(Boolean) remove os nulos
   }, [allRotinas, alunos, busca]);
 
   const rotinaCounts = useMemo(() => {
@@ -418,18 +429,25 @@ return (
       </div>
     </div>
 
-    {alunosComRotinasFiltradas.length === 0 ? (
+      {alunos.length === 0 ? (
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-16 text-center">
           <Users className="h-16 w-16 text-muted-foreground mb-4" />
-          <h3 className="text-xl font-semibold mb-2">Nenhum aluno encontrado</h3>
-          <p className="text-muted-foreground mb-6 max-w-md">
-            {alunos.length === 0
-              ? 'Você ainda não tem alunos. Adicione alunos para começar a criar rotinas.'
-              : 'Nenhum aluno corresponde à sua busca.'}
-          </p>
+            <h3 className="text-xl font-semibold mb-2">Nenhum aluno encontrado</h3>
         </CardContent>
       </Card>
+      ) : alunosComRotinasFiltradas.length === 0 ? (
+        <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+              {busca ? (
+                <Users className="h-16 w-16 text-muted-foreground mb-4" />
+              ) : (
+                <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+              )}
+              <h3 className="text-xl font-semibold mb-2">{busca ? 'Nenhum aluno encontrado' : 'Nenhuma rotina encontrada'}</h3>
+              {busca && <p className="text-muted-foreground">Nenhum aluno corresponde à sua busca.</p>}
+            </CardContent>
+        </Card>
     ) : (
       <div className="space-y-6 pb-32 md:pb-20 max-w-5xl mx-auto">
         {alunosComRotinasFiltradas.map(({ aluno, rotinas }) => (
@@ -450,7 +468,7 @@ return (
                 </Link>
               </CardTitle>
             </CardHeader>
-            <CardContent className="pb-20">
+            <CardContent className="pb-4">
               <Tabs 
                 value={activeTabs[aluno.id] || 'atual'} 
                 onValueChange={(tab) => setActiveTabs(prev => ({ ...prev, [aluno.id]: tab }))}
@@ -462,7 +480,7 @@ return (
                   <TabsTrigger value="encerradas">Encerradas ({rotinas.encerradas.length})</TabsTrigger>
                 </TabsList>
 
-                {(['atual', 'rascunho', 'encerradas'] as const).map(tab => (
+                {(['atual', 'rascunho', 'encerradas'] as const).map((tab) => (
                   <TabsContent key={tab} value={tab} className="mt-4">
                     {rotinas[tab].length === 0 ? (
                       <Card className="border-dashed min-h-[180px]">
@@ -476,28 +494,16 @@ return (
                         </CardContent>
                       </Card>
                     ) : tab === 'encerradas' ? (
-                      <Tabs 
+                      <Tabs
                         value={nestedActiveTabs[aluno.id] || '1ano'} 
                         onValueChange={(nestedTab) => setNestedActiveTabs(prev => ({ ...prev, [aluno.id]: nestedTab }))}
                         className="w-full"
                       >
                         <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0">
-                          <TabsTrigger 
-                            value="1ano" 
-                            className="relative h-9 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none"
-                          >Último ano</TabsTrigger>
-                          <TabsTrigger 
-                            value="2anos" 
-                            className="relative h-9 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none"
-                          >2 anos</TabsTrigger>
-                          <TabsTrigger 
-                            value="3anos" 
-                            className="relative h-9 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none"
-                          >3 anos</TabsTrigger>
-                          <TabsTrigger 
-                            value="todas" 
-                            className="relative h-9 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none"
-                          >Todas</TabsTrigger>
+                          <TabsTrigger value="1ano" className="relative h-9 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none">Último ano</TabsTrigger>
+                          <TabsTrigger value="2anos" className="relative h-9 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none">2 anos</TabsTrigger>
+                          <TabsTrigger value="3anos" className="relative h-9 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none">3 anos</TabsTrigger>
+                          <TabsTrigger value="todas" className="relative h-9 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none">Todas</TabsTrigger>
                         </TabsList>
                         {(['1ano', '2anos', '3anos', 'todas'] as const).map(periodo => {
                           const getFilteredRotinas = () => {
@@ -610,20 +616,6 @@ return (
                 ))}
               </Tabs>
             </CardContent>
-            {/* Botão Flutuante para Nova Rotina (visível apenas na aba 'atual') */}
-            {(activeTabs[aluno.id] || 'atual') === 'atual' && (
-              <div className="absolute bottom-4 right-4">
-                  <Button
-                    onClick={() => handleNovaRotinaParaAluno(aluno.id)}
-                    disabled={!!isCheckingRotina}
-                    className="rounded-full h-12 w-12 p-0 shadow-lg flex items-center justify-center [&_svg]:size-7"
-                    aria-label="Nova Rotina"
-                    title="Nova Rotina"
-                  >
-                    {isCheckingRotina === aluno.id ? <Loader2 className="animate-spin" /> : <Plus />}
-                  </Button>
-              </div>
-            )}
           </Card>
         ))}
       </div>
@@ -730,6 +722,71 @@ return (
               Dica: Crie modelos de rotina para agilizar seu trabalho.
             </div>
           )}
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    {/* Botão FAB Global para Nova Rotina */}
+    {alunos.length > 0 && (
+      <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-40">
+        <Button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
+          aria-label="Criar nova rotina"
+          title="Criar nova rotina"
+        >
+          <Plus />
+        </Button>
+      </div>
+    )}
+
+    {/* Modal de Seleção de Aluno para Nova Rotina */}
+    <Dialog open={isCreateModalOpen} onOpenChange={handleModalSelecaoAlunoOpenChange}>
+      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[425px] rounded-md flex flex-col max-h-[80vh]">
+        <DialogHeader>
+          <DialogTitle>Nova Rotina</DialogTitle>
+          <DialogDescription>
+            Selecione um aluno para criar uma nova rotina de treino.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="relative flex-1 flex flex-col">
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Buscar por nome..."
+              value={buscaAlunoModal}
+              onChange={e => setBuscaAlunoModal(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <ScrollArea className="flex-1 -mx-6 px-6">
+            <div className="space-y-2">
+              {alunosFiltradosModal.length > 0 ? (
+                alunosFiltradosModal.map(aluno => (
+                  <button
+                    key={aluno.id}
+                    onClick={() => handleNovaRotinaParaAluno(aluno.id)}
+                    disabled={isCheckingRotina === aluno.id}
+                    className={buttonVariants({ variant: 'ghost', className: 'w-full h-auto justify-start p-2 text-left' })}
+                  >
+                    <Avatar className="h-9 w-9 mr-3">
+                      {aluno.avatar_type === 'image' && aluno.avatar_image_url ? (
+                        <AvatarImage src={aluno.avatar_image_url} alt={aluno.nome_completo} />
+                      ) : (
+                        <AvatarFallback style={{ backgroundColor: aluno.avatar_color || '#ccc' }} className="text-white font-semibold">
+                          {aluno.avatar_letter}
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                    <span className="flex-1">{aluno.nome_completo}</span>
+                    {isCheckingRotina === aluno.id && <Loader2 className="h-4 w-4 animate-spin" />}
+                  </button>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhum aluno encontrado.</p>
+              )}
+            </div>
+          </ScrollArea>
         </div>
       </DialogContent>
     </Dialog>

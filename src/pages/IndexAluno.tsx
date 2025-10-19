@@ -403,7 +403,12 @@ const IndexAluno = () => {
                     </div>
                   ))}
                 </div>
-              ) : (<p className="text-sm text-muted-foreground text-center py-4">Nenhum agendamento para este período.</p>)}
+              ) : (
+                <div className="text-center py-12">
+                  <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">Nenhum agendamento encontrado</h3>
+                </div>
+              )}
             </Tabs>
           </CardContent>
         </Card>

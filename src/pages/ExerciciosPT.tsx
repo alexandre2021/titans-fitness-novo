@@ -474,7 +474,7 @@ const ExerciciosPT = () => {
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-16 text-center">
                 <Dumbbell className="h-16 w-16 text-muted-foreground mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Nenhum exercício personalizado</h3>
+                <h3 className="text-xl font-semibold mb-2">Nenhum exercício encontrado</h3>
               </CardContent>
             </Card>
           ) : (
