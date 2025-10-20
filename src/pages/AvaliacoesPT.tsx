@@ -426,8 +426,8 @@ const AvaliacoesPT = () => {
                 >
                   <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="historico">Histórico</TabsTrigger>
-                    <TabsTrigger value="graficos">Evolução (Gráficos)</TabsTrigger>
-                    <TabsTrigger value="fotos">Evolução (Fotos)</TabsTrigger>
+                    <TabsTrigger value="graficos">Gráficos</TabsTrigger>
+                    <TabsTrigger value="fotos">Antes X Depois</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="historico" className="mt-4">
@@ -488,11 +488,11 @@ const AvaliacoesPT = () => {
                                             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-4"><MoreVertical /></Button>
                                           </DropdownMenuTrigger>
                                           <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                                            <DropdownMenuItem onClick={() => navigate(`/alunos-avaliacoes/${aluno.id}/${avaliacao.id}`, { state: { from: '/avaliacoes' } })}>
+                                            <DropdownMenuItem onClick={() => navigate(`/alunos-avaliacoes/${aluno.id}/${avaliacao.id}`, { state: { from: '/avaliacoes' } })} className="text-base md:text-sm">
                                               <Eye className="mr-2 h-4 w-4" />
                                               <span>Detalhes</span>
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => handleExcluirAvaliacao(avaliacao)} className="text-destructive focus:text-destructive" disabled={user?.id !== avaliacao.professor_id}>
+                                            <DropdownMenuItem onClick={() => handleExcluirAvaliacao(avaliacao)} className="text-base md:text-sm text-destructive focus:text-destructive" disabled={user?.id !== avaliacao.professor_id}>
                                               <Trash2 className="mr-2 h-4 w-4" />
                                               <span>Excluir</span>
                                             </DropdownMenuItem>

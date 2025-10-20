@@ -457,8 +457,8 @@ const AvaliacoesAluno = () => {
       <Tabs defaultValue="historico" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="historico">Histórico</TabsTrigger>
-          <TabsTrigger value="graficos">Evolução (Gráficos)</TabsTrigger>
-          <TabsTrigger value="fotos">Evolução (Fotos)</TabsTrigger>
+          <TabsTrigger value="graficos">Gráficos</TabsTrigger>
+          <TabsTrigger value="fotos">Antes X Depois</TabsTrigger>
         </TabsList>
 
         <TabsContent value="historico">
@@ -506,7 +506,7 @@ const AvaliacoesAluno = () => {
 
         <TabsContent value="graficos">
           <Card>
-            <CardHeader><CardTitle className="flex items-center gap-3"><LineChartIcon className="h-5 w-5" />Evolução (Gráficos)</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-3"><LineChartIcon className="h-5 w-5" />Gráficos</CardTitle></CardHeader>
             <CardContent className="space-y-8 pt-2">
               {avaliacoes.length > 1 ? (
                 <>
@@ -537,7 +537,7 @@ const AvaliacoesAluno = () => {
 
         <TabsContent value="fotos">
           <Card>
-            <CardHeader><CardTitle className="flex items-center gap-3"><Camera className="h-5 w-5" />Evolução (Fotos)</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-3"><Camera className="h-5 w-5" />Antes X Depois</CardTitle></CardHeader>
             <CardContent className="space-y-6 pt-2">
               {avaliacoes.length > 1 ? (
                 <>

@@ -529,8 +529,8 @@ const AlunosAvaliacoes = () => {
       <Tabs defaultValue="historico" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="historico">Histórico</TabsTrigger>
-          <TabsTrigger value="graficos">Evolução (Gráficos)</TabsTrigger>
-          <TabsTrigger value="fotos">Evolução (Fotos)</TabsTrigger>
+          <TabsTrigger value="graficos">Gráficos</TabsTrigger>
+          <TabsTrigger value="fotos">Antes X Depois</TabsTrigger>
         </TabsList>
 
         {/* Aba de Histórico */}
