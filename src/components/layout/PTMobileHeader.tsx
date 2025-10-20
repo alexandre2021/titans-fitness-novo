@@ -91,6 +91,7 @@ const PTMobileHeader = () => {
     const mainPages: { [key: string]: { title: string; subtitle?: string } } = {
       "/index-professor": { title: "Painel", subtitle: `Bem-vindo, ${profile?.nome_completo?.split(' ')[0] || 'Professor(a)'}!` },
       "/exercicios": { title: "Exercícios", subtitle: "Gerencie seus exercícios padrão e personalizados" },
+      "/avaliacoes": { title: "Avaliações", subtitle: "Acompanhe o histórico de avaliações" },
       "/meus-modelos": { title: "Meus Modelos", subtitle: "Gerencie seus modelos de rotina" },
       "/meus-posts": { title: "Meus Posts", subtitle: "Gerencie todos os seus artigos e publicações" },
       "/mais": { title: "Mais Opções", subtitle: "Navegue por outras seções e configurações" },
@@ -184,8 +185,8 @@ const PTMobileHeader = () => {
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-12 w-12 rounded-full">
-            <Avatar className="h-12 w-12">
+          <Button variant="ghost" size="sm" className="h-14 w-14 rounded-full">
+            <Avatar className="h-14 w-14">
               {getAvatarContent()}
             </Avatar>
           </Button>

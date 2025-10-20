@@ -639,7 +639,7 @@ const AvaliacoesPT = () => {
         <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-40">
           <Button
             onClick={() => setIsCreateModalOpen(true)}
-            className="rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
+            className="rounded-full h-12 w-12 p-0 shadow-lg flex items-center justify-center [&_svg]:size-7"
             aria-label="Criar nova avaliação"
             title="Criar nova avaliação"
           >

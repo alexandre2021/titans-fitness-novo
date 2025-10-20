@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 import { useMediaQuery } from '@/hooks/use-media-query';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,6 +17,7 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
+import { supabase } from '@/integrations/supabase/client';
 import { Label } from '@/components/ui/label';
 import { ExercicioModelo } from './RotinaCriacao';
 import CustomSelect from '@/components/ui/CustomSelect';
@@ -621,65 +621,6 @@ return (
       </div>
     )}
 
-    {/* Modal de Informações sobre Status */}
-    <AlertDialog open={showStatusInfoDialog} onOpenChange={setShowStatusInfoDialog}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Situação das Rotinas</AlertDialogTitle>
-        </AlertDialogHeader>
-        <div className="space-y-4 pt-2">
-          <div className="flex items-start gap-3">
-            <div className="w-2 h-2 rounded-full bg-gray-500 mt-2 flex-shrink-0"></div>
-            <div>
-              <p className="font-medium text-gray-800 mb-1">Rascunho</p>
-              <p className="text-sm text-muted-foreground">
-                Rotina em processo de criação pelo professor, ainda não finalizada.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
-            <div>
-              <p className="font-medium text-green-800 mb-1">Ativa</p>
-              <p className="text-sm text-muted-foreground">
-                Aluno pode acessar e executar os treinos normalmente. A rotina é exibida na aba "Atual".
-              </p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <div className="w-2 h-2 rounded-full bg-red-500 mt-2 flex-shrink-0"></div>
-            <div>
-              <p className="font-medium text-red-800 mb-1">Bloqueada</p>
-              <p className="text-sm text-muted-foreground">
-                Acesso aos treinos foi suspenso temporariamente pelo professor. A rotina é exibida na aba "Atual".
-              </p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <div className="w-2 h-2 rounded-full bg-orange-500 mt-2 flex-shrink-0"></div>
-            <div>
-              <p className="font-medium text-orange-800 mb-1">Cancelada</p>
-              <p className="text-sm text-muted-foreground">
-                Rotina interrompida por uma ação administrativa, como a exclusão da conta do Professor. A rotina é movida para a aba "Encerradas" como parte do histórico.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
-            <div>
-              <p className="font-medium text-blue-800 mb-1">Concluída</p>
-              <p className="text-sm text-muted-foreground">
-                Todas as sessões da rotina foram executadas. A rotina é movida para a aba "Encerradas" como parte do histórico.
-              </p>
-            </div>
-          </div>
-        </div>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Fechar</AlertDialogCancel>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-
     {/* Modal de Confirmação de Exclusão */}
     <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
       <AlertDialogContent>
@@ -731,7 +672,7 @@ return (
       <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-40">
         <Button
           onClick={() => setIsCreateModalOpen(true)}
-          className="rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center [&_svg]:size-8"
+          className="rounded-full h-12 w-12 p-0 shadow-lg flex items-center justify-center [&_svg]:size-7"
           aria-label="Criar nova rotina"
           title="Criar nova rotina"
         >
