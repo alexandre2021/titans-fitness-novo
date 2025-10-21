@@ -8,10 +8,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, Loader2 } from "lucide-react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { GoogleIcon } from "@/components/icons/GoogleIcon";
 
 const formSchema = z.object({
   nome_completo: z.string().min(2, "Nome completo deve ter pelo menos 2 caracteres"),
@@ -187,6 +188,29 @@ export default function CadastroAluno() {
           </CardHeader>
 
           <CardContent>
+            <div className="space-y-4 mb-4">
+              <Button variant="outline" className="w-full" onClick={async () => {
+                setIsLoading(true);
+                const { error } = await supabase.auth.signInWithOAuth({
+                  provider: 'google',
+                  options: {
+                    redirectTo: `${window.location.origin}/`,
+                    queryParams: {
+                      user_type: 'aluno',
+                    },
+                  },
+                });
+                if (error) toast.error("Erro ao cadastrar com Google", { description: error.message });
+                // O setIsLoading(false) não é chamado aqui pois a página será redirecionada.
+              }} disabled={isLoading}>
+                <GoogleIcon className="mr-2 h-5 w-5" />
+                Cadastrar com Google
+              </Button>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">OU</span></div>
+              </div>
+            </div>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <FormField

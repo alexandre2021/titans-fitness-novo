@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { GoogleIcon } from "@/components/icons/GoogleIcon";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -89,6 +90,23 @@ const Login = () => {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        },
+      });
+      if (error) throw error;
+    } catch (error: any) {
+      toast.error("Erro no login com Google", { description: error.message });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b border-border py-4">
@@ -121,6 +139,22 @@ const Login = () => {
           </CardHeader>
           
           <CardContent>
+            <div className="space-y-4 mb-4">
+              <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
+                {isLoading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <GoogleIcon className="mr-2 h-5 w-5" />
+                )}
+                Entrar com Google
+              </Button>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">OU</span></div>
+              </div>
+            </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-text-primary">
