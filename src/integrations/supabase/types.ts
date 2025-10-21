@@ -364,6 +364,44 @@ export type Database = {
           },
         ]
       }
+      convites: {
+        Row: {
+          created_at: string
+          email_convidado: string
+          id: string
+          professor_id: string
+          status: string
+          tipo_convite: string
+          token_convite: string
+        }
+        Insert: {
+          created_at?: string
+          email_convidado: string
+          id?: string
+          professor_id: string
+          status?: string
+          tipo_convite: string
+          token_convite?: string
+        }
+        Update: {
+          created_at?: string
+          email_convidado?: string
+          id?: string
+          professor_id?: string
+          status?: string
+          tipo_convite?: string
+          token_convite?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "convites_professor_id_fkey"
+            columns: ["professor_id"]
+            isOneToOne: false
+            referencedRelation: "professores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cron_job_logs: {
         Row: {
           details: Json | null
@@ -1260,53 +1298,6 @@ export type Database = {
             columns: ["professor_id"]
             isOneToOne: false
             referencedRelation: "professores"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      rotinas_arquivadas: {
-        Row: {
-          aluno_id: string
-          created_at: string | null
-          data_conclusao: string
-          data_inicio: string
-          duracao_semanas: number
-          id: string
-          nome_rotina: string
-          objetivo: string
-          pdf_url: string
-          treinos_por_semana: number
-        }
-        Insert: {
-          aluno_id: string
-          created_at?: string | null
-          data_conclusao: string
-          data_inicio: string
-          duracao_semanas: number
-          id?: string
-          nome_rotina: string
-          objetivo: string
-          pdf_url: string
-          treinos_por_semana: number
-        }
-        Update: {
-          aluno_id?: string
-          created_at?: string | null
-          data_conclusao?: string
-          data_inicio?: string
-          duracao_semanas?: number
-          id?: string
-          nome_rotina?: string
-          objetivo?: string
-          pdf_url?: string
-          treinos_por_semana?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "rotinas_arquivadas_aluno_id_fkey"
-            columns: ["aluno_id"]
-            isOneToOne: false
-            referencedRelation: "alunos"
             referencedColumns: ["id"]
           },
         ]

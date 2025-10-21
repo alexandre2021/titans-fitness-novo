@@ -7,9 +7,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import * as z from "zod";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -31,6 +31,7 @@ export default function CadastroAluno() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -45,6 +46,8 @@ export default function CadastroAluno() {
 
   const onSubmit = async (data: FormData) => {
     setIsLoading(true);
+    const conviteToken = searchParams.get('token');
+    let professorIdConvidante: string | null = null;
 
     try {
       // 1. Criar usuário no Supabase Auth
@@ -68,6 +71,24 @@ export default function CadastroAluno() {
       if (!authData.user) {
         toast.error("Erro no cadastro", { description: "Não foi possível criar o usuário." });
         return;
+      }
+
+      // Se veio de um convite, valida o token e pega o ID do professor
+      if (conviteToken) {
+        const { data: conviteData, error: conviteError } = await supabase
+          .from('convites')
+          .select('professor_id, email_convidado')
+          .eq('token_convite', conviteToken)
+          .eq('status', 'pendente')
+          .single();
+
+        if (conviteError || !conviteData) {
+          toast.error("Convite inválido ou expirado.");
+        } else if (conviteData.email_convidado.toLowerCase() !== data.email.toLowerCase()) {
+          toast.error("Email do convite não corresponde ao email cadastrado.");
+        } else {
+          professorIdConvidante = conviteData.professor_id;
+        }
       }
 
       // 2. Gerar código de vínculo único
@@ -101,6 +122,25 @@ export default function CadastroAluno() {
         // Rollback
         await supabase.auth.admin.deleteUser(authData.user.id);
         return;
+      }
+
+      // 5. Se veio de um convite, cria o vínculo e atualiza o convite
+      if (professorIdConvidante) {
+        const { error: vinculoError } = await supabase.from('alunos_professores').insert({
+          aluno_id: authData.user.id,
+          professor_id: professorIdConvidante,
+        });
+
+        if (vinculoError) {
+          console.error("Erro ao criar vínculo automático:", vinculoError);
+          // Não bloqueia o fluxo, mas loga o erro.
+        } else {
+          // Atualiza o status do convite para 'aceito'
+          await supabase
+            .from('convites')
+            .update({ status: 'aceito' })
+            .eq('token_convite', conviteToken);
+        }
       }
 
       // 5. Redirecionar para confirmação de email

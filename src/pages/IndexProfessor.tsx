@@ -362,7 +362,7 @@ const IndexProfessor = () => {
                         {(ag.status === 'recusado' || ag.status === 'pendente' || ag.status === 'confirmado') && new Date(ag.data_hora_inicio) > new Date() && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="default" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4">
+                              <Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4">
                                 <MoreVertical />
                               </Button>
                             </DropdownMenuTrigger>
