@@ -63,7 +63,7 @@ const brevoApiUrl = 'https://api.brevo.com/v3/smtp/email';
 const PROTECTED_EMAILS = [
     'aramos1069@gmail.com',
     'contato@titans.fitness',
-    'malhonegabriel@gmail.com'
+    'administrador@titans.fitness'
 ];
 
 // --- Helper Functions ---

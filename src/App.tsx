@@ -59,6 +59,7 @@ import CentralDeAjuda from "./pages/CentralDeAjuda";
 import CentralDeAjudaPublica from "./pages/CentralDeAjudaPublica"; // Importar o novo componente
 import Contato from "./pages/Contato";
 import PerguntasFrequentes from "./pages/PerguntasFrequentes";
+import Blog from "./pages/Blog";
 import NovoExercicioPadrao from "./pages/NovoExercicioPadrao";
 
 // NOVAS IMPORTAÇÕES PARA EXECUÇÃO
@@ -97,6 +98,7 @@ const router = createBrowserRouter([
   { path: "/central-de-ajuda", element: <CentralDeAjudaPublica /> }, // Usar o novo componente aqui
   { path: "/faq", element: <PerguntasFrequentes /> },
   { path: "/resetar-senha", element: <ResetarSenha /> },
+  { path: "/blog", element: <Blog /> },
   { path: "/blog/:slug", element: <PostPage /> },
   {
     element: <AuthGuard><Outlet /></AuthGuard>,

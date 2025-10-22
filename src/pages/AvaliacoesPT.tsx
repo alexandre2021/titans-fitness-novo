@@ -655,8 +655,8 @@ const AvaliacoesPT = () => {
             <DialogTitle>Nova Avaliação</DialogTitle>
             <p className="text-sm text-muted-foreground">Selecione um aluno para criar uma nova avaliação física.</p>
           </DialogHeader>
-          <div className="relative flex-1 flex flex-col">
-            <div className="relative mb-4">
+          <div className="relative flex-1 flex flex-col min-h-0">
+            <div className="relative mb-4 flex-shrink-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Buscar por nome..."
@@ -673,9 +673,9 @@ const AvaliacoesPT = () => {
                       key={aluno.id}
                       onClick={() => handleNovaAvaliacaoParaAluno(aluno.id)}
                       disabled={isCheckingAvaliacao === aluno.id}
-                      className={buttonVariants({ variant: 'ghost', className: 'w-full h-auto justify-start p-2 text-left' })}
+                      className={buttonVariants({ variant: 'ghost', className: 'w-full h-auto justify-start p-3 text-left' })}
                     >
-                      <Avatar className="h-9 w-9 mr-3"><AvatarImage src={aluno.avatar_image_url || undefined} /><AvatarFallback style={{ backgroundColor: aluno.avatar_color || '#ccc' }} className="text-white font-semibold">{aluno.avatar_letter}</AvatarFallback></Avatar>
+                      <Avatar className="h-11 w-11 mr-4"><AvatarImage src={aluno.avatar_image_url || undefined} /><AvatarFallback style={{ backgroundColor: aluno.avatar_color || '#ccc' }} className="text-white font-semibold">{aluno.avatar_letter}</AvatarFallback></Avatar>
                       <span className="flex-1">{aluno.nome_completo}</span>
                       {isCheckingAvaliacao === aluno.id && <Loader2 className="h-4 w-4 animate-spin" />}
                     </button>

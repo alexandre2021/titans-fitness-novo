@@ -8,7 +8,7 @@ Este documento descreve a arquitetura do sistema de notificações automáticas,
 
 O objetivo é notificar os usuários sobre eventos importantes que ocorrem na plataforma, como desvinculação de contas ou exclusão de rotinas. Em vez de um sistema de notificações complexo e separado, a solução utiliza a própria estrutura de chat existente.
 
-Todas as notificações são enviadas por um usuário de sistema, o **Administrador** (`contato@titans.fitness`), garantindo que a origem da mensagem seja clara e centralizada.
+Todas as notificações são enviadas por um usuário de sistema, o **Administrador** (`administrador@titans.fitness`), garantindo que a origem da mensagem seja clara e centralizada.
 
 ---
 
@@ -16,7 +16,7 @@ Todas as notificações são enviadas por um usuário de sistema, o **Administra
 
 ### 2.1. Usuário Administrador
 
--   **ID:** O UUID do usuário `contato@titans.fitness` é armazenado como uma variável de ambiente no Supabase (`ADMIN_USER_ID`).
+-   **ID:** O UUID do usuário `administrador@titans.fitness` é armazenado como uma variável de ambiente no Supabase (`ADMIN_USER_ID`).
 -   **Função:** Atua como o remetente de todas as notificações automáticas do sistema.
 
 ### 2.2. Edge Function: `enviar-notificacao`

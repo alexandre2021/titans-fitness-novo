@@ -250,13 +250,6 @@ const DetalhesAluno = () => {
                 </p>
               </div>
             </div>
-            <div className="flex items-start gap-3">
-              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-              <div>
-                <p className="text-sm font-medium">Endereço</p>
-                <p className="text-sm text-muted-foreground">{displayValue(aluno.endereco)}</p>
-              </div>
-            </div>
           </div>
         </CardContent>
       </Card>

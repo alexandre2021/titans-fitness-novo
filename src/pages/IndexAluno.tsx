@@ -362,7 +362,7 @@ const IndexAluno = () => {
                     <div key={ag.id} className="p-3 border rounded-lg bg-muted/50">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <Avatar className="h-10 w-10">
+                          <Avatar className="h-12 w-12">
                             {ag.professores?.avatar_type === 'image' && ag.professores.avatar_image_url ? (
                               <AvatarImage src={ag.professores.avatar_image_url} alt={ag.professores.nome_completo} />
                             ) : (

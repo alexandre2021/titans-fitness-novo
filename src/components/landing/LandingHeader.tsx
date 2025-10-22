@@ -26,14 +26,22 @@ const LandingHeader = () => {
           )}
         </Link>
         <div className="flex items-center gap-2 md:gap-4">
-          {location.pathname === "/" && (
-            <Link to="/funcionalidades">
-              <Button variant="ghost">Funcionalidades</Button>
-            </Link>
+          {!isMobile && (
+            <>
+              <Link to="/blog">
+                <Button variant="ghost">Blog</Button>
+              </Link>
+              <Link to="/sobre">
+                <Button variant="ghost">Sobre Nós</Button>
+              </Link>
+              <Link to="/faq">
+                <Button variant="ghost">FAQ</Button>
+              </Link>
+            </>
           )}
-          {(location.pathname.startsWith("/funcionalidades") || location.pathname.startsWith("/faq") || location.pathname.startsWith("/sobre") || location.pathname.startsWith("/termos") || location.pathname.startsWith("/privacidade") || location.pathname.startsWith("/central-de-ajuda") || location.pathname.startsWith("/contato")) && (
+          {(location.pathname.startsWith("/faq") || location.pathname.startsWith("/sobre") || location.pathname.startsWith("/termos") || location.pathname.startsWith("/privacidade") || location.pathname.startsWith("/central-de-ajuda") || location.pathname.startsWith("/contato") || location.pathname.startsWith("/blog")) && (
             <Link to="/">
-              <Button variant="ghost">Home</Button>
+              <Button variant="ghost">Início</Button>
             </Link>
           )}
           <LoginRedirectButton />

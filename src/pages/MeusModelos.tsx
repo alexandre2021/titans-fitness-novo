@@ -18,6 +18,15 @@ import { FILTRO_DIFICULDADES_OPTIONS, FILTRO_FREQUENCIAS_OPTIONS, FILTRO_OBJETIV
 
 type ModeloRotina = Tables<'modelos_rotina'>;
 
+const CORES_OBJETIVOS: { [key: string]: string } = {
+  'Emagrecimento': 'bg-orange-100 text-orange-800',
+  'Ganho de massa': 'bg-blue-100 text-blue-800',
+  'Definição muscular': 'bg-purple-100 text-purple-800',
+  'Condicionamento físico': 'bg-green-100 text-green-800',
+  'Reabilitação': 'bg-yellow-100 text-yellow-800',
+  'Performance esportiva': 'bg-indigo-100 text-indigo-800'
+};
+
 // Main component
 const MeusModelos = () => {
   const navigate = useNavigate();
@@ -105,6 +114,9 @@ const MeusModelos = () => {
   });
 
   const getBadgeColor = (type: 'objetivo' | 'dificuldade', value: string) => {
+    if (type === 'objetivo') {
+      return CORES_OBJETIVOS[value] || 'bg-gray-100 text-gray-800';
+    }
     if (type === 'dificuldade') {
       if (value === 'Baixa') return 'bg-green-100 text-green-800 ';
       if (value === 'Média') return 'bg-yellow-100 text-yellow-800';

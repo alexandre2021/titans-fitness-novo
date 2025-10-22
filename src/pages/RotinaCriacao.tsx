@@ -12,8 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import CustomSelect from '@/components/ui/CustomSelect';
-import { toast } from 'sonner';
-import { Plus, Trash2, Save, X, Dumbbell, Check, Loader2, ChevronRight, ChevronLeft, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
+import { toast } from 'sonner';import { Plus, Trash2, Save, X, Dumbbell, Check, Loader2, ChevronRight, ChevronLeft, GripVertical, ChevronUp, ChevronDown, Link } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
@@ -36,7 +35,7 @@ import { OBJETIVOS_OPTIONS, DIFICULDADES_OPTIONS, DURACAO_OPTIONS, GRUPOS_MUSCUL
 import { Tables } from '@/integrations/supabase/types';
 
 // Reusable Components
-import { ExercicioModal } from '@/components/rotina/criacao/ExercicioModal';
+import { ExercicioModal, ItemSacola } from '@/components/rotina/criacao/ExercicioModal';
 import { SerieSimples } from '@/components/rotina/criacao/SerieSimples';
 import { SerieCombinada } from '@/components/rotina/criacao/SerieCombinada';
 import { useExercicioLookup } from '@/hooks/useExercicioLookup';
@@ -238,6 +237,7 @@ const RotinaConfiguracaoStep = ({ onAvancar, initialData, onCancelar, aluno, onU
 
 // --- Etapa 2: Componente de Treinos ---
 const RotinaTreinosStep = ({ onAvancar, onVoltar, initialData, configuracao, onCancelar, onUpdate }: RotinaTreinosStepProps) => {
+  const isInitialMount = useRef(true);
   const [treinos, setTreinos] = useState<TreinoTemp[]>(() => {
     // Se já tem treinos salvos (vindo do rascunho/storage), usa eles
     if (initialData && initialData.length > 0) {
@@ -259,19 +259,34 @@ const RotinaTreinosStep = ({ onAvancar, onVoltar, initialData, configuracao, onC
 
   // Sincroniza o estado interno se os dados iniciais ou a configuração mudarem.
   useEffect(() => {
-    if (initialData && initialData.length > 0) {
-      setTreinos(initialData);
-    } else if (configuracao?.treinos_por_semana) {
-      const nomesTreinos = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
-      const novosTreinos = Array.from({ length: configuracao.treinos_por_semana }, (_, i) => ({
-        id: `treino_draft_${Date.now()}_${i}`,
-        nome: `Treino ${nomesTreinos[i] || String.fromCharCode(65 + i)}`,
-        grupos_musculares: [],
-        ordem: i + 1,
-      }));
-      setTreinos(novosTreinos);
+    const frequenciaConfig = configuracao?.treinos_por_semana;
+    const frequenciaAtual = treinos.length;
+
+    // Se a frequência da configuração mudou e é diferente do que está no estado,
+    // força a recriação da lista de treinos. Isso resolve o bug de cache do estado.
+    if (!isInitialMount.current && frequenciaConfig !== undefined && frequenciaConfig !== frequenciaAtual) {
+      toast.info("A frequência de treinos foi alterada.", {
+        description: "Os treinos e exercícios foram reiniciados para se adequar à nova configuração."
+      });
     }
-  }, [initialData, configuracao?.treinos_por_semana]);
+
+    if (frequenciaConfig !== undefined && frequenciaConfig !== frequenciaAtual) {
+        const nomesTreinos = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+        const novosTreinos = Array.from({ length: frequenciaConfig }, (_, i) => ({
+            id: `treino_draft_${Date.now()}_${i}`,
+            nome: `Treino ${nomesTreinos[i] || String.fromCharCode(65 + i)}`,
+            grupos_musculares: [],
+            ordem: i + 1,
+        }));
+        setTreinos(novosTreinos);
+        onUpdate({ treinos: novosTreinos }); // ✅ CORREÇÃO: Salva os treinos recém-criados no estado global.
+    }
+
+    // Marca que a montagem inicial já ocorreu.
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+    }
+  }, [configuracao?.treinos_por_semana, onUpdate, treinos.length]);
 
   const adicionarGrupoMuscular = (treinoIndex: number, grupo: string) => {
     setTreinos(prev => prev.map((treino, index) => {
@@ -419,29 +434,37 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, exercicios, treinos, setE
     setIsModalOpen(true);
   };
 
-  const handleAdicionarExercicios = (exerciciosSelecionados: Tables<'exercicios'>[], tipo: 'simples' | 'combinada') => {
-    if (!treinoAtual || exerciciosSelecionados.length === 0) return;
+  // ✅ CORREÇÃO: Nova função para lidar com múltiplos itens da sacola de uma vez
+  const handleAdicionarMultiplosExercicios = (itens: ItemSacola[]) => {
+    if (!treinoAtual) return;
 
-    let exerciciosParaAdicionar: ExercicioModelo[] = [];
-
-    if (tipo === 'combinada' && exerciciosSelecionados.length === 2) {
-      exerciciosParaAdicionar.push({
-        id: `ex_modelo_${Date.now()}_${Math.random()}`,
-        exercicio_1_id: exerciciosSelecionados[0].id,
-        exercicio_2_id: exerciciosSelecionados[1].id,
-        tipo: 'combinada',
-        series: [{ id: `serie_comb_${Date.now()}`, numero_serie: 1, repeticoes_1: 0, carga_1: 0, repeticoes_2: 0, carga_2: 0, intervalo_apos_serie: 90 }],
-        intervalo_apos_exercicio: 120,
-      });
-    } else { // Série Simples
-      exerciciosParaAdicionar = exerciciosSelecionados.map(ex => ({ id: `ex_modelo_${Date.now()}_${Math.random()}`, exercicio_1_id: ex.id, tipo: 'simples', series: [{ id: `serie_${Date.now()}`, numero_serie: 1, repeticoes: 0, carga: 0, intervalo_apos_serie: 60 }], intervalo_apos_exercicio: 90 }));
-    }
+    const novosExerciciosParaTreino = itens.flatMap(item => {
+      if (item.tipo === 'simples') {
+        return {
+          id: `ex_modelo_${Date.now()}_${Math.random()}`,
+          exercicio_1_id: item.exercicio.id,
+          tipo: 'simples',
+          series: [{ id: `serie_${Date.now()}`, numero_serie: 1, repeticoes: 0, carga: 0, intervalo_apos_serie: 60 }],
+          intervalo_apos_exercicio: 90
+        };
+      } else if (item.tipo === 'combinacao') {
+        return {
+          id: `ex_modelo_${Date.now()}_${Math.random()}`,
+          exercicio_1_id: item.exercicios[0].id,
+          exercicio_2_id: item.exercicios[1].id,
+          tipo: 'combinada',
+          series: [{ id: `serie_comb_${Date.now()}`, numero_serie: 1, repeticoes_1: 0, carga_1: 0, repeticoes_2: 0, carga_2: 0, intervalo_apos_serie: 90 }],
+          intervalo_apos_exercicio: 120
+        };
+      }
+      return [];
+    });
 
     setExercicios({
       ...exercicios,
-      [treinoAtual.id]: [...(exercicios[treinoAtual.id] || []), ...exerciciosParaAdicionar],
+      [treinoAtual.id]: [...(exercicios[treinoAtual.id] || []), ...novosExerciciosParaTreino],
     });
-    // Não fecha o modal, permitindo adicionar mais exercícios
+    toast.success(`${novosExerciciosParaTreino.length} item(ns) adicionado(s) ao treino.`);
   };
 
   const handleRemoverExercicio = (treinoId: string, exercicioId: string) => {
@@ -514,6 +537,7 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, exercicios, treinos, setE
               {(exercicios[treino.id] || []).length > 0 ? (
                 <div className="space-y-4">
                   {exercicios[treino.id].map((ex, exIndex) => {
+                    const combinedCounter = exercicios[treino.id].slice(0, exIndex + 1).filter(e => e.tipo === 'combinada').length;
                     const exercicioInfo1 = getExercicioInfo(ex.exercicio_1_id);
                     const exercicioInfo2 = ex.exercicio_2_id ? getExercicioInfo(ex.exercicio_2_id) : null;
                     const nomeExercicio = ex.tipo === 'combinada' && exercicioInfo2 ? `${exercicioInfo1.nome} + ${exercicioInfo2.nome}` : exercicioInfo1.nome;
@@ -529,6 +553,11 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, exercicios, treinos, setE
                               <Button type="button" variant="ghost" size="sm" onClick={() => handleMoverExercicio(treino.id, exIndex, 'baixo')} disabled={isUltimoExercicioDoTreino} className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"><ChevronDown className="h-5 w-5" /></Button>
                             </div>
                             <h4 className="font-medium text-gray-900">{nomeExercicio}</h4>
+                            {ex.tipo === 'combinada' && (
+                              <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                                <Link className="h-3 w-3 mr-1" /> C{combinedCounter}
+                              </Badge>
+                            )}
                           </div>
                           <div>
                             <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoverExercicio(treino.id, ex.id)} className="text-gray-400 hover:text-red-500 h-8 w-8 p-0"><Trash2 className="h-4 w-4" /></Button>
@@ -581,7 +610,7 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, exercicios, treinos, setE
           <ExercicioModal 
             isOpen={isModalOpen} 
             onClose={() => setIsModalOpen(false)} 
-            onAdd={handleAdicionarExercicios} 
+            onConcluir={handleAdicionarMultiplosExercicios} 
             gruposMuscularesFiltro={treinoAtual?.grupos_musculares || []}
             exerciciosJaAdicionados={treinoAtual ? (exercicios[treinoAtual.id] || []).flatMap(ex => [ex.exercicio_1_id, ex.exercicio_2_id]).filter(Boolean) as string[] : []}
           />)}
@@ -649,22 +678,19 @@ const RotinaCriacao = () => {
   }, [alunoId]);
 
   const handleAvancarConfiguracao = async (data: ModeloConfiguracaoData) => {
-    // ✅ CORRIGIDO: Pega a frequência do STORAGE (não da configuração atual do formulário)
-    const storageFrequency = rotinaEmCriacao.configuracao?.treinos_por_semana;
+    const oldConfig = rotinaEmCriacao.configuracao;
     const newFrequency = data.treinos_por_semana;
+    const oldFrequency = oldConfig?.treinos_por_semana;
+    const treinosExistem = rotinaEmCriacao.treinos && rotinaEmCriacao.treinos.length > 0;
   
     if (newFrequency === undefined) {
       await updateStorage({ configuracao: data, etapaAtual: 'treinos' });
       setEtapa('treinos');
       return;
     }
-  
-    // ✅ Compara a frequência do STORAGE com a nova
-    if (storageFrequency !== undefined && newFrequency !== storageFrequency) {
-      toast.info("A frequência de treinos foi alterada.", {
-        description: "Os treinos e exercícios foram reiniciados para se adequar à nova configuração."
-      });
-  
+
+    // Se a frequência mudou, reinicia os treinos e exercícios.
+    if (oldFrequency !== undefined && newFrequency !== oldFrequency) {
       const nomesTreinos = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
       const novosTreinos = Array.from({ length: newFrequency }, (_, i) => ({
         id: `treino_draft_${Date.now()}_${i}`,
@@ -672,8 +698,6 @@ const RotinaCriacao = () => {
         grupos_musculares: [],
         ordem: i + 1,
       }));
-
-      // Zera treinos e exercícios
       await updateStorage({
         configuracao: data,
         treinos: novosTreinos,

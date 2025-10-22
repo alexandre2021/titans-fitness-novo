@@ -690,8 +690,8 @@ return (
             Selecione um aluno para criar uma nova rotina de treino.
           </DialogDescription>
         </DialogHeader>
-        <div className="relative flex-1 flex flex-col">
-          <div className="relative mb-4">
+        <div className="relative flex-1 flex flex-col min-h-0">
+          <div className="relative mb-4 flex-shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Buscar por nome..."
@@ -700,34 +700,34 @@ return (
               className="pl-10"
             />
           </div>
-          <ScrollArea className="flex-1 -mx-6 px-6">
-            <div className="space-y-2">
-              {alunosFiltradosModal.length > 0 ? (
-                alunosFiltradosModal.map(aluno => (
-                  <button
-                    key={aluno.id}
-                    onClick={() => handleNovaRotinaParaAluno(aluno.id)}
-                    disabled={isCheckingRotina === aluno.id}
-                    className={buttonVariants({ variant: 'ghost', className: 'w-full h-auto justify-start p-2 text-left' })}
-                  >
-                    <Avatar className="h-9 w-9 mr-3">
-                      {aluno.avatar_type === 'image' && aluno.avatar_image_url ? (
-                        <AvatarImage src={aluno.avatar_image_url} alt={aluno.nome_completo} />
-                      ) : (
-                        <AvatarFallback style={{ backgroundColor: aluno.avatar_color || '#ccc' }} className="text-white font-semibold">
-                          {aluno.avatar_letter}
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
-                    <span className="flex-1">{aluno.nome_completo}</span>
-                    {isCheckingRotina === aluno.id && <Loader2 className="h-4 w-4 animate-spin" />}
-                  </button>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">Nenhum aluno encontrado.</p>
-              )}
-            </div>
-          </ScrollArea>
+          <div className="flex-1 overflow-y-auto -mx-6 px-6">
+              <div className="space-y-2">
+                {alunosFiltradosModal.length > 0 ? (
+                  alunosFiltradosModal.map(aluno => (
+                    <button
+                      key={aluno.id}
+                      onClick={() => handleNovaRotinaParaAluno(aluno.id)}
+                      disabled={isCheckingRotina === aluno.id}
+                      className={buttonVariants({ variant: 'ghost', className: 'w-full h-auto justify-start p-3 text-left' })}
+                    >
+                      <Avatar className="h-11 w-11 mr-4">
+                        {aluno.avatar_type === 'image' && aluno.avatar_image_url ? (
+                          <AvatarImage src={aluno.avatar_image_url} alt={aluno.nome_completo} />
+                        ) : (
+                          <AvatarFallback style={{ backgroundColor: aluno.avatar_color || '#ccc' }} className="text-white font-semibold">
+                            {aluno.avatar_letter}
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
+                      <span className="flex-1">{aluno.nome_completo}</span>
+                      {isCheckingRotina === aluno.id && <Loader2 className="h-4 w-4 animate-spin" />}
+                    </button>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">Nenhum aluno encontrado.</p>
+                )}
+              </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

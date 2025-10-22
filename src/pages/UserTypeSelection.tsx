@@ -46,15 +46,15 @@ const UserTypeSelection = () => {
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-primary/20 transition-colors">
                   <User className="w-8 h-8 text-primary" />
                 </div>
-                <CardTitle className="text-2xl text-text-primary">Professor</CardTitle>
+                <CardTitle className="text-2xl text-text-primary">Profissional</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
                 <p className="text-text-secondary mb-8">
-                  Gerencie seus alunos, crie treinos personalizados e acompanhe seus progressos.
+                  Gerencie seus clientes, crie treinos personalizados e acompanhe seus progressos.
                 </p>
                 <Link to="/cadastro/professor" className="block">
                   <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
-                    Sou Professor
+                    Sou Profissional
                   </Button>
                 </Link>
               </CardContent>
@@ -66,15 +66,15 @@ const UserTypeSelection = () => {
                 <div className="w-16 h-16 bg-secondary/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-secondary/20 transition-colors">
                   <Users className="w-8 h-8 text-secondary" />
                 </div>
-                <CardTitle className="text-2xl text-text-primary">Aluno</CardTitle>
+                <CardTitle className="text-2xl text-text-primary">Cliente</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
                 <p className="text-text-secondary mb-8">
-                  Acesse seus treinos personalizados, acompanhe seu progresso e mantenha contato direto com seu Professor.
+                  Acesse seus treinos, acompanhe seu progresso e mantenha contato direto com seu profissional.
                 </p>
                 <Link to="/cadastro/aluno" className="block">
                   <Button className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground">
-                    Sou Aluno
+                    Sou Cliente
                   </Button>
                 </Link>
               </CardContent>

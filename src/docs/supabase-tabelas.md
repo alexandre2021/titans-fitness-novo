@@ -736,3 +736,212 @@ WHERE conversa_id = $conversa_id
 ---
 
 **Última atualização**: 2025-10-01
+
+---
+
+## 6. Script de Dados Fictícios (Seed)
+
+O script SQL abaixo pode ser usado para popular o banco de dados com dados de exemplo para testes e desenvolvimento.
+
+**Atenção**: Este script insere usuários diretamente na tabela `auth.users`. Isso é útil para ambientes de desenvolvimento, mas não dispara e-mails de confirmação. Todos os usuários serão criados com a senha `senha123`.
+
+```sql
+-- Habilita a extensão para gerar UUIDs
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- Inicia um bloco de transação para garantir a consistência
+BEGIN;
+
+-- Limpa as tabelas na ordem correta para evitar conflitos de chave estrangeira
+TRUNCATE TABLE 
+    public.execucoes_series, public.execucoes_sessao, public.series, public.exercicios_rotina, public.treinos, public.rotinas, 
+    public.modelos_serie, public.modelos_exercicio, public.modelos_treino, public.modelos_rotina,
+    public.avaliacoes_fisicas, public.agendamentos, public.mensagens, public.participantes_conversa, public.conversas,
+    public.alunos_professores, public.posts, public.exercicios, public.alunos, public.professores, public.user_profiles, public.admins
+RESTART IDENTITY CASCADE;
+
+-- Declaração de variáveis para armazenar UUIDs
+DO $$
+DECLARE
+    -- UUIDs dos Usuários
+    admin_user_id uuid := 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+    prof_carlos_id uuid := 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a12';
+    aluno_ana_id uuid := 'c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a13';
+    aluno_joao_id uuid := 'd3eebc99-9c0b-4ef8-bb6d-6bb9bd380a14';
+    aluno_maria_id uuid := 'e4eebc99-9c0b-4ef8-bb6d-6bb9bd380a15';
+    aluno_pedro_id uuid := 'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a16';
+    aluno_lucas_id uuid := 'a7eebc99-9c0b-4ef8-bb6d-6bb9bd380a17';
+
+    -- IDs de Rotina, Treinos, Exercícios, etc.
+    rotina_joao_id uuid;
+    treino_a_id uuid;
+    treino_b_id uuid;
+    treino_c_id uuid;
+    ex_rotina_1_id uuid;
+    ex_rotina_2_id uuid;
+    ex_rotina_3_id uuid;
+    ex_padrao_1_id uuid;
+    ex_padrao_2_id uuid;
+    ex_personalizado_1_id uuid;
+    conversa_1_id uuid;
+    conversa_2_id uuid;
+    modelo_rotina_id uuid;
+    modelo_treino_id uuid;
+    modelo_exercicio_id uuid;
+
+BEGIN
+    -- 0. Deletar usuários existentes para permitir a recriação com IDs fixos.
+    -- Isso é necessário porque não podemos usar TRUNCATE na tabela auth.users.
+    DELETE FROM auth.users WHERE email IN (
+        'contato@titans.fitness',
+        'carlos.magno@email.com',
+        'ana.livia@email.com',
+        'joao.silva@email.com',
+        'maria.oliveira@email.com',
+        'pedro.santos@email.com',
+        'lucas.pereira@email.com'
+    );
+
+    -- 1. Inserir usuários no `auth.users` (com senha 'senha123' para todos)
+    INSERT INTO auth.users (id, email, encrypted_password, role, email_confirmed_at) VALUES
+    (admin_user_id, 'contato@titans.fitness', crypt('senha123', gen_salt('bf')), 'authenticated', now()),
+    (prof_carlos_id, 'carlos.magno@email.com', crypt('senha123', gen_salt('bf')), 'authenticated', now()),
+    (aluno_ana_id, 'ana.livia@email.com', crypt('senha123', gen_salt('bf')), 'authenticated', now()),
+    (aluno_joao_id, 'joao.silva@email.com', crypt('senha123', gen_salt('bf')), 'authenticated', now()),
+    (aluno_maria_id, 'maria.oliveira@email.com', crypt('senha123', gen_salt('bf')), 'authenticated', now()),
+    (aluno_pedro_id, 'pedro.santos@email.com', crypt('senha123', gen_salt('bf')), 'authenticated', now()),
+    (aluno_lucas_id, 'lucas.pereira@email.com', crypt('senha123', gen_salt('bf')), 'authenticated', now());
+
+    -- 2. Inserir perfis em `user_profiles`
+    INSERT INTO public.user_profiles (id, user_type) VALUES
+    (admin_user_id, 'admin'),
+    (prof_carlos_id, 'professor'),
+    (aluno_ana_id, 'aluno'),
+    (aluno_joao_id, 'aluno'),
+    (aluno_maria_id, 'aluno'),
+    (aluno_pedro_id, 'aluno'),
+    (aluno_lucas_id, 'aluno');
+
+    -- 3. Inserir dados dos professores
+    INSERT INTO public.professores (id, nome_completo, email, onboarding_completo, cref, bio, codigo_vinculo) VALUES
+    (prof_carlos_id, 'Carlos Magno', 'carlos.magno@email.com', true, '123456-G/SP', 'Especialista em hipertrofia e treinamento de força.', 'CARLOS');
+
+    -- 4. Inserir dados dos alunos
+    INSERT INTO public.alunos (id, nome_completo, email, onboarding_completo, status, codigo_vinculo) VALUES
+    (aluno_joao_id, 'João da Silva', 'joao.silva@email.com', true, 'ativo', 'JOAO'),
+    (aluno_maria_id, 'Maria Oliveira', 'maria.oliveira@email.com', true, 'ativo', 'MARIA'),
+    (aluno_pedro_id, 'Pedro Santos', 'pedro.santos@email.com', false, 'pendente', 'PEDRO'),
+    (aluno_ana_id, 'Ana Livia', 'ana.livia@email.com', true, 'ativo', 'ANA'),
+    (aluno_lucas_id, 'Lucas Pereira', 'lucas.pereira@email.com', true, 'ativo', 'LUCAS');
+
+    -- 5. Criar relacionamentos de "seguir"
+    INSERT INTO public.alunos_professores (aluno_id, professor_id) VALUES
+    (aluno_joao_id, prof_carlos_id), -- João segue Carlos
+    (aluno_maria_id, prof_carlos_id), -- Maria segue Carlos
+    (aluno_ana_id, prof_carlos_id),   -- Ana segue Carlos
+    (aluno_lucas_id, prof_carlos_id); -- Lucas segue Carlos
+
+    -- 6. Inserir exercícios (padrão e personalizados)
+    INSERT INTO public.exercicios (id, nome, grupo_muscular, equipamento, tipo, is_ativo) VALUES
+    (gen_random_uuid(), 'Supino Reto', 'Peito', 'Barra', 'padrao', true) RETURNING id INTO ex_padrao_1_id;
+    INSERT INTO public.exercicios (id, nome, grupo_muscular, equipamento, tipo, is_ativo) VALUES
+    (gen_random_uuid(), 'Agachamento Livre', 'Pernas', 'Barra', 'padrao', true) RETURNING id INTO ex_padrao_2_id;
+    INSERT INTO public.exercicios (id, nome, grupo_muscular, equipamento, tipo, is_ativo) VALUES
+    (gen_random_uuid(), 'Remada Curvada (Personalizada)', 'Costas', 'Barra', 'personalizado', true) RETURNING id INTO ex_personalizado_1_id;
+    
+    UPDATE public.exercicios SET professor_id = prof_carlos_id WHERE id = ex_personalizado_1_id;
+
+    -- 7. Criar uma rotina para o Aluno João com o Professor Carlos
+    INSERT INTO public.rotinas (nome, objetivo, aluno_id, professor_id, treinos_por_semana, dificuldade, duracao_semanas, data_inicio, valor_total, forma_pagamento, status) VALUES
+    ('Hipertrofia Total - João', 'Ganho de massa', aluno_joao_id, prof_carlos_id, 3, 'Intermediário', 8, '2025-01-20', 150.00, 'PIX', 'Ativa')
+    RETURNING id INTO rotina_joao_id;
+
+    -- 8. Criar treinos para a rotina do João
+    INSERT INTO public.treinos (rotina_id, nome, grupos_musculares, ordem) VALUES
+    (rotina_joao_id, 'Treino A - Peito e Tríceps', 'Peito,Tríceps', 1) RETURNING id INTO treino_a_id;
+    INSERT INTO public.treinos (rotina_id, nome, grupos_musculares, ordem) VALUES
+    (rotina_joao_id, 'Treino B - Costas e Bíceps', 'Costas,Bíceps', 2) RETURNING id INTO treino_b_id;
+    INSERT INTO public.treinos (rotina_id, nome, grupos_musculares, ordem) VALUES
+    (rotina_joao_id, 'Treino C - Pernas e Ombros', 'Pernas,Ombros', 3) RETURNING id INTO treino_c_id;
+
+    -- 9. Adicionar exercícios aos treinos
+    -- Treino A
+    INSERT INTO public.exercicios_rotina (treino_id, exercicio_1_id, ordem) VALUES
+    (treino_a_id, ex_padrao_1_id, 1) RETURNING id INTO ex_rotina_1_id;
+    
+    -- Treino B (com exercício personalizado)
+    INSERT INTO public.exercicios_rotina (treino_id, exercicio_1_id, ordem) VALUES
+    (treino_b_id, ex_personalizado_1_id, 1) RETURNING id INTO ex_rotina_2_id;
+
+    -- Treino C
+    INSERT INTO public.exercicios_rotina (treino_id, exercicio_1_id, ordem) VALUES
+    (treino_c_id, ex_padrao_2_id, 1) RETURNING id INTO ex_rotina_3_id;
+
+    -- 10. Adicionar séries aos exercícios da rotina
+    INSERT INTO public.series (exercicio_id, numero_serie, repeticoes, carga, intervalo_apos_serie) VALUES
+    (ex_rotina_1_id, 1, 12, 50, 60),
+    (ex_rotina_1_id, 2, 10, 55, 60),
+    (ex_rotina_1_id, 3, 8, 60, 90),
+    (ex_rotina_2_id, 1, 12, 40, 60),
+    (ex_rotina_2_id, 2, 12, 40, 60),
+    (ex_rotina_3_id, 1, 15, 80, 90),
+    (ex_rotina_3_id, 2, 12, 90, 90),
+    (ex_rotina_3_id, 3, 10, 100, 120);
+
+    -- 11. Gerar sessões de treino para a rotina
+    INSERT INTO public.execucoes_sessao (rotina_id, treino_id, aluno_id, sessao_numero, status) VALUES
+    (rotina_joao_id, treino_a_id, aluno_joao_id, 1, 'concluida'),
+    (rotina_joao_id, treino_b_id, aluno_joao_id, 2, 'em_andamento'),
+    (rotina_joao_id, treino_c_id, aluno_joao_id, 3, 'em_aberto');
+
+    -- 12. Criar posts para o blog
+    INSERT INTO public.posts (author_id, title, category, slug, excerpt, content, status) VALUES
+    (prof_carlos_id, '5 Dicas para Maximizar seu Supino', 'Exercícios', '5-dicas-supino', 'Aprenda como melhorar sua técnica e força no supino reto.', '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Conteúdo completo do post aqui..."}]}]}', 'published'),
+    (prof_carlos_id, 'A Verdade sobre Dietas Low-Carb', 'Nutrição', 'verdade-low-carb', 'Uma análise sobre os prós e contras da dieta low-carb para emagrecimento.', '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Rascunho do post sobre dietas..."}]}]}', 'draft');
+
+    -- 13. Criar uma avaliação física
+    INSERT INTO public.avaliacoes_fisicas (aluno_id, data_avaliacao, peso, altura, imc, peito_busto, cintura, quadril) VALUES
+    (aluno_joao_id, '2025-01-15', 85.5, 180, 26.4, 102, 85, 100);
+
+    -- 14. Criar um modelo de rotina para o Professor Carlos
+    INSERT INTO public.modelos_rotina (professor_id, nome, objetivo, dificuldade, treinos_por_semana, duracao_semanas) VALUES
+    (prof_carlos_id, 'Hipertrofia Essencial 3x', 'Ganho de massa', 'Intermediário', 3, 8) RETURNING id INTO modelo_rotina_id;
+
+    INSERT INTO public.modelos_treino (modelo_rotina_id, nome, grupos_musculares, ordem) VALUES
+    (modelo_rotina_id, 'Push Day', ARRAY['Peito', 'Ombros', 'Tríceps'], 1) RETURNING id INTO modelo_treino_id;
+
+    INSERT INTO public.modelos_exercicio (modelo_treino_id, exercicio_1_id, ordem) VALUES
+    (modelo_treino_id, ex_padrao_1_id, 1) RETURNING id INTO modelo_exercicio_id;
+
+    INSERT INTO public.modelos_serie (modelo_exercicio_id, numero_serie, repeticoes, carga) VALUES
+    (modelo_exercicio_id, 1, 12, 50),
+    (modelo_exercicio_id, 2, 10, 55);
+
+    -- 15. Criar agendamentos
+    INSERT INTO public.agendamentos (professor_id, aluno_id, tipo, status, data_hora_inicio, data_hora_fim) VALUES
+    (prof_carlos_id, aluno_joao_id, 'sessao_treino', 'confirmado', now() + interval '2 days', now() + interval '2 days' + interval '1 hour'),
+    (prof_carlos_id, aluno_maria_id, 'avaliacao_fisica', 'pendente', now() + interval '3 days', now() + interval '3 days' + interval '1 hour');
+
+    -- 16. Criar conversas e mensagens
+    -- Conversa 1:1 entre Carlos e João
+    INSERT INTO public.conversas (is_grupo) VALUES (false) RETURNING id INTO conversa_1_id;
+    INSERT INTO public.participantes_conversa (conversa_id, user_id) VALUES (conversa_1_id, prof_carlos_id), (conversa_1_id, aluno_joao_id);
+    INSERT INTO public.mensagens (conversa_id, remetente_id, conteudo) VALUES
+    (conversa_1_id, prof_carlos_id, 'E aí João, tudo certo com o treino?'),
+    (conversa_1_id, aluno_joao_id, 'Tudo ótimo, professor! Só uma dúvida no supino.');
+
+    -- Conversa em Grupo
+    INSERT INTO public.conversas (is_grupo, nome_grupo, creator_id) VALUES (true, 'Galera da Força', prof_carlos_id) RETURNING id INTO conversa_2_id;
+    INSERT INTO public.participantes_conversa (conversa_id, user_id) VALUES 
+    (conversa_2_id, prof_carlos_id), 
+    (conversa_2_id, aluno_joao_id),
+    (conversa_2_id, aluno_maria_id);
+    INSERT INTO public.mensagens (conversa_id, remetente_id, conteudo) VALUES
+    (conversa_2_id, prof_carlos_id, 'Pessoal, amanhã o treino é pesado!');
+
+END $$;
+
+-- Finaliza a transação
+COMMIT;
+
+```

@@ -82,7 +82,7 @@ const ConversaItem = ({ conversa, onClick }: { conversa: ConversaUI, onClick: ()
           )}
         </div>
         {conversa.naoLidas > 0 && (
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
             {conversa.naoLidas}
           </span>
         )}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Utensils, Dumbbell, HeartPulse, BrainCircuit, Zap, Stethoscope, FlaskConical, TrendingUp, ShieldCheck, Search } from "lucide-react";
+import { ArrowRight, Utensils, Dumbbell, HeartPulse, BrainCircuit, Zap, Stethoscope, FlaskConical, TrendingUp, ShieldCheck, Search, MoreHorizontal } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -41,7 +41,7 @@ const BlogFeedSection = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [currentPage, setCurrentPage] = useState(1);
-  const postsPerPage = 8;
+  const postsPerPage = 6; // Alterado de 8 para 6
   const location = useLocation();
 
   useEffect(() => {
@@ -96,18 +96,8 @@ const BlogFeedSection = () => {
   );
 
   return (
-    <section className="py-16 md:py-24 bg-muted/40">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-extrabold tracking-tighter">
-            Explore nosso Conteúdo
-          </h2>
-          <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-            Dicas, artigos e insights preparados por nossa equipe para ajudar você a atingir seus objetivos.
-          </p>
-        </div>
-
-        <div className="mb-12 grid gap-4 md:grid-cols-3 max-w-4xl mx-auto">
+    <>
+        <div className="mb-12 grid gap-4 md:grid-cols-3 max-w-4xl mx-auto w-full">
           <div className="relative md:col-span-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -127,7 +117,7 @@ const BlogFeedSection = () => {
           </Select>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
           {loading ? (
             Array.from({ length: 4 }).map((_, index) => (
               <Card key={index} className="overflow-hidden">
@@ -182,23 +172,61 @@ const BlogFeedSection = () => {
           <div className="mt-12 pt-8 border-t">
             <Pagination>
               <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''} />
+                <PaginationItem className="mr-4">
+                  <PaginationLink 
+                    href="#" 
+                    onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }}
+                    className={`whitespace-nowrap gap-1 pl-2.5 ${currentPage === 1 ? 'pointer-events-none opacity-50' : ''}`}
+                  >
+                    Anterior
+                  </PaginationLink>
                 </PaginationItem>
-                {[...Array(totalPages)].map((_, i) => (
-                  <PaginationItem key={i}>
-                    <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(i + 1); }} isActive={currentPage === i + 1}>{i + 1}</PaginationLink>
-                  </PaginationItem>
-                ))}
-                <PaginationItem>
-                  <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''} />
+                
+                {(() => {
+                  const pageNumbers = [];
+                  const siblingCount = 1;
+                  const totalPageNumbers = siblingCount + 5;
+
+                  if (totalPages <= totalPageNumbers) {
+                    for (let i = 1; i <= totalPages; i++) {
+                      pageNumbers.push(i);
+                    }
+                  } else {
+                    const leftSiblingIndex = Math.max(currentPage - siblingCount, 1);
+                    const rightSiblingIndex = Math.min(currentPage + siblingCount, totalPages);
+                    const shouldShowLeftDots = leftSiblingIndex > 2;
+                    const shouldShowRightDots = rightSiblingIndex < totalPages - 2;
+
+                    pageNumbers.push(1);
+                    if (shouldShowLeftDots) pageNumbers.push('...');
+                    for (let i = leftSiblingIndex; i <= rightSiblingIndex; i++) {
+                      pageNumbers.push(i);
+                    }
+                    if (shouldShowRightDots) pageNumbers.push('...');
+                    pageNumbers.push(totalPages);
+                  }
+
+                  return pageNumbers.map((page, index) => (
+                    <PaginationItem key={`${page}-${index}`}>
+                      {page === '...' ? <span className="flex h-9 w-9 items-center justify-center"><MoreHorizontal className="h-4 w-4" /></span> : <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page as number); }} isActive={currentPage === page}>{page}</PaginationLink>}
+                    </PaginationItem>
+                  ));
+                })()}
+
+                <PaginationItem className="ml-4">
+                  <PaginationLink 
+                    href="#" 
+                    onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }}
+                    className={`whitespace-nowrap gap-1 pr-2.5 ${currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}`}
+                  >
+                    Próximo
+                  </PaginationLink>
                 </PaginationItem>
               </PaginationContent>
             </Pagination>
           </div>
         )}
-      </div>
-    </section>
+    </>
   );
 };
 
