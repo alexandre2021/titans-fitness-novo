@@ -339,8 +339,8 @@ export const ExercicioModal: React.FC<Props> = ({
         onRequestClose={onClose}
         shouldCloseOnOverlayClick={true}
         shouldCloseOnEsc={true}
-        className="bg-white rounded-lg max-w-4xl max-h-[90vh] w-full mx-4 outline-none flex flex-col"
-        overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4"
+        className="bg-white rounded-lg max-w-4xl max-h-[90vh] w-full outline-none flex flex-col"
+        overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-2"
       >
         {/* Header */}
         <div className="px-6 py-4 border-b flex-shrink-0">

@@ -2,10 +2,14 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MonitorSmartphone, Users, Dumbbell, Repeat, BookOpen, Calendar, MessageSquare, BarChart3, CloudOff, LifeBuoy, Workflow, Gift } from "lucide-react";
+import exerciciosImg from "@/assets/exercicios.png";
 import LandingHeader from "@/components/landing/LandingHeader";
 import indexProfessorImg from "@/assets/index_professor.png";
 import avaliacaoImg from "@/assets/avaliacao.png";
 import alunosImg from "@/assets/alunos.png";
+import rotinaImg from "@/assets/rotina.png";
+import modeloRotinaImg from "@/assets/modelo_rotina.png";
+import mobileImg from "@/assets/mobile.png";
 import LandingFooter from "@/components/landing/LandingFooter";
 const Landing = () => {
   return (
@@ -118,29 +122,29 @@ const ProfessorFeaturesSection = () => (
     <FeatureCard
       icon={BookOpen}
       title="Biblioteca de Exercícios Personalizada"
-      imageSrc="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/mockup-exercicios.png"
+      imageSrc={exerciciosImg}
       imageAlt="Tela da Biblioteca de Exercícios"
     >
       <p>Utilize nossa vasta base de exercícios ou crie até 100 exercícios personalizados com suas próprias mídias. Faça upload de fotos e vídeos para garantir a execução perfeita por parte dos seus alunos.</p>
     </FeatureCard>
 
     <FeatureCard
-      icon={Dumbbell}
-      title="Criação de Rotinas Avançadas"
-      imageSrc="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/mockup-rotina.png"
-      imageAlt="Tela de Criação de Rotinas"
+      icon={Repeat}
+      title="Modelos de Treino Reutilizáveis"
+      imageSrc={modeloRotinaImg}
+      imageAlt="Tela de Modelos de Treino"
       reverse
     >
-      <p>Vá além do básico. Monte treinos completos com séries simples, combinadas (supersets) e drop sets. Nossa interface intuitiva permite que você crie programas de treino complexos em minutos.</p>
+      <p>Pare de repetir trabalho. Crie e salve templates de rotinas para diferentes objetivos e perfis de alunos. Aplique um modelo a um novo cliente e faça apenas os ajustes necessários, otimizando seu tempo e escalando seu negócio.</p>
     </FeatureCard>
 
     <FeatureCard
-      icon={Repeat}
-      title="Modelos de Treino Reutilizáveis"
-      imageSrc="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/mockup-modelos.png"
-      imageAlt="Tela de Modelos de Treino"
+      icon={Dumbbell}
+      title="Criação de Rotinas Avançadas"
+      imageSrc={rotinaImg}
+      imageAlt="Tela de Criação de Rotinas"
     >
-      <p>Pare de repetir trabalho. Crie e salve templates de rotinas para diferentes objetivos e perfis de alunos. Aplique um modelo a um novo cliente e faça apenas os ajustes necessários, otimizando seu tempo e escalando seu negócio.</p>
+      <p>Vá além do básico. Monte treinos completos com séries simples, combinadas (supersets) e drop sets. Nossa interface intuitiva permite que você crie programas de treino complexos em minutos.</p>
     </FeatureCard>
 
     <FeatureCard
@@ -160,7 +164,7 @@ const AlunoFeaturesSection = () => (
     <FeatureCard
       icon={Dumbbell}
       title="Seu Treino na Palma da Mão"
-      imageSrc="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/mockup-execucao.png"
+      imageSrc={mobileImg}
       imageAlt="Tela de Execução de Treino do Aluno"
     >
       <p>Acesse sua rotina de treino atual a qualquer momento, com todos os detalhes de execução, séries, repetições e vídeos demonstrativos. Registre suas cargas e observações a cada série para construir um histórico valioso.</p>
