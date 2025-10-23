@@ -1,12 +1,12 @@
 import React, { useState, useEffect, FormEvent, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
+import { Tables } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 
 import { Button } from "@/components/ui/button";
-import { Check, ChevronLeft, ChevronRight, Plus, Trash2, X, Dumbbell, ChevronUp, ChevronDown, Loader2, Save } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Plus, Trash2, X, Dumbbell, ChevronUp, ChevronDown, Loader2, Save, Link } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -30,7 +30,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useExercicioLookup } from "@/hooks/useExercicioLookup";
 import { SerieSimples } from "@/components/rotina/criacao/SerieSimples";
 import { SerieCombinada } from "@/components/rotina/criacao/SerieCombinada";
-import { ExercicioModal } from "@/components/rotina/criacao/ExercicioModal";
+import { ExercicioModal, ItemSacola } from "@/components/rotina/criacao/ExercicioModal";
 import CustomSelect from "@/components/ui/CustomSelect";
 import { OBJETIVOS_OPTIONS, DIFICULDADES_OPTIONS, FREQUENCIAS_OPTIONS, DURACAO_OPTIONS, GRUPOS_MUSCULARES, CORES_GRUPOS_MUSCULARES, STORAGE_KEY_NOVO_MODELO } from "@/constants/rotinas";
 
@@ -258,6 +258,7 @@ const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar }: ModeloConfig
 
 // --- Etapa 2: Componente de Treinos ---
 const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCancelar, onUpdate }: ModeloTreinosProps) => {
+  const isInitialMount = useRef(true);
   const [treinos, setTreinos] = useState<TreinoTemp[]>(() => {
     if (initialData && initialData.length > 0) {
       return initialData.sort((a, b) => a.ordem - b.ordem);
@@ -278,6 +279,37 @@ const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCance
     }
     return [];
   });
+
+  // ✅ CORREÇÃO: Adiciona useEffect para sincronizar quando a frequência muda
+  useEffect(() => {
+    const frequenciaConfig = configuracao?.treinos_por_semana;
+    const frequenciaAtual = treinos.length;
+
+    // Se a frequência da configuração mudou e é diferente do que está no estado,
+    // força a recriação da lista de treinos.
+    if (!isInitialMount.current && frequenciaConfig !== undefined && frequenciaConfig !== frequenciaAtual) {
+      toast.info("A frequência de treinos foi alterada.", {
+        description: "Os treinos e exercícios foram reiniciados para se adequar à nova configuração."
+      });
+    }
+
+    if (frequenciaConfig !== undefined && frequenciaConfig !== frequenciaAtual) {
+      const nomesTreinos = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+      const novosTreinos = Array.from({ length: frequenciaConfig }, (_, i) => ({
+        id: `treino_draft_${Date.now()}_${i}`,
+        nome: `Treino ${nomesTreinos[i] || String.fromCharCode(65 + i)}`,
+        grupos_musculares: [],
+        ordem: i + 1,
+      }));
+      setTreinos(novosTreinos);
+      onUpdate({ treinos: novosTreinos });
+    }
+
+    // Marca que a montagem inicial já ocorreu.
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+    }
+  }, [configuracao?.treinos_por_semana, onUpdate, treinos.length]);
 
   const handleMoverTreino = (index: number, direcao: 'cima' | 'baixo') => {
     setTreinos(prev => {
@@ -446,36 +478,34 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
     setIsModalOpen(true);
   };
 
-  const handleAdicionarExercicios = (exerciciosSelecionados: Tables<'exercicios'>[], tipo: 'simples' | 'combinada') => {
-    if (!treinoAtual || exerciciosSelecionados.length === 0) return;
+  const handleAdicionarMultiplosExercicios = (itens: ItemSacola[]) => {
+    if (!treinoAtual) return;
 
-    let exerciciosParaAdicionar: ExercicioModelo[] = [];
-    if (tipo === 'combinada' && exerciciosSelecionados.length === 2) {
-      const exercicioCombinado: ExercicioModelo = {
-        id: `ex_modelo_${Date.now()}_${Math.random()}`,
-        exercicio_1_id: exerciciosSelecionados[0].id,
-        exercicio_2_id: exerciciosSelecionados[1].id,
-        tipo: 'combinada',
-        series: [{ id: `serie_comb_${Date.now()}`, numero_serie: 1, repeticoes_1: 0, carga_1: 0, repeticoes_2: 0, carga_2: 0, intervalo_apos_serie: 90 }],
-        intervalo_apos_exercicio: 120,
-      };
-      exerciciosParaAdicionar.push(exercicioCombinado);
-    } else {
-      // Série Simples
-      exerciciosParaAdicionar = exerciciosSelecionados.map(ex => ({
-        id: `ex_modelo_${Date.now()}_${Math.random()}`,
-        exercicio_1_id: ex.id,
-        tipo: 'simples',
-        series: [{ id: `serie_${Date.now()}`, numero_serie: 1, repeticoes: 0, carga: 0, intervalo_apos_serie: 60 }],
-        intervalo_apos_exercicio: 90,
-      }));
-    }
-
+    const novosExerciciosParaTreino = itens.flatMap(item => {
+      if (item.tipo === 'simples') {
+        return {
+          id: `ex_modelo_${Date.now()}_${Math.random()}`,
+          exercicio_1_id: item.exercicio.id,
+          tipo: 'simples',
+          series: [{ id: `serie_${Date.now()}`, numero_serie: 1, repeticoes: 0, carga: 0, intervalo_apos_serie: 60 }],
+          intervalo_apos_exercicio: 90
+        };
+      } else if (item.tipo === 'combinacao') {
+        return {
+          id: `ex_modelo_${Date.now()}_${Math.random()}`,
+          exercicio_1_id: item.exercicios[0].id,
+          exercicio_2_id: item.exercicios[1].id,
+          tipo: 'combinada',
+          series: [{ id: `serie_comb_${Date.now()}`, numero_serie: 1, repeticoes_1: 0, carga_1: 0, repeticoes_2: 0, carga_2: 0, intervalo_apos_serie: 90 }],
+          intervalo_apos_exercicio: 120
+        };
+      }
+      return [];
+    });
     setExercicios(prev => ({
       ...prev,
-      [treinoAtual.id]: [...(prev[treinoAtual.id] || []), ...exerciciosParaAdicionar]
+      [treinoAtual.id]: [...(prev[treinoAtual.id] || []), ...novosExerciciosParaTreino],
     }));
-    // Não fecha o modal para permitir adicionar mais
   };
 
   const handleRemoverExercicio = (treinoId: string, exercicioId: string) => {
@@ -642,7 +672,7 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
         <ExercicioModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          onAdd={handleAdicionarExercicios}
+          onConcluir={handleAdicionarMultiplosExercicios}
           gruposMuscularesFiltro={treinoAtual?.grupos_musculares || []}
           exerciciosJaAdicionados={treinoAtual ? (exercicios[treinoAtual.id] || []).flatMap(ex => [ex.exercicio_1_id, ex.exercicio_2_id]).filter(Boolean) as string[] : []}
         />
