@@ -10,6 +10,9 @@ import alunosImg from "@/assets/alunos.png";
 import rotinaImg from "@/assets/rotina.png";
 import modeloRotinaImg from "@/assets/modelo_rotina.png";
 import mobileImg from "@/assets/mobile.png";
+import evolucaoImg from "@/assets/evolucao.png";
+import comunicacaoImg from "@/assets/comunicacao.png";
+import treinarImg from "@/assets/treinar.png";
 import LandingFooter from "@/components/landing/LandingFooter";
 const Landing = () => {
   return (
@@ -25,12 +28,12 @@ const Landing = () => {
             <p className="mt-6 text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
               A plataforma completa para Professores e Alunos que buscam resultados reais. Gerencie treinos, acompanhe o progresso e conecte-se de forma inteligente.
             </p>
-            <div className="mt-10 flex flex-col sm:flex-row justify-center items-center gap-4">
+            <div className="mt-10 flex flex-row justify-center items-center gap-4">
               <Link to="/cadastro/professor">
-                <Button size="lg" className="w-full sm:w-auto">Sou Professor(a)</Button>
+                <Button size="lg" className="w-full">Sou Professor(a)</Button>
               </Link>
               <Link to="/cadastro/aluno">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto">Sou Aluno(a)</Button>
+                <Button size="lg" variant="outline" className="w-full">Sou Aluno(a)</Button>
               </Link>
             </div>
           </div>
@@ -89,11 +92,8 @@ const FeatureCard = ({ icon: Icon, title, children, imageSrc, imageAlt, reverse 
       </div>
     </div>
     <div className={`flex items-center justify-center ${reverse ? 'md:col-start-1' : ''}`}>
-      <Card className="w-full max-w-lg shadow-xl bg-card overflow-hidden">
-        <CardContent className="p-0">
-          <img src={imageSrc} alt={imageAlt} className="mx-auto h-auto object-contain" />
-        </CardContent>
-      </Card>
+      {/* O Card e CardContent foram removidos para eliminar a borda e a sombra */}
+      <img src={imageSrc} alt={imageAlt} className="w-full max-w-lg h-auto object-contain rounded-xl" />
     </div>
   </div>
 );
@@ -173,7 +173,7 @@ const AlunoFeaturesSection = () => (
     <FeatureCard
       icon={BarChart3}
       title="Acompanhamento Visual da Evolução"
-      imageSrc="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/mockup-avaliacoes.png"
+      imageSrc={evolucaoImg}
       imageAlt="Tela de Avaliações Físicas do Aluno"
       reverse
     >
@@ -181,10 +181,20 @@ const AlunoFeaturesSection = () => (
     </FeatureCard>
 
     <FeatureCard
+      icon={MessageSquare}
+      title="Comunicação Fácil e Direta"
+      imageSrc={comunicacaoImg}
+      imageAlt="Tela de Chat do Aluno"
+    >
+      <p>Fale diretamente com seu professor pelo chat integrado. Tire dúvidas sobre exercícios, peça orientações e receba o suporte que precisa para evoluir com segurança.</p>
+    </FeatureCard>
+
+    <FeatureCard
       icon={CloudOff}
       title="Treine em Qualquer Lugar, a Qualquer Hora"
-      imageSrc="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/mockup-offline.png"
+      imageSrc={treinarImg}
       imageAlt="Mockup de Acesso Offline"
+      reverse
     >
       <p>Não deixe que a falta de internet atrapalhe seu treino. Nosso aplicativo funciona offline, permitindo que você acesse e registre seus treinos mesmo em academias com sinal ruim. Seus dados são sincronizados automaticamente assim que você se reconectar.</p>
     </FeatureCard>
