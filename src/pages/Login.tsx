@@ -30,33 +30,27 @@ const Login = () => {
   }, [searchParams]);
 
   // Este efeito lida com o redirecionamento APÓS uma mudança de estado de login bem-sucedida.
-  // Ele também redireciona usuários já logados para longe da página de login.
+  // Ele agora apenas redireciona usuários já logados para longe da página de login.
   useEffect(() => {
-    // ✅ CORREÇÃO: Garante que o redirecionamento só ocorra se o usuário estiver
-    // autenticado e a sessão estiver estável, evitando o loop durante o logout.
     const checkAndRedirect = async () => {
-      // Verifica se a sessão atual é válida antes de redirecionar.
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!authLoading && user && session) {
-      const redirectUser = async () => {
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('user_type')
-          .eq('id', user.id)
-          .single();
-
-        if (profile?.user_type === 'professor') {
-          navigate('/index-professor', { replace: true });
-        } else if (profile?.user_type === 'aluno') {
-          navigate('/index-aluno', { replace: true });
-        } else {
-          // Fallback para tipos de usuário desconhecidos ou se o perfil falhar ao carregar
-          navigate('/', { replace: true });
+      if (authLoading) return;
+      
+      if (user) {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('user_type')
+            .eq('id', user.id)
+            .single();
+  
+          if (profile?.user_type === 'professor') {
+            navigate('/index-professor', { replace: true });
+          } else if (profile?.user_type === 'aluno') {
+            navigate('/index-aluno', { replace: true });
+          }
         }
-      };
-      // Usamos void para indicar explicitamente que não estamos aguardando a promessa aqui
-        void redirectUser();
       }
     };
     void checkAndRedirect();
@@ -96,12 +90,16 @@ const Login = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/`,
+          redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
       if (error) throw error;
-    } catch (error: any) {
-      toast.error("Erro no login com Google", { description: error.message });
+    } catch (error: unknown) {
+      let errorMessage = "Ocorreu um erro desconhecido.";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      toast.error("Erro no login com Google", { description: errorMessage });
     } finally {
       setIsLoading(false);
     }
@@ -126,7 +124,6 @@ const Login = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 flex justify-center px-6 pt-8 pb-6 md:pt-16 md:pb-12">
         <Card className="w-full max-w-md border-border shadow-lg">
           <CardHeader className="text-center">
@@ -152,7 +149,9 @@ const Login = () => {
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t" />
                 </div>
-                <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">OU</span></div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">OU</span>
+                </div>
               </div>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -208,7 +207,6 @@ const Login = () => {
               >
                 {isLoading ? "Entrando..." : "Entrar"}
               </Button>
-
             </form>
             
             <div className="mt-6 text-center text-sm">
@@ -217,7 +215,9 @@ const Login = () => {
               </Link>
               <p className="mt-2 text-muted-foreground">
                 Não tem uma conta?{" "}
-                <Link to="/cadastro" className="font-bold text-primary hover:underline">Cadastre-se gratuitamente</Link>
+                <Link to="/cadastro" className="font-bold text-primary hover:underline">
+                  Cadastre-se gratuitamente
+                </Link>
               </p>
             </div>
           </CardContent>

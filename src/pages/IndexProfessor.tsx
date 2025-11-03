@@ -265,7 +265,7 @@ const IndexProfessor = () => {
         <Link to="/alunos">
           <Card className="cursor-pointer hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Alunos</CardTitle>
+              <CardTitle className="text-base md:text-lg font-semibold">Alunos</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -279,7 +279,7 @@ const IndexProfessor = () => {
         <Link to="/exercicios" state={{ activeTab: 'personalizados' }}>
           <Card className="cursor-pointer hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Exercícios</CardTitle>
+              <CardTitle className="text-base md:text-lg font-semibold">Exercícios</CardTitle>
               <Dumbbell className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -293,7 +293,7 @@ const IndexProfessor = () => {
         <Link to="/rotinas">
           <Card className="cursor-pointer hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Rotinas</CardTitle>
+              <CardTitle className="text-base md:text-lg font-semibold">Rotinas</CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -307,7 +307,7 @@ const IndexProfessor = () => {
         <Link to="/avaliacoes">
           <Card className="cursor-pointer hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avaliações</CardTitle>
+              <CardTitle className="text-base md:text-lg font-semibold">Avaliações</CardTitle>
               <BarChart3 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -343,7 +343,9 @@ const IndexProfessor = () => {
                           {ag.alunos?.avatar_type === 'image' && ag.alunos.avatar_image_url ? (
                             <AvatarImage src={ag.alunos.avatar_image_url} alt={ag.alunos.nome_completo || ''} />
                           ) : (
-                            <AvatarFallback style={{ backgroundColor: ag.alunos?.avatar_color || '#ccc' }} className="text-white font-semibold">{ag.alunos?.avatar_letter}</AvatarFallback>
+                            <AvatarFallback style={{ backgroundColor: ag.alunos?.avatar_color || '#ccc' }} className="text-white font-semibold">
+                              {ag.alunos?.avatar_letter || ag.alunos?.nome_completo?.charAt(0).toUpperCase()}
+                            </AvatarFallback>
                           )}
                         </Avatar>
                         <div className="space-y-1">

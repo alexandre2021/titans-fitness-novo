@@ -391,43 +391,46 @@ return (
     )}
 
     {/* Card de Estatísticas */}
-    <Card>
-      <CardContent className="p-4">
-        <div className="grid grid-cols-4 divide-x divide-border text-center">
-          <div className="px-2">
-            <p className="text-2xl font-bold">{rotinaCounts.ativas}</p>
-            <p className="text-xs font-medium text-muted-foreground">Ativas</p>
+    {allRotinas.length > 0 && (
+      <Card>
+        <CardContent className="p-4">
+          <div className="grid grid-cols-4 divide-x divide-border text-center">
+            <div className="px-2">
+              <p className="text-2xl font-bold">{rotinaCounts.ativas}</p>
+              <p className="text-xs font-medium text-muted-foreground">Ativas</p>
+            </div>
+            <div className="px-2">
+              <p className="text-2xl font-bold">{rotinaCounts.bloqueadas}</p>
+              <p className="text-xs font-medium text-muted-foreground">Bloqueadas</p>
+            </div>
+            <div className="px-2">
+              <p className="text-2xl font-bold">{rotinaCounts.rascunho}</p>
+              <p className="text-xs font-medium text-muted-foreground">Rascunhos</p>
+            </div>
+            <div className="px-2">
+              <p className="text-2xl font-bold">{rotinaCounts.encerradas}</p>
+              <p className="text-xs font-medium text-muted-foreground">Encerradas</p>
+            </div>
           </div>
-          <div className="px-2">
-            <p className="text-2xl font-bold">{rotinaCounts.bloqueadas}</p>
-            <p className="text-xs font-medium text-muted-foreground">Bloqueadas</p>
-          </div>
-          <div className="px-2">
-            <p className="text-2xl font-bold">{rotinaCounts.rascunho}</p>
-            <p className="text-xs font-medium text-muted-foreground">Rascunhos</p>
-          </div>
-          <div className="px-2">
-            <p className="text-2xl font-bold">{rotinaCounts.encerradas}</p>
-            <p className="text-xs font-medium text-muted-foreground">Encerradas</p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    )}
 
-
-    <div className="space-y-4">
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Buscar por nome do aluno..."
-              value={busca}
-              onChange={e => setBusca(e.target.value)}
-              className="pl-10"
-            />
+    {allRotinas.length > 0 && (
+      <div className="space-y-4">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Buscar por nome do aluno..."
+                value={busca}
+                onChange={e => setBusca(e.target.value)}
+                className="pl-10"
+              />
+          </div>
         </div>
       </div>
-    </div>
+    )}
 
       {alunos.length === 0 ? (
       <Card className="border-dashed">
@@ -459,7 +462,7 @@ return (
                     <AvatarImage src={aluno.avatar_image_url} alt={aluno.nome_completo} />
                   ) : (
                     <AvatarFallback style={{ backgroundColor: aluno.avatar_color || '#ccc' }} className="text-white font-semibold">
-                      {aluno.avatar_letter}
+                      {aluno.avatar_letter || aluno.nome_completo?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   )}
                 </Avatar>
@@ -683,11 +686,17 @@ return (
 
     {/* Modal de Seleção de Aluno para Nova Rotina */}
     <Dialog open={isCreateModalOpen} onOpenChange={handleModalSelecaoAlunoOpenChange}>
-      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[425px] rounded-md flex flex-col max-h-[80vh]">
+      <DialogContent
+        className="w-[calc(100%-2rem)] sm:max-w-[425px] rounded-md flex flex-col max-h-[80vh]"
+        onOpenAutoFocus={e => {
+          e.preventDefault();
+          (e.currentTarget as HTMLElement)?.focus();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Nova Rotina</DialogTitle>
           <DialogDescription>
-            Selecione um aluno para criar uma nova rotina de treino.
+            Selecione um aluno para criar uma nova rotina.
           </DialogDescription>
         </DialogHeader>
         <div className="relative flex-1 flex flex-col min-h-0">
@@ -711,13 +720,12 @@ return (
                       className={buttonVariants({ variant: 'ghost', className: 'w-full h-auto justify-start p-3 text-left' })}
                     >
                       <Avatar className="h-11 w-11 mr-4">
-                        {aluno.avatar_type === 'image' && aluno.avatar_image_url ? (
-                          <AvatarImage src={aluno.avatar_image_url} alt={aluno.nome_completo} />
-                        ) : (
-                          <AvatarFallback style={{ backgroundColor: aluno.avatar_color || '#ccc' }} className="text-white font-semibold">
-                            {aluno.avatar_letter}
-                          </AvatarFallback>
-                        )}
+                        {aluno.avatar_image_url ? (
+                          <AvatarImage src={aluno.avatar_image_url} alt={aluno.nome_completo || ''} />
+                        ) : null}
+                        <AvatarFallback style={{ backgroundColor: aluno.avatar_color || '#ccc' }} className="text-white font-semibold">
+                          {aluno.avatar_letter || aluno.nome_completo?.charAt(0).toUpperCase()}
+                        </AvatarFallback>
                       </Avatar>
                       <span className="flex-1">{aluno.nome_completo}</span>
                       {isCheckingRotina === aluno.id && <Loader2 className="h-4 w-4 animate-spin" />}

@@ -6,6 +6,7 @@ import { createBrowserRouter, RouterProvider, Outlet, Navigate } from "react-rou
 import { AuthProvider } from "@/context/AuthProvider";
 import AuthGuard from "@/components/AuthGuard";
 import Index from "./pages/Index";
+import AuthCallback from "./pages/AuthCallback";
 import NovoExercicio from "./pages/NovoExercicio";
 import CopiaExercicio from "./pages/CopiaExercicio";
 import EditarExercicio from "./pages/EditarExercicio";
@@ -84,6 +85,7 @@ const router = createBrowserRouter([
     path: "/",
     element: <Index />
   },
+  { path: "/auth/callback", element: <AuthCallback /> },
   { path: "/funcionalidades", element: <Funcionalidades /> },
   { path: "/cadastro", element: <UserTypeSelection /> },
   { path: "/cadastro/professor", element: <CadastroProfessor /> },
@@ -101,6 +103,7 @@ const router = createBrowserRouter([
   { path: "/blog", element: <Blog /> },
   { path: "/blog/:slug", element: <PostPage /> },
   {
+    // Envolve todas as rotas que precisam de autenticação e outros contextos
     element: <AuthGuard><Outlet /></AuthGuard>,
     children: [
       // Onboarding routes (sem layout principal)
@@ -182,22 +185,19 @@ const router = createBrowserRouter([
   },
 ]);
 
-const AppContent = () => {
+const App = () => {
   return (
-    <TooltipProvider>
-      {/* Configura o Toaster para aparecer no topo e centro */}
-      <Sonner position="top-center" richColors theme="light" />
-      <RouterProvider router={router} />
-      <PwaUpdateNotification />
-      <PwaInstallPrompt />
-    </TooltipProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <Sonner position="top-center" richColors theme="light" />
+          <RouterProvider router={router} />
+          <PwaUpdateNotification />
+          <PwaInstallPrompt />
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 };
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider><AppContent /></AuthProvider>
-  </QueryClientProvider>
-);
 
 export default App;

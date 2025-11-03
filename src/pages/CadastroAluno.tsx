@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -108,12 +108,22 @@ export default function CadastroAluno() {
       // 3. Criar perfil em user_profiles
       await supabase.from('user_profiles').insert({ id: authData.user.id, user_type: 'aluno' });
 
+      // Gerar avatar de letra padrão
+      const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16'];
+      const randomColor = colors[Math.floor(Math.random() * colors.length)];
+      const letter = data.nome_completo?.charAt(0).toUpperCase() || 'A';
+
       // 4. Criar perfil em alunos
       const { error: alunoError } = await supabase.from('alunos').insert({
         id: authData.user.id,
         nome_completo: data.nome_completo,
         email: data.email.toLowerCase(),
         codigo_vinculo: codigoVinculo,
+        // Dados do avatar padrão
+        avatar_type: 'letter',
+        avatar_letter: letter,
+        avatar_color: randomColor,
+        // Fim dos dados do avatar
         onboarding_completo: false,
         status: 'ativo',
       });
@@ -194,10 +204,7 @@ export default function CadastroAluno() {
                 const { error } = await supabase.auth.signInWithOAuth({
                   provider: 'google',
                   options: {
-                    redirectTo: `${window.location.origin}/`,
-                    queryParams: {
-                      user_type: 'aluno',
-                    },
+                    redirectTo: `${window.location.origin}/auth/callback?user_type=aluno`,
                   },
                 });
                 if (error) toast.error("Erro ao cadastrar com Google", { description: error.message });

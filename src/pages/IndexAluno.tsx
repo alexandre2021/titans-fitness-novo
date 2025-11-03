@@ -282,7 +282,7 @@ const IndexAluno = () => {
         <Link to="/minhas-rotinas">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full flex flex-col">
             <CardHeader className="pb-2 space-y-0"> {/* Remove o espaço entre título e descrição */}
-              <CardTitle className="flex flex-row items-center justify-between space-y-0 text-sm font-medium"> {/* Remove pb-2 daqui */}
+              <CardTitle className="flex flex-row items-center justify-between space-y-0 text-base md:text-lg font-semibold">
                 Rotinas
                 <ClipboardList className="h-4 w-4 text-muted-foreground" />
               </CardTitle>
@@ -297,7 +297,7 @@ const IndexAluno = () => {
         <Link to={activeRotinaId ? `/execucao-rotina/selecionar-treino/${activeRotinaId}` : '/minhas-rotinas'}>
           <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full flex flex-col">
             <CardHeader className="pb-2 space-y-0"> {/* Remove o espaço entre título e descrição */}
-              <CardTitle className="flex flex-row items-center justify-between space-y-0 text-sm font-medium"> {/* Remove pb-2 daqui */}
+              <CardTitle className="flex flex-row items-center justify-between space-y-0 text-base md:text-lg font-semibold">
                 Sessões
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardTitle>
@@ -314,7 +314,7 @@ const IndexAluno = () => {
         <Link to="/professores">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full flex flex-col">
             <CardHeader className="pb-2 space-y-0"> {/* Remove o espaço entre título e descrição */}
-              <CardTitle className="flex flex-row items-center justify-between space-y-0 text-sm font-medium"> {/* Remove pb-2 daqui */}
+              <CardTitle className="flex flex-row items-center justify-between space-y-0 text-base md:text-lg font-semibold">
                 Professores
                 <User className="h-4 w-4 text-muted-foreground" />
               </CardTitle>
@@ -329,7 +329,7 @@ const IndexAluno = () => {
         <Link to="/avaliacoes-aluno">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full flex flex-col">
             <CardHeader className="pb-2 space-y-0"> {/* Remove o espaço entre título e descrição */}
-              <CardTitle className="flex flex-row items-center justify-between space-y-0 text-sm font-medium"> {/* Remove pb-2 daqui */}
+              <CardTitle className="flex flex-row items-center justify-between space-y-0 text-base md:text-lg font-semibold">
                 Avaliações
                 <BarChart3 className="h-4 w-4 text-muted-foreground" />
               </CardTitle>
@@ -366,7 +366,9 @@ const IndexAluno = () => {
                             {ag.professores?.avatar_type === 'image' && ag.professores.avatar_image_url ? (
                               <AvatarImage src={ag.professores.avatar_image_url} alt={ag.professores.nome_completo} />
                             ) : (
-                              <AvatarFallback style={{ backgroundColor: ag.professores?.avatar_color || '#ccc' }} className="text-white font-semibold">{ag.professores?.avatar_letter}</AvatarFallback>
+                              <AvatarFallback style={{ backgroundColor: ag.professores?.avatar_color || '#ccc' }} className="text-white font-semibold">
+                                {ag.professores?.avatar_letter || ag.professores?.nome_completo?.charAt(0).toUpperCase()}
+                              </AvatarFallback>
                             )}
                           </Avatar>
                           <div className="flex-1 min-w-0">

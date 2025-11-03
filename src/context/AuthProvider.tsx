@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { AuthContext } from '@/context/AuthContext';
+import { AuthContext, AuthContextType } from '@/context/AuthContext';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -53,6 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     queryClient.clear();
+    // Navegar para a landing page após o logout
     window.location.replace('/login');
   };
 

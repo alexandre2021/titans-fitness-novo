@@ -370,17 +370,19 @@ const AvaliacoesPT = () => {
         </div>
       )}
 
-      <div className="space-y-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Buscar por nome do aluno..."
-            value={busca}
-            onChange={e => setBusca(e.target.value)}
-            className="pl-10"
-          />
+      {allAvaliacoes.length > 0 && (
+        <div className="space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Buscar por nome do aluno..."
+              value={busca}
+              onChange={e => setBusca(e.target.value)}
+              className="pl-10"
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {alunos.length === 0 ? (
         <Card className="border-dashed">
@@ -408,7 +410,7 @@ const AvaliacoesPT = () => {
                         <AvatarImage src={aluno.avatar_image_url} alt={aluno.nome_completo} />
                       ) : (
                         <AvatarFallback style={{ backgroundColor: aluno.avatar_color || '#ccc' }} className="text-white font-semibold">
-                          {aluno.avatar_letter}
+                        {aluno.avatar_letter || aluno.nome_completo?.charAt(0).toUpperCase()}
                         </AvatarFallback>
                       )}
                     </Avatar>
@@ -650,10 +652,16 @@ const AvaliacoesPT = () => {
 
       {/* Modal de Seleção de Aluno para Nova Avaliação */}
       <Dialog open={isCreateModalOpen} onOpenChange={handleModalSelecaoAlunoOpenChange}>
-        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[425px] rounded-md flex flex-col max-h-[80vh]">
+        <DialogContent
+          className="w-[calc(100%-2rem)] sm:max-w-[425px] rounded-md flex flex-col max-h-[80vh]"
+          onOpenAutoFocus={e => {
+            e.preventDefault();
+            (e.currentTarget as HTMLElement)?.focus();
+          }}
+        >
           <DialogHeader>
             <DialogTitle>Nova Avaliação</DialogTitle>
-            <p className="text-sm text-muted-foreground">Selecione um aluno para criar uma nova avaliação física.</p>
+            <p className="text-sm text-muted-foreground">Selecione um aluno para criar uma nova avaliação.</p>
           </DialogHeader>
           <div className="relative flex-1 flex flex-col min-h-0">
             <div className="relative mb-4 flex-shrink-0">
@@ -675,7 +683,12 @@ const AvaliacoesPT = () => {
                       disabled={isCheckingAvaliacao === aluno.id}
                       className={buttonVariants({ variant: 'ghost', className: 'w-full h-auto justify-start p-3 text-left' })}
                     >
-                      <Avatar className="h-11 w-11 mr-4"><AvatarImage src={aluno.avatar_image_url || undefined} /><AvatarFallback style={{ backgroundColor: aluno.avatar_color || '#ccc' }} className="text-white font-semibold">{aluno.avatar_letter}</AvatarFallback></Avatar>
+                      <Avatar className="h-11 w-11 mr-4">
+                        {aluno.avatar_image_url ? <AvatarImage src={aluno.avatar_image_url} /> : null}
+                        <AvatarFallback style={{ backgroundColor: aluno.avatar_color || '#ccc' }} className="text-white font-semibold">
+                          {aluno.avatar_letter || aluno.nome_completo?.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
                       <span className="flex-1">{aluno.nome_completo}</span>
                       {isCheckingAvaliacao === aluno.id && <Loader2 className="h-4 w-4 animate-spin" />}
                     </button>
