@@ -166,10 +166,12 @@ const Cadastroprofessor = () => {
             <div className="space-y-4 mb-4">
               <Button variant="outline" className="w-full" onClick={async () => {
                 setIsLoading(true);
+                // ✅ Salva o tipo de usuário no sessionStorage antes de redirecionar
+                sessionStorage.setItem('oauth_user_type', 'professor');
                 const { error } = await supabase.auth.signInWithOAuth({
                   provider: 'google',
                   options: {
-                    redirectTo: `${window.location.origin}/auth/callback?user_type=professor`,
+                    redirectTo: `${window.location.origin}/auth/callback`, // Professores geralmente não usam token de convite, então mantemos simples.
                   },
                 });
                 if (error) toast.error("Erro ao cadastrar com Google", { description: error.message });

@@ -110,7 +110,7 @@ export default function CadastroAluno() {
 
       // Gerar avatar de letra padrão
       const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16'];
-      const randomColor = colors[Math.floor(Math.random() * colors.length)];
+      const randomColor = colors[Math.floor(Math.random() * colors.length)]; // ✅ Cor é gerada aqui
       const letter = data.nome_completo?.charAt(0).toUpperCase() || 'A';
 
       // 4. Criar perfil em alunos
@@ -122,7 +122,7 @@ export default function CadastroAluno() {
         // Dados do avatar padrão
         avatar_type: 'letter',
         avatar_letter: letter,
-        avatar_color: randomColor,
+        avatar_color: randomColor, // ✅ E salva no banco de dados
         // Fim dos dados do avatar
         onboarding_completo: false,
         status: 'ativo',
@@ -201,12 +201,17 @@ export default function CadastroAluno() {
             <div className="space-y-4 mb-4">
               <Button variant="outline" className="w-full" onClick={async () => {
                 setIsLoading(true);
+                // ✅ Salva o tipo de usuário no sessionStorage antes de redirecionar
+                const conviteToken = searchParams.get('token');
+                sessionStorage.setItem('oauth_user_type', 'aluno');
                 const { error } = await supabase.auth.signInWithOAuth({
                   provider: 'google',
                   options: {
-                    redirectTo: `${window.location.origin}/auth/callback?user_type=aluno`,
+                    // ✅ Adiciona o token de convite à URL de callback se ele existir
+                    redirectTo: `${window.location.origin}/auth/callback${conviteToken ? `?token=${conviteToken}` : ''}`,
                   },
                 });
+
                 if (error) toast.error("Erro ao cadastrar com Google", { description: error.message });
                 // O setIsLoading(false) não é chamado aqui pois a página será redirecionada.
               }} disabled={isLoading}>

@@ -51,18 +51,6 @@ const OnboardingAlunoDadosBasicos = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const generateAvatar = () => {
-    const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16'];
-    const randomColor = colors[Math.floor(Math.random() * colors.length)];
-    const letter = formData.nome_completo?.charAt(0).toUpperCase() || 'A';
-    
-    return {
-      avatar_type: 'letter',
-      avatar_letter: letter,
-      avatar_color: randomColor
-    };
-  };
-
   const handleFinish = async () => {
     // Validar apenas o nome completo (obrigatório)
     if (!formData.nome_completo.trim()) {
@@ -83,15 +71,21 @@ const OnboardingAlunoDadosBasicos = () => {
     setIsLoading(true);
 
     try {
-      const avatarData = generateAvatar();
+      // ✅ Lógica de geração de avatar movida para cá
+      const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16'];
+      const randomColor = colors[Math.floor(Math.random() * colors.length)];
+      const letter = formData.nome_completo?.charAt(0).toUpperCase() || 'A';
 
       // Salvar dados básicos (SEM marcar onboarding como completo ainda)
       const success = await updateProfile({
         nome_completo: formData.nome_completo.trim(),
         genero: formData.genero || null,
         data_nascimento: formData.data_nascimento || null,
-        descricao_pessoal: formData.descricao_pessoal.trim() || null,
-        ...avatarData
+        descricao_pessoal: formData.descricao_pessoal.trim() || null,        
+        // ✅ Salva os dados do avatar de letra
+        avatar_type: 'letter',
+        avatar_letter: letter,
+        avatar_color: randomColor,
       });
 
       if (success) {

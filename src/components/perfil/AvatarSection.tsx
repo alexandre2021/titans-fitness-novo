@@ -256,7 +256,7 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
           <div className="relative w-24 h-24">
             <Avatar className="w-full h-full text-4xl border-2 border-background">
               <AvatarImage src={profile.avatar_image_url!} alt="Avatar do Usuário" />
-              <AvatarFallback style={{ backgroundColor: profile.avatar_color || '#3B82F6' }} className="text-white font-semibold">
+            <AvatarFallback style={{ backgroundColor: profile.avatar_color || '#cccccc' }} className="text-white font-semibold">
                 {letter}
               </AvatarFallback>
             </Avatar>
@@ -296,7 +296,7 @@ export const AvatarSection: React.FC<AvatarSectionProps> = ({ profile, onProfile
   const AvatarWithLetter = (
     <div className="relative w-24 h-24">
       <Avatar className="w-full h-full text-4xl border-2 border-background">
-        <AvatarFallback style={{ backgroundColor: profile.avatar_color || '#3B82F6' }} className="text-white font-semibold">
+        <AvatarFallback style={{ backgroundColor: profile.avatar_color || '#cccccc' }} className="text-white font-semibold">
           {letter}
         </AvatarFallback>
       </Avatar>

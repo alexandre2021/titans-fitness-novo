@@ -90,8 +90,8 @@ export function DatePicker({
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 100 }, (_, i) => String(currentYear - i));
   const months = Array.from({ length: 12 }, (_, i) => {
-    const date = new Date(2000, i, 1);
-    const monthFormat = isMobile ? "MMM" : "MMMM";
+    const date = new Date(2000, i, 1); // ✅ Alteração para sempre usar o formato abreviado
+    const monthFormat = "MMM";
     let label = format(date, monthFormat, { locale: ptBR });
     // Remove o ponto final da abreviação (ex: "jan.") e capitaliza a primeira letra
     label = label.replace('.', '');

@@ -90,7 +90,8 @@ const Login = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          // ✅ CORREÇÃO: Aponta para a URL de callback correta.
+          redirectTo: `${window.location.origin}/auth/callback`, 
         },
       });
       if (error) throw error;
@@ -149,9 +150,7 @@ const Login = () => {
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t" />
                 </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">OU</span>
-                </div>
+                <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">OU</span></div>
               </div>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
