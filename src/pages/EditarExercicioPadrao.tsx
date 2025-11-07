@@ -1,6 +1,6 @@
 // src/pages/EditarExercicioPadrao.tsx
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,7 @@ type Exercicio = Tables<"exercicios">;
 const EditarExercicioPadrao = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const toast = sonnerToast;
   const { user } = useAuth();
   const isMobile = useIsMobile();
@@ -67,6 +68,104 @@ const EditarExercicioPadrao = () => {
   const GRUPOS_MUSCULARES_OPTIONS = gruposMusculares.map(o => ({ value: o, label: o }));
   const EQUIPAMENTOS_OPTIONS = equipamentos.map(d => ({ value: d, label: d }));
   const DIFICULDADES_OPTIONS = dificuldades.map(f => ({ value: f, label: f }));
+
+  // Função para converter GIF para WebP animado (igual ao script de carga)
+  const convertGifToWebP = async (file: File, width: number, height: number): Promise<File> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      canvas.width = width;
+      canvas.height = height;
+
+      img.onload = () => {
+        // Desenhar o GIF no canvas (preserva a animação)
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        // Converter para WebP mantendo a animação
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const optimizedFile = new File([blob], file.name.replace('.gif', '.webp'), {
+              type: 'image/webp'
+            });
+            resolve(optimizedFile);
+          } else {
+            resolve(file); // Fallback para o arquivo original
+          }
+        }, 'image/webp', 0.8);
+      };
+      
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  // Função para redimensionar e converter imagens estáticas para JPEG (igual ao script de carga)
+  const resizeAndConvertImage = async (file: File, width: number, height: number): Promise<File> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      img.onload = () => {
+        canvas.width = width;
+        canvas.height = height;
+
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        // Converter para JPEG com qualidade otimizada
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const optimizedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.jpg'), {
+              type: 'image/jpeg'
+            });
+            resolve(optimizedFile);
+          } else {
+            resolve(file);
+          }
+        }, 'image/jpeg', 0.8);
+      };
+
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  // Função para processar mídias igual ao script de carga
+  const processMediaFile = async (file: File, type: 'image' | 'video'): Promise<File> => {
+    if (type === 'image') {
+      // Para GIFs: converter para WebP animado (igual ao script de carga)
+      if (file.type === 'image/gif') {
+        return await convertGifToWebP(file, 360, 360);
+      }
+      
+      // Para WebP animados: manter como WebP mas redimensionar
+      if (file.type === 'image/webp') {
+        // Verificar se é animado tentando ler vários frames
+        const resizedFile = await resizeAndOptimizeImage(file, 360);
+        return resizedFile || file;
+      }
+      
+      // Para outras imagens estáticas: redimensionar para 360x360 e converter para JPEG
+      return await resizeAndConvertImage(file, 360, 360);
+    }
+    
+    // Para vídeos: manter lógica atual
+    return file;
+  };
+
+  // Função para voltar preservando filtros
+  const handleVoltar = () => {
+    const returnTo = searchParams.get('returnTo');
+    
+    if (returnTo) {
+      const decodedReturnTo = decodeURIComponent(returnTo);
+      console.log('--- EDITAR_PADRAO_VOLTAR: Voltando para URL:', decodedReturnTo);
+      navigate(decodedReturnTo, { replace: true });
+    } else {
+      console.log('--- EDITAR_PADRAO_VOLTAR (FALLBACK): Não encontrou parâmetro returnTo. Voltando para /exercicios.');
+      navigate('/exercicios', { replace: true });
+    }
+  };
 
   const getSignedImageUrl = useCallback(async (filename: string): Promise<string> => {
     try {
@@ -150,7 +249,8 @@ const EditarExercicioPadrao = () => {
   const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = type === 'video' ? 'video/*' : 'image/jpeg, image/png, image/webp';
+    // ✅ ATUALIZADO: Aceitar GIF além dos outros formatos
+    input.accept = type === 'video' ? 'video/*' : 'image/jpeg, image/png, image/webp, image/gif';
     if (isMobile) input.capture = type === 'video' ? 'user' : 'environment';
 
     input.onchange = async (event) => {
@@ -163,11 +263,26 @@ const EditarExercicioPadrao = () => {
         return;
       }
 
-      const resizedFile = type.startsWith('imagem') ? await resizeAndOptimizeImage(file, 640) : file;
-      if (!resizedFile) { toast.error("Erro ao processar imagem."); return; }
+      try {
+        // ✅ NOVO: Processar arquivo igual ao script de carga
+        const processedFile = type.startsWith('imagem') 
+          ? await processMediaFile(file, 'image')
+          : file;
 
-      const key = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'video_url';
-      setMidias(prev => ({ ...prev, [key]: resizedFile }));
+        const key = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'video_url';
+        setMidias(prev => ({ ...prev, [key]: processedFile }));
+
+        // Feedback de otimização
+        if (processedFile.size < file.size) {
+          const reduction = ((file.size - processedFile.size) / file.size * 100).toFixed(1);
+          toast.success("Imagem otimizada", {
+            description: `Tamanho reduzido em ${reduction}%`
+          });
+        }
+      } catch (error) {
+        toast.error("Erro ao processar imagem");
+        console.error(error);
+      }
     };
     input.click();
   };
@@ -206,42 +321,77 @@ const EditarExercicioPadrao = () => {
     }
   };
 
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.nome.trim()) newErrors.nome = 'Nome é obrigatório';
+    if (!formData.descricao.trim()) newErrors.descricao = 'Descrição é obrigatória';
+    if (instrucoesList.every(i => !i.trim())) newErrors.instrucoes = 'Pelo menos uma instrução é obrigatória';
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSave = async () => {
     if (!id || !user) return;
     setSaving(true);
 
+    if (!validateForm()) {
+      toast.error("Erro de Validação", {
+        description: "Por favor, preencha todos os campos obrigatórios.",
+      });
+      setSaving(false);
+      return;
+    }
+
     try {
+      // 1. Processar o upload/deleção de mídias
       const finalMediaUrls: { [key: string]: string | null } = {};
       for (const key of ['imagem_1_url', 'imagem_2_url', 'video_url']) {
         const currentValue = midias[key];
         const initialValue = initialMediaUrls[key as keyof typeof initialMediaUrls];
 
         if (currentValue instanceof File) {
+          // Se é um arquivo novo, faz upload e deleta o antigo se existir
           finalMediaUrls[key] = await uploadFile(currentValue);
           if (initialValue) await deleteFile(initialValue);
         } else if (currentValue === null && initialValue) {
+          // Se foi removido (é nulo agora), deleta o antigo
           finalMediaUrls[key] = null;
           await deleteFile(initialValue);
         } else {
+          // Se não mudou, mantém o valor antigo
           finalMediaUrls[key] = currentValue as string | null;
         }
       }
 
-      const { error } = await supabase.from('exercicios').update({
-        nome: formData.nome.trim(),
-        descricao: formData.descricao.trim(),
-        grupo_muscular: formData.grupo_muscular,
-        equipamento: formData.equipamento,
-        dificuldade: formData.dificuldade,
-        instrucoes: instrucoesList.filter(i => i.trim()).join('#'),
-        grupo_muscular_primario: formData.grupo_muscular_primario.trim() || null,
-        grupos_musculares_secundarios: formData.grupos_musculares_secundarios.trim() || null,
-        ...finalMediaUrls,
-        youtube_url: midias.youtube_url as string || null,
-      }).eq('id', id);
+      // ✅ CORREÇÃO: Chama a Edge Function para atualizar o exercício com privilégios de admin.
+      const { data: functionData, error } = await supabase.functions.invoke('update-exercicio-padrao', {
+        body: {
+          exercicioId: id,
+          updates: {
+            nome: formData.nome.trim(),
+            descricao: formData.descricao.trim(),
+            grupo_muscular: formData.grupo_muscular,
+            equipamento: formData.equipamento,
+            dificuldade: formData.dificuldade,
+            instrucoes: instrucoesList.filter(i => i.trim()).join('#'),
+            grupo_muscular_primario: formData.grupo_muscular_primario.trim() || null,
+            grupos_musculares_secundarios: formData.grupos_musculares_secundarios.trim() || null,
+            ...finalMediaUrls, // ✅ CORREÇÃO: Envia os URLs das mídias atualizadas
+            youtube_url: midias.youtube_url as string || null,
+          }
+        }
+      });
 
       if (error) throw error;
-      navigate('/exercicios');
+      if (functionData && functionData.error) throw new Error(functionData.error);
+
+      toast.success("Exercício Padrão Atualizado", {
+        description: `O exercício "${formData.nome.trim()}" foi atualizado com sucesso.`
+      });
+      
+      // Usar handleVoltar para voltar preservando filtros após salvar
+      handleVoltar();
     } catch (error) {
       toast.error("Erro ao salvar", { description: (error as Error).message });
     } finally {
@@ -252,16 +402,11 @@ const EditarExercicioPadrao = () => {
   if (loading) return <div>Carregando...</div>;
   if (!exercicio) return <div>Exercício não encontrado.</div>;
 
-  // O restante do JSX é muito similar ao de NovoExercicioPadrao, então vou omitir para brevidade
-  // e focar na lógica. A UI pode ser copiada de `EditarExercicio.tsx` e adaptada.
-  // A lógica principal de fetch e save está acima.
-
-  // UI (similar a EditarExercicio.tsx, mas com a lógica de save e upload para 'exercicios-padrao')
   return (
     <div className="space-y-6">
       {!isMobile && (
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/exercicios')} className="h-10 w-10 p-0">
+          <Button variant="ghost" onClick={handleVoltar} className="h-10 w-10 p-0">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
@@ -276,12 +421,14 @@ const EditarExercicioPadrao = () => {
           <CardHeader><CardTitle>Informações Básicas</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="nome">Nome</Label>
-              <Input id="nome" value={formData.nome} onChange={(e) => setFormData(prev => ({ ...prev, nome: e.target.value }))} />
+              <Label htmlFor="nome">Nome *</Label>
+              <Input id="nome" value={formData.nome} onChange={(e) => setFormData(prev => ({ ...prev, nome: e.target.value }))} className={errors.nome ? "border-red-500" : ""} />
+              {errors.nome && <p className="text-sm text-red-500 mt-1">{errors.nome}</p>}
             </div>
             <div>
-              <Label htmlFor="descricao">Descrição</Label>
-              <Textarea id="descricao" value={formData.descricao} onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))} />
+              <Label htmlFor="descricao">Descrição *</Label>
+              <Textarea id="descricao" value={formData.descricao} onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))} className={errors.descricao ? "border-red-500" : ""} />
+              {errors.descricao && <p className="text-sm text-red-500 mt-1">{errors.descricao}</p>}
             </div>
             <Separator />
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

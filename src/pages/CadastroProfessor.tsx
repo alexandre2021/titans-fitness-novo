@@ -133,25 +133,25 @@ const Cadastroprofessor = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="border-b border-border py-4">
+      <header className="border-b border-border py-3">
         <div className="flex items-center justify-center relative px-6">
           <Button
             variant="ghost"
             onClick={() => navigate(-1)}
-            className="h-10 w-10 p-0 absolute left-6"
+            className="h-9 w-9 p-0 absolute left-4 md:left-6"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <img
             src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal.png"
             alt="Titans.fitness"
-            className="h-12"
+            className="h-10"
           />
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex justify-center px-6 pt-8 pb-6 md:pt-16 md:pb-12">
+      <main className="flex-1 flex justify-center px-6 pt-8 pb-12 md:pt-12">
         <Card className="w-full max-w-md border-border shadow-lg">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl text-text-primary">

@@ -39,11 +39,12 @@ const GRUPO_CORES: { [key: string]: string } = {
 const ExerciciosPT = () => {
   const navigate = useNavigate();
   const location = useLocation();
+
   const { user } = useAuth();
   const ADMIN_EMAIL = 'contato@titans.fitness';
   const isAdmin = user?.email === ADMIN_EMAIL;
   const LIMITE_EXERCICIOS_PERSONALIZADOS = 100;
-  
+
   const {
     exerciciosPadrao,
     exerciciosPersonalizados,
@@ -53,27 +54,74 @@ const ExerciciosPT = () => {
     refetch
   } = useExercicios();
 
+  const [activeTab, setActiveTab] = useState<"padrao" | "personalizados">("padrao");
+  const [busca, setBusca] = useState("");
   const [filtros, setFiltros] = useState({
     grupoMuscular: 'todos',
     equipamento: 'todos',
     dificuldade: 'todos'
   });
-  const [activeTab, setActiveTab] = useState<"padrao" | "personalizados">(location.state?.activeTab || "padrao");
+
+  const isFirstRender = useRef(true); // Controla a primeira renderização para evitar navegação inicial
+  const isUpdatingFromUrl = useRef(false); // NOVO REF: Controla se a atualização veio da URL
+
+  // Efeito de LEITURA: Sincroniza o estado interno com os parâmetros da URL
+  useEffect(() => {
+    isUpdatingFromUrl.current = true; // Sinaliza que a próxima mudança de estado é devido à leitura da URL
+    const currentSearchParams = new URLSearchParams(location.search);
+    const tab = (currentSearchParams.get('tab') as "padrao" | "personalizados") || "padrao";
+    const newBusca = currentSearchParams.get('busca') || "";
+    const newFiltros = {
+      grupoMuscular: currentSearchParams.get('grupo') || 'todos',
+      equipamento: currentSearchParams.get('equipamento') || 'todos',
+      dificuldade: currentSearchParams.get('dificuldade') || 'todos'
+    };
+
+    setActiveTab(tab);
+    setBusca(newBusca);
+    setFiltros(newFiltros);
+
+    // Apenas marca que a primeira renderização (leitura da URL) acabou
+    if (isFirstRender.current) {
+        isFirstRender.current = false;
+    }
+  }, [location.search, setActiveTab, setBusca, setFiltros]);
+
+    // Efeito de ESCRITA: Sincroniza a URL com as mudanças no estado interno
+  useEffect(() => {
+    if (isUpdatingFromUrl.current) {
+        isUpdatingFromUrl.current = false; // Reseta o sinalizador
+        return; // Não faz nada se a mudança veio da URL (quebrando o loop!)
+    }
+    const currentSearchParams = new URLSearchParams();
+    if (activeTab && activeTab !== "padrao") currentSearchParams.set('tab', activeTab);
+    if (busca) currentSearchParams.set('busca', busca);
+    if (filtros.grupoMuscular && filtros.grupoMuscular !== 'todos') currentSearchParams.set('grupo', filtros.grupoMuscular);
+    if (filtros.equipamento && filtros.equipamento !== 'todos') currentSearchParams.set('equipamento', filtros.equipamento);
+    if (filtros.dificuldade && filtros.dificuldade !== 'todos') currentSearchParams.set('dificuldade', filtros.dificuldade);
+
+    const newSearch = currentSearchParams.toString();
+    const currentUrlSearch = location.search.startsWith('?') ? location.search.substring(1) : location.search;
+
+    if (isFirstRender.current) {
+        isFirstRender.current = false;
+        return; 
+    }
+
+    if (newSearch !== currentUrlSearch) {
+        navigate({ search: newSearch }, { replace: true });
+    }
+
+  }, [activeTab, busca, filtros.grupoMuscular, filtros.equipamento, filtros.dificuldade, navigate, location.search]);
+
+
   const [showFilters, setShowFilters] = useState(false);
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [exercicioParaExcluir, setExercicioParaExcluir] = useState<Tables<'exercicios'> | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [busca, setBusca] = useState("");
   const [showScrollTopButton, setShowScrollTopButton] = useState(false);
   const deletingRef = useRef(false);
-
-  // Efeito para sincronizar a aba com o estado da navegação
-  useEffect(() => {
-    if (location.state?.activeTab) {
-      setActiveTab(location.state.activeTab);
-    }
-  }, [location.state]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -142,7 +190,7 @@ const ExerciciosPT = () => {
 
     } catch (error) {
       console.error("Erro ao excluir exercício:", error);
-      
+
       // Em caso de erro, resetar estados (o hook já mostra o toast de erro)
       setIsDeleting(false);
       deletingRef.current = false;
@@ -162,7 +210,7 @@ const ExerciciosPT = () => {
       exercicio.nome?.toLowerCase().includes(busca.toLowerCase()) ||
       exercicio.descricao?.toLowerCase().includes(busca.toLowerCase()) ||
       exercicio.grupo_muscular?.toLowerCase().includes(busca.toLowerCase());
-    
+
     const matchesFiltros = 
       (filtros.grupoMuscular === 'todos' || exercicio.grupo_muscular === filtros.grupoMuscular) &&
       (filtros.equipamento === 'todos' || exercicio.equipamento === filtros.equipamento) &&
@@ -178,6 +226,7 @@ const ExerciciosPT = () => {
   const limparFiltros = () => {
     setFiltros({ grupoMuscular: 'todos', equipamento: 'todos', dificuldade: 'todos' });
     setBusca('');
+    // A URL será limpa pelo useEffect de escrita
   };
 
   const canAddMore = totalPersonalizados < LIMITE_EXERCICIOS_PERSONALIZADOS;
@@ -329,11 +378,17 @@ const ExerciciosPT = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 pb-20 md:pb-0">
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 pb-32 md:pb-16">
               {exerciciosFiltrados.map((exercicio) => {
                 const corGrupo = exercicio.grupo_muscular ? GRUPO_CORES[exercicio.grupo_muscular] || 'bg-gray-100 text-black' : 'bg-gray-100 text-black';
                 return (
-                  <Card key={exercicio.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/exercicios/detalhes/${exercicio.id}`, { state: { fromTab: 'padrao' } })}>
+                  <Card 
+                    key={exercicio.id} 
+                    className="hover:shadow-md transition-shadow cursor-pointer" 
+                    onClick={() => {
+                        const returnToUrl = encodeURIComponent(location.pathname + location.search);
+                        navigate(`/exercicios/detalhes/${exercicio.id}?returnTo=${returnToUrl}`);
+                    }}>
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0 pr-1 md:pr-4 flex flex-col">
@@ -352,7 +407,11 @@ const ExerciciosPT = () => {
                             <Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4" onClick={(e) => e.stopPropagation()}><MoreVertical /></Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/exercicios/detalhes/${exercicio.id}`, { state: { fromTab: 'padrao' } }); }}>
+                            <DropdownMenuItem onClick={(e) => { 
+                                e.stopPropagation(); 
+                                const returnToUrl = encodeURIComponent(location.pathname + location.search);
+                                navigate(`/exercicios/detalhes/${exercicio.id}?returnTo=${returnToUrl}`);
+                            }}>
                               <Eye className="mr-2 h-5 w-5" />
                               <span className="text-base">Ver Detalhes</span>
                             </DropdownMenuItem>
@@ -362,7 +421,11 @@ const ExerciciosPT = () => {
                             </DropdownMenuItem>
                             {isAdmin && (
                               <DropdownMenuItem
-                                onClick={(e) => { e.stopPropagation(); navigate(`/exercicios/editar-padrao/${exercicio.id}`); }}
+                                onClick={(e) => { 
+                                  e.stopPropagation(); 
+                                  const returnToUrl = encodeURIComponent(location.pathname + location.search);
+                                  navigate(`/exercicios/editar-padrao/${exercicio.id}?returnTo=${returnToUrl}`);
+                                }}
                                 className="bg-secondary text-secondary-foreground hover:bg-secondary/80 focus:bg-secondary/80 focus:text-secondary-foreground"
                               >
                                 <Edit className="mr-2 h-5 w-5" />
@@ -502,7 +565,13 @@ const ExerciciosPT = () => {
                   {exerciciosFiltrados.map((exercicio) => {
                     const corGrupo = exercicio.grupo_muscular ? GRUPO_CORES[exercicio.grupo_muscular] || 'bg-gray-100 text-black' : 'bg-gray-100 text-black';
                     return (
-                      <Card key={exercicio.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/exercicios/detalhes/${exercicio.id}`, { state: { fromTab: 'personalizados' } })}>
+                      <Card 
+                        key={exercicio.id} 
+                        className="hover:shadow-md transition-shadow cursor-pointer" 
+                    onClick={() => {
+                        const returnToUrl = encodeURIComponent(location.pathname + location.search);
+                        navigate(`/exercicios/detalhes/${exercicio.id}?returnTo=${returnToUrl}`);
+                    }}>
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 min-w-0 pr-1 md:pr-4 flex flex-col">
@@ -521,11 +590,19 @@ const ExerciciosPT = () => {
                                 <Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4" onClick={(e) => e.stopPropagation()}><MoreVertical /></Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/exercicios/detalhes/${exercicio.id}`, { state: { fromTab: 'personalizados' } }); }}>
+                                <DropdownMenuItem onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    const returnToUrl = encodeURIComponent(location.pathname + location.search);
+                                    navigate(`/exercicios/detalhes/${exercicio.id}?returnTo=${returnToUrl}`);
+                                }}>
                                   <Eye className="mr-2 h-5 w-5" />
                                   <span className="text-base">Ver Detalhes</span>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/exercicios/editar/${exercicio.id}`); }}>
+                                <DropdownMenuItem onClick={(e) => { 
+                                  e.stopPropagation(); 
+                                  const returnToUrl = encodeURIComponent(location.pathname + location.search);
+                                  navigate(`/exercicios/editar/${exercicio.id}?returnTo=${returnToUrl}`);
+                                }}>
                                   <Edit className="mr-2 h-5 w-5" />
                                   <span className="text-base">Editar</span>
                                 </DropdownMenuItem>

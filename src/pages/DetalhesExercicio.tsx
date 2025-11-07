@@ -1,7 +1,7 @@
 // pages/DetalhesExercicio.tsx
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom"; // Adicionar useSearchParams
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,7 @@ const DetalhesExercicio = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams(); // Adicionar esta linha
   const { user } = useAuth();
   const isMobile = useIsMobile();
 
@@ -196,11 +197,22 @@ const DetalhesExercicio = () => {
     fetchExercicio();
   }, [id, user, navigate, loadSignedUrls]);
 
+  // DetalhesExercicio.tsx (Substitua toda a função handleVoltar pela nova versão abaixo)
   const handleVoltar = () => {
-    // Usa o estado da navegação para saber de qual aba veio.
-    // Se não houver estado, usa o tipo do exercício como fallback.
-    const abaDeOrigem = location.state?.fromTab || (exercicio?.tipo === 'personalizado' ? 'personalizados' : 'padrao');
-    navigate('/exercicios', { state: { activeTab: abaDeOrigem }});
+    // 1. Tenta obter a URL de retorno do parâmetro de URL 'returnTo' (Robusta)
+    const returnTo = searchParams.get('returnTo');
+    
+    if (returnTo) {
+        // Usa decodeURIComponent para restaurar a URL original, incluindo os filtros
+        const decodedReturnTo = decodeURIComponent(returnTo);
+        console.log('--- DETALHES_VOLTAR (ROBUSTO): Voltando para URL:', decodedReturnTo);
+        navigate(decodedReturnTo, { replace: true });
+    } else {
+        // 2. Fallback antigo (mantido por segurança, mas o novo método deve ser preferencial)
+        console.log('--- DETALHES_VOLTAR (FALLBACK): Não encontrou parâmetro returnTo.');
+        const abaDeOrigem = location.state?.fromTab || (exercicio?.tipo === 'personalizado' ? 'personalizados' : 'padrao');
+        navigate(`/exercicios?tab=${abaDeOrigem}`, { replace: true });
+    }
   };
 
   const handleCriarCopia = () => {

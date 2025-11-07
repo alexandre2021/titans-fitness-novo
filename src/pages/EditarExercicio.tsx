@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,8 @@ type Exercicio = Tables<"exercicios">;
 const EditarExercicio = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation(); // Será necessário
+  const [searchParams] = useSearchParams(); // ADICIONE ESTA LINHA
   const toast = sonnerToast;
   const { user } = useAuth();
   const isMobile = useIsMobile();
@@ -407,6 +409,22 @@ const EditarExercicio = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleVoltar = () => {
+    // Tenta obter a URL de retorno do parâmetro de URL 'returnTo' (Robusta)
+    const returnTo = searchParams.get('returnTo');
+    
+    if (returnTo) {
+        // Usa decodeURIComponent para restaurar a URL original, incluindo os filtros
+        const decodedReturnTo = decodeURIComponent(returnTo);
+        console.log('--- EDITAR_VOLTAR: Voltando para URL:', decodedReturnTo);
+        navigate(decodedReturnTo, { replace: true });
+    } else {
+        // Fallback: Se por algum motivo o returnTo não estiver na URL, volta para a lista padrão.
+        console.log('--- EDITAR_VOLTAR (FALLBACK): Não encontrou parâmetro returnTo. Voltando para /exercicios.');
+        navigate('/exercicios', { replace: true });
+    }
+  };
+
   const handleSave = async () => {
     const instrucoesFinal = instrucoesList.filter(i => i.trim()).join('#');
     if (!validateForm()) {
@@ -484,7 +502,7 @@ const EditarExercicio = () => {
         {/* Layout Desktop */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" onClick={() => navigate('/exercicios', { state: { activeTab: 'personalizados' } })} className="h-10 w-10 p-0">
+              <Button variant="ghost" onClick={handleVoltar} className="h-10 w-10 p-0">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
               <div className="flex-1">
