@@ -35,7 +35,6 @@ const CopiaExercicio = () => {
   const [showVideoInfoModal, setShowVideoInfoModal] = useState(false);
   const [showVideoRecorder, setShowVideoRecorder] = useState(false);
   const [showDeleteMediaDialog, setShowDeleteMediaDialog] = useState<string | null>(null);
-  const [videoRotation, setVideoRotation] = useState(0);
   
   const { user } = useAuth();
   
@@ -325,22 +324,6 @@ const CopiaExercicio = () => {
     input.click();
   };
 
-  // Função para detectar orientação do vídeo
-  const getVideoOrientation = async (videoFile: File): Promise<number> => {
-    return new Promise((resolve) => {
-      const video = document.createElement('video');
-      video.preload = 'metadata';
-      video.onloadedmetadata = () => {
-        URL.revokeObjectURL(video.src);
-        const isPortrait = video.videoHeight > video.videoWidth;
-        resolve(isPortrait ? 90 : 0);
-      };
-      video.onerror = () => resolve(0);
-      video.src = URL.createObjectURL(videoFile);
-    });
-  };
-
-
   const handleRecordingComplete = ({ 
     videoBlob, 
     thumbnailBlob 
@@ -351,9 +334,6 @@ const CopiaExercicio = () => {
     const videoFile = new File([videoBlob], `gravacao_${Date.now()}.webm`, { type: 'video/webm' });    
     const thumbnailFile = new File([thumbnailBlob], `thumbnail_${Date.now()}.jpeg`, { type: 'image/jpeg' });    
     setMidias(prev => ({ ...prev, video_url: videoFile, video_thumbnail_path: thumbnailFile }));
-    getVideoOrientation(videoFile).then(rotation => {
-      setVideoRotation(rotation);
-    });
     setShowVideoRecorder(false);
   };
 
@@ -475,16 +455,6 @@ const CopiaExercicio = () => {
       loadSignedUrls(exercicioOriginal.tipo as 'padrao' | 'personalizado');
     }
   }, [exercicioOriginal, loadSignedUrls]);
-
-  // Efeito para detectar a orientação de um vídeo que já existe (ao carregar a página)
-  useEffect(() => {
-    if (midias.video_url && typeof midias.video_url === 'string' && signedUrls.video) {
-      // Como não temos o File, não podemos usar getVideoOrientation.
-      // A solução ideal seria salvar a orientação no banco de dados no momento do upload.
-      // Por enquanto, assumimos 0 para vídeos existentes.
-      setVideoRotation(0);
-    }
-  }, [midias.video_url, signedUrls.video]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -1046,7 +1016,6 @@ const CopiaExercicio = () => {
                               src={signedUrls.video}
                               className="absolute top-0 left-0 w-full h-full object-cover rounded-lg"
                               controls
-                              style={{ transform: `rotate(${videoRotation}deg)` }}
                             />
                           </div>
                         ) : (
