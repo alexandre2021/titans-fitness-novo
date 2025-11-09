@@ -4,10 +4,11 @@ import { Camera, X, Circle } from 'lucide-react';
 import { toast as sonnerToast } from "sonner";
 import Modal from 'react-modal';
 
+// MODIFICAÇÃO 1: Atualiza a interface para retornar o vídeo E o thumbnail
 interface VideoRecorderProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onRecordingComplete: (videoBlob: Blob) => void;
+  onRecordingComplete: (files: { videoBlob: Blob, thumbnailBlob: Blob }) => void;
 }
 
 export function VideoRecorder({ open, onOpenChange, onRecordingComplete }: VideoRecorderProps) {
@@ -18,18 +19,70 @@ export function VideoRecorder({ open, onOpenChange, onRecordingComplete }: Video
   const [isRecording, setIsRecording] = useState(false);
   const [countdown, setCountdown] = useState(12);
 
+  // --- FUNÇÃO AUXILIAR PARA CAPTURAR O THUMBNAIL (A FOTO) ---
+  const captureThumbnail = useCallback(async (videoBlob: Blob): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      // Cria um elemento de vídeo temporário
+      const video = document.createElement('video');
+      video.src = URL.createObjectURL(videoBlob);
+      video.autoplay = true;
+      video.muted = true;
+      video.crossOrigin = 'anonymous'; 
+      
+      // Quando o vídeo carrega os metadados (incluindo dimensões)
+      video.onloadedmetadata = () => {
+        video.currentTime = 0; // Garante que começamos no primeiro frame
+
+        // Aguarda o frame estar pronto para desenhar
+        video.onseeked = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          const ctx = canvas.getContext('2d');
+          
+          if (ctx) {
+            // Desenha o frame do vídeo no canvas
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Converte o canvas para um Blob de imagem (JPEG para compressão e eficiência)
+            canvas.toBlob((blob) => {
+              // Limpeza
+              URL.revokeObjectURL(video.src); 
+              video.remove();
+              
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error("Falha ao gerar o Blob do thumbnail."));
+              }
+            }, 'image/jpeg', 0.85); // 0.85 é uma boa qualidade de compressão
+          } else {
+            reject(new Error("Contexto 2D do Canvas indisponível."));
+          }
+        };
+      };
+
+      video.onerror = (e) => {
+        URL.revokeObjectURL(video.src);
+        video.remove();
+        reject(new Error("Erro ao carregar os dados do vídeo para thumbnail."));
+      };
+    });
+  }, []);
+
+  // --- LÓGICA DE PARADA DA GRAVAÇÃO ---
   const stopRecording = useCallback(() => {
+    // A lógica de stop é movida para dentro do onstop do recorder
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
     }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
+    
+    // O stream será parado no onstop do recorder, após processamento
     setIsRecording(false);
     setCountdown(12);
   }, []);
 
+  // --- LÓGICA DE INÍCIO DA GRAVAÇÃO ---
   const startRecording = useCallback(async () => {
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
@@ -50,7 +103,7 @@ export function VideoRecorder({ open, onOpenChange, onRecordingComplete }: Video
       const recordedChunks: Blob[] = [];
       const recorder = new MediaRecorder(stream, {
         mimeType: 'video/webm; codecs=vp9',
-        videoBitsPerSecond: 500000, // 500 kbps para compressão
+        videoBitsPerSecond: 500000, // 500 kbps
       });
 
       mediaRecorderRef.current = recorder;
@@ -61,10 +114,29 @@ export function VideoRecorder({ open, onOpenChange, onRecordingComplete }: Video
         }
       };
 
-      recorder.onstop = () => {
+      // MODIFICAÇÃO 2: Lógica de processamento e retorno no onstop
+      recorder.onstop = async () => {
+        // Para todas as tracks do stream (limpeza da câmera)
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+          streamRef.current = null;
+        }
+        
         const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
-        onRecordingComplete(videoBlob);
-        stopRecording();
+        
+        try {
+          // GERA O THUMBNAIL ANTES DE CHAMAR O CALLBACK
+          const thumbnailBlob = await captureThumbnail(videoBlob);
+          
+          // Retorna os dois blobs para a página-mãe
+          onRecordingComplete({ videoBlob, thumbnailBlob });
+          
+        } catch (error) {
+          console.error("Erro no processamento de vídeo ou thumbnail:", error);
+          toast.error("Erro de Processamento", { description: "Falha ao gerar o thumbnail do vídeo." });
+        } finally {
+            onOpenChange(false); // Fecha o modal após o processamento (sucesso ou falha)
+        }
       };
 
       recorder.start();
@@ -75,15 +147,17 @@ export function VideoRecorder({ open, onOpenChange, onRecordingComplete }: Video
       toast.error("Erro de Câmera", { description: "Não foi possível acessar a câmera. Verifique as permissões." });
       onOpenChange(false);
     }
-  }, [toast, onRecordingComplete, onOpenChange, stopRecording]);
+  }, [toast, onRecordingComplete, onOpenChange, captureThumbnail]);
 
+  // Limpeza ao fechar o modal ou limite de tempo
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (isRecording) {
       timer = setInterval(() => {
         setCountdown(prev => {
           if (prev <= 1) {
-            stopRecording();
+            // AQUI CHAMAMOS stopRecording, que aciona o recorder.onstop
+            stopRecording(); 
             return 12;
           }
           return prev - 1;
@@ -93,18 +167,29 @@ export function VideoRecorder({ open, onOpenChange, onRecordingComplete }: Video
     return () => clearInterval(timer);
   }, [isRecording, stopRecording]);
 
-  // Limpeza ao fechar o modal
   useEffect(() => {
     if (!open) {
-      stopRecording();
+      // Limpeza de stream quando o modal é fechado
+      if (streamRef.current) {
+         streamRef.current.getTracks().forEach(track => track.stop());
+         streamRef.current = null;
+      }
+      setIsRecording(false);
+      setCountdown(12);
+    } else {
+        // Se o modal abrir, mas não estiver gravando, tenta iniciar
+        if (!isRecording) {
+            startRecording();
+        }
     }
-  }, [open, stopRecording]);
+  }, [open, isRecording, startRecording]);
+
 
   return (
     <Modal
       isOpen={open}
       onRequestClose={() => onOpenChange(false)}
-      shouldCloseOnOverlayClick={false} // Evita fechar ao clicar fora
+      shouldCloseOnOverlayClick={false} 
       shouldCloseOnEsc={true}
       className="h-full w-full bg-black flex flex-col outline-none"
       overlayClassName="fixed inset-0 z-50"

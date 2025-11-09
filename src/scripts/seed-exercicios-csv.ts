@@ -124,15 +124,24 @@ async function uploadImage(imageFilename: string | null, grupoMuscular: string):
 }
 
 /**
+ * Remove acentos de uma string.
+ * Ex: "Coração" => "Coracao"
+ */
+const removeAccents = (str: string): string => {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+};
+
+/**
  * Encontra o arquivo de imagem para um exercício, testando várias extensões.
  * É tolerante a múltiplos espaços no nome do arquivo.
  */
 const findImageFile = (baseFilename: string): string | null => {
   const extensions = ['.webp', '.jpg', '.jpeg', '.png', '.gif'];
+  const trimmedBaseFilename = baseFilename.trim();
 
   // 1. Tenta encontrar com o nome exato primeiro
   for (const ext of extensions) {
-    const filename = `${baseFilename}${ext}`;
+    const filename = `${trimmedBaseFilename}${ext}`;
     const imagePath = path.join(IMAGES_FOLDER_PATH, filename);
     if (fs.existsSync(imagePath)) {
       return filename;
@@ -140,8 +149,8 @@ const findImageFile = (baseFilename: string): string | null => {
   }
 
   // 2. Se não encontrar, tenta com os espaços normalizados (múltiplos espaços viram um só)
-  const normalizedBaseFilename = baseFilename.replace(/\s+/g, ' ').trim();
-  if (normalizedBaseFilename !== baseFilename) {
+  const normalizedBaseFilename = trimmedBaseFilename.replace(/\s+/g, ' ');
+  if (normalizedBaseFilename !== trimmedBaseFilename) {
     for (const ext of extensions) {
       const filename = `${normalizedBaseFilename}${ext}`;
       const imagePath = path.join(IMAGES_FOLDER_PATH, filename);
@@ -152,8 +161,25 @@ const findImageFile = (baseFilename: string): string | null => {
     }
   }
 
+  // 3. Se não encontrar, tenta sem acentos
+  const accentlessBaseFilename = removeAccents(normalizedBaseFilename);
+  if (accentlessBaseFilename !== normalizedBaseFilename) {
+    const filesInDir = fs.readdirSync(IMAGES_FOLDER_PATH);
+    for (const fileInDir of filesInDir) {
+      const accentlessFileInDir = removeAccents(fileInDir);
+      for (const ext of extensions) {
+        const filenameToMatch = `${accentlessBaseFilename}${ext}`;
+        if (accentlessFileInDir === filenameToMatch) {
+          console.log(`  - ℹ️  Nota: Imagem encontrada para "${baseFilename}" usando nome sem acentos: "${fileInDir}"`);
+          return fileInDir; // Retorna o nome do arquivo original com acentos
+        }
+      }
+    }
+  }
+
   return null;
 };
+
 
 /**
  * Função principal para ler o CSV e popular o banco de dados.

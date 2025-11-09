@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import Modal from 'react-modal';
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Save, Copy, Upload, Trash2, Eye, ExternalLink, Camera, Video, X } from "lucide-react";
+import { ArrowLeft, Save, Copy, Upload, Trash2, Eye, ExternalLink, Camera, Video, X, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast as sonnerToast } from "sonner";
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -35,6 +35,7 @@ const CopiaExercicio = () => {
   const [showVideoInfoModal, setShowVideoInfoModal] = useState(false);
   const [showVideoRecorder, setShowVideoRecorder] = useState(false);
   const [showDeleteMediaDialog, setShowDeleteMediaDialog] = useState<string | null>(null);
+  const [videoRotation, setVideoRotation] = useState(0);
   
   const { user } = useAuth();
   
@@ -54,23 +55,29 @@ const CopiaExercicio = () => {
   // MANTENDO estrutura original do estado de mídias
   const [midias, setMidias] = useState<{
     [key: string]: string | File | null;
+    video_thumbnail_path: string | File | null;
   }>({
     imagem_1_url: null, 
     imagem_2_url: null, 
     video_url: null, 
-    youtube_url: null
+    youtube_url: null,
+    video_thumbnail_path: null,
   });
+
+  const [coverMediaKey, setCoverMediaKey] = useState<keyof typeof midias | null>(null);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [signedUrls, setSignedUrls] = useState<{
     imagem1?: string;
     imagem2?: string;
     video?: string;
+    videoThumbnail?: string;
   }>({});
   const [initialMediaUrls, setInitialMediaUrls] = useState({
     imagem_1_url: null as string | null,
     imagem_2_url: null as string | null,
     video_url: null as string | null,
+    video_thumbnail_path: null as string | null,
   });
 
   const [loadingImages, setLoadingImages] = useState(false);
@@ -318,16 +325,46 @@ const CopiaExercicio = () => {
     input.click();
   };
 
-  const handleRecordingComplete = (videoBlob: Blob) => {
-    const videoFile = new File([videoBlob], `gravacao_${Date.now()}.webm`, { type: 'video/webm' });
-    setMidias(prev => ({ ...prev, video_url: videoFile }));
+  // Função para detectar orientação do vídeo
+  const getVideoOrientation = async (videoFile: File): Promise<number> => {
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.onloadedmetadata = () => {
+        URL.revokeObjectURL(video.src);
+        const isPortrait = video.videoHeight > video.videoWidth;
+        resolve(isPortrait ? 90 : 0);
+      };
+      video.onerror = () => resolve(0);
+      video.src = URL.createObjectURL(videoFile);
+    });
+  };
+
+
+  const handleRecordingComplete = ({ 
+    videoBlob, 
+    thumbnailBlob 
+  }: { 
+    videoBlob: Blob, 
+    thumbnailBlob: Blob 
+  }) => {
+    const videoFile = new File([videoBlob], `gravacao_${Date.now()}.webm`, { type: 'video/webm' });    
+    const thumbnailFile = new File([thumbnailBlob], `thumbnail_${Date.now()}.jpeg`, { type: 'image/jpeg' });    
+    setMidias(prev => ({ ...prev, video_url: videoFile, video_thumbnail_path: thumbnailFile }));
+    getVideoOrientation(videoFile).then(rotation => {
+      setVideoRotation(rotation);
+    });
     setShowVideoRecorder(false);
   };
 
   const handleDeleteMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
     try {
-      const key = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'video_url';
-      setMidias(prev => ({ ...prev, [key]: null }));
+      const mediaKeyToDelete = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'video_url';
+      setMidias(prev => ({ ...prev, [mediaKeyToDelete]: null }));
+
+      if (coverMediaKey === mediaKeyToDelete) {
+        setCoverMediaKey(null);
+      }
 
       setShowDeleteMediaDialog(null);
     } catch (error) {
@@ -337,6 +374,19 @@ const CopiaExercicio = () => {
       });
     }
   };
+
+  // Efeito para definir a primeira mídia como capa automaticamente
+  useEffect(() => {
+    if (coverMediaKey) return;
+
+    const firstAvailableMedia = (['imagem_1_url', 'imagem_2_url', 'video_url', 'youtube_url'] as const).find(
+      key => midias[key] !== null
+    );
+
+    if (firstAvailableMedia) {
+      setCoverMediaKey(firstAvailableMedia);
+    }
+  }, [midias, coverMediaKey]);
 
   // useEffect para carregar exercício original (mantido igual)
   useEffect(() => {
@@ -391,14 +441,17 @@ const CopiaExercicio = () => {
           imagem_1_url: exercicio.imagem_1_url || null,
           imagem_2_url: exercicio.imagem_2_url || null,
           video_url: exercicio.video_url || null,
+          video_thumbnail_path: exercicio.video_thumbnail_path || null,
           youtube_url: exercicio.youtube_url || null,
         });
         setInitialMediaUrls({
           imagem_1_url: exercicio.imagem_1_url,
           imagem_2_url: exercicio.imagem_2_url,
           video_url: exercicio.video_url,
+          video_thumbnail_path: exercicio.video_thumbnail_path,
         });
 
+        setCoverMediaKey(exercicio.cover_media_url as keyof typeof midias | null);
         console.log('✅ Exercício original carregado:', exercicio);
       } catch (error) {
         console.error('❌ Erro ao carregar exercício:', error);
@@ -422,6 +475,16 @@ const CopiaExercicio = () => {
       loadSignedUrls(exercicioOriginal.tipo as 'padrao' | 'personalizado');
     }
   }, [exercicioOriginal, loadSignedUrls]);
+
+  // Efeito para detectar a orientação de um vídeo que já existe (ao carregar a página)
+  useEffect(() => {
+    if (midias.video_url && typeof midias.video_url === 'string' && signedUrls.video) {
+      // Como não temos o File, não podemos usar getVideoOrientation.
+      // A solução ideal seria salvar a orientação no banco de dados no momento do upload.
+      // Por enquanto, assumimos 0 para vídeos existentes.
+      setVideoRotation(0);
+    }
+  }, [midias.video_url, signedUrls.video]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -529,10 +592,11 @@ const CopiaExercicio = () => {
 
     try {
       // 1. Processar e fazer upload/cópia de todas as mídias
-      const [imagem_1_url_final, imagem_2_url_final, video_url_final] = await Promise.all([
+      const [imagem_1_url_final, imagem_2_url_final, video_url_final, video_thumbnail_path_final] = await Promise.all([
         uploadFile(midias.imagem_1_url),
         uploadFile(midias.imagem_2_url),
         uploadFile(midias.video_url),
+        uploadFile(midias.video_thumbnail_path),
       ]);
 
       const instrucoesFinal = instrucoesList.filter(i => i.trim()).join('#');
@@ -552,7 +616,9 @@ const CopiaExercicio = () => {
           imagem_1_url: imagem_1_url_final,
           imagem_2_url: imagem_2_url_final,
           video_url: video_url_final,
+          video_thumbnail_path: video_thumbnail_path_final,
           youtube_url: midias.youtube_url as string || null,
+          cover_media_url: coverMediaKey ? String(coverMediaKey) : null,
           tipo: 'personalizado',
           professor_id: user.id,
           exercicio_padrao_id: exercicioOriginal?.id,
@@ -803,6 +869,18 @@ const CopiaExercicio = () => {
                             <span className="text-sm text-muted-foreground">Erro ao carregar</span>
                           </div>
                         )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute top-1 right-1 h-8 w-8 bg-white/30 hover:bg-white/50 backdrop-blur-sm text-gray-800 rounded-full"
+                          onClick={() => setCoverMediaKey('imagem_1_url')}
+                          title="Definir como capa"
+                        >
+                          <Star
+                            className={`h-4 w-4 transition-all ${coverMediaKey === 'imagem_1_url' ? 'fill-yellow-400 text-yellow-400' : 'fill-transparent'}`}
+                          />
+                        </Button>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <Button
@@ -884,6 +962,18 @@ const CopiaExercicio = () => {
                             <span className="text-sm text-muted-foreground">Erro ao carregar</span>
                           </div>
                         )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute top-1 right-1 h-8 w-8 bg-white/30 hover:bg-white/50 backdrop-blur-sm text-gray-800 rounded-full"
+                          onClick={() => setCoverMediaKey('imagem_2_url')}
+                          title="Definir como capa"
+                        >
+                          <Star
+                            className={`h-4 w-4 transition-all ${coverMediaKey === 'imagem_2_url' ? 'fill-yellow-400 text-yellow-400' : 'fill-transparent'}`}
+                          />
+                        </Button>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <Button
@@ -949,22 +1039,37 @@ const CopiaExercicio = () => {
                 <div className="mt-2 space-y-4">
                   {midias.video_url ? (
                     <div className="space-y-3">
-                      <div className="relative inline-block w-48 aspect-video bg-black rounded-lg border shadow-sm">
-                        {loadingImages ? (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <span className="text-sm text-muted-foreground">Carregando...</span>
+                      <div className="relative w-full max-w-md mx-auto bg-black rounded-lg border shadow-sm overflow-hidden">
+                        {signedUrls.video ? (
+                          <div className="relative pt-[56.25%]"> {/* 16:9 aspect ratio */}
+                            <video
+                              src={signedUrls.video}
+                              className="absolute top-0 left-0 w-full h-full object-cover rounded-lg"
+                              controls
+                              style={{ transform: `rotate(${videoRotation}deg)` }}
+                            />
                           </div>
-                        ) : signedUrls.video ? (
-                          <video 
-                            src={signedUrls.video} 
-                            className="w-full h-full object-contain rounded-lg"
-                            controls
-                          />
                         ) : (
-                          <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
-                            <span className="text-sm text-muted-foreground">Erro ao carregar</span>
+                          <div className="w-full h-48 bg-muted rounded-lg border flex items-center justify-center">
+                            {loadingImages ? (
+                              <span className="text-sm text-muted-foreground">Carregando...</span>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">Erro ao carregar</span>
+                            )}
                           </div>
                         )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute top-2 right-2 h-8 w-8 bg-white/30 hover:bg-white/50 backdrop-blur-sm text-gray-800 rounded-full z-10"
+                          onClick={() => setCoverMediaKey('video_url')}
+                          title="Definir como capa"
+                        >
+                          <Star
+                            className={`h-4 w-4 transition-all ${coverMediaKey === 'video_url' ? 'fill-yellow-400 text-yellow-400' : 'fill-transparent'}`}
+                          />
+                        </Button>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <Button
@@ -1080,11 +1185,25 @@ const CopiaExercicio = () => {
                     <p className="text-sm text-blue-600 break-all">{exercicioOriginal.youtube_url}</p>
                   </div>
                 )}
-                <Input
-                  value={midias.youtube_url as string || ''}
-                  onChange={(e) => setMidias(prev => ({ ...prev, youtube_url: e.target.value }))}
-                  placeholder="https://youtube.com/watch?v=... (cole aqui sua URL do YouTube)"
-                />
+                <div className="relative">
+                  <Input
+                    value={midias.youtube_url as string || ''}
+                    onChange={(e) => setMidias(prev => ({ ...prev, youtube_url: e.target.value }))}
+                    placeholder="https://youtube.com/watch?v=... (cole aqui sua URL do YouTube)"
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-1/2 -translate-y-1/2 right-1 h-8 w-8"
+                    onClick={() => setCoverMediaKey('youtube_url')}
+                    title="Definir como capa"
+                    disabled={!midias.youtube_url}
+                  >
+                    <Star className={`h-4 w-4 transition-all ${coverMediaKey === 'youtube_url' ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`} />
+                  </Button>
+                </div>
                 {midias.youtube_url && (
                   <div className="flex items-center gap-2 mt-3">
                     <div className="text-sm text-green-600 flex items-center gap-1">

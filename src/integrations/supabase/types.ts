@@ -367,7 +367,7 @@ export type Database = {
       convites: {
         Row: {
           created_at: string
-          email_convidado: string
+          email_convidado: string | null
           id: string
           professor_id: string
           status: string
@@ -376,7 +376,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          email_convidado: string
+          email_convidado?: string | null
           id?: string
           professor_id: string
           status?: string
@@ -385,7 +385,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          email_convidado?: string
+          email_convidado?: string | null
           id?: string
           professor_id?: string
           status?: string
@@ -569,6 +569,7 @@ export type Database = {
       }
       exercicios: {
         Row: {
+          cover_media_url: string | null
           created_at: string | null
           descricao: string | null
           dificuldade: string | null
@@ -582,16 +583,17 @@ export type Database = {
           imagem_2_url: string | null
           instrucoes: string | null
           is_ativo: boolean | null
-          media_original_key: string | null
           nome: string
           professor_id: string | null
           slug: string | null
           status_midia: string | null
           tipo: string | null
+          video_thumbnail_path: string | null
           video_url: string | null
           youtube_url: string | null
         }
         Insert: {
+          cover_media_url?: string | null
           created_at?: string | null
           descricao?: string | null
           dificuldade?: string | null
@@ -605,16 +607,17 @@ export type Database = {
           imagem_2_url?: string | null
           instrucoes?: string | null
           is_ativo?: boolean | null
-          media_original_key?: string | null
           nome: string
           professor_id?: string | null
           slug?: string | null
           status_midia?: string | null
           tipo?: string | null
+          video_thumbnail_path?: string | null
           video_url?: string | null
           youtube_url?: string | null
         }
         Update: {
+          cover_media_url?: string | null
           created_at?: string | null
           descricao?: string | null
           dificuldade?: string | null
@@ -628,12 +631,12 @@ export type Database = {
           imagem_2_url?: string | null
           instrucoes?: string | null
           is_ativo?: boolean | null
-          media_original_key?: string | null
           nome?: string
           professor_id?: string | null
           slug?: string | null
           status_midia?: string | null
           tipo?: string | null
+          video_thumbnail_path?: string | null
           video_url?: string | null
           youtube_url?: string | null
         }
@@ -1428,34 +1431,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      binary_quantize: {
-        Args: { "": string } | { "": unknown }
-        Returns: unknown
-      }
-      bytea_to_text: {
-        Args: { data: string }
-        Returns: string
-      }
-      delete_old_rejected_appointments: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      bytea_to_text: { Args: { data: string }; Returns: string }
+      delete_old_rejected_appointments: { Args: never; Returns: undefined }
       delete_storage_object: {
         Args: { bucket_name: string; object_path: string }
         Returns: undefined
       }
-      delete_user_auth: {
-        Args: { user_id: string }
-        Returns: boolean
-      }
-      desvincular_aluno: {
-        Args: { aluno_id: string }
-        Returns: Json
-      }
-      gerar_codigo_vinculo_unico: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      delete_user_auth: { Args: { user_id: string }; Returns: boolean }
+      desvincular_aluno: { Args: { aluno_id: string }; Returns: Json }
+      gerar_codigo_vinculo_unico: { Args: never; Returns: string }
       get_conversa_participantes: {
         Args: { p_conversa_id: string }
         Returns: {
@@ -1468,7 +1452,7 @@ export type Database = {
         }[]
       }
       get_conversas_e_contatos: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           avatar: string
           avatar_color: string
@@ -1489,76 +1473,88 @@ export type Database = {
         Args: { user_id_1: string; user_id_2: string }
         Returns: string
       }
-      get_my_claim: {
-        Args: { claim: string }
-        Returns: Json
-      }
+      get_my_claim: { Args: { claim: string }; Returns: Json }
       get_top_similarity: {
         Args: { query_embedding: string }
         Returns: {
           similarity: number
         }[]
       }
-      get_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      halfvec_avg: {
-        Args: { "": number[] }
-        Returns: unknown
-      }
-      halfvec_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      halfvec_send: {
-        Args: { "": unknown }
-        Returns: string
-      }
-      halfvec_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
-      }
-      hnsw_bit_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnsw_halfvec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnsw_sparsevec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnswhandler: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
+      get_user_role: { Args: never; Returns: string }
       http: {
         Args: { request: Database["public"]["CompositeTypes"]["http_request"] }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
+        SetofOptions: {
+          from: "http_request"
+          to: "http_response"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
-      http_delete: {
-        Args:
-          | { content: string; content_type: string; uri: string }
-          | { uri: string }
-        Returns: Database["public"]["CompositeTypes"]["http_response"]
-      }
-      http_get: {
-        Args: { data: Json; uri: string } | { uri: string }
-        Returns: Database["public"]["CompositeTypes"]["http_response"]
-      }
+      http_delete:
+        | {
+            Args: { uri: string }
+            Returns: Database["public"]["CompositeTypes"]["http_response"]
+            SetofOptions: {
+              from: "*"
+              to: "http_response"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: { content: string; content_type: string; uri: string }
+            Returns: Database["public"]["CompositeTypes"]["http_response"]
+            SetofOptions: {
+              from: "*"
+              to: "http_response"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+      http_get:
+        | {
+            Args: { uri: string }
+            Returns: Database["public"]["CompositeTypes"]["http_response"]
+            SetofOptions: {
+              from: "*"
+              to: "http_response"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: { data: Json; uri: string }
+            Returns: Database["public"]["CompositeTypes"]["http_response"]
+            SetofOptions: {
+              from: "*"
+              to: "http_response"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       http_head: {
         Args: { uri: string }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
+        SetofOptions: {
+          from: "*"
+          to: "http_response"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       http_header: {
         Args: { field: string; value: string }
         Returns: Database["public"]["CompositeTypes"]["http_header"]
+        SetofOptions: {
+          from: "*"
+          to: "http_header"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       http_list_curlopt: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           curlopt: string
           value: string
@@ -1567,53 +1563,51 @@ export type Database = {
       http_patch: {
         Args: { content: string; content_type: string; uri: string }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
+        SetofOptions: {
+          from: "*"
+          to: "http_response"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
-      http_post: {
-        Args:
-          | { content: string; content_type: string; uri: string }
-          | { data: Json; uri: string }
-        Returns: Database["public"]["CompositeTypes"]["http_response"]
-      }
+      http_post:
+        | {
+            Args: { content: string; content_type: string; uri: string }
+            Returns: Database["public"]["CompositeTypes"]["http_response"]
+            SetofOptions: {
+              from: "*"
+              to: "http_response"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: { data: Json; uri: string }
+            Returns: Database["public"]["CompositeTypes"]["http_response"]
+            SetofOptions: {
+              from: "*"
+              to: "http_response"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       http_put: {
         Args: { content: string; content_type: string; uri: string }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
+        SetofOptions: {
+          from: "*"
+          to: "http_response"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
-      http_reset_curlopt: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      http_reset_curlopt: { Args: never; Returns: boolean }
       http_set_curlopt: {
         Args: { curlopt: string; value: string }
         Returns: boolean
       }
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      ivfflat_bit_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      ivfflat_halfvec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      ivfflathandler: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      l2_norm: {
-        Args: { "": unknown } | { "": unknown }
-        Returns: number
-      }
-      l2_normalize: {
-        Args: { "": string } | { "": unknown } | { "": unknown }
-        Returns: unknown
-      }
-      marcar_convites_expirados: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      is_admin: { Args: never; Returns: boolean }
+      marcar_convites_expirados: { Args: never; Returns: undefined }
       match_knowledge_base: {
         Args: {
           match_count: number
@@ -1630,75 +1624,40 @@ export type Database = {
         Args: { p_aluno_id: string; p_professor_id: string }
         Returns: undefined
       }
-      run_inactive_users_check: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      sparsevec_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      sparsevec_send: {
-        Args: { "": unknown }
-        Returns: string
-      }
-      sparsevec_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
-      }
+      run_inactive_users_check: { Args: never; Returns: undefined }
       test_checkmail_validation: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           email: string
           result: Json
         }[]
       }
-      text_to_bytea: {
-        Args: { data: string }
-        Returns: string
-      }
+      text_to_bytea: { Args: { data: string }; Returns: string }
       update_articles_order: {
         Args: {
           updates: Database["public"]["CompositeTypes"]["article_order_update"][]
         }
         Returns: undefined
       }
-      urlencode: {
-        Args: { data: Json } | { string: string } | { string: string }
-        Returns: string
-      }
+      urlencode:
+        | { Args: { data: Json }; Returns: string }
+        | {
+            Args: { string: string }
+            Returns: {
+              error: true
+            } & "Could not choose the best candidate function between: public.urlencode(string => bytea), public.urlencode(string => varchar). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+          }
+        | {
+            Args: { string: string }
+            Returns: {
+              error: true
+            } & "Could not choose the best candidate function between: public.urlencode(string => bytea), public.urlencode(string => varchar). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+          }
       validate_email_with_checkmail: {
         Args: { email_to_validate: string }
         Returns: Json
       }
-      vector_avg: {
-        Args: { "": number[] }
-        Returns: string
-      }
-      vector_dims: {
-        Args: { "": string } | { "": unknown }
-        Returns: number
-      }
-      vector_norm: {
-        Args: { "": string }
-        Returns: number
-      }
-      vector_out: {
-        Args: { "": string }
-        Returns: unknown
-      }
-      vector_send: {
-        Args: { "": string }
-        Returns: string
-      }
-      vector_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
-      }
-      verify_user_password: {
-        Args: { password: string }
-        Returns: boolean
-      }
+      verify_user_password: { Args: { password: string }; Returns: boolean }
     }
     Enums: {
       plano_tipo: "gratuito" | "basico" | "premium" | "profissional"
@@ -1721,7 +1680,7 @@ export type Database = {
         value: string | null
       }
       http_request: {
-        method: unknown | null
+        method: unknown
         uri: string | null
         headers: Database["public"]["CompositeTypes"]["http_header"][] | null
         content_type: string | null

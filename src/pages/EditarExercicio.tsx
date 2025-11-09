@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useParams, useLocation, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import Modal from 'react-modal';
-import { ArrowLeft, Save, Trash2, Eye, ExternalLink, Camera, Video, Upload, X } from "lucide-react";
+import { ArrowLeft, Save, Trash2, Eye, ExternalLink, Camera, Video, Upload, X, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast as sonnerToast } from "sonner";
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -22,8 +22,8 @@ type Exercicio = Tables<"exercicios">;
 const EditarExercicio = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const location = useLocation(); // Será necessário
-  const [searchParams] = useSearchParams(); // ADICIONE ESTA LINHA
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const toast = sonnerToast;
   const { user } = useAuth();
   const isMobile = useIsMobile();
@@ -52,23 +52,29 @@ const EditarExercicio = () => {
     imagem_2_url: null,
     video_url: null,
     youtube_url: null,
+    video_thumbnail_path: null,
   });
+
+  const [coverMediaKey, setCoverMediaKey] = useState<keyof typeof midias | null>(null);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [signedUrls, setSignedUrls] = useState<{
     imagem1?: string;
     imagem2?: string;
     video?: string;
+    videoThumbnail?: string;
   }>({});
   const [initialMediaUrls, setInitialMediaUrls] = useState({
     imagem_1_url: null as string | null,
     imagem_2_url: null as string | null,
     video_url: null as string | null,
+    video_thumbnail_path: null as string | null,
   });
 
   const [showVideoInfoModal, setShowVideoInfoModal] = useState(false);
   const [showVideoRecorder, setShowVideoRecorder] = useState(false);
   const [showDeleteMediaDialog, setShowDeleteMediaDialog] = useState<string | null>(null);
+  const [videoRotation, setVideoRotation] = useState(0);
 
   const gruposMusculares = [
     'Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps',
@@ -85,6 +91,9 @@ const EditarExercicio = () => {
   const GRUPOS_MUSCULARES_OPTIONS = gruposMusculares.map(o => ({ value: o, label: o }));
   const EQUIPAMENTOS_OPTIONS = equipamentos.map(d => ({ value: d, label: d }));
   const DIFICULDADES_OPTIONS = dificuldades.map(f => ({ value: f, label: f }));
+
+  // ✅ CACHE LOCAL para evitar múltiplas chamadas
+  const urlCache = useRef<Map<string, string>>(new Map());
 
   // Componente responsivo para confirmação de exclusão de mídia
   const ResponsiveDeleteMediaConfirmation = ({ 
@@ -168,72 +177,90 @@ const EditarExercicio = () => {
     );
   };
 
-  const getSignedImageUrl = useCallback(async (filename: string): Promise<string> => {
+  // ✅ FUNÇÃO OTIMIZADA: getSignedImageUrl com cache
+  const getSignedImageUrl = useCallback(async (filename: string): Promise<string | null> => {
+    if (!filename) return null;
+    
+    // ✅ Verifica cache primeiro
+    if (urlCache.current.has(filename)) {
+      return urlCache.current.get(filename) || null;
+    }
+
     try {
+      console.log(`🔄 Buscando URL para: ${filename}`);
       const { data, error } = await supabase.functions.invoke('get-image-url', {
         body: { filename, bucket_type: 'exercicios' }
       });
 
       if (error) throw error;
-      if (!data.success || !data.url) throw new Error('URL não retornada pelo servidor');
-
-      return data.url;
+      
+      const url = data?.url || null;
+      if (url) {
+        urlCache.current.set(filename, url);
+      }
+      
+      return url;
     } catch (error) {
-      console.error('Erro ao obter URL assinada:', error);
-      throw error;
+      console.error('❌ Erro ao obter URL assinada:', error);
+      return null;
     }
   }, []);
 
   const loadSignedUrls = useCallback(async () => {
-    console.log('🔍 [loadSignedUrls] Iniciado. Estado `midias` atual:', midias);
-  
-    const processMedia = async (
-      mediaKey: 'imagem_1_url' | 'imagem_2_url' | 'video_url',
-      signedUrlKey: 'imagem1' | 'imagem2' | 'video'
-    ) => {
-      const mediaValue = midias[mediaKey];
-      const initialValue = initialMediaUrls[mediaKey];
+    if (!exercicio?.id || loading) return;
 
-      // Se o valor não mudou E a URL já existe, não faz nada.
-      // Isso permite o carregamento inicial e evita reprocessamento.
-      if (mediaValue === initialValue && signedUrls[signedUrlKey]) {
-        return null;
-      }
+    console.log('🚀 INICIANDO CARREGAMENTO DE URLs...');
 
-      if (mediaValue instanceof File) {
-        const objectURL = URL.createObjectURL(mediaValue);
-        console.log(`✅ [processMedia] Criou ObjectURL para ${mediaKey}`);
-        return { [signedUrlKey]: objectURL };
-      } else if (typeof mediaValue === 'string' && mediaValue) {
-        try {
-          const signedUrl = await getSignedImageUrl(mediaValue);
-          return { [signedUrlKey]: signedUrl };
-        } catch (error) {
-          console.error(`Erro ao obter URL para ${mediaKey}:`, error);
-          return { [signedUrlKey]: undefined };
-        }
-      } else {
-        return { [signedUrlKey]: undefined };
-      }
-    };
-  
     try {
-      const [img1Result, img2Result, videoResult] = await Promise.all([
-        processMedia('imagem_1_url', 'imagem1'),
-        processMedia('imagem_2_url', 'imagem2'),
-        processMedia('video_url', 'video'),
-      ]);
+      const urlsToLoad = [];
+      const newUrls: Record<string, string | undefined> = {};
 
-      // Só atualiza URLs que realmente mudaram
-      const updates = { ...img1Result, ...img2Result, ...videoResult };
+      // Processa imagens e vídeos
+      for (const key of ['imagem_1_url', 'imagem_2_url', 'video_url'] as const) {
+        const mediaValue = midias[key];
+        const urlKey = key.replace('_url', '').replace('_1', '1').replace('_2', '2');
 
-      if (Object.keys(updates).length > 0) {
-        setSignedUrls(prev => ({ ...prev, ...updates }));
+        if (mediaValue instanceof File) {
+          newUrls[urlKey] = URL.createObjectURL(mediaValue);
+        } else if (typeof mediaValue === 'string' && mediaValue) {
+          urlsToLoad.push(getSignedImageUrl(mediaValue).then(url => ({ key: urlKey, url })));
+        }
       }
+
+      const results = await Promise.all(urlsToLoad);
+      results.forEach(result => {
+        if (result.url) newUrls[result.key] = result.url;
+      });
+
+      setSignedUrls(prev => ({ ...prev, ...newUrls }));
     } catch (error) {
-      console.error('❌ [loadSignedUrls] Erro geral:', error);
+      console.error('💥 Erro ao carregar URLs:', error);
     }
-  }, [midias, getSignedImageUrl, initialMediaUrls, signedUrls]);
+  }, [exercicio?.id, midias, getSignedImageUrl, loading]);
+
+  // ✅ useEffect SIMPLIFICADO - Executa apenas uma vez
+  useEffect(() => {
+    if (exercicio?.id && !loading) {
+      console.log('🎯 EXECUTANDO CARREGAMENTO UMA VEZ');
+      loadSignedUrls();
+    }
+  }, [exercicio?.id, loading, loadSignedUrls]); // Apenas estas dependências
+
+  // Função para detectar orientação do vídeo
+  const getVideoOrientation = async (videoFile: File): Promise<number> => {
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.onloadedmetadata = () => {
+        URL.revokeObjectURL(video.src);
+        const isPortrait = video.videoHeight > video.videoWidth;
+        console.log(`🎥 Orientação do vídeo: ${isPortrait ? 'Retrato' : 'Paisagem'} (${video.videoWidth}x${video.videoHeight})`);
+        resolve(isPortrait ? 90 : 0);
+      };
+      video.onerror = () => resolve(0);
+      video.src = URL.createObjectURL(videoFile);
+    });
+  };
 
   const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
     console.log('🔍 [handleSelectMedia] Iniciado para tipo:', type);
@@ -287,6 +314,10 @@ const EditarExercicio = () => {
         setMidias(prev => ({ ...prev, [key]: resized }));
       } else if (type === 'video') {
         setMidias(prev => ({ ...prev, video_url: file }));
+        // Detecta e define a rotação do novo vídeo
+        getVideoOrientation(file).then(rotation => {
+          setVideoRotation(rotation);
+        });
         console.log('✅ [handleSelectMedia] Vídeo selecionado. Atualizando estado `midias`.');
       }
 
@@ -298,17 +329,47 @@ const EditarExercicio = () => {
     input.click();
   };
 
-  const handleRecordingComplete = (videoBlob: Blob) => {
-    const videoFile = new File([videoBlob], `gravacao_${Date.now()}.webm`, { type: 'video/webm' });
-    setMidias(prev => ({ ...prev, video_url: videoFile }));
+  const handleRecordingComplete = ({ 
+    videoBlob, 
+    thumbnailBlob 
+  }: { 
+    videoBlob: Blob, 
+    thumbnailBlob: Blob 
+  }) => {
+    const videoFile = new File([videoBlob], `gravacao_${Date.now()}.webm`, { type: 'video/webm' });    const thumbnailFile = new File([thumbnailBlob], `thumbnail_${Date.now()}.jpeg`, { type: 'image/jpeg' });    setMidias(prev => ({ ...prev, video_url: videoFile, video_thumbnail_path: thumbnailFile }));
     setShowVideoRecorder(false);
   };
 
   const handleDeleteMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
     const urlMap = { imagem1: 'imagem_1_url', imagem2: 'imagem_2_url', video: 'video_url' };
-    setMidias(prev => ({ ...prev, [urlMap[type]]: null }));
+    const mediaKeyToDelete = urlMap[type];
+
+    // Limpa a mídia
+    setMidias(prev => ({ ...prev, [mediaKeyToDelete]: null }));
+
+    // Se a mídia removida era a capa, limpa a seleção para que a próxima seja escolhida
+    if (coverMediaKey === mediaKeyToDelete) {
+      setCoverMediaKey(null);
+    }
+
     setShowDeleteMediaDialog(null);
   };
+
+  // Efeito para definir a primeira mídia como capa automaticamente
+  useEffect(() => {
+    // Se já existe uma capa definida, não faz nada.
+    if (coverMediaKey) return;
+
+    // Encontra a primeira mídia que não é nula.
+    const firstAvailableMedia = (['imagem_1_url', 'imagem_2_url', 'video_url', 'youtube_url'] as const).find(
+      key => midias[key] !== null
+    );
+
+    // Se encontrou, define como capa.
+    if (firstAvailableMedia) {
+      setCoverMediaKey(firstAvailableMedia);
+    }
+  }, [midias, coverMediaKey]);
 
   useEffect(() => {
     const fetchExercicio = async () => {
@@ -339,12 +400,15 @@ const EditarExercicio = () => {
           imagem_1_url: data.imagem_1_url,
           imagem_2_url: data.imagem_2_url,
           video_url: data.video_url,
+          video_thumbnail_path: data.video_thumbnail_path,
           youtube_url: data.youtube_url,
         });
+        setCoverMediaKey(data.cover_media_url as keyof typeof midias | null);
         setInitialMediaUrls({
           imagem_1_url: data.imagem_1_url,
           imagem_2_url: data.imagem_2_url,
           video_url: data.video_url,
+          video_thumbnail_path: data.video_thumbnail_path,
         });
       } catch (error) {
         console.error('Erro ao carregar exercício:', error);
@@ -356,6 +420,13 @@ const EditarExercicio = () => {
     };
     fetchExercicio();
   }, [id, user, navigate, toast]);
+
+  // Efeito para carregar as URLs de preview quando as mídias mudam
+  useEffect(() => {
+    if (exercicio?.id && !loading) {
+      loadSignedUrls();
+    }
+  }, [exercicio?.id, loading, midias, loadSignedUrls]);
 
   const uploadFile = async (file: File | string | null): Promise<string | null> => {
     if (!file || !(file instanceof File)) return null;
@@ -374,13 +445,6 @@ const EditarExercicio = () => {
       throw error;
     }
   };
-
-  useEffect(() => {
-    if (exercicio) {
-      loadSignedUrls();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exercicio, midias]);
 
   const deleteFile = async (fileUrl: string) => {
     if (!fileUrl) return;
@@ -440,7 +504,7 @@ const EditarExercicio = () => {
     try {
       const finalMediaUrls: { [key: string]: string | null } = {};
 
-      for (const key of ['imagem_1_url', 'imagem_2_url', 'video_url']) {
+      for (const key of ['imagem_1_url', 'imagem_2_url', 'video_url', 'video_thumbnail_path']) {
         const currentValue = midias[key];
         const initialValue = initialMediaUrls[key as keyof typeof initialMediaUrls];
 
@@ -466,9 +530,11 @@ const EditarExercicio = () => {
         equipamento: formData.equipamento,
         dificuldade: formData.dificuldade,
         instrucoes: instrucoesFinal,
+        cover_media_url: coverMediaKey ? String(coverMediaKey) : null, // Salva a chave da mídia de capa
         grupo_muscular_primario: formData.grupo_muscular_primario.trim() || null,
         grupos_musculares_secundarios: formData.grupos_musculares_secundarios.trim() || null,
         ...finalMediaUrls,
+        video_thumbnail_path: finalMediaUrls.video_thumbnail_path,
         youtube_url: midias.youtube_url as string || null,
       })
       .eq('id', id)
@@ -609,12 +675,26 @@ const EditarExercicio = () => {
               <div className="mt-2 space-y-4">
                 {midias.imagem_1_url ? (
                   <div className="space-y-3">
-                    <div className="relative inline-block">
+                    <div className="relative inline-block w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
                       {signedUrls.imagem1 ? (
-                        <img src={signedUrls.imagem1} alt="Primeira imagem" className="max-w-40 max-h-40 object-contain rounded-lg border shadow-sm bg-muted"/>
+                        <img 
+                          src={signedUrls.imagem1} 
+                          alt="Primeira imagem" 
+                          className="max-w-full max-h-full object-contain rounded-lg"
+                        />
                       ) : (
                         <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center"><span className="text-sm text-muted-foreground">Erro ao carregar</span></div>
                       )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-1 right-1 h-8 w-8 bg-white/30 hover:bg-white/50 backdrop-blur-sm text-gray-800 rounded-full"
+                        onClick={() => setCoverMediaKey('imagem_1_url')}
+                        title="Definir como capa"
+                      >
+                        <Star className={`h-4 w-4 transition-all ${coverMediaKey === 'imagem_1_url' ? 'fill-yellow-400 text-yellow-400' : 'fill-transparent'}`} />
+                      </Button>
                     </div>
                       <div className="flex gap-2">
                         <Button type="button" variant="outline" size="sm" onClick={() => signedUrls.imagem1 && window.open(signedUrls.imagem1, '_blank')} className="flex items-center gap-2" disabled={!signedUrls.imagem1}><Eye className="h-4 w-4" /> Ver</Button>
@@ -651,12 +731,26 @@ const EditarExercicio = () => {
               <div className="mt-2 space-y-4">
                 {midias.imagem_2_url ? (
                   <div className="space-y-3">
-                    <div className="relative inline-block">
+                    <div className="relative inline-block w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
                       {signedUrls.imagem2 ? (
-                        <img src={signedUrls.imagem2} alt="Segunda imagem" className="max-w-40 max-h-40 object-contain rounded-lg border shadow-sm bg-muted"/>
+                        <img 
+                          src={signedUrls.imagem2} 
+                          alt="Segunda imagem" 
+                          className="max-w-full max-h-full object-contain rounded-lg"
+                        />
                       ) : (
                         <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center"><span className="text-sm text-muted-foreground">Erro ao carregar</span></div>
                       )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-1 right-1 h-8 w-8 bg-white/30 hover:bg-white/50 backdrop-blur-sm text-gray-800 rounded-full"
+                        onClick={() => setCoverMediaKey('imagem_2_url')}
+                        title="Definir como capa"
+                      >
+                        <Star className={`h-4 w-4 transition-all ${coverMediaKey === 'imagem_2_url' ? 'fill-yellow-400 text-yellow-400' : 'fill-transparent'}`} />
+                      </Button>
                     </div>
                       <div className="flex gap-2">
                         <Button type="button" variant="outline" size="sm" onClick={() => signedUrls.imagem2 && window.open(signedUrls.imagem2, '_blank')} className="flex items-center gap-2" disabled={!signedUrls.imagem2}><Eye className="h-4 w-4" /> Ver</Button>
@@ -693,12 +787,31 @@ const EditarExercicio = () => {
               <div className="mt-2 space-y-4">
                 {midias.video_url ? (
                   <div className="space-y-3">
-                    <div className="relative inline-block w-48 aspect-video bg-black rounded-lg border shadow-sm">
+                    <div className="relative w-full max-w-md mx-auto bg-black rounded-lg border shadow-sm overflow-hidden">
                       {signedUrls.video ? (
-                        <video src={signedUrls.video} className="max-w-40 max-h-40 object-contain rounded-lg border shadow-sm bg-muted" controls />
+                        <div className="relative pt-[56.25%]"> {/* 16:9 aspect ratio */}
+                          <video 
+                            src={signedUrls.video} 
+                            className="absolute top-0 left-0 w-full h-full object-cover rounded-lg"
+                            controls 
+                            style={{ transform: `rotate(${videoRotation}deg)` }}
+                          />
+                        </div>
                       ) : (
-                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center"><span className="text-sm text-muted-foreground">Erro ao carregar</span></div>
+                        <div className="w-full h-48 bg-muted rounded-lg border flex items-center justify-center">
+                          <span className="text-sm text-muted-foreground">Erro ao carregar</span>
+                        </div>
                       )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-2 right-2 h-8 w-8 bg-white/30 hover:bg-white/50 backdrop-blur-sm text-gray-800 rounded-full z-10"
+                        onClick={() => setCoverMediaKey('video_url')}
+                        title="Definir como capa"
+                      >
+                        <Star className={`h-4 w-4 transition-all ${coverMediaKey === 'video_url' ? 'fill-yellow-400 text-yellow-400' : 'fill-transparent'}`} />
+                      </Button>
                     </div>
                     <div className="flex gap-2">
                       <Button type="button" variant="outline" size="sm" onClick={() => signedUrls.video && window.open(signedUrls.video, '_blank')} className="flex items-center gap-2" disabled={!signedUrls.video}><Eye className="h-4 w-4" /> Assistir</Button>
@@ -734,13 +847,27 @@ const EditarExercicio = () => {
             {/* YouTube */}
             <div>
               <Label htmlFor="youtube_url" className="text-sm font-medium">URL do YouTube</Label>
-              <div className="mt-2 space-y-3">
-                <Input
-                  id="youtube_url"
-                  value={midias.youtube_url as string || ''}
-                  onChange={(e) => setMidias(prev => ({ ...prev, youtube_url: e.target.value }))}
-                  placeholder="https://youtube.com/watch?v=..."
-                />
+              <div className="mt-2 space-y-3 relative">
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="youtube_url"
+                    value={midias.youtube_url as string || ''}
+                    onChange={(e) => setMidias(prev => ({ ...prev, youtube_url: e.target.value }))}
+                    placeholder="https://youtube.com/watch?v=..."
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-1/2 -translate-y-1/2 right-1 h-8 w-8"
+                    onClick={() => setCoverMediaKey('youtube_url')}
+                    title="Definir como capa"
+                    disabled={!midias.youtube_url}
+                  >
+                    <Star className={`h-4 w-4 transition-all ${coverMediaKey === 'youtube_url' ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`} />
+                  </Button>
+                </div>
                 {midias.youtube_url && (
                   <Button type="button" variant="outline" size="sm" onClick={() => midias.youtube_url && window.open(midias.youtube_url as string, '_blank')}><ExternalLink className="h-4 w-4 mr-2" />Ver no YouTube</Button>
                 )}

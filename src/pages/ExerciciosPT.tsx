@@ -1,20 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowUp, Plus, Search, Filter, Dumbbell, ShieldAlert, Info, AlertTriangle, Trash2, X, MoreVertical, Copy, Edit, Eye } from "lucide-react";
+import { ArrowUp, Plus, Search, Filter, Dumbbell, ShieldAlert, Info, AlertTriangle, X } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { useExercicios } from "@/hooks/useExercicios";
 import CustomSelect from "@/components/ui/CustomSelect";
 import { useAuth } from "@/hooks/useAuth";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { ExercicioCard } from "@/components/exercicios/ExercicioCard";
 
 const GRUPOS_MUSCULARES = ['Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Abdômen', 'Pernas', 'Glúteos', 'Panturrilha'];
 const EQUIPAMENTOS = ['Barra', 'Halteres', 'Máquina', 'Peso Corporal', 'Cabo', 'Kettlebell', 'Fitas de Suspensão', 'Elásticos', 'Bola Suíça', 'Bolas Medicinais', 'Landmine', 'Bola Bosu'];
@@ -23,18 +22,6 @@ const DIFICULDADES = ['Baixa', 'Média', 'Alta'];
 const GRUPOS_MUSCULARES_OPTIONS = [{ value: 'todos', label: 'Todos' }, ...GRUPOS_MUSCULARES.map(o => ({ value: o, label: o }))];
 const EQUIPAMENTOS_OPTIONS = [{ value: 'todos', label: 'Todos' }, ...EQUIPAMENTOS.map(d => ({ value: d, label: d }))];
 const DIFICULDADES_OPTIONS = [{ value: 'todos', label: 'Todas' }, ...DIFICULDADES.map(f => ({ value: f, label: f }))];
-
-const GRUPO_CORES: { [key: string]: string } = {
-  'Peito': 'bg-red-100 text-red-800',
-  'Costas': 'bg-blue-100 text-blue-800',
-  'Pernas': 'bg-green-100 text-green-800',
-  'Ombros': 'bg-yellow-100 text-yellow-800',
-  'Bíceps': 'bg-purple-100 text-purple-800',
-  'Tríceps': 'bg-pink-100 text-pink-800',
-  'Abdômen': 'bg-orange-100 text-orange-800',
-  'Glúteos': 'bg-violet-100 text-violet-800',
-  'Panturrilha': 'bg-indigo-100 text-indigo-800'
-};
 
 const ExerciciosPT = () => {
   const navigate = useNavigate();
@@ -379,66 +366,16 @@ const ExerciciosPT = () => {
             </Card>
           ) : (
             <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 pb-32 md:pb-16">
-              {exerciciosFiltrados.map((exercicio) => {
-                const corGrupo = exercicio.grupo_muscular ? GRUPO_CORES[exercicio.grupo_muscular] || 'bg-gray-100 text-black' : 'bg-gray-100 text-black';
-                return (
-                  <Card 
-                    key={exercicio.id} 
-                    className="hover:shadow-md transition-shadow cursor-pointer" 
-                    onClick={() => {
-                        const returnToUrl = encodeURIComponent(location.pathname + location.search);
-                        navigate(`/exercicios/detalhes/${exercicio.id}?returnTo=${returnToUrl}`);
-                    }}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0 pr-1 md:pr-4 flex flex-col">
-                          <h3 className="font-semibold text-foreground line-clamp-2 mb-2 h-12">{exercicio.nome}</h3>
-                          {exercicio.descricao && (
-                            <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{exercicio.descricao}</p>
-                          )}
-                          <div className="flex flex-wrap gap-1 md:gap-2">
-                            {exercicio.grupo_muscular && <Badge className={`text-xs border-0 ${corGrupo}`}>{exercicio.grupo_muscular}</Badge>}
-                            {exercicio.equipamento && <Badge className="text-xs bg-gray-100 text-black">{exercicio.equipamento}</Badge>}
-                            {exercicio.dificuldade && <Badge className="text-xs bg-gray-100 text-black border-0">{exercicio.dificuldade}</Badge>}
-                          </div>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4" onClick={(e) => e.stopPropagation()}><MoreVertical /></Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={(e) => { 
-                                e.stopPropagation(); 
-                                const returnToUrl = encodeURIComponent(location.pathname + location.search);
-                                navigate(`/exercicios/detalhes/${exercicio.id}?returnTo=${returnToUrl}`);
-                            }}>
-                              <Eye className="mr-2 h-5 w-5" />
-                              <span className="text-base">Ver Detalhes</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCriarCopia(exercicio.id); }}>
-                              <Copy className="mr-2 h-5 w-5" />
-                              <span className="text-base">Criar Cópia</span>
-                            </DropdownMenuItem>
-                            {isAdmin && (
-                              <DropdownMenuItem
-                                onClick={(e) => { 
-                                  e.stopPropagation(); 
-                                  const returnToUrl = encodeURIComponent(location.pathname + location.search);
-                                  navigate(`/exercicios/editar-padrao/${exercicio.id}?returnTo=${returnToUrl}`);
-                                }}
-                                className="bg-secondary text-secondary-foreground hover:bg-secondary/80 focus:bg-secondary/80 focus:text-secondary-foreground"
-                              >
-                                <Edit className="mr-2 h-5 w-5" />
-                                <span className="text-base">Editar Padrão</span>
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+              {exerciciosFiltrados.map((exercicio) => (
+                <ExercicioCard
+                  key={exercicio.id}
+                  exercicio={exercicio}
+                  onCriarCopia={handleCriarCopia}
+                  onExcluir={handleExcluirExercicio}
+                  isAdmin={isAdmin}
+                  location={location}
+                />
+              ))}
             </div>
           )}
         </TabsContent>
@@ -562,61 +499,16 @@ const ExerciciosPT = () => {
                 </Card>
             ) : (
                 <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                  {exerciciosFiltrados.map((exercicio) => {
-                    const corGrupo = exercicio.grupo_muscular ? GRUPO_CORES[exercicio.grupo_muscular] || 'bg-gray-100 text-black' : 'bg-gray-100 text-black';
-                    return (
-                      <Card 
-                        key={exercicio.id} 
-                        className="hover:shadow-md transition-shadow cursor-pointer" 
-                    onClick={() => {
-                        const returnToUrl = encodeURIComponent(location.pathname + location.search);
-                        navigate(`/exercicios/detalhes/${exercicio.id}?returnTo=${returnToUrl}`);
-                    }}>
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1 min-w-0 pr-1 md:pr-4 flex flex-col">
-                              <h3 className="font-semibold text-foreground line-clamp-2 mb-2 h-12">{exercicio.nome}</h3>
-                              {exercicio.descricao && (
-                                <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{exercicio.descricao}</p>
-                              )}
-                              <div className="flex flex-wrap gap-1 md:gap-2">
-                                {exercicio.grupo_muscular && <Badge className={`text-xs border-0 ${corGrupo}`}>{exercicio.grupo_muscular}</Badge>}
-                                {exercicio.equipamento && <Badge className="text-xs bg-gray-100 text-black">{exercicio.equipamento}</Badge>}
-                                {exercicio.dificuldade && <Badge className="text-xs bg-gray-100 text-black border-0">{exercicio.dificuldade}</Badge>}
-                              </div>
-                            </div>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4" onClick={(e) => e.stopPropagation()}><MoreVertical /></Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={(e) => { 
-                                    e.stopPropagation(); 
-                                    const returnToUrl = encodeURIComponent(location.pathname + location.search);
-                                    navigate(`/exercicios/detalhes/${exercicio.id}?returnTo=${returnToUrl}`);
-                                }}>
-                                  <Eye className="mr-2 h-5 w-5" />
-                                  <span className="text-base">Ver Detalhes</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={(e) => { 
-                                  e.stopPropagation(); 
-                                  const returnToUrl = encodeURIComponent(location.pathname + location.search);
-                                  navigate(`/exercicios/editar/${exercicio.id}?returnTo=${returnToUrl}`);
-                                }}>
-                                  <Edit className="mr-2 h-5 w-5" />
-                                  <span className="text-base">Editar</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleExcluirExercicio(exercicio.id); }} className="text-destructive focus:text-destructive">
-                                  <Trash2 className="mr-2 h-5 w-5" />
-                                  <span className="text-base">Excluir</span>
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+                  {exerciciosFiltrados.map((exercicio) => (
+                    <ExercicioCard
+                      key={exercicio.id}
+                      exercicio={exercicio}
+                      onCriarCopia={handleCriarCopia}
+                      onExcluir={handleExcluirExercicio}
+                      isAdmin={isAdmin}
+                      location={location}
+                    />
+                  ))}
                 </div>
               )}
             </>
