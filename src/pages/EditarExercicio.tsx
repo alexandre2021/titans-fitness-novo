@@ -246,19 +246,117 @@ const EditarExercicio = () => {
     }
   }, [exercicio?.id, loading, loadSignedUrls]); // Apenas estas dependências
 
-  // Função para detectar orientação do vídeo
   const getVideoOrientation = async (videoFile: File): Promise<number> => {
     return new Promise((resolve) => {
-      const video = document.createElement('video');
-      video.preload = 'metadata';
-      video.onloadedmetadata = () => {
-        URL.revokeObjectURL(video.src);
-        const isPortrait = video.videoHeight > video.videoWidth;
-        console.log(`🎥 Orientação do vídeo: ${isPortrait ? 'Retrato' : 'Paisagem'} (${video.videoWidth}x${video.videoHeight})`);
-        resolve(isPortrait ? 90 : 0);
+      // Primeiro, tenta detectar via metadados EXIF
+      const reader = new FileReader();
+      
+      reader.onload = function(e) {
+        try {
+          const arrayBuffer = e.target?.result as ArrayBuffer;
+          if (!arrayBuffer) {
+            throw new Error("ArrayBuffer is null");
+          }
+          const uint8Array = new Uint8Array(arrayBuffer);
+          
+          // Procura por metadados de orientação no vídeo
+          let orientation = 0;
+          
+          // Verifica se é um arquivo MP4/MOV (formatos mais comuns)
+          if (videoFile.type.includes('mp4') || videoFile.type.includes('quicktime')) {
+            // Tenta encontrar o atom 'tkhd' que contém informações de rotação
+            for (let i = 0; i < uint8Array.length - 8; i++) {
+              // Procura pelo header 'tkhd' (Track Header Atom)
+              if (uint8Array[i] === 116 && uint8Array[i+1] === 107 && 
+                  uint8Array[i+2] === 104 && uint8Array[i+3] === 100) {
+                
+                // A rotação está geralmente 20-24 bytes após o início do atom tkhd
+                const rotationStart = i + 20;
+                if (rotationStart + 16 < uint8Array.length) {
+                  // Lê a matriz de rotação (4 bytes para cada componente)
+                  const matrix = new DataView(arrayBuffer, rotationStart, 36);
+                  
+                  // Se a matriz indica rotação de 90°, retorna 90
+                  if (matrix.getInt32(4) === -65536 && matrix.getInt32(12) === 65536) {
+                    orientation = 90;
+                    break;
+                  }
+                  // Se a matriz indica rotação de 270°, retorna 270
+                  else if (matrix.getInt32(4) === 65536 && matrix.getInt32(12) === -65536) {
+                    orientation = 270;
+                    break;
+                  }
+                  // Se a matriz indica rotação de 180°, retorna 180
+                  else if (matrix.getInt32(0) === -65536 && matrix.getInt32(16) === -65536) {
+                    orientation = 180;
+                    break;
+                  }
+                }
+              }
+            }
+          }
+          
+          // Se não encontrou metadados EXIF, usa detecção por dimensões
+          if (orientation === 0) {
+            const video = document.createElement('video');
+            video.preload = 'metadata';
+            
+            video.onloadedmetadata = () => {
+              URL.revokeObjectURL(video.src);
+              const isPortrait = video.videoHeight > video.videoWidth;
+              orientation = isPortrait ? 90 : 0;
+              console.log(`📐 Orientação por dimensões: ${orientation}° (${video.videoWidth}x${video.videoHeight})`);
+              resolve(orientation);
+            };
+            
+            video.onerror = () => {
+              console.warn('❌ Fallback para detecção por dimensões falhou');
+              resolve(0);
+            };
+            
+            video.src = URL.createObjectURL(videoFile);
+          } else {
+            console.log(`🎯 Orientação por metadados EXIF: ${orientation}°`);
+            resolve(orientation);
+          }
+        } catch (readError) {
+          console.warn('❌ Erro na leitura do arquivo, usando fallback', readError);
+          // Fallback para detecção por dimensões
+          const video = document.createElement('video');
+          video.preload = 'metadata';
+          video.onloadedmetadata = () => {
+            URL.revokeObjectURL(video.src);
+            const isPortrait = video.videoHeight > video.videoWidth;
+            const orientation = isPortrait ? 90 : 0;
+            console.log(`📐 Fallback - Orientação: ${orientation}°`);
+            resolve(orientation);
+          };
+          video.onerror = () => resolve(0);
+          video.src = URL.createObjectURL(videoFile);
+        }
       };
-      video.onerror = () => resolve(0);
-      video.src = URL.createObjectURL(videoFile);
+      
+      reader.onerror = () => {
+        console.warn('❌ Erro na leitura do arquivo, usando fallback');
+        // Fallback para detecção por dimensões
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        
+        video.onloadedmetadata = () => {
+          URL.revokeObjectURL(video.src);
+          const isPortrait = video.videoHeight > video.videoWidth;
+          const orientation = isPortrait ? 90 : 0;
+          console.log(`📐 Fallback - Orientação: ${orientation}°`);
+          resolve(orientation);
+        };
+        
+        video.onerror = () => resolve(0);
+        video.src = URL.createObjectURL(videoFile);
+      };
+      
+      // Lê os primeiros 64KB do arquivo (onde geralmente estão os metadados)
+      const slice = videoFile.slice(0, 65536);
+      reader.readAsArrayBuffer(slice);
     });
   };
 
@@ -794,7 +892,10 @@ const EditarExercicio = () => {
                             src={signedUrls.video} 
                             className="absolute top-0 left-0 w-full h-full object-cover rounded-lg"
                             controls 
-                            style={{ transform: `rotate(${videoRotation}deg)` }}
+                            style={{ 
+                              transform: `rotate(${videoRotation}deg)`,
+                              aspectRatio: videoRotation === 90 || videoRotation === 270 ? '9/16' : '16/9'
+                            }}
                           />
                         </div>
                       ) : (
