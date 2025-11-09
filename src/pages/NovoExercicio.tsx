@@ -164,6 +164,12 @@ const NovoExercicio = () => {
           </Button>
         </div>
         <div className="p-6">
+          <p className="text-sm text-muted-foreground mb-4">
+            <strong>📱 Posicione o celular em pé (vertical):</strong>
+          </p>
+          <p className="text-sm text-muted-foreground mb-2">
+            Para melhor visualização, segure o celular na posição vertical durante a gravação.
+          </p>
           <p className="text-sm text-muted-foreground">
             O vídeo terá duração máxima de <strong>12 segundos</strong> e será salvo <strong>sem áudio</strong> para otimização.
           </p>
@@ -828,9 +834,12 @@ const NovoExercicio = () => {
                         disabled={saving}
                       >
                         {isMobile ? (
-                          <>
-                            <Video className="h-4 w-4" /> Gravar Vídeo
-                          </>
+                          <div className="flex flex-col items-center">
+                            <div className="flex items-center gap-2">
+                              <Video className="h-4 w-4" /> <span>Gravar Vídeo</span>
+                            </div>
+                            <span className="text-xs block font-normal">(Segure em pé)</span>
+                          </div>
                         ) : (
                           <>
                             <Upload className="h-4 w-4" /> Selecionar Vídeo

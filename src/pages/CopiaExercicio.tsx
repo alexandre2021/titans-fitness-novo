@@ -162,6 +162,12 @@ const CopiaExercicio = () => {
           </Button>
         </div>
         <div className="p-6">
+          <p className="text-sm text-muted-foreground mb-4">
+            <strong>📱 Posicione o celular em pé (vertical):</strong>
+          </p>
+          <p className="text-sm text-muted-foreground mb-2">
+            Para melhor visualização, segure o celular na posição vertical durante a gravação.
+          </p>
           <p className="text-sm text-muted-foreground">
             O vídeo terá duração máxima de <strong>12 segundos</strong> e será salvo <strong>sem áudio</strong> para otimização.
           </p>
@@ -1060,8 +1066,12 @@ const CopiaExercicio = () => {
                           className="flex items-center gap-2"
                           disabled={saving}
                         >
-                          <Video className="h-4 w-4" />
-                          Novo Vídeo
+                          {isMobile ? (
+                            <div className="flex flex-col items-center text-center leading-tight">
+                              <div className="flex items-center gap-2"><Video className="h-4 w-4" /> <span>Novo Vídeo</span></div>
+                              <span className="text-xs block font-normal">(Segure em pé)</span>
+                            </div>
+                          ) : <><Video className="h-4 w-4" /> Novo Vídeo</>}
                         </Button>
                         <Button
                           type="button"
@@ -1083,21 +1093,13 @@ const CopiaExercicio = () => {
                           type="button"
                           variant="default"
                           onClick={() => { if (isMobile) setShowVideoInfoModal(true); else toast.info("Funcionalidade móvel", { description: "A gravação de vídeo está disponível apenas no celular." }); }}
-                          className="flex items-center gap-2 md:hidden"
+                          className="flex items-center gap-2"
                           disabled={saving || !isMobile}
                         >
-                          <Video className="h-4 w-4" />
-                          Gravar Vídeo
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="default"
-                          onClick={() => handleSelectMedia('video')}
-                          className="hidden md:flex items-center gap-2"
-                          disabled={saving}
-                        >
-                          <Upload className="h-4 w-4" />
-                          Selecionar Vídeo
+                          <div className="flex flex-col items-center">
+                            <div className="flex items-center gap-2"><Video className="h-4 w-4" /> <span>Gravar Vídeo</span></div>
+                            <span className="text-xs block font-normal">(Segure em pé)</span>
+                          </div>
                         </Button>
                       </div>
                     </div>

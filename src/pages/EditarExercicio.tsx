@@ -164,6 +164,12 @@ const EditarExercicio = () => {
           </Button>
         </div>
         <div className="p-6">
+          <p className="text-sm text-muted-foreground mb-4">
+            <strong>📱 Posicione o celular em pé (vertical):</strong>
+          </p>
+          <p className="text-sm text-muted-foreground mb-2">
+            Para melhor visualização, segure o celular na posição vertical durante a gravação.
+          </p>
           <p className="text-sm text-muted-foreground">
             O vídeo terá duração máxima de <strong>12 segundos</strong> e será salvo <strong>sem áudio</strong> para otimização.
           </p>
