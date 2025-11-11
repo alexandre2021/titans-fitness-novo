@@ -60,7 +60,6 @@ const ExerciciosPT = () => {
   const [showScrollTopButton, setShowScrollTopButton] = useState(false);
   const deletingRef = useRef(false);
 
-  // ✅ CORREÇÃO DEFINITIVA: A verificação de rota deve vir DEPOIS de todos os hooks
   // Efeito de LEITURA: Sincroniza o estado interno com os parâmetros da URL
   useEffect(() => {
     isUpdatingFromUrl.current = true; // Sinaliza que a atualização vem da URL/state
@@ -179,12 +178,6 @@ const ExerciciosPT = () => {
       deletingRef.current = false;
     }
   }, [exercicioParaExcluir, isDeleting, excluirExercicio]);
-
-  // ✅ CORREÇÃO DEFINITIVA: A verificação de rota agora está DEPOIS de todos os hooks
-  // e antes de qualquer renderização de JSX.
-  if (location.pathname !== '/exercicios') {
-    return null;
-  }
 
   const handleExcluirExercicio = async (exercicioId: string) => {
     const exercicio = exerciciosPersonalizados.find(e => e.id === exercicioId);

@@ -127,20 +127,15 @@ const router = createBrowserRouter([
           // Rotas principais
           { path: "/index-professor", element: <IndexProfessor /> },
           { path: "/alunos", element: <AlunosPT /> },
-          // ✅ CORREÇÃO DEFINITIVA: Layout para Exercícios
-          { 
-            path: "/exercicios", 
-            element: <Outlet />, // Componente de Layout que renderiza rotas filhas
-            children: [
-              { index: true, element: <ExerciciosPT /> }, // Página de listagem
-              { path: "novo", element: <NovoExercicio /> },
-              { path: "copia/:id", element: <CopiaExercicio /> },
-              { path: "editar/:id", element: <EditarExercicio /> },
-              { path: "detalhes/:id", element: <DetalhesExercicio /> },
-              { path: "novo-padrao", element: <NovoExercicioPadrao /> },
-              { path: "editar-padrao/:id", element: <EditarExercicioPadrao /> },
-            ]
-          },
+          // ✅ CORREÇÃO: Rotas de Exercícios SEM aninhamento
+          { path: "/exercicios", element: <ExerciciosPT /> },
+          { path: "/exercicios/novo", element: <NovoExercicio /> },
+          { path: "/exercicios/copia/:id", element: <CopiaExercicio /> },
+          { path: "/exercicios/editar/:id", element: <EditarExercicio /> },
+          { path: "/exercicios/detalhes/:id", element: <DetalhesExercicio /> },
+          { path: "/exercicios/novo-padrao", element: <NovoExercicioPadrao /> },
+          { path: "/exercicios/editar-padrao/:id", element: <EditarExercicioPadrao /> },
+          
           { path: "/agenda-pt", element: <AgendaPT /> },
           // Rotas de Posts protegidas para o admin
           {

@@ -1037,28 +1037,23 @@ const CopiaExercicio = () => {
                 <div className="mt-2 space-y-4">
                   {midias.video_url ? (
                     <div className="space-y-3">
-                      <div className="relative inline-block w-40 h-40 bg-muted rounded-lg border flex items-center justify-center overflow-hidden">
-                        {midias.video_url instanceof File ? (
-                          <video 
-                            src={URL.createObjectURL(midias.video_url)} 
-                            className="max-w-full max-h-full object-contain"
+                      <div className="relative inline-block w-40 bg-muted rounded-lg border shadow-sm overflow-hidden flex items-center justify-center">
+                        {signedUrls.video && (
+                          <video
+                            src={signedUrls.video}
+                            className="w-full h-auto object-contain rounded-lg"
                             controls
                           />
-                        ) : signedUrls.video ? (
-                          <video 
-                            src={signedUrls.video} 
-                            className="max-w-full max-h-full object-contain"
-                            controls
-                          />
-                        ) : (
-                          <div className="w-full h-48 bg-muted rounded-lg border flex items-center justify-center">
+                        )}
+                        {!signedUrls.video && (
+                          <div className="w-full h-40 bg-muted rounded-lg border flex items-center justify-center">
                             <span className="text-sm text-muted-foreground">Carregando...</span>
                           </div>
                         )}
                         <Button
                           type="button"
                           variant="ghost"
-                          size="sm"
+                          size="icon"
                           className="absolute top-1 right-1 h-8 w-8 bg-white/30 hover:bg-white/50 backdrop-blur-sm text-gray-800 rounded-full"
                           onClick={() => setCoverMediaKey('video_url')}
                           title="Definir como capa"

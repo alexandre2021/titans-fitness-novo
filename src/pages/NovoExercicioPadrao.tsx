@@ -97,7 +97,17 @@ const NovoExercicioPadrao = () => {
     return (
       <Modal isOpen={showVideoInfoModal} onRequestClose={handleClose} shouldCloseOnOverlayClick={true} shouldCloseOnEsc={true} className="bg-white rounded-lg max-w-md w-full mx-4 outline-none" overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="flex items-center justify-between p-6 border-b"><h2 className="text-lg font-semibold">Gravar Vídeo do Exercício</h2><Button variant="ghost" size="sm" onClick={handleClose} className="h-8 w-8 p-0"><X className="h-4 w-4" /></Button></div>
-        <div className="p-6"><p className="text-sm text-muted-foreground">O vídeo terá duração máxima de <strong>12 segundos</strong> e será salvo <strong>sem áudio</strong> para otimização.</p></div>
+        <div className="p-6">
+          <p className="text-sm text-muted-foreground mb-4">
+            <strong>📱 Posicione o celular em pé (vertical):</strong>
+          </p>
+          <p className="text-sm text-muted-foreground mb-2">
+            Para melhor visualização, segure o celular na posição vertical durante a gravação.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            O vídeo terá duração máxima de <strong>12 segundos</strong> e será salvo <strong>sem áudio</strong> para otimização.
+          </p>
+        </div>
         <div className="flex justify-end gap-2 p-6 border-t"><Button variant="outline" onClick={handleClose}>Cancelar</Button><Button onClick={handleConfirm}>Iniciar Gravação</Button></div>
       </Modal>
     );
@@ -440,20 +450,22 @@ const NovoExercicioPadrao = () => {
               <div className="mt-2 space-y-4">
                 {midias.video_url ? (
                   <div className="space-y-3">
-                    <div className="relative inline-block w-40 h-40 bg-muted rounded-lg border flex items-center justify-center overflow-hidden">
+                    <div className="relative inline-block w-40 bg-muted rounded-lg border shadow-sm overflow-hidden flex items-center justify-center">
                       {signedUrls.video ? (
-                        <video 
-                          src={signedUrls.video} 
-                          className="max-w-full max-h-full object-contain"
-                          controls 
+                        <video
+                          src={signedUrls.video}
+                          className="w-full h-auto object-contain rounded-lg"
+                          controls
                         />
                       ) : (
-                        <div className="text-sm text-muted-foreground">Carregando...</div>
+                        <div className="w-full h-40 bg-muted rounded-lg border flex items-center justify-center">
+                          <span className="text-sm text-muted-foreground">Carregando...</span>
+                        </div>
                       )}
                       <Button
                         type="button"
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         className="absolute top-1 right-1 h-8 w-8 bg-white/30 hover:bg-white/50 backdrop-blur-sm text-gray-800 rounded-full"
                         onClick={() => setCoverMediaKey('video_url')}
                         title="Definir como capa"
