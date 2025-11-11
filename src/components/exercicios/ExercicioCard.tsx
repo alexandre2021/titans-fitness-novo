@@ -118,70 +118,75 @@ export const ExercicioCard = ({ exercicio, onCriarCopia, onExcluir, isAdmin, loc
           <h3 className="font-semibold text-foreground line-clamp-2 flex-1">{exercicio.nome}</h3>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-8 w-8 rounded-full p-0 flex-shrink-0" 
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4"
                 onClick={(e) => e.stopPropagation()}
               >
-                <MoreVertical className="h-4 w-4" />
+                <MoreVertical />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem 
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  handleNavigation(`/exercicios/detalhes/${exercicio.id}`); 
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleNavigation(`/exercicios/detalhes/${exercicio.id}`);
                 }}
               >
-                <Eye className="mr-2 h-4 w-4" />Ver Detalhes
+                <Eye className="mr-2 h-5 w-5" />
+                <span className="text-base">Ver Detalhes</span>
               </DropdownMenuItem>
-              
+
               {onCriarCopia && (
-                <DropdownMenuItem 
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    onCriarCopia(exercicio.id); 
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCriarCopia(exercicio.id);
                   }}
                 >
-                  <Copy className="mr-2 h-4 w-4" />Criar Cópia
+                  <Copy className="mr-2 h-5 w-5" />
+                  <span className="text-base">Criar Cópia</span>
                 </DropdownMenuItem>
               )}
-              
+
               {exercicio.tipo === 'personalizado' && (
                 <>
-                  <DropdownMenuItem 
-                    onClick={(e) => { 
-                      e.stopPropagation(); 
-                      handleNavigation(`/exercicios/editar/${exercicio.id}`); 
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleNavigation(`/exercicios/editar/${exercicio.id}`);
                     }}
                   >
-                    <Edit className="mr-2 h-4 w-4" />Editar
+                    <Edit className="mr-2 h-5 w-5" />
+                    <span className="text-base">Editar</span>
                   </DropdownMenuItem>
-                  
+
                   {onExcluir && (
-                    <DropdownMenuItem 
-                      onClick={(e) => { 
-                        e.stopPropagation(); 
-                        onExcluir(exercicio.id); 
-                      }} 
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onExcluir(exercicio.id);
+                      }}
                       className="text-destructive focus:text-destructive"
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />Excluir
+                      <Trash2 className="mr-2 h-5 w-5" />
+                      <span className="text-base">Excluir</span>
                     </DropdownMenuItem>
                   )}
                 </>
               )}
-              
+
               {isAdmin && exercicio.tipo === 'padrao' && (
-                <DropdownMenuItem 
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    handleNavigation(`/exercicios/editar-padrao/${exercicio.id}`); 
-                  }} 
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNavigation(`/exercicios/editar-padrao/${exercicio.id}`);
+                  }}
                   className="bg-secondary text-secondary-foreground hover:bg-secondary/80 focus:bg-secondary/80 focus:text-secondary-foreground"
                 >
-                  <Edit className="mr-2 h-4 w-4" />Editar Padrão
+                  <Edit className="mr-2 h-5 w-5" />
+                  <span className="text-base">Editar Padrão</span>
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>

@@ -68,8 +68,14 @@ const ExerciciosPT = () => {
     // 1. Prioriza o activeTab do location.state
     if (location.state && location.state.activeTab) {
       tabToSet = location.state.activeTab;
-      // Limpa o state após o uso para evitar que ele persista em navegações futuras
-      navigate(location.pathname, { replace: true, state: {} });
+      // Adiciona o tab na URL e limpa o state
+      const newSearchParams = new URLSearchParams(location.search);
+      if (tabToSet !== "padrao") {
+        newSearchParams.set('tab', tabToSet);
+      } else {
+        newSearchParams.delete('tab');
+      }
+      navigate(`${location.pathname}?${newSearchParams.toString()}`, { replace: true, state: {} });
     } else {
       // 2. Fallback para o parâmetro 'tab' da URL
       const currentSearchParams = new URLSearchParams(location.search);
