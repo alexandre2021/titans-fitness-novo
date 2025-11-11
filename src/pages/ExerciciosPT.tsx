@@ -49,36 +49,49 @@ const ExerciciosPT = () => {
     dificuldade: 'todos'
   });
 
-  const isFirstRender = useRef(true); // Controla a primeira renderização para evitar navegação inicial
-  const isUpdatingFromUrl = useRef(false); // NOVO REF: Controla se a atualização veio da URL
+  const isFirstRender = useRef(true);
+  const isUpdatingFromUrl = useRef(false);
 
+  const [showFilters, setShowFilters] = useState(false);
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [exercicioParaExcluir, setExercicioParaExcluir] = useState<Tables<'exercicios'> | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showScrollTopButton, setShowScrollTopButton] = useState(false);
+  const deletingRef = useRef(false);
+
+  // ✅ CORREÇÃO DEFINITIVA: A verificação de rota deve vir DEPOIS de todos os hooks
   // Efeito de LEITURA: Sincroniza o estado interno com os parâmetros da URL
   useEffect(() => {
-    isUpdatingFromUrl.current = true; // Sinaliza que a próxima mudança de estado é devido à leitura da URL
-    const currentSearchParams = new URLSearchParams(location.search);
-    const tab = (currentSearchParams.get('tab') as "padrao" | "personalizados") || "padrao";
-    const newBusca = currentSearchParams.get('busca') || "";
-    const newFiltros = {
-      grupoMuscular: currentSearchParams.get('grupo') || 'todos',
-      equipamento: currentSearchParams.get('equipamento') || 'todos',
-      dificuldade: currentSearchParams.get('dificuldade') || 'todos'
-    };
+    isUpdatingFromUrl.current = true; // Sinaliza que a atualização vem da URL/state
+    let tabToSet: "padrao" | "personalizados" = "padrao";
 
-    setActiveTab(tab);
-    setBusca(newBusca);
-    setFiltros(newFiltros);
+    // 1. Prioriza o activeTab do location.state
+    if (location.state && location.state.activeTab) {
+      tabToSet = location.state.activeTab;
+      // Limpa o state após o uso para evitar que ele persista em navegações futuras
+      navigate(location.pathname, { replace: true, state: {} });
+    } else {
+      // 2. Fallback para o parâmetro 'tab' da URL
+      const currentSearchParams = new URLSearchParams(location.search);
+      tabToSet = (currentSearchParams.get('tab') as "padrao" | "personalizados") || "padrao";
+    }
 
-    // Apenas marca que a primeira renderização (leitura da URL) acabou
+    const currentSearchParams = new URLSearchParams(location.search); // Lê outros filtros da URL
+    setBusca(currentSearchParams.get('busca') || "");
+    setFiltros({ grupoMuscular: currentSearchParams.get('grupo') || 'todos', equipamento: currentSearchParams.get('equipamento') || 'todos', dificuldade: currentSearchParams.get('dificuldade') || 'todos' });
+    setActiveTab(tabToSet);
+
     if (isFirstRender.current) {
         isFirstRender.current = false;
     }
-  }, [location.search, setActiveTab, setBusca, setFiltros]);
+  }, [location.search, location.pathname, location.state, navigate]);
 
-    // Efeito de ESCRITA: Sincroniza a URL com as mudanças no estado interno
+  // Efeito de ESCRITA: Sincroniza a URL com as mudanças no estado interno
   useEffect(() => {
     if (isUpdatingFromUrl.current) {
-        isUpdatingFromUrl.current = false; // Reseta o sinalizador
-        return; // Não faz nada se a mudança veio da URL (quebrando o loop!)
+        isUpdatingFromUrl.current = false;
+        return;
     }
     const currentSearchParams = new URLSearchParams();
     if (activeTab && activeTab !== "padrao") currentSearchParams.set('tab', activeTab);
@@ -98,17 +111,7 @@ const ExerciciosPT = () => {
     if (newSearch !== currentUrlSearch) {
         navigate({ search: newSearch }, { replace: true });
     }
-
   }, [activeTab, busca, filtros.grupoMuscular, filtros.equipamento, filtros.dificuldade, navigate, location.search]);
-
-
-  const [showFilters, setShowFilters] = useState(false);
-  const isDesktop = useMediaQuery("(min-width: 768px)");
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [exercicioParaExcluir, setExercicioParaExcluir] = useState<Tables<'exercicios'> | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [showScrollTopButton, setShowScrollTopButton] = useState(false);
-  const deletingRef = useRef(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -129,12 +132,16 @@ const ExerciciosPT = () => {
   };
 
   const handleNovoExercicio = () => {
+    // Adicionando console.log para depuração
+    console.log('Botão "Novo Exercício Personalizado" clicado. Verificando limite de exercícios...');
     if (totalPersonalizados >= LIMITE_EXERCICIOS_PERSONALIZADOS) {
+      console.log(`Limite de ${LIMITE_EXERCICIOS_PERSONALIZADOS} exercícios atingido. Exibindo toast de erro.`);
       toast.error("Limite atingido", {
         description: `Você atingiu o limite de ${LIMITE_EXERCICIOS_PERSONALIZADOS} exercícios personalizados. Para criar novos, remova algum exercício antigo.`,
       })
       return;
     }
+    console.log('Limite OK. Navegando para /exercicios/novo...');
     navigate("/exercicios/novo");
   };
 
@@ -152,14 +159,6 @@ const ExerciciosPT = () => {
     navigate(`/exercicios/copia/${exercicioId}`);
   };
 
-  const handleExcluirExercicio = async (exercicioId: string) => {
-    const exercicio = exerciciosPersonalizados.find(e => e.id === exercicioId);
-    if (exercicio) {
-      setExercicioParaExcluir(exercicio);
-      setShowDeleteDialog(true);
-    }
-  };
-
   const handleConfirmarExclusao = useCallback(async () => {
     if (!exercicioParaExcluir || isDeleting || deletingRef.current) return;
 
@@ -169,7 +168,6 @@ const ExerciciosPT = () => {
     try {
       await excluirExercicio(exercicioParaExcluir.id);
 
-      // Resetar estados sem mostrar toast (o hook já mostra)
       setExercicioParaExcluir(null);
       setIsDeleting(false);
       deletingRef.current = false;
@@ -177,12 +175,24 @@ const ExerciciosPT = () => {
 
     } catch (error) {
       console.error("Erro ao excluir exercício:", error);
-
-      // Em caso de erro, resetar estados (o hook já mostra o toast de erro)
       setIsDeleting(false);
       deletingRef.current = false;
     }
   }, [exercicioParaExcluir, isDeleting, excluirExercicio]);
+
+  // ✅ CORREÇÃO DEFINITIVA: A verificação de rota agora está DEPOIS de todos os hooks
+  // e antes de qualquer renderização de JSX.
+  if (location.pathname !== '/exercicios') {
+    return null;
+  }
+
+  const handleExcluirExercicio = async (exercicioId: string) => {
+    const exercicio = exerciciosPersonalizados.find(e => e.id === exercicioId);
+    if (exercicio) {
+      setExercicioParaExcluir(exercicio);
+      setShowDeleteDialog(true);
+    }
+  };
 
   const handleCancelarExclusao = () => {
     if (isDeleting) return;
@@ -213,7 +223,6 @@ const ExerciciosPT = () => {
   const limparFiltros = () => {
     setFiltros({ grupoMuscular: 'todos', equipamento: 'todos', dificuldade: 'todos' });
     setBusca('');
-    // A URL será limpa pelo useEffect de escrita
   };
 
   const canAddMore = totalPersonalizados < LIMITE_EXERCICIOS_PERSONALIZADOS;
@@ -233,7 +242,6 @@ const ExerciciosPT = () => {
 
   return (
     <div className="space-y-6">
-      {/* Cabeçalho */}
       {isDesktop && (
         <div className="items-center justify-between">
           <div>
@@ -245,7 +253,6 @@ const ExerciciosPT = () => {
         </div>
       )}
 
-      {/* Abas */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "padrao" | "personalizados")}>
         <TabsList>
           <TabsTrigger value="padrao">
@@ -257,7 +264,6 @@ const ExerciciosPT = () => {
         </TabsList>
 
         <TabsContent value="padrao" className="space-y-4 mt-4">
-          {/* Busca e Filtros */}
           <div className="space-y-4">
             <div className="flex gap-2 md:hidden">
               <div className="relative flex-1">
@@ -381,7 +387,6 @@ const ExerciciosPT = () => {
         </TabsContent>
 
         <TabsContent value="personalizados" className="space-y-4 mt-4">
-          {/* Similar ao padrão mas com ExercicioCard para excluir */}
           <div className="space-y-4">
             <div className="flex gap-2 md:hidden">
               <div className="relative flex-1">
@@ -498,7 +503,7 @@ const ExerciciosPT = () => {
                   </CardContent>
                 </Card>
             ) : (
-                <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 pb-32 md:pb-16">
                   {exerciciosFiltrados.map((exercicio) => (
                     <ExercicioCard
                       key={exercicio.id}
@@ -516,7 +521,6 @@ const ExerciciosPT = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Modal de Confirmação de Exclusão */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -553,7 +557,6 @@ const ExerciciosPT = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Botão Flutuante para Novo Exercício Padrão (Admin) */}
       {isAdmin && activeTab === "padrao" && (
         <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
           <Button
@@ -567,7 +570,6 @@ const ExerciciosPT = () => {
         </div>
       )}
 
-      {/* Botão Flutuante para Novo Exercício */}
       {activeTab === "personalizados" && (
         <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
           <Button
@@ -581,7 +583,6 @@ const ExerciciosPT = () => {
         </div>
       )}
 
-      {/* Botão Flutuante para Voltar ao Topo */}
       {showScrollTopButton && (
         <div className="fixed bottom-36 md:bottom-24 right-4 md:right-6 z-50">
           <Button

@@ -361,44 +361,28 @@ const DetalhesExercicio = () => {
               {/* Primeira Imagem */}
               {exercicio.imagem_1_url && (
                 <div>
-                  <Label className="text-sm font-medium">
-                    Primeira Imagem
-                  </Label>
+                  <Label>Primeira Imagem</Label>
                   <div className="mt-2 space-y-3">
-                    <div className="relative inline-block">
-                      {loadingImages ? (
-                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
-                          <span className="text-sm text-muted-foreground">Carregando...</span>
-                        </div>
-                      ) : signedUrls.imagem1 ? (
-                        <img 
-                          src={signedUrls.imagem1} 
-                          alt="Primeira imagem do exercício" 
-                          className="max-w-40 max-h-40 object-contain rounded-lg border shadow-sm bg-muted"
-                          onError={(e) => {
-                            console.error('Erro ao carregar imagem 1');
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      ) : (
-                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
-                          <span className="text-sm text-muted-foreground">Erro ao carregar</span>
-                        </div>
-                      )}
+                    <div className="relative inline-block w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
+                    {loadingImages ? (
+                      <div className="text-sm text-muted-foreground">Carregando...</div>
+                    ) : signedUrls.imagem1 ? (
+                      <img src={signedUrls.imagem1} className="max-w-full max-h-full object-contain rounded-lg" />
+                    ) : (
+                      <div className="h-48 flex items-center justify-center text-gray-400">Mídia não disponível</div>
+                    )}
                     </div>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewMedia(signedUrls.imagem1 || exercicio.imagem_1_url!)}
-                        className="flex items-center gap-2"
-                        disabled={!signedUrls.imagem1}
-                      >
-                        <Eye className="h-4 w-4" />
-                        Visualizar
-                      </Button>
-                    </div>
+                    {signedUrls.imagem1 && (
+                      <div className="flex gap-2 mt-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewMedia(signedUrls.imagem1!)}
+                        >
+                          <Eye className="h-4 w-4 mr-2" /> Visualizar
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -406,44 +390,28 @@ const DetalhesExercicio = () => {
               {/* Segunda Imagem */}
               {exercicio.imagem_2_url && (
                 <div>
-                  <Label className="text-sm font-medium">
-                    Segunda Imagem
-                  </Label>
+                  <Label>Segunda Imagem</Label>
                   <div className="mt-2 space-y-3">
-                    <div className="relative inline-block">
-                      {loadingImages ? (
-                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
-                          <span className="text-sm text-muted-foreground">Carregando...</span>
-                        </div>
-                      ) : signedUrls.imagem2 ? (
-                        <img 
-                          src={signedUrls.imagem2} 
-                          alt="Segunda imagem do exercício" 
-                          className="max-w-40 max-h-40 object-contain rounded-lg border shadow-sm bg-muted"
-                          onError={(e) => {
-                            console.error('Erro ao carregar imagem 2');
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      ) : (
-                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
-                          <span className="text-sm text-muted-foreground">Erro ao carregar</span>
-                        </div>
-                      )}
+                    <div className="relative inline-block w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
+                    {loadingImages ? (
+                      <div className="text-sm text-muted-foreground">Carregando...</div>
+                    ) : signedUrls.imagem2 ? (
+                      <img src={signedUrls.imagem2} className="max-w-full max-h-full object-contain rounded-lg" />
+                    ) : (
+                      <div className="h-48 flex items-center justify-center text-gray-400">Mídia não disponível</div>
+                    )}
                     </div>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewMedia(signedUrls.imagem2 || exercicio.imagem_2_url!)}
-                        className="flex items-center gap-2"
-                        disabled={!signedUrls.imagem2}
-                      >
-                        <Eye className="h-4 w-4" />
-                        Visualizar
-                      </Button>
-                    </div>
+                    {signedUrls.imagem2 && (
+                      <div className="flex gap-2 mt-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewMedia(signedUrls.imagem2!)}
+                        >
+                          <Eye className="h-4 w-4 mr-2" /> Visualizar
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -451,43 +419,28 @@ const DetalhesExercicio = () => {
               {/* Vídeo */}
               {exercicio.video_url && (
                 <div>
-                  <Label className="text-sm font-medium">
-                    Vídeo
-                  </Label>
+                  <Label>Vídeo</Label>
                   <div className="mt-2 space-y-3">
-                    <div className="relative inline-block">
-                      {loadingImages ? (
-                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
-                          <span className="text-sm text-muted-foreground">Carregando...</span>
-                        </div>
-                      ) : signedUrls.video ? (
-                        <video 
-                          src={signedUrls.video} 
-                          className="max-w-40 max-h-40 object-contain rounded-lg border shadow-sm bg-muted"
-                          controls
-                          onError={(e) => {
-                            console.error('Erro ao carregar vídeo');
-                          }}
-                        />
-                      ) : (
-                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
-                          <span className="text-sm text-muted-foreground">Erro ao carregar</span>
-                        </div>
-                      )}
+                    <div className="relative inline-block w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
+                    {loadingImages ? (
+                      <div className="text-sm text-muted-foreground">Carregando...</div>
+                    ) : signedUrls.video ? (
+                      <video src={signedUrls.video} className="max-w-full max-h-full object-contain rounded-lg" controls />
+                    ) : (
+                      <div className="h-48 flex items-center justify-center text-gray-400">Mídia não disponível</div>
+                    )}
                     </div>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewMedia(signedUrls.video || exercicio.video_url!)}
-                        className="flex items-center gap-2"
-                        disabled={!signedUrls.video}
-                      >
-                        <Eye className="h-4 w-4" />
-                        Assistir
-                      </Button>
-                    </div>
+                    {signedUrls.video && (
+                      <div className="flex gap-2 mt-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewMedia(signedUrls.video!)}
+                        >
+                          <Eye className="h-4 w-4 mr-2" /> Assistir
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

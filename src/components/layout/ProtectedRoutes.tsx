@@ -19,6 +19,9 @@ const MessagesButton = lazy(() => import('@/components/messages/MessageButton'))
 // A funcionalidade do assistente de IA foi pausada, então o componente não é mais renderizado.
 // import HelpChat from "@/pages/HelpChat";
 
+const PTLayout = lazy(() => import('./PTLayout'));
+const AlunoLayout = lazy(() => import('./AlunoLayout'));
+
 const ProtectedRoutes = () => {
   const { user, loading: authLoading } = useAuth();
   const [userType, setUserType] = useState<string | null>(null);
@@ -82,67 +85,24 @@ const ProtectedRoutes = () => {
     );
   }
 
-  const isFocusedMode = 
-    location.pathname.startsWith('/rotinas-criar/') || 
-    location.pathname.startsWith('/execucao-rotina/executar-treino/');
-
-  const isMaisPage = location.pathname === '/mais';
-
-  let Sidebar, MobileHeader, BottomNav;
-
   switch (userType) {
     case 'aluno':
-      Sidebar = AlunoSidebar;
-      MobileHeader = AlunoMobileHeader;
-      BottomNav = AlunoBottomNav;
-      break;
+      return (
+        <Suspense fallback={<div>Carregando layout do aluno...</div>}>
+          <AlunoLayout />
+        </Suspense>
+      );
     case 'professor':
-      Sidebar = PTSidebar;
-      MobileHeader = PTMobileHeader;
-      BottomNav = PTBottomNav;
-      break;
+      return (
+        <Suspense fallback={<div>Carregando layout do professor...</div>}>
+          <PTLayout />
+        </Suspense>
+      );
     default:
+      // Se não for aluno nem professor, ou para rotas que não precisam de layout,
+      // apenas renderiza o Outlet para que as rotas filhas possam ser exibidas.
       return <Outlet />;
   }
-
-  if (isMobile) {
-    return (
-      <div className="min-h-screen bg-background">
-        {!isFocusedMode && <MobileHeader />}
-        <main className={`p-4 ${isFocusedMode ? 'pt-6' : 'pt-24 pb-16'}`}>
-          <Outlet />
-        </main>
-        {!isFocusedMode && <BottomNav />}
-        <Suspense>
-          <MessagesButton onClick={() => setIsDrawerOpen(true)} position="bottom-left" unreadCount={unreadCount} />
-          <MessagesDrawer 
-            isOpen={isDrawerOpen} 
-            onClose={() => setIsDrawerOpen(false)} 
-            direction="left" 
-            onUnreadCountChange={setUnreadCount} />
-        </Suspense>
-        {/* <HelpChat /> */}
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-background">
-      {!isFocusedMode && <Sidebar />}
-      <main className={`flex-1 p-6 ${!isFocusedMode ? 'pl-72' : ''} transition-all duration-300`}>
-        <Outlet />
-      </main>
-      <Suspense>
-        <MessagesButton onClick={() => setIsDrawerOpen(true)} position="top-right" unreadCount={unreadCount} />
-        <MessagesDrawer 
-          isOpen={isDrawerOpen} 
-          onClose={() => setIsDrawerOpen(false)} 
-          direction="right" 
-          onUnreadCountChange={setUnreadCount} />
-      </Suspense>
-      {/* <HelpChat /> */}
-    </div>
-  );
 };
 
 export default ProtectedRoutes;

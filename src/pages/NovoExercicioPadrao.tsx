@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import Modal from 'react-modal';
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Save, Plus, Trash2, Eye, ExternalLink, Camera, Video, Upload, X } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, Eye, ExternalLink, Camera, Video, Upload, X, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast as sonnerToast } from "sonner";
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -51,12 +51,16 @@ const NovoExercicioPadrao = () => {
 
   const [midias, setMidias] = useState<{
     [key: string]: string | File | null;
+    video_thumbnail_path: string | File | null;
   }>({
     imagem_1_url: null,
     imagem_2_url: null,
     video_url: null,
     youtube_url: null,
+    video_thumbnail_path: null,
   });
+
+  const [coverMediaKey, setCoverMediaKey] = useState<keyof typeof midias | null>(null);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [signedUrls, setSignedUrls] = useState<{
@@ -144,9 +148,16 @@ const NovoExercicioPadrao = () => {
     if (Object.keys(updates).length > 0) { setSignedUrls(prev => ({ ...prev, ...updates })); }
   }, [midias, signedUrls]);
 
-  const handleRecordingComplete = (videoBlob: Blob) => {
-    const videoFile = new File([videoBlob], `gravacao_${Date.now()}.webm`, { type: 'video/webm' });
-    setMidias(prev => ({ ...prev, video_url: videoFile }));
+  const handleRecordingComplete = ({ 
+    videoBlob, 
+    thumbnailBlob 
+  }: { 
+    videoBlob: Blob, 
+    thumbnailBlob: Blob 
+  }) => {
+    const videoFile = new File([videoBlob], `gravacao_${Date.now()}.webm`, { type: 'video/webm' });    
+    const thumbnailFile = new File([thumbnailBlob], `thumbnail_${Date.now()}.jpeg`, { type: 'image/jpeg' });    
+    setMidias(prev => ({ ...prev, video_url: videoFile, video_thumbnail_path: thumbnailFile }));
     setShowVideoRecorder(false);
   };
 
@@ -157,7 +168,43 @@ const NovoExercicioPadrao = () => {
     setShowDeleteMediaDialog(null);
   };
 
-  useEffect(() => { loadSignedUrls(); }, [loadSignedUrls]);
+  // Efeito para definir a primeira mídia como capa automaticamente
+  useEffect(() => {
+    if (coverMediaKey) return;
+
+    const firstAvailableMedia = ([
+      'imagem_1_url',
+      'imagem_2_url',
+      'video_url',
+      'youtube_url',
+    ] as const).find((key) => midias[key] !== null);
+
+    if (firstAvailableMedia) {
+      setCoverMediaKey(firstAvailableMedia);
+    }
+  }, [midias, coverMediaKey]);
+
+  // ✅ CORREÇÃO: useEffect para gerar URLs de preview para arquivos locais (File)
+  // e garantir que a UI seja atualizada corretamente.
+  useEffect(() => {
+    const newSignedUrls: Record<string, string> = {};
+
+    if (midias.imagem_1_url instanceof File) {
+      newSignedUrls.imagem1 = URL.createObjectURL(midias.imagem_1_url);
+    }
+    if (midias.imagem_2_url instanceof File) {
+      newSignedUrls.imagem2 = URL.createObjectURL(midias.imagem_2_url);
+    }
+    if (midias.video_url instanceof File) {
+      newSignedUrls.video = URL.createObjectURL(midias.video_url);
+    }
+
+    // Limpa URLs de mídias que foram removidas (setadas para null)
+    setSignedUrls(prev => ({
+      ...prev,
+      ...newSignedUrls,
+    }));
+  }, [midias]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -195,10 +242,11 @@ const NovoExercicioPadrao = () => {
 
     setSaving(true);
     try {
-      const [imagem_1_url_final, imagem_2_url_final, video_url_final] = await Promise.all([
+      const [imagem_1_url_final, imagem_2_url_final, video_url_final, video_thumbnail_path_final] = await Promise.all([
         uploadFile(midias.imagem_1_url),
         uploadFile(midias.imagem_2_url),
         uploadFile(midias.video_url),
+        uploadFile(midias.video_thumbnail_path),
       ]);
 
       const { data: exercicio, error } = await supabase
@@ -215,6 +263,7 @@ const NovoExercicioPadrao = () => {
           imagem_1_url: imagem_1_url_final,
           imagem_2_url: imagem_2_url_final,
           video_url: video_url_final,
+          video_thumbnail_path: video_thumbnail_path_final,
           youtube_url: midias.youtube_url as string || null,
           tipo: 'padrao',
           professor_id: null,
@@ -321,8 +370,30 @@ const NovoExercicioPadrao = () => {
               <div className="mt-2 space-y-4">
                 {midias.imagem_1_url ? (
                   <div className="space-y-3">
-                    <div className="relative inline-block"><img src={signedUrls.imagem1} alt="Primeira imagem" className="max-w-40 max-h-40 object-contain rounded-lg border shadow-sm bg-muted" /></div>
-                    <div className="flex gap-2"><Button type="button" variant="outline" size="sm" onClick={() => signedUrls.imagem1 && window.open(signedUrls.imagem1, '_blank')} className="flex items-center gap-2" disabled={!signedUrls.imagem1 || saving}><Eye className="h-4 w-4" /> Ver</Button><Button type="button" variant="outline" size="sm" onClick={() => handleSelectMedia('imagem1')} className="flex items-center gap-2" disabled={saving}>{isMobile ? <Camera className="h-4 w-4" /> : <Upload className="h-4 w-4" />}{isMobile ? 'Nova Foto' : 'Alterar'}</Button><Button type="button" variant="outline" size="sm" onClick={() => setShowDeleteMediaDialog('imagem1')} className="flex items-center gap-2" disabled={saving}><Trash2 className="h-4 w-4" /> Excluir</Button></div>
+                    <div className="relative inline-block w-40 h-40 bg-muted rounded-lg border flex items-center justify-center overflow-hidden">
+                      {signedUrls.imagem1 ? (
+                        <img 
+                          src={signedUrls.imagem1} 
+                          alt="Primeira imagem" 
+                          className="max-w-full max-h-full object-contain"
+                        />
+                      ) : (
+                        <div className="text-sm text-muted-foreground">Carregando...</div>
+                      )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-1 right-1 h-8 w-8 bg-white/30 hover:bg-white/50 backdrop-blur-sm text-gray-800 rounded-full"
+                        onClick={() => setCoverMediaKey('imagem_1_url')}
+                        title="Definir como capa"
+                      >
+                        <Star className={`h-4 w-4 transition-all ${coverMediaKey === 'imagem_1_url' ? 'fill-yellow-400 text-yellow-400' : 'fill-transparent'}`} />
+                      </Button>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={() => signedUrls.imagem1 && window.open(signedUrls.imagem1, '_blank')} className="flex items-center gap-2" disabled={!signedUrls.imagem1 || saving}><Eye className="h-4 w-4" /> Ver</Button><Button type="button" variant="outline" size="sm" onClick={() => handleSelectMedia('imagem1')} className="flex items-center gap-2" disabled={saving}>{isMobile ? <Camera className="h-4 w-4" /> : <Upload className="h-4 w-4" />}{isMobile ? 'Nova Foto' : 'Alterar'}</Button><Button type="button" variant="outline" size="sm" onClick={() => setShowDeleteMediaDialog('imagem1')} className="flex items-center gap-2" disabled={saving}><Trash2 className="h-4 w-4" /> Excluir</Button>
+                    </div>
                   </div>
                 ) : (
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center"><p className="text-sm text-muted-foreground mb-3">Adicione uma imagem para o exercício.</p><div className="flex justify-center"><Button type="button" variant="default" onClick={() => handleSelectMedia('imagem1')} className="flex items-center gap-2" disabled={saving}>{isMobile ? <Camera className="h-4 w-4" /> : <Upload className="h-4 w-4" />}{isMobile ? 'Tirar Foto' : 'Selecionar Imagem'}</Button></div></div>
@@ -334,8 +405,30 @@ const NovoExercicioPadrao = () => {
               <div className="mt-2 space-y-4">
                 {midias.imagem_2_url ? (
                   <div className="space-y-3">
-                    <div className="relative inline-block"><img src={signedUrls.imagem2} alt="Segunda imagem" className="max-w-40 max-h-40 object-contain rounded-lg border shadow-sm bg-muted" /></div>
-                    <div className="flex gap-2"><Button type="button" variant="outline" size="sm" onClick={() => signedUrls.imagem2 && window.open(signedUrls.imagem2, '_blank')} className="flex items-center gap-2" disabled={!signedUrls.imagem2 || saving}><Eye className="h-4 w-4" /> Ver</Button><Button type="button" variant="outline" size="sm" onClick={() => handleSelectMedia('imagem2')} className="flex items-center gap-2" disabled={saving}>{isMobile ? <Camera className="h-4 w-4" /> : <Upload className="h-4 w-4" />}{isMobile ? 'Nova Foto' : 'Alterar'}</Button><Button type="button" variant="outline" size="sm" onClick={() => setShowDeleteMediaDialog('imagem2')} className="flex items-center gap-2" disabled={saving}><Trash2 className="h-4 w-4" /> Excluir</Button></div>
+                    <div className="relative inline-block w-40 h-40 bg-muted rounded-lg border flex items-center justify-center overflow-hidden">
+                      {signedUrls.imagem2 ? (
+                        <img 
+                          src={signedUrls.imagem2} 
+                          alt="Segunda imagem" 
+                          className="max-w-full max-h-full object-contain"
+                        />
+                      ) : (
+                        <div className="text-sm text-muted-foreground">Carregando...</div>
+                      )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-1 right-1 h-8 w-8 bg-white/30 hover:bg-white/50 backdrop-blur-sm text-gray-800 rounded-full"
+                        onClick={() => setCoverMediaKey('imagem_2_url')}
+                        title="Definir como capa"
+                      >
+                        <Star className={`h-4 w-4 transition-all ${coverMediaKey === 'imagem_2_url' ? 'fill-yellow-400 text-yellow-400' : 'fill-transparent'}`} />
+                      </Button>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={() => signedUrls.imagem2 && window.open(signedUrls.imagem2, '_blank')} className="flex items-center gap-2" disabled={!signedUrls.imagem2 || saving}><Eye className="h-4 w-4" /> Ver</Button><Button type="button" variant="outline" size="sm" onClick={() => handleSelectMedia('imagem2')} className="flex items-center gap-2" disabled={saving}>{isMobile ? <Camera className="h-4 w-4" /> : <Upload className="h-4 w-4" />}{isMobile ? 'Nova Foto' : 'Alterar'}</Button><Button type="button" variant="outline" size="sm" onClick={() => setShowDeleteMediaDialog('imagem2')} className="flex items-center gap-2" disabled={saving}><Trash2 className="h-4 w-4" /> Excluir</Button>
+                    </div>
                   </div>
                 ) : (
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center"><p className="text-sm text-muted-foreground mb-3">Adicione uma segunda imagem (opcional).</p><div className="flex justify-center"><Button type="button" variant="default" onClick={() => handleSelectMedia('imagem2')} className="flex items-center gap-2" disabled={saving}>{isMobile ? <Camera className="h-4 w-4" /> : <Upload className="h-4 w-4" />}{isMobile ? 'Tirar Foto' : 'Selecionar Imagem'}</Button></div></div>
@@ -347,8 +440,30 @@ const NovoExercicioPadrao = () => {
               <div className="mt-2 space-y-4">
                 {midias.video_url ? (
                   <div className="space-y-3">
-                    <div className="relative inline-block w-48 aspect-video bg-black rounded-lg border shadow-sm"><video src={signedUrls.video} className="max-w-40 max-h-40 object-contain rounded-lg border shadow-sm bg-muted" controls /></div>
-                    <div className="flex gap-2"><Button type="button" variant="outline" size="sm" onClick={() => signedUrls.video && window.open(signedUrls.video, '_blank')} className="flex items-center gap-2" disabled={!signedUrls.video || saving}><Eye className="h-4 w-4" /> Assistir</Button><Button type="button" variant="outline" size="sm" onClick={() => { if (isMobile) { setShowVideoInfoModal(true); } else { handleSelectMedia('video'); } }} className="flex items-center gap-2" disabled={saving}><Video className="h-4 w-4" /> Novo Vídeo</Button><Button type="button" variant="outline" size="sm" onClick={() => setShowDeleteMediaDialog('video')} className="flex items-center gap-2" disabled={saving}><Trash2 className="h-4 w-4" /> Excluir</Button></div>
+                    <div className="relative inline-block w-40 h-40 bg-muted rounded-lg border flex items-center justify-center overflow-hidden">
+                      {signedUrls.video ? (
+                        <video 
+                          src={signedUrls.video} 
+                          className="max-w-full max-h-full object-contain"
+                          controls 
+                        />
+                      ) : (
+                        <div className="text-sm text-muted-foreground">Carregando...</div>
+                      )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute top-1 right-1 h-8 w-8 bg-white/30 hover:bg-white/50 backdrop-blur-sm text-gray-800 rounded-full"
+                        onClick={() => setCoverMediaKey('video_url')}
+                        title="Definir como capa"
+                      >
+                        <Star className={`h-4 w-4 transition-all ${coverMediaKey === 'video_url' ? 'fill-yellow-400 text-yellow-400' : 'fill-transparent'}`} />
+                      </Button>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={() => signedUrls.video && window.open(signedUrls.video, '_blank')} className="flex items-center gap-2" disabled={!signedUrls.video || saving}><Eye className="h-4 w-4" /> Assistir</Button><Button type="button" variant="outline" size="sm" onClick={() => { if (isMobile) { setShowVideoInfoModal(true); } else { handleSelectMedia('video'); } }} className="flex items-center gap-2" disabled={saving}><Video className="h-4 w-4" /> Novo Vídeo</Button><Button type="button" variant="outline" size="sm" onClick={() => setShowDeleteMediaDialog('video')} className="flex items-center gap-2" disabled={saving}><Trash2 className="h-4 w-4" /> Excluir</Button>
+                    </div>
                   </div>
                 ) : (
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center"><p className="text-sm text-muted-foreground mb-3">Adicione um vídeo para o exercício.</p><div className="flex flex-col sm:flex-row gap-2 justify-center items-center"><Button type="button" variant="default" onClick={() => setShowVideoInfoModal(true)} className="flex items-center gap-2" disabled={saving}>{isMobile ? <><Video className="h-4 w-4" /> Gravar Vídeo</> : <><Upload className="h-4 w-4" /> Selecionar Vídeo</>}</Button></div></div>
@@ -362,7 +477,18 @@ const NovoExercicioPadrao = () => {
           <CardHeader><CardTitle className="text-lg font-semibold">Link do YouTube</CardTitle><p className="text-sm text-muted-foreground">Adicione um vídeo do YouTube como referência.</p></CardHeader>
           <CardContent>
             <div>
-              <Input value={midias.youtube_url as string || ''} onChange={(e) => setMidias(prev => ({ ...prev, youtube_url: e.target.value }))} placeholder="https://youtube.com/watch?v=... (cole aqui sua URL do YouTube)" />
+              <div className="relative">
+                <Input value={midias.youtube_url as string || ''} onChange={(e) => setMidias(prev => ({ ...prev, youtube_url: e.target.value }))} placeholder="https://youtube.com/watch?v=... (cole aqui sua URL do YouTube)" className="pr-10" />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-1/2 -translate-y-1/2 right-1 h-8 w-8"
+                  onClick={() => setCoverMediaKey('youtube_url')}
+                  title="Definir como capa"
+                  disabled={!midias.youtube_url}
+                ><Star className={`h-4 w-4 transition-all ${coverMediaKey === 'youtube_url' ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`} /></Button>
+              </div>
               {midias.youtube_url && (<div className="flex items-center gap-2 mt-3"><div className="text-sm text-green-600 flex items-center gap-1">✅ URL do YouTube configurada</div><Button type="button" variant="outline" size="sm" onClick={() => midias.youtube_url && window.open(midias.youtube_url as string, '_blank')} className="flex items-center gap-2"><ExternalLink className="h-4 w-4" /> Ver no YouTube</Button></div>)}
             </div>
           </CardContent>

@@ -245,39 +245,30 @@ const NovoExercicio = () => {
     input.click();
   };
 
-  const loadSignedUrls = useCallback(async () => {
-    const processMedia = (
-      mediaKey: 'imagem_1_url' | 'imagem_2_url' | 'video_url',
-      signedUrlKey: 'imagem1' | 'imagem2' | 'video'
-    ) => {
-      const mediaValue = midias[mediaKey];
+  // ✅ CORREÇÃO: O useEffect agora depende diretamente de `midias`.
+  // A lógica de `loadSignedUrls` foi movida para dentro do useEffect
+  // e `signedUrls` foi removido das dependências para quebrar o loop.
+  useEffect(() => {
+    const newSignedUrls: Record<string, string> = {};
 
-      // Se a URL já existe e o valor não é um novo arquivo, não faz nada.
-      if (signedUrls[signedUrlKey] && !(mediaValue instanceof File)) {
-        return null;
-      }
-
-      if (mediaValue instanceof File) {
-        const objectURL = URL.createObjectURL(mediaValue);
-        return { [signedUrlKey]: objectURL };
-      } else {
-        // Se o valor for null (mídia removida), limpa a URL.
-        return { [signedUrlKey]: undefined };
-      }
-    };
-
-    const [img1Result, img2Result, videoResult] = await Promise.all([
-      processMedia('imagem_1_url', 'imagem1'),
-      processMedia('imagem_2_url', 'imagem2'),
-      processMedia('video_url', 'video'),
-    ]);
-
-    const updates = { ...img1Result, ...img2Result, ...videoResult };
-
-    if (Object.keys(updates).length > 0) {
-      setSignedUrls(prev => ({ ...prev, ...updates }));
+    if (midias.imagem_1_url instanceof File) {
+      newSignedUrls.imagem1 = URL.createObjectURL(midias.imagem_1_url);
     }
-  }, [midias, signedUrls]);
+    if (midias.imagem_2_url instanceof File) {
+      newSignedUrls.imagem2 = URL.createObjectURL(midias.imagem_2_url);
+    }
+    if (midias.video_url instanceof File) {
+      newSignedUrls.video = URL.createObjectURL(midias.video_url);
+    }
+
+    // Limpa URLs de mídias que foram removidas (setadas para null)
+    setSignedUrls(prev => ({
+      imagem1: midias.imagem_1_url ? (newSignedUrls.imagem1 || prev.imagem1) : undefined,
+      imagem2: midias.imagem_2_url ? (newSignedUrls.imagem2 || prev.imagem2) : undefined,
+      video: midias.video_url ? (newSignedUrls.video || prev.video) : undefined,
+      videoThumbnail: midias.video_thumbnail_path instanceof File ? URL.createObjectURL(midias.video_thumbnail_path) : undefined,
+    }));
+  }, [midias]);
 
   const handleRecordingComplete = ({ 
     videoBlob, 
@@ -323,10 +314,6 @@ const NovoExercicio = () => {
       setCoverMediaKey(firstAvailableMedia);
     }
   }, [midias, coverMediaKey]);
-
-  useEffect(() => {
-    loadSignedUrls();
-  }, [loadSignedUrls]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -653,12 +640,12 @@ const NovoExercicio = () => {
               <div className="mt-2 space-y-4">
                 {midias.imagem_1_url ? (
                   <div className="space-y-3">
-                    <div className="relative inline-block">
+                    <div className="relative inline-block w-40 h-40 bg-muted rounded-lg border flex items-center justify-center overflow-hidden">
                       {signedUrls.imagem1 ? (
                         <img 
                           src={signedUrls.imagem1} 
                           alt="Primeira imagem" 
-                          className="max-w-40 max-h-40 object-contain rounded-lg border shadow-sm bg-muted"
+                          className="max-w-full max-h-full object-contain"
                         />
                       ) : (
                         <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
@@ -717,12 +704,12 @@ const NovoExercicio = () => {
               <div className="mt-2 space-y-4">
                 {midias.imagem_2_url ? (
                   <div className="space-y-3">
-                    <div className="relative inline-block">
+                    <div className="relative inline-block w-40 h-40 bg-muted rounded-lg border flex items-center justify-center overflow-hidden">
                       {signedUrls.imagem2 ? (
                         <img 
                           src={signedUrls.imagem2} 
                           alt="Segunda imagem" 
-                          className="max-w-40 max-h-40 object-contain rounded-lg border shadow-sm bg-muted"
+                          className="max-w-full max-h-full object-contain"
                         />
                       ) : (
                         <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
@@ -781,15 +768,15 @@ const NovoExercicio = () => {
               <div className="mt-2 space-y-4">
                 {midias.video_url ? (
                   <div className="space-y-3">
-                    <div className="relative w-full max-w-md mx-auto bg-black rounded-lg border shadow-sm overflow-hidden">
+                    <div className="relative inline-block w-40 h-40 bg-muted rounded-lg border flex items-center justify-center overflow-hidden">
                       {signedUrls.video ? (
-                        <div className="relative pt-[56.25%]"> {/* 16:9 aspect ratio */}
+                        <>
                           <video
                             src={signedUrls.video}
-                            className="absolute top-0 left-0 w-full h-full object-cover rounded-lg"
+                            className="max-w-full max-h-full object-contain"
                             controls
                           />
-                        </div>
+                        </>
                       ) : (
                         <div className="w-full h-48 bg-muted rounded-lg border flex items-center justify-center">
                           <span className="text-sm text-muted-foreground">
@@ -800,8 +787,8 @@ const NovoExercicio = () => {
                       <Button
                         type="button"
                         variant="ghost"
-                        size="icon"
-                        className="absolute top-2 right-2 h-8 w-8 bg-white/30 hover:bg-white/50 backdrop-blur-sm text-gray-800 rounded-full z-10"
+                        size="sm"
+                        className="absolute top-1 right-1 h-8 w-8 bg-white/30 hover:bg-white/50 backdrop-blur-sm text-gray-800 rounded-full"
                         onClick={() => setCoverMediaKey('video_url')}
                         title="Definir como capa"
                       >
@@ -834,12 +821,10 @@ const NovoExercicio = () => {
                         disabled={saving}
                       >
                         {isMobile ? (
-                          <div className="flex flex-col items-center">
-                            <div className="flex items-center gap-2">
-                              <Video className="h-4 w-4" /> <span>Gravar Vídeo</span>
+                            <div className="flex flex-col items-center leading-tight">
+                              <div className="flex items-center gap-2"><Video className="h-4 w-4" /> <span>Gravar</span></div>
+                              <span className="text-xs block font-normal">(Segure em pé)</span>
                             </div>
-                            <span className="text-xs block font-normal">(Segure em pé)</span>
-                          </div>
                         ) : (
                           <>
                             <Upload className="h-4 w-4" /> Selecionar Vídeo

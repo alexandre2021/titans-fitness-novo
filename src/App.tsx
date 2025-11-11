@@ -57,7 +57,7 @@ import PostPage from "./pages/Post";
 import MeusPosts from "./pages/MeusPosts";
 import EditarExercicioPadrao from "./pages/EditarExercicioPadrao";
 import CentralDeAjuda from "./pages/CentralDeAjuda";
-import CentralDeAjudaPublica from "./pages/CentralDeAjudaPublica"; // Importar o novo componente
+import CentralDeAjudaPublica from "./pages/CentralDeAjudaPublica";
 import Contato from "./pages/Contato";
 import PerguntasFrequentes from "./pages/PerguntasFrequentes";
 import Blog from "./pages/Blog";
@@ -97,7 +97,7 @@ const router = createBrowserRouter([
   { path: "/esqueci-senha", element: <EsqueciSenha /> },
   { path: "/contato", element: <Contato /> },
   { path: "/sobre", element: <SobreNos /> },
-  { path: "/central-de-ajuda", element: <CentralDeAjudaPublica /> }, // Usar o novo componente aqui
+  { path: "/central-de-ajuda", element: <CentralDeAjudaPublica /> },
   { path: "/faq", element: <PerguntasFrequentes /> },
   { path: "/resetar-senha", element: <ResetarSenha /> },
   { path: "/blog", element: <Blog /> },
@@ -112,27 +112,35 @@ const router = createBrowserRouter([
       { path: "/onboarding-pt/informacoes-basicas", element: <OnboardingPTInformacoesBasicas /> },
       { path: "/onboarding-pt/experiencia-profissional", element: <OnboardingPTExperienciaProfissional /> },
       { path: "/onboarding-pt/redes-sociais", element: <OnboardingPTRedesSociais /> },
+      
+      
       // Rotas de criação de modelo e rotina (sem layout principal para modo de foco)
       { path: "/modelos/novo", element: <NovoModelo /> },
       { path: "/modelos/editar/:modeloId", element: <EditarModelo /> },
       { path: "/rotinas-criar/:alunoId", element: <RotinaCriacao /> },
       { path: "/selecionar-modelo", element: <NovoModeloSelecao /> },
+      
       // Rotas protegidas com layout (PT e Aluno)
       {
         element: <ProtectedRoutes />,
         children: [
-          // Rotas do PT
-          // Adicionado redirecionamento da rota antiga para a nova
-          { path: "/index-pt", element: <Navigate to="/index-professor" replace /> },
+          // Rotas principais
           { path: "/index-professor", element: <IndexProfessor /> },
           { path: "/alunos", element: <AlunosPT /> },
-          { path: "/exercicios", element: <ExerciciosPT /> },
-          { path: "/exercicios/novo", element: <NovoExercicio /> },
-          { path: "/exercicios/copia/:id", element: <CopiaExercicio /> },
-          { path: "/exercicios/editar/:id", element: <EditarExercicio /> },
-          { path: "/exercicios/editar-padrao/:id", element: <EditarExercicioPadrao /> },
-          { path: "/exercicios/novo-padrao", element: <NovoExercicioPadrao /> },
-          { path: "/exercicios/detalhes/:id", element: <DetalhesExercicio /> },
+          // ✅ CORREÇÃO DEFINITIVA: Layout para Exercícios
+          { 
+            path: "/exercicios", 
+            element: <Outlet />, // Componente de Layout que renderiza rotas filhas
+            children: [
+              { index: true, element: <ExerciciosPT /> }, // Página de listagem
+              { path: "novo", element: <NovoExercicio /> },
+              { path: "copia/:id", element: <CopiaExercicio /> },
+              { path: "editar/:id", element: <EditarExercicio /> },
+              { path: "detalhes/:id", element: <DetalhesExercicio /> },
+              { path: "novo-padrao", element: <NovoExercicioPadrao /> },
+              { path: "editar-padrao/:id", element: <EditarExercicioPadrao /> },
+            ]
+          },
           { path: "/agenda-pt", element: <AgendaPT /> },
           // Rotas de Posts protegidas para o admin
           {

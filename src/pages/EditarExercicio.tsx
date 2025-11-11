@@ -164,12 +164,6 @@ const EditarExercicio = () => {
           </Button>
         </div>
         <div className="p-6">
-          <p className="text-sm text-muted-foreground mb-4">
-            <strong>📱 Posicione o celular em pé (vertical):</strong>
-          </p>
-          <p className="text-sm text-muted-foreground mb-2">
-            Para melhor visualização, segure o celular na posição vertical durante a gravação.
-          </p>
           <p className="text-sm text-muted-foreground">
             O vídeo terá duração máxima de <strong>12 segundos</strong> e será salvo <strong>sem áudio</strong> para otimização.
           </p>
@@ -459,18 +453,15 @@ const EditarExercicio = () => {
   };
 
   const handleVoltar = () => {
-    // Tenta obter a URL de retorno do parâmetro de URL 'returnTo' (Robusta)
     const returnTo = searchParams.get('returnTo');
     
     if (returnTo) {
-        // Usa decodeURIComponent para restaurar a URL original, incluindo os filtros
         const decodedReturnTo = decodeURIComponent(returnTo);
         console.log('--- EDITAR_VOLTAR: Voltando para URL:', decodedReturnTo);
         navigate(decodedReturnTo, { replace: true });
     } else {
-        // Fallback: Se por algum motivo o returnTo não estiver na URL, volta para a lista padrão.
-        console.log('--- EDITAR_VOLTAR (FALLBACK): Não encontrou parâmetro returnTo. Voltando para /exercicios.');
-        navigate('/exercicios', { replace: true });
+      console.log('--- EDITAR_VOLTAR (FALLBACK): Voltando para /exercicios com aba "personalizados".');
+      navigate('/exercicios', { replace: true, state: { activeTab: 'personalizados' } });
     }
   };
 
@@ -772,12 +763,15 @@ const EditarExercicio = () => {
               <div className="mt-2 space-y-4">
                 {midias.video_url ? (
                   <div className="space-y-3">
-                    <div className="relative w-full max-w-md mx-auto bg-black rounded-lg border shadow-sm overflow-hidden">
+                    <div className="relative w-40 h-40 bg-muted rounded-lg border shadow-sm overflow-hidden flex items-center justify-center">
                       {signedUrls.video ? (
-                        <div className="relative pt-[56.25%]"> {/* 16:9 aspect ratio */}
+                        <>
                           <video 
-                            src={signedUrls.video} className="absolute top-0 left-0 w-full h-full object-cover rounded-lg" controls />
-                        </div>
+                            src={signedUrls.video}
+                            className="max-w-full max-h-full object-contain rounded-lg"
+                            controls
+                          />
+                        </>
                       ) : (
                         <div className="w-full h-48 bg-muted rounded-lg border flex items-center justify-center">
                           <span className="text-sm text-muted-foreground">Erro ao carregar</span>
@@ -786,8 +780,8 @@ const EditarExercicio = () => {
                       <Button
                         type="button"
                         variant="ghost"
-                        size="icon"
-                        className="absolute top-2 right-2 h-8 w-8 bg-white/30 hover:bg-white/50 backdrop-blur-sm text-gray-800 rounded-full z-10"
+                        size="sm"
+                        className="absolute top-1 right-1 h-8 w-8 bg-white/30 hover:bg-white/50 backdrop-blur-sm text-gray-800 rounded-full"
                         onClick={() => setCoverMediaKey('video_url')}
                         title="Definir como capa"
                       >

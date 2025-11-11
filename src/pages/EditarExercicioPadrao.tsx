@@ -74,80 +74,52 @@ const EditarExercicioPadrao = () => {
   // ✅ SOLUÇÃO RADICAL: Cache local das URLs para evitar múltiplas chamadas
   const urlCache = useRef<Map<string, string>>(new Map());
 
-  // Função para converter GIF para WebP animado
-  const convertGifToWebP = async (file: File, width: number, height: number): Promise<File> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      
-      canvas.width = width;
-      canvas.height = height;
+  // Componente responsivo para confirmação de exclusão de mídia
+  const ResponsiveDeleteMediaConfirmation = ({ 
+    open, 
+    onOpenChange, 
+    onConfirm, 
+    title,
+    description
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onConfirm: () => void;
+    title: string;
+    description: React.ReactNode;
+  }) => {
+    const handleClose = () => onOpenChange(false);
 
-      img.onload = () => {
-        ctx?.drawImage(img, 0, 0, width, height);
+    return (
+      <Modal
+        isOpen={open}
+        onRequestClose={handleClose}
+        shouldCloseOnOverlayClick={true}
+        shouldCloseOnEsc={true}
+        className="bg-white rounded-lg max-w-md w-full mx-4 outline-none"
+        overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b">
+          <h2 className="text-lg font-semibold">{title}</h2>
+          <Button variant="ghost" size="sm" onClick={handleClose} className="h-8 w-8 p-0">
+            <span className="sr-only">Fechar</span>
+            ×
+          </Button>
+        </div>
         
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const optimizedFile = new File([blob], file.name.replace('.gif', '.webp'), {
-              type: 'image/webp'
-            });
-            resolve(optimizedFile);
-          } else {
-            resolve(file);
-          }
-        }, 'image/webp', 0.8);
-      };
-      
-      img.src = URL.createObjectURL(file);
-    });
-  };
-
-  // Função para redimensionar e converter imagens estáticas para JPEG
-  const resizeAndConvertImage = async (file: File, width: number, height: number): Promise<File> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-
-      img.onload = () => {
-        canvas.width = width;
-        canvas.height = height;
-
-        ctx?.drawImage(img, 0, 0, width, height);
-
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const optimizedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.jpg'), {
-              type: 'image/jpeg'
-            });
-            resolve(optimizedFile);
-          } else {
-            resolve(file);
-          }
-        }, 'image/jpeg', 0.8);
-      };
-
-      img.src = URL.createObjectURL(file);
-    });
-  };
-
-  // Função para processar mídias
-  const processMediaFile = async (file: File, type: 'image' | 'video'): Promise<File> => {
-    if (type === 'image') {
-      if (file.type === 'image/gif') {
-        return await convertGifToWebP(file, 360, 360);
-      }
-      
-      if (file.type === 'image/webp') {
-        const resizedFile = await resizeAndOptimizeImage(file, 360);
-        return resizedFile || file;
-      }
-      
-      return await resizeAndConvertImage(file, 360, 360);
-    }
-    
-    return file;
+        {/* Conteúdo */}
+        <div className="p-6">
+          <div className="text-sm text-muted-foreground">{description}</div>
+        </div>
+        
+        {/* Botões no footer */}
+        <div className="flex justify-end gap-2 p-6 border-t">
+          <Button variant="outline" onClick={handleClose}>Cancelar</Button>
+          <Button onClick={onConfirm} variant="destructive">Excluir</Button>
+        </div>
+      </Modal>
+    );
   };
 
   // Função para voltar preservando filtros
@@ -223,7 +195,7 @@ const EditarExercicioPadrao = () => {
       }
 
       const results = await Promise.all(urlsToLoad);
-      const newUrls: any = {};
+      const newUrls: Record<string, string | undefined> = {};
 
       results.forEach(result => {
         if (result.url) {
@@ -312,19 +284,11 @@ const EditarExercicioPadrao = () => {
       }
 
       try {
-        const processedFile = type.startsWith('imagem') 
-          ? await processMediaFile(file, 'image')
+        const processedFile = type.startsWith('imagem')
+          ? await resizeAndOptimizeImage(file, 640)
           : file;
-
         const key = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'video_url';
         setMidias(prev => ({ ...prev, [key]: processedFile }));
-
-        if (processedFile.size < file.size) {
-          const reduction = ((file.size - processedFile.size) / file.size * 100).toFixed(1);
-          toast.success("Imagem otimizada", {
-            description: `Tamanho reduzido em ${reduction}%`
-          });
-        }
       } catch (error) {
         toast.error("Erro ao processar imagem");
         console.error(error);
@@ -566,20 +530,20 @@ const EditarExercicioPadrao = () => {
               <div className="mt-2 space-y-4">
                 {midias.imagem_1_url ? (
                   <div className="space-y-3">
-                    <div className="relative inline-block">
-                      {signedUrls.imagem1 ? (
+                    <div className="relative inline-block w-40 h-40 bg-muted rounded-lg border flex items-center justify-center overflow-hidden">
+                      {midias.imagem_1_url instanceof File ? (
+                        <img src={URL.createObjectURL(midias.imagem_1_url)} alt="Preview da primeira imagem" className="max-w-full max-h-full object-contain" />
+                      ) : signedUrls.imagem1 ? (
                         <img 
                           src={signedUrls.imagem1} 
                           alt="Primeira imagem" 
-                          className="max-w-40 max-h-40 object-contain rounded-lg border shadow-sm bg-muted"
+                          className="max-w-full max-h-full object-contain"
                           loading="eager"
                           decoding="sync"
                           fetchPriority="high"
                         />
                       ) : (
-                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
-                          <div className="text-sm text-muted-foreground">Carregando...</div>
-                        </div>
+                        <div className="text-sm text-muted-foreground">Carregando...</div>
                       )}
                       <Button
                         type="button"
@@ -612,20 +576,17 @@ const EditarExercicioPadrao = () => {
               <div className="mt-2 space-y-4">
                 {midias.imagem_2_url ? (
                   <div className="space-y-3">
-                    <div className="relative inline-block">
-                      {signedUrls.imagem2 ? (
+                    <div className="relative inline-block w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
+                      {midias.imagem_2_url instanceof File ? (
+                        <img src={URL.createObjectURL(midias.imagem_2_url)} alt="Preview da segunda imagem" className="max-w-full max-h-full object-contain" />
+                      ) : signedUrls.imagem2 ? (
                         <img 
                           src={signedUrls.imagem2} 
                           alt="Segunda imagem" 
-                          className="max-w-40 max-h-40 object-contain rounded-lg border shadow-sm bg-muted"
-                          loading="eager"
-                          decoding="sync"
-                          fetchPriority="high"
+                          className="max-w-full max-h-full object-contain"
                         />
                       ) : (
-                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
-                          <div className="text-sm text-muted-foreground">Carregando...</div>
-                        </div>
+                        <div className="text-sm text-muted-foreground">Carregando...</div>
                       )}
                       <Button
                         type="button"
@@ -658,22 +619,22 @@ const EditarExercicioPadrao = () => {
               <div className="mt-2 space-y-4">
                 {midias.video_url ? (
                   <div className="space-y-3">
-                    <div className="relative inline-block w-48 aspect-video bg-black rounded-lg border shadow-sm">
-                      {signedUrls.video ? (
+                    <div className="relative w-40 h-40 bg-muted rounded-lg border flex items-center justify-center overflow-hidden">
+                      {midias.video_url instanceof File ? (
+                        <video src={URL.createObjectURL(midias.video_url)} className="max-w-full max-h-full object-contain" controls />
+                      ) : signedUrls.video ? (
                         <video 
                           src={signedUrls.video} 
-                          className="w-full h-full object-contain" 
+                          className="max-w-full max-h-full object-contain"
                           controls 
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <div className="text-sm text-white/70">Carregando...</div>
-                        </div>
+                        <div className="text-sm text-muted-foreground">Carregando...</div>
                       )}
                       <Button
                         type="button"
                         variant="ghost"
-                        size="icon"
+                        size="sm"
                         className="absolute top-1 right-1 h-8 w-8 bg-white/30 hover:bg-white/50 backdrop-blur-sm text-gray-800 rounded-full"
                         onClick={() => setCoverMediaKey('video_url')}
                         title="Definir como capa"
@@ -688,8 +649,11 @@ const EditarExercicioPadrao = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <p className="text-sm text-muted-foreground mb-3">Adicione um vídeo para o exercício.</p>
+                  <div className="flex justify-center">
                     <Button type="button" variant="default" onClick={() => handleSelectMedia('video')} className="flex items-center gap-2" disabled={saving}><Upload className="h-4 w-4" /> Selecionar Vídeo</Button>
+                  </div>
                   </div>
                 )}
               </div>
@@ -701,30 +665,13 @@ const EditarExercicioPadrao = () => {
       </div>
 
       {/* Modal de confirmação de exclusão */}
-      <Modal
-        isOpen={showDeleteMediaDialog !== null}
-        onRequestClose={() => setShowDeleteMediaDialog(null)}
-        className="fixed inset-0 flex items-center justify-center p-4"
-        overlayClassName="fixed inset-0 bg-black/50"
-      >
-        <div className="bg-white rounded-lg p-6 max-w-md w-full space-y-4">
-          <h2 className="text-xl font-semibold">Confirmar Exclusão</h2>
-          <p className="text-muted-foreground">
-            Tem certeza que deseja excluir esta mídia? Esta ação não pode ser desfeita.
-          </p>
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => setShowDeleteMediaDialog(null)}>
-              Cancelar
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={() => showDeleteMediaDialog && handleDeleteMedia(showDeleteMediaDialog as 'imagem1' | 'imagem2' | 'video')}
-            >
-              Excluir
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      <ResponsiveDeleteMediaConfirmation
+        open={showDeleteMediaDialog !== null}
+        onOpenChange={(open) => !open && setShowDeleteMediaDialog(null)}
+        onConfirm={() => showDeleteMediaDialog && handleDeleteMedia(showDeleteMediaDialog as 'imagem1' | 'imagem2' | 'video')}
+        title="Confirmar Exclusão"
+        description="Tem certeza que deseja excluir esta mídia? Esta ação não pode ser desfeita."
+      />
 
       {/* Botão de salvar fixo */}
       <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
