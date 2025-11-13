@@ -1,6 +1,6 @@
 // src/pages/NovoExercicioPadrao.tsx
 import { useState, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,19 +20,32 @@ import CustomSelect from "@/components/ui/CustomSelect";
 
 const NovoExercicioPadrao = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const toast = sonnerToast;
   const isMobile = useIsMobile();
-  
+
   const [saving, setSaving] = useState(false);
-  
+
   const { user } = useAuth();
   const ADMIN_EMAIL = 'contato@titans.fitness';
+
+  // Função para voltar preservando filtros
+  const handleVoltar = () => {
+    const returnTo = searchParams.get('returnTo');
+
+    if (returnTo) {
+      const decodedReturnTo = decodeURIComponent(returnTo);
+      navigate(decodedReturnTo, { replace: true });
+    } else {
+      navigate('/exercicios', { replace: true });
+    }
+  };
 
   // Proteção de Rota: Apenas o admin pode acessar
   useEffect(() => {
     if (user && user.email !== ADMIN_EMAIL) {
       toast.error("Acesso Negado", { description: "Você não tem permissão para criar exercícios padrão." });
-      navigate('/exercicios');
+      handleVoltar();
     }
   }, [user, navigate, toast, ADMIN_EMAIL]);
   
@@ -173,7 +186,18 @@ const NovoExercicioPadrao = () => {
 
   const handleDeleteMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
     const key = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'video_url';
-    setMidias(prev => ({ ...prev, [key]: null }));
+
+    // Se estiver deletando vídeo, também deleta o thumbnail
+    if (type === 'video') {
+      setMidias(prev => ({
+        ...prev,
+        video_url: null,
+        video_thumbnail_path: null
+      }));
+    } else {
+      setMidias(prev => ({ ...prev, [key]: null }));
+    }
+
     setSignedUrls(prev => ({ ...prev, [type === 'video' ? 'video' : type]: undefined }));
     setShowDeleteMediaDialog(null);
   };
@@ -285,7 +309,7 @@ const NovoExercicioPadrao = () => {
 
       if (error) throw error;
 
-      navigate('/exercicios');
+      handleVoltar();
     } catch (error) {
       console.error('Erro ao criar exercício padrão:', error);
       toast.error("Erro ao criar exercício", { description: "Não foi possível criar o exercício padrão. Tente novamente." });
@@ -300,7 +324,7 @@ const NovoExercicioPadrao = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" onClick={() => navigate('/exercicios')} className="h-10 w-10 p-0"><ArrowLeft className="h-4 w-4" /></Button>
+              <Button variant="ghost" onClick={handleVoltar} className="h-10 w-10 p-0"><ArrowLeft className="h-4 w-4" /></Button>
               <div className="flex-1">
                 <div className="mb-1"><Badge variant="outline" className="bg-green-50 text-green-700 border-green-200"><Plus className="h-3 w-3 mr-1" />Exercício Padrão</Badge></div>
                 <h1 className="text-3xl font-bold flex items-center gap-2">Novo Exercício Padrão</h1>

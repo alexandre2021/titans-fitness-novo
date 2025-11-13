@@ -35,9 +35,34 @@ O upload de mídias para exercícios personalizados utiliza o princípio de "cli
 
 ### 2.2. Fluxo de Vídeos
 
-1.  **Gravação:** O componente `VideoRecorder.tsx` utiliza a API `MediaRecorder` do navegador.
-2.  **Compressão no Cliente:** A gravação é configurada para ter no máximo **12 segundos**, **sem áudio** e com um bitrate baixo (`500 kbps`), resultando em um arquivo leve (aprox. 750 KB).
-3.  **Upload para R2:** O fluxo de upload é idêntico ao das imagens, usando a Edge Function `upload-media`.
+1.  **Instrução ao Usuário:** Antes de iniciar a gravação, um modal informa o usuário:
+    -   📱 **"Posicione o celular em pé (vertical)"** - instrução visual para garantir a orientação correta.
+    -   Duração máxima de **12 segundos**.
+    -   Gravação **sem áudio** para otimização.
+
+2.  **Gravação em Portrait:** O componente `VideoRecorder.tsx` utiliza a API `MediaRecorder` com configuração específica para vídeo vertical:
+    -   **Resolução:** 360x640 pixels (portrait).
+    -   **Aspect Ratio:** 9:16 (vertical).
+    -   **Câmera:** `facingMode: 'environment'` (câmera traseira).
+    -   **Lembrete Visual:** Durante a gravação, o cabeçalho exibe "📱 Mantenha o celular em pé (vertical)".
+
+3.  **Compressão no Cliente:** A gravação é configurada com:
+    -   Duração máxima de **12 segundos**.
+    -   **Sem áudio** (`audio: false`).
+    -   Bitrate baixo de **500 kbps** (`videoBitsPerSecond: 500000`).
+    -   Resultado: arquivo leve de aproximadamente **750 KB**.
+
+4.  **Geração Automática de Thumbnail:** Após a gravação, o sistema automaticamente:
+    -   Captura o **primeiro frame** do vídeo usando Canvas API.
+    -   Gera um thumbnail em **JPEG com 85% de qualidade**.
+    -   O thumbnail é usado para pré-visualização nos cards de exercícios, economizando banda.
+
+5.  **Exibição Otimizada:** Nas páginas de exercícios, os vídeos são exibidos em containers otimizados para portrait:
+    -   **Container:** `w-40 bg-muted` (largura fixa de 160px).
+    -   **Vídeo:** `w-full h-auto object-contain` (mantém proporção vertical).
+    -   **Badge "Vídeo":** Identificação visual nos cards para diferenciar de imagens.
+
+6.  **Upload para R2:** O vídeo e seu thumbnail são enviados para o bucket `exercicios` no Cloudflare R2 através de URLs pré-assinadas, geradas pela Edge Function `upload-media`.
 
 ---
 

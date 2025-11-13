@@ -41,16 +41,16 @@ const Mais = () => {
   }, [user, authLoading]);
 
   const baseProfessorLinks = [
+    { href: "/meus-modelos", label: "Modelos", icon: BookCopy },
     { href: "/avaliacoes", label: "Avaliações", icon: BarChart3 },
-    { href: "/meus-modelos", label: "Meus Modelos", icon: BookCopy },
   ];
 
   if (user?.email === 'contato@titans.fitness') {
-    const meusModelosIndex = baseProfessorLinks.findIndex(
-      (link) => link.href === "/meus-modelos"
+    const avaliacoesIndex = baseProfessorLinks.findIndex(
+      (link) => link.href === "/avaliacoes"
     );
-    if (meusModelosIndex !== -1) {
-      baseProfessorLinks.splice(meusModelosIndex + 1, 0, { href: "/meus-posts", label: "Meus Posts", icon: SquarePen });
+    if (avaliacoesIndex !== -1) {
+      baseProfessorLinks.splice(avaliacoesIndex + 1, 0, { href: "/meus-posts", label: "Meus Posts", icon: SquarePen });
     }
   }
   baseProfessorLinks.push({ href: "/app/ajuda", label: "Central de Ajuda", icon: LifeBuoy }, { href: "/", label: "Home", icon: Home });

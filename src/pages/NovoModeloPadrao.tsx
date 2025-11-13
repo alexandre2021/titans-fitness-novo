@@ -1,5 +1,7 @@
+// src/pages/NovoModeloPadrao.tsx
+// Página para criação de modelos de rotina PADRÃO (apenas admin)
 import React, { useState, useEffect, FormEvent, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Tables } from "@/integrations/supabase/types";
@@ -79,8 +81,6 @@ interface ModeloConfiguracaoProps {
   onAvancar: (data: ModeloConfiguracaoData) => void;
   initialData?: ModeloConfiguracaoData;
   onCancelar: () => void;
-  onSalvarESair: (data: ModeloConfiguracaoData) => void;
-  isSaving: boolean;
 }
 
 interface ModeloEmCriacao {
@@ -97,8 +97,6 @@ interface ModeloTreinosProps {
   configuracao?: ModeloConfiguracaoData;
   onCancelar: () => void;
   onUpdate: (data: Partial<ModeloEmCriacao>) => void;
-  onSalvarESair: (data: TreinoTemp[]) => void;
-  isSaving: boolean;
 }
 
 interface ModeloExerciciosProps {
@@ -112,9 +110,7 @@ interface ModeloExerciciosProps {
 }
 
 // --- Etapa 1: Componente de Configuração ---
-const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar, onSalvarESair, isSaving }: ModeloConfiguracaoProps) => {
-  console.log('📝 ModeloConfiguracao recebeu initialData:', initialData);
-
+const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar }: ModeloConfiguracaoProps) => {
   const [formData, setFormData] = useState<ModeloConfiguracaoData>(
     initialData ?? {
       nome: "",
@@ -125,17 +121,7 @@ const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar, onSalvarESair,
       observacoes_rotina: "",
     }
   );
-
-  console.log('📝 ModeloConfiguracao formData inicial:', formData);
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  // Atualizar formData quando initialData mudar (importante para modo cópia)
-  useEffect(() => {
-    if (initialData) {
-      console.log('🔄 ModeloConfiguracao: initialData mudou, atualizando formData');
-      setFormData(initialData);
-    }
-  }, [initialData]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -166,12 +152,6 @@ const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar, onSalvarESair,
     e.preventDefault();
     if (validateForm()) {
       onAvancar(formData);
-    }
-  }
-
-  function handleSalvarESair() {
-    if (validateForm()) {
-      onSalvarESair(formData);
     }
   }
 
@@ -256,23 +236,10 @@ const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar, onSalvarESair,
           {/* Botões de navegação - Desktop */}
           <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t p-4 hidden md:flex justify-end items-center z-50 px-6 lg:px-8">
             <div className="flex items-center gap-2">
-              <Button type="button" variant="ghost" onClick={onCancelar} size="lg" disabled={isSaving}>
+              <Button type="button" variant="ghost" onClick={onCancelar} size="lg">
                   Cancelar
               </Button>
-              <Button type="button" variant="outline" onClick={handleSalvarESair} size="lg" disabled={isSaving}>
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Salvando...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Salvar e Sair
-                    </>
-                  )}
-              </Button>
-              <Button type="submit" size="lg" disabled={isSaving}>
+              <Button type="submit" size="lg">
                   Avançar para Treinos <ChevronRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
@@ -281,21 +248,8 @@ const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar, onSalvarESair,
           {/* Botões de navegação - Mobile */}
           <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 md:hidden z-50">
             <div className="flex justify-end gap-2">
-                <Button type="button" variant="ghost" onClick={onCancelar} size="lg" disabled={isSaving}>Cancelar</Button>
-                <Button type="button" variant="outline" onClick={handleSalvarESair} size="lg" disabled={isSaving}>
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Salvando...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Salvar
-                    </>
-                  )}
-                </Button>
-                <Button type="submit" size="lg" disabled={isSaving}>Avançar</Button>
+                <Button type="button" variant="ghost" onClick={onCancelar} size="lg">Cancelar</Button>
+                <Button type="submit" size="lg">Avançar</Button>
             </div>
           </div>
         </form>
@@ -305,7 +259,7 @@ const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar, onSalvarESair,
 };
 
 // --- Etapa 2: Componente de Treinos ---
-const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCancelar, onUpdate, onSalvarESair, isSaving }: ModeloTreinosProps) => {
+const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCancelar, onUpdate }: ModeloTreinosProps) => {
   const isInitialMount = useRef(true);
   const [treinos, setTreinos] = useState<TreinoTemp[]>(() => {
     if (initialData && initialData.length > 0) {
@@ -420,12 +374,6 @@ const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCance
     onVoltar();
   };
 
-  const handleSalvarESair = () => {
-    if (requisitosAtendidos) {
-      onSalvarESair(treinos);
-    }
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -480,28 +428,15 @@ const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCance
 
       {/* Botões de navegação - Desktop */}
       <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t p-4 hidden md:flex justify-between items-center z-50 px-6 lg:px-8">
-          <Button variant="outline" onClick={handleVoltarClick} size="lg" disabled={isSaving}>
+          <Button variant="outline" onClick={handleVoltarClick} size="lg">
               <ChevronLeft className="h-4 w-4 mr-2" />
               Voltar
           </Button>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={onCancelar} size="lg" disabled={isSaving}>
+            <Button variant="ghost" onClick={onCancelar} size="lg">
                 Cancelar
             </Button>
-            <Button variant="outline" onClick={handleSalvarESair} disabled={!requisitosAtendidos || isSaving} size="lg">
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Salvar e Sair
-                  </>
-                )}
-            </Button>
-            <Button onClick={handleProximo} disabled={!requisitosAtendidos || isSaving} size="lg">
+            <Button onClick={handleProximo} disabled={!requisitosAtendidos} size="lg">
               Avançar para Exercícios <ChevronRight className="h-4 w-4 ml-2" />
             </Button>
           </div>
@@ -510,23 +445,10 @@ const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCance
       {/* Botões de navegação - Mobile */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 md:hidden z-50">
         <div className="flex justify-between items-center">
-            <Button variant="outline" onClick={handleVoltarClick} size="lg" disabled={isSaving}>Voltar</Button>
+            <Button variant="outline" onClick={handleVoltarClick} size="lg">Voltar</Button>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" onClick={onCancelar} size="lg" disabled={isSaving}>Cancelar</Button>
-              <Button variant="outline" onClick={handleSalvarESair} disabled={!requisitosAtendidos || isSaving} size="lg">
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Salvar
-                  </>
-                )}
-              </Button>
-              <Button onClick={handleProximo} disabled={!requisitosAtendidos || isSaving} size="lg">Avançar</Button>
+              <Button variant="ghost" onClick={onCancelar} size="lg">Cancelar</Button>
+              <Button onClick={handleProximo} disabled={!requisitosAtendidos} size="lg">Avançar</Button>
             </div>
         </div>
       </div>
@@ -566,7 +488,7 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
         return {
           id: `ex_modelo_${Date.now()}_${Math.random()}`,
           exercicio_1_id: item.exercicio.id,
-          tipo: 'simples',
+          tipo: 'simples' as const,
           series: [{ id: `serie_${Date.now()}`, numero_serie: 1, repeticoes: 0, carga: 0, intervalo_apos_serie: 60 }],
           intervalo_apos_exercicio: 90
         };
@@ -575,13 +497,14 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
           id: `ex_modelo_${Date.now()}_${Math.random()}`,
           exercicio_1_id: item.exercicios[0].id,
           exercicio_2_id: item.exercicios[1].id,
-          tipo: 'combinada',
+          tipo: 'combinada' as const,
           series: [{ id: `serie_comb_${Date.now()}`, numero_serie: 1, repeticoes_1: 0, carga_1: 0, repeticoes_2: 0, carga_2: 0, intervalo_apos_serie: 90 }],
           intervalo_apos_exercicio: 120
         };
       }
       return [];
     });
+
     setExercicios(prev => ({
       ...prev,
       [treinoAtual.id]: [...(prev[treinoAtual.id] || []), ...novosExerciciosParaTreino],
@@ -773,91 +696,37 @@ interface ModeloEmCriacao {
   etapaAtual?: Etapa;
 }
 
-interface NovoModeloProps {
-  isCopia?: boolean;
-  modeloOriginal?: any;
-  returnTab?: string;
-}
-
-const NovoModelo = ({ isCopia = false, modeloOriginal, returnTab = 'personalizado' }: NovoModeloProps = {}) => {
+const NovoModeloPadrao = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnTab = searchParams.get('returnTab') || 'padrao';
   const [etapa, setEtapa] = useState<Etapa>('configuracao');
   const [modeloEmCriacao, setModeloEmCriacao] = useState<ModeloEmCriacao>({});
   const { user } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 
-  // Carregar dados do sessionStorage ou do modelo original (cópia)
+  const ADMIN_EMAIL = 'contato@titans.fitness';
+
+  // Proteção de Rota: Apenas o admin pode acessar
   useEffect(() => {
-    console.log('🔍 NovoModelo useEffect - isCopia:', isCopia, 'modeloOriginal:', modeloOriginal);
-
-    if (isCopia && modeloOriginal) {
-      console.log('✅ Entrando em modo cópia');
-      // Modo cópia: carregar dados do modelo original
-      const configuracao: ModeloConfiguracaoData = {
-        nome: `${modeloOriginal.nome} (cópia)`,
-        objetivo: modeloOriginal.objetivo,
-        dificuldade: modeloOriginal.dificuldade,
-        treinos_por_semana: modeloOriginal.treinos_por_semana,
-        duracao_semanas: modeloOriginal.duracao_semanas,
-        observacoes_rotina: modeloOriginal.observacoes_rotina || "",
-      };
-      console.log('📋 Configuração criada:', configuracao);
-
-      const treinos: TreinoTemp[] = (modeloOriginal.treinos || []).map((t: any, idx: number) => ({
-        id: `treino_draft_${Date.now()}_${idx}`,
-        nome: t.nome,
-        grupos_musculares: t.grupos_musculares || [],
-        observacoes: t.observacoes || "",
-        ordem: t.ordem,
-        tempo_estimado_minutos: t.tempo_estimado_minutos,
-      }));
-
-      const exercicios: Record<string, ExercicioModelo[]> = {};
-      (modeloOriginal.treinos || []).forEach((t: any, idx: number) => {
-        const treinoId = treinos[idx]?.id;
-        if (treinoId && t.exercicios) {
-          exercicios[treinoId] = t.exercicios.map((ex: any, exIdx: number) => ({
-            id: `ex_modelo_${Date.now()}_${idx}_${exIdx}`,
-            exercicio_1_id: ex.exercicio_1_id,
-            exercicio_2_id: ex.exercicio_2_id || undefined,
-            tipo: ex.tipo,
-            intervalo_apos_exercicio: ex.intervalo_apos_exercicio,
-            series: (ex.series || []).map((s: any, sIdx: number) => ({
-              id: `serie_${Date.now()}_${idx}_${exIdx}_${sIdx}`,
-              numero_serie: s.numero_serie,
-              repeticoes: s.repeticoes,
-              carga: s.carga,
-              repeticoes_1: s.repeticoes_1,
-              carga_1: s.carga_1,
-              repeticoes_2: s.repeticoes_2,
-              carga_2: s.carga_2,
-              tem_dropset: s.tem_dropset,
-              carga_dropset: s.carga_dropset,
-              intervalo_apos_serie: s.intervalo_apos_serie,
-            })),
-          }));
-        }
+    if (user && user.email !== ADMIN_EMAIL) {
+      toast.error("Acesso Negado", {
+        description: "Você não tem permissão para criar modelos padrão."
       });
-
-      const modeloData = { configuracao, treinos, exercicios, etapaAtual: 'configuracao' as Etapa };
-      console.log('💾 Setando modeloEmCriacao com:', modeloData);
-      setModeloEmCriacao(modeloData);
-      return;
+      navigate(`/meus-modelos?tab=${returnTab}`);
     }
+  }, [user, navigate]);
 
-    // Modo normal: carregar do sessionStorage
-    console.log('📂 Modo normal: tentando carregar do sessionStorage');
+  // Carregar dados do sessionStorage ao montar
+  useEffect(() => {
     const savedData = sessionStorage.getItem(STORAGE_KEY_NOVO_MODELO);
     if (savedData) {
-      console.log('✅ Dados encontrados no sessionStorage');
       const parsedData = JSON.parse(savedData);
       setModeloEmCriacao(parsedData);
       setEtapa(parsedData.etapaAtual || 'configuracao');
-    } else {
-      console.log('❌ Nenhum dado no sessionStorage');
     }
-  }, [isCopia, modeloOriginal]);
+  }, []);
 
   // Salvar dados no sessionStorage ao alterar
   const updateStorage = useCallback((data: Partial<ModeloEmCriacao>): Promise<void> => {
@@ -966,17 +835,18 @@ const NovoModelo = ({ isCopia = false, modeloOriginal, returnTab = 'personalizad
     }
 
     try {
-      // 1. Inserir o modelo principal
+      // 1. Inserir o modelo principal (PADRÃO - professor_id NULL)
       const { data: modeloCriado, error: erroModelo } = await supabase
         .from('modelos_rotina')
         .insert({
-          professor_id: user.id,
+          professor_id: null, // NULL para modelos padrão
           nome: configuracao.nome,
           objetivo: configuracao.objetivo,
           dificuldade: configuracao.dificuldade,
           treinos_por_semana: configuracao.treinos_por_semana,
           duracao_semanas: configuracao.duracao_semanas,
           observacoes_rotina: configuracao.observacoes_rotina || null,
+          tipo: 'padrao', // Tipo padrão
         })
         .select()
         .single();
@@ -1052,107 +922,12 @@ const NovoModelo = ({ isCopia = false, modeloOriginal, returnTab = 'personalizad
     else if (etapa === 'exercicios') setEtapa('treinos');
   };
 
-  // Handler para salvar e sair das etapas 1 e 2
-  const handleSalvarESairEtapa1 = async (data: ModeloConfiguracaoData) => {
-    if (!user) {
-      toast.error("Erro de autenticação", { description: "Você precisa estar logado para salvar um modelo." });
-      return;
-    }
-
-    setIsSaving(true);
-
-    try {
-      // Inserir modelo com apenas a configuração básica
-      const { data: modeloCriado, error: erroModelo } = await supabase
-        .from('modelos_rotina')
-        .insert({
-          professor_id: user.id,
-          nome: data.nome,
-          objetivo: data.objetivo,
-          dificuldade: data.dificuldade,
-          treinos_por_semana: data.treinos_por_semana,
-          duracao_semanas: data.duracao_semanas,
-          observacoes_rotina: data.observacoes_rotina || null,
-        })
-        .select()
-        .single();
-
-      if (erroModelo) throw erroModelo;
-
-      sessionStorage.removeItem(STORAGE_KEY_NOVO_MODELO);
-      toast.success("Modelo salvo com sucesso!");
-      navigate(`/meus-modelos?tab=${returnTab}`, { replace: true });
-    } catch (error) {
-      console.error("Erro ao salvar modelo:", error);
-      toast.error("Erro ao Salvar", { description: error instanceof Error ? error.message : "Não foi possível salvar o modelo. Tente novamente." });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleSalvarESairEtapa2 = async (treinos: TreinoTemp[]) => {
-    if (!user) {
-      toast.error("Erro de autenticação", { description: "Você precisa estar logado para salvar um modelo." });
-      return;
-    }
-
-    const { configuracao } = modeloEmCriacao;
-
-    if (!configuracao) {
-      toast.error("Dados incompletos", { description: "Não foi possível salvar o modelo pois os dados estão incompletos." });
-      return;
-    }
-
-    setIsSaving(true);
-
-    try {
-      // 1. Inserir o modelo principal
-      const { data: modeloCriado, error: erroModelo } = await supabase
-        .from('modelos_rotina')
-        .insert({
-          professor_id: user.id,
-          nome: configuracao.nome,
-          objetivo: configuracao.objetivo,
-          dificuldade: configuracao.dificuldade,
-          treinos_por_semana: configuracao.treinos_por_semana,
-          duracao_semanas: configuracao.duracao_semanas,
-          observacoes_rotina: configuracao.observacoes_rotina || null,
-        })
-        .select()
-        .single();
-
-      if (erroModelo) throw erroModelo;
-
-      // 2. Mapear treinos e inserir
-      const treinosParaInserir = treinos.map((treino, index) => ({
-        modelo_rotina_id: modeloCriado.id,
-        nome: treino.nome,
-        grupos_musculares: treino.grupos_musculares,
-        ordem: index + 1,
-        observacoes: treino.observacoes,
-      }));
-
-      const { error: erroTreinos } = await supabase.from('modelos_treino').insert(treinosParaInserir);
-      if (erroTreinos) throw erroTreinos;
-
-      sessionStorage.removeItem(STORAGE_KEY_NOVO_MODELO);
-      toast.success("Modelo salvo com sucesso!");
-      navigate(`/meus-modelos?tab=${returnTab}`, { replace: true });
-    } catch (error) {
-      console.error("Erro ao salvar modelo:", error);
-      toast.error("Erro ao Salvar", { description: error instanceof Error ? error.message : "Não foi possível salvar o modelo. Tente novamente." });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const renderEtapa = () => {
-    console.log('🎨 Renderizando etapa:', etapa, 'modeloEmCriacao:', modeloEmCriacao);
     switch (etapa) {
-      case 'configuracao': return <ModeloConfiguracao onAvancar={handleAvancarConfiguracao} initialData={modeloEmCriacao.configuracao} onCancelar={handleCancelar} onSalvarESair={handleSalvarESairEtapa1} isSaving={isSaving} />;
-      case 'treinos': return <ModeloTreinos onAvancar={handleAvancarTreinos} onVoltar={handleVoltar} initialData={modeloEmCriacao.treinos} configuracao={modeloEmCriacao.configuracao} onCancelar={handleCancelar} onUpdate={updateStorage} onSalvarESair={handleSalvarESairEtapa2} isSaving={isSaving} />;
+      case 'configuracao': return <ModeloConfiguracao onAvancar={handleAvancarConfiguracao} initialData={modeloEmCriacao.configuracao} onCancelar={handleCancelar} />;
+      case 'treinos': return <ModeloTreinos onAvancar={handleAvancarTreinos} onVoltar={handleVoltar} initialData={modeloEmCriacao.treinos} configuracao={modeloEmCriacao.configuracao} onCancelar={handleCancelar} onUpdate={updateStorage} />;
       case 'exercicios': return <ModeloExercicios onFinalizar={handleFinalizarModelo} onVoltar={handleVoltar} initialData={modeloEmCriacao.exercicios} treinos={modeloEmCriacao.treinos || []} onUpdate={updateStorage} onCancelar={handleCancelar} isSaving={isSaving} />;
-      default: return <ModeloConfiguracao onAvancar={handleAvancarConfiguracao} initialData={modeloEmCriacao.configuracao} onCancelar={handleCancelar} onSalvarESair={handleSalvarESairEtapa1} isSaving={isSaving} />;
+      default: return <ModeloConfiguracao onAvancar={handleAvancarConfiguracao} initialData={modeloEmCriacao.configuracao} onCancelar={handleCancelar} />;
     }
   };
 
@@ -1178,4 +953,4 @@ const NovoModelo = ({ isCopia = false, modeloOriginal, returnTab = 'personalizad
   );
 };
 
-export default NovoModelo;
+export default NovoModeloPadrao;

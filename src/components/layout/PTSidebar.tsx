@@ -46,14 +46,14 @@ const PTSidebar = () => {
       icon: FileText,
     },
     {
+      title: "Modelos",
+      href: "/meus-modelos",
+      icon: BookCopy,
+    },
+    {
       title: "Avaliações",
       href: "/avaliacoes",
       icon: BarChart3,
-    },
-    {
-      title: "Meus Modelos",
-      href: "/meus-modelos",
-      icon: BookCopy,
     },
     {
       title: "Central de Ajuda",
@@ -68,9 +68,9 @@ const PTSidebar = () => {
   ];
 
   if (user?.email === ADMIN_EMAIL) {
-    const meusModelosIndex = navigationItems.findIndex(item => item.href === "/meus-modelos");
-    if (meusModelosIndex !== -1) {
-      navigationItems.splice(meusModelosIndex + 1, 0, {
+    const avaliacoesIndex = navigationItems.findIndex(item => item.href === "/avaliacoes");
+    if (avaliacoesIndex !== -1) {
+      navigationItems.splice(avaliacoesIndex + 1, 0, {
       title: "Meus Posts",
       href: "/meus-posts",
       icon: SquarePen,

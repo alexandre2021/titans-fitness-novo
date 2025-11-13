@@ -178,16 +178,30 @@ export const ExercicioCard = ({ exercicio, onCriarCopia, onExcluir, isAdmin, loc
               )}
 
               {isAdmin && exercicio.tipo === 'padrao' && (
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleNavigation(`/exercicios/editar-padrao/${exercicio.id}`);
-                  }}
-                  className="bg-secondary text-secondary-foreground hover:bg-secondary/80 focus:bg-secondary/80 focus:text-secondary-foreground"
-                >
-                  <Edit className="mr-2 h-5 w-5" />
-                  <span className="text-base">Editar Padrão</span>
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleNavigation(`/exercicios/editar-padrao/${exercicio.id}`);
+                    }}
+                  >
+                    <Edit className="mr-2 h-5 w-5" />
+                    <span className="text-base">Editar Padrão</span>
+                  </DropdownMenuItem>
+
+                  {onExcluir && (
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onExcluir(exercicio.id);
+                      }}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="mr-2 h-5 w-5" />
+                      <span className="text-base">Excluir</span>
+                    </DropdownMenuItem>
+                  )}
+                </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>

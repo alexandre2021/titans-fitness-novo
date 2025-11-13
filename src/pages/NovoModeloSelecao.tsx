@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, BookCopy, Repeat, Loader2, Check, Plus, Search, Filter, X } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, BookCopy, Repeat, Loader2, Check, Plus, Search, Filter, X, Target, BicepsFlexed, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -23,14 +24,17 @@ const NovoModeloSelecao = () => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const { user } = useAuth();
+  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const alunoId = searchParams.get('alunoId');
 
   const [aluno, setAluno] = useState<Aluno | null>(null);
-  const [modelos, setModelos] = useState<ModeloRotina[]>([]);
+  const [modelosPadrao, setModelosPadrao] = useState<ModeloRotina[]>([]);
+  const [modelosPersonalizados, setModelosPersonalizados] = useState<ModeloRotina[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtros, setFiltros] = useState({ busca: '', objetivo: 'todos', dificuldade: 'todos', frequencia: 'todos' });
   const [showFilters, setShowFilters] = useState(false);
+  const [activeTab, setActiveTab] = useState<'padrao' | 'personalizado'>('padrao');
   const [selecionandoModeloId, setSelecionandoModeloId] = useState<string | null>(null);
 
   const temFiltrosAvancadosAtivos = filtros.objetivo !== 'todos' || filtros.dificuldade !== 'todos' || filtros.frequencia !== 'todos';
@@ -54,7 +58,7 @@ const NovoModeloSelecao = () => {
       if (!user) return;
       setLoading(true);
       try {
-        // MUDANÇA: Verificar se o professor tem permissão para ver este aluno (se o aluno o segue)
+        // Verificar se o professor tem permissão para ver este aluno
         const { data: relacao, error: relacaoError } = await supabase.from('alunos_professores').select('aluno_id').eq('aluno_id', alunoId).eq('professor_id', user.id).single();
 
         if (relacaoError || !relacao) throw new Error("Você não tem permissão para ver este aluno.");
@@ -75,15 +79,25 @@ const NovoModeloSelecao = () => {
         }
         setAluno(alunoData);
 
-        // Fetch Modelos
-        const { data: modelosData, error: modelosError } = await supabase
+        // Fetch Modelos Padrão (admin) e Personalizados (do professor)
+        const { data: modelosPadraoData, error: padraoError } = await supabase
           .from('modelos_rotina')
           .select('*')
+          .eq('tipo', 'padrao')
+          .order('created_at', { ascending: false });
+
+        const { data: modelosPersonalizadosData, error: personalizadosError } = await supabase
+          .from('modelos_rotina')
+          .select('*')
+          .eq('tipo', 'personalizado')
           .eq('professor_id', user.id)
           .order('created_at', { ascending: false });
 
-        if (modelosError) throw modelosError;
-        setModelos(modelosData || []);
+        if (padraoError) throw padraoError;
+        if (personalizadosError) throw personalizadosError;
+
+        setModelosPadrao(modelosPadraoData || []);
+        setModelosPersonalizados(modelosPersonalizadosData || []);
       } catch (error) {
         toast.error("Erro ao carregar dados", {
           description: "Não foi possível carregar os modelos. Tente novamente."
@@ -114,7 +128,7 @@ const NovoModeloSelecao = () => {
       }));
 
       const exerciciosPorTreinoRotina: Record<string, ExercicioModelo[]> = {};
-      
+
       for (let i = 0; i < treinosModelo.length; i++) {
         const treinoModelo = treinosModelo[i];
         const treinoRotina = treinosRotina[i]; // Corresponding new treino
@@ -174,21 +188,114 @@ const NovoModeloSelecao = () => {
     }
   };
 
-  const modelosFiltrados = modelos.filter(modelo => {
-    const buscaMatch = filtros.busca === '' || modelo.nome.toLowerCase().includes(filtros.busca.toLowerCase());
-    const objetivoMatch = filtros.objetivo === 'todos' || modelo.objetivo === filtros.objetivo;
-    const dificuldadeMatch = filtros.dificuldade === 'todos' || modelo.dificuldade === filtros.dificuldade;
-    const frequenciaMatch = filtros.frequencia === 'todos' || String(modelo.treinos_por_semana) === filtros.frequencia;
-    return buscaMatch && objetivoMatch && dificuldadeMatch && frequenciaMatch;
-  });
+  const filtrarModelos = (modelos: ModeloRotina[]) => {
+    return modelos.filter(modelo => {
+      const buscaMatch = filtros.busca === '' || modelo.nome.toLowerCase().includes(filtros.busca.toLowerCase());
+      const objetivoMatch = filtros.objetivo === 'todos' || modelo.objetivo === filtros.objetivo;
+      const dificuldadeMatch = filtros.dificuldade === 'todos' || modelo.dificuldade === filtros.dificuldade;
+      const frequenciaMatch = filtros.frequencia === 'todos' || String(modelo.treinos_por_semana) === filtros.frequencia;
+      return buscaMatch && objetivoMatch && dificuldadeMatch && frequenciaMatch;
+    });
+  };
 
-  const getBadgeColor = (type: 'objetivo' | 'dificuldade', value: string) => {
-    if (type === 'dificuldade') {
-      if (value === 'Baixa') return 'bg-green-100 text-green-800 ';
-      if (value === 'Média') return 'bg-yellow-100 text-yellow-800';
-      if (value === 'Alta') return 'bg-red-100 text-red-800';
+  const modelosPadraoFiltrados = filtrarModelos(modelosPadrao);
+  const modelosPersonalizadosFiltrados = filtrarModelos(modelosPersonalizados);
+
+  const renderModelosGrid = (modelos: ModeloRotina[]) => {
+    if (modelos.length === 0) {
+      return (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <BookCopy className="h-16 w-16 text-muted-foreground mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Nenhum modelo encontrado</h3>
+            <p className="text-muted-foreground mb-6 max-w-md">
+              {activeTab === 'padrao'
+                ? 'Não há modelos padrão disponíveis no momento.'
+                : 'Você ainda não criou nenhum modelo personalizado. Crie um na seção "Meus Modelos".'}
+            </p>
+            {activeTab === 'personalizado' && (
+              <Button onClick={() => navigate('/meus-modelos')}>
+                <Plus className="mr-2 h-4 w-4" />
+                Criar Primeiro Modelo
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      );
     }
-    return 'bg-gray-100 text-gray-800';
+
+    return (
+      <div className="space-y-4 pb-20 md:pb-0 max-w-5xl mx-auto">
+        {modelos.map((modelo) => (
+          <div key={modelo.id} className="border rounded-lg p-6 hover:bg-muted/50 transition-colors">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex-1 min-w-0">
+                <h4 className="text-lg font-semibold">{modelo.nome}</h4>
+                {activeTab === 'personalizado' && modelo.created_at && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Criado em: {new Date(modelo.created_at).toLocaleDateString('pt-BR')}
+                  </p>
+                )}
+                <div className="flex items-center gap-2 mb-2 mt-2">
+                  {modelo.tipo === 'padrao' ? (
+                    <Badge className="bg-blue-100 text-blue-800">Padrão</Badge>
+                  ) : (
+                    <Badge className="bg-purple-100 text-purple-800">Personalizado</Badge>
+                  )}
+                </div>
+              </div>
+              <Button
+                onClick={() => handleSelecionarModelo(modelo)}
+                disabled={selecionandoModeloId === modelo.id}
+                className="flex-shrink-0"
+              >
+                {selecionandoModeloId === modelo.id ? (
+                  <><Loader2 className="h-4 w-4 animate-spin mr-2" />Carregando...</>
+                ) : (
+                  <><Check className="h-4 w-4 mr-2" />Selecionar</>
+                )}
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+              <div className="flex items-center gap-2">
+                <Target className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Objetivo</p>
+                  <p className="font-medium capitalize">{modelo.objetivo}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <BicepsFlexed className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Dificuldade</p>
+                  <p className="font-medium capitalize">{modelo.dificuldade}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Duração</p>
+                  <p className="font-medium">{modelo.duracao_semanas} semanas</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Repeat className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Frequência</p>
+                  <p className="font-medium">{modelo.treinos_por_semana}x por semana</p>
+                </div>
+              </div>
+            </div>
+            {modelo.observacoes_rotina && (
+              <div className="pt-3 border-t">
+                <p className="text-sm text-muted-foreground mb-1">Observações:</p>
+                <p className="text-sm">{modelo.observacoes_rotina}</p>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
   };
 
   if (loading) {
@@ -205,22 +312,27 @@ const NovoModeloSelecao = () => {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          onClick={() => navigate(`/alunos-rotinas/${alunoId}`)}
-          className="h-10 w-10 p-0"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold">Selecionar Modelo</h1>
-          <p className="text-muted-foreground">
-            Escolha um modelo para criar a rotina de {aluno?.nome_completo || 'aluno'}
-          </p>
+    <div className="space-y-6">
+      {/* Header - Desktop */}
+      {isDesktop && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              onClick={() => navigate(`/alunos-rotinas/${alunoId}`)}
+              className="h-10 w-10 p-0"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold">Selecionar Modelo</h1>
+              <p className="text-muted-foreground">
+                Escolha um modelo para criar a rotina de {aluno?.nome_completo || 'aluno'}
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Busca e Filtros */}
       <div className="space-y-4">
@@ -299,59 +411,27 @@ const NovoModeloSelecao = () => {
         )}
       </div>
 
-      {modelosFiltrados.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <BookCopy className="h-16 w-16 text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Nenhum modelo encontrado</h3>
-            <p className="text-muted-foreground mb-6 max-w-md">
-              {modelos.length === 0 ? 'Você ainda não criou nenhum modelo. Crie um na seção "Meus Modelos".' : 'Tente ajustar os filtros ou o termo de busca.'}
-            </p>
-            {modelos.length === 0 && (
-              <Button onClick={() => navigate('/meus-modelos')}>
-                <Plus className="mr-2 h-4 w-4" />
-                Criar Primeiro Modelo
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {modelosFiltrados.map((modelo) => (
-            <Card key={modelo.id} className="flex flex-col">
-              <CardHeader>
-                <CardTitle className="text-lg">{modelo.nome}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex-grow flex flex-col justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Criado em: {modelo.created_at ? new Date(modelo.created_at).toLocaleDateString('pt-BR') : 'Data indisponível'}
-                  </p>
-                  <div className="flex items-center gap-2 mb-4">
-                    <Repeat className="h-4 w-4 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">{modelo.treinos_por_semana} treinos/semana</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {modelo.objetivo && <Badge variant="outline" className={getBadgeColor('objetivo', modelo.objetivo)}>{modelo.objetivo}</Badge>}
-                    {modelo.dificuldade && <Badge variant="outline" className={getBadgeColor('dificuldade', modelo.dificuldade)}>{modelo.dificuldade}</Badge>}
-                  </div>
-                </div>
-                <Button
-                  onClick={() => handleSelecionarModelo(modelo)}
-                  disabled={selecionandoModeloId === modelo.id}
-                  className="w-full mt-6"
-                >
-                  {selecionandoModeloId === modelo.id ? (
-                    <><Loader2 className="h-4 w-4 animate-spin mr-2" />Carregando...</>
-                  ) : (
-                    <><Check className="h-4 w-4 mr-2" />Selecionar</>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      {/* Tabs: Aplicativo / Meus Modelos */}
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'padrao' | 'personalizado')} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto md:mx-0">
+          <TabsTrigger value="padrao">
+            Aplicativo ({modelosPadrao.length})
+          </TabsTrigger>
+          <TabsTrigger value="personalizado">
+            Meus Modelos ({modelosPersonalizados.length})
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Tab Content: Padrão */}
+        <TabsContent value="padrao" className="space-y-4">
+          {renderModelosGrid(modelosPadraoFiltrados)}
+        </TabsContent>
+
+        {/* Tab Content: Personalizados */}
+        <TabsContent value="personalizado" className="space-y-4">
+          {renderModelosGrid(modelosPersonalizadosFiltrados)}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

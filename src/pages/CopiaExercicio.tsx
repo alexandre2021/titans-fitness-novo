@@ -2,7 +2,7 @@
 // Mantendo estrutura original, apenas trocando estratégia de upload
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,16 +26,17 @@ type Exercicio = Tables<"exercicios">;
 const CopiaExercicio = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const toast = sonnerToast;
   const isMobile = useIsMobile();
-  
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [exercicioOriginal, setExercicioOriginal] = useState<Exercicio | null>(null);
   const [showVideoInfoModal, setShowVideoInfoModal] = useState(false);
   const [showVideoRecorder, setShowVideoRecorder] = useState(false);
   const [showDeleteMediaDialog, setShowDeleteMediaDialog] = useState<string | null>(null);
-  
+
   const { user } = useAuth();
   
   const [formData, setFormData] = useState({
@@ -373,7 +374,17 @@ const CopiaExercicio = () => {
   const handleDeleteMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
     try {
       const mediaKeyToDelete = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'video_url';
-      setMidias(prev => ({ ...prev, [mediaKeyToDelete]: null }));
+
+      // Se estiver deletando vídeo, também deleta o thumbnail
+      if (type === 'video') {
+        setMidias(prev => ({
+          ...prev,
+          video_url: null,
+          video_thumbnail_path: null
+        }));
+      } else {
+        setMidias(prev => ({ ...prev, [mediaKeyToDelete]: null }));
+      }
 
       if (coverMediaKey === mediaKeyToDelete) {
         setCoverMediaKey(null);
@@ -403,9 +414,20 @@ const CopiaExercicio = () => {
 
   // useEffect para carregar exercício original (mantido igual)
   useEffect(() => {
+    const handleVoltar = () => {
+      const returnTo = searchParams.get('returnTo');
+
+      if (returnTo) {
+        const decodedReturnTo = decodeURIComponent(returnTo);
+        navigate(decodedReturnTo, { replace: true });
+      } else {
+        navigate('/exercicios', { replace: true });
+      }
+    };
+
     const fetchExercicio = async () => {
       if (!id) {
-        navigate('/exercicios');
+        handleVoltar();
         return;
       }
 
@@ -471,7 +493,7 @@ const CopiaExercicio = () => {
         toast.error("Erro ao carregar", {
           description: "Não foi possível carregar o exercício. Verifique se o ID está correto.",
         });
-        navigate('/exercicios');
+        handleVoltar();
       } finally {
         setLoading(false);
       }
@@ -625,7 +647,14 @@ const CopiaExercicio = () => {
       if (error) throw error;
 
       // O redirecionamento já indica o sucesso da operação.
-      navigate('/exercicios');
+      const returnTo = searchParams.get('returnTo');
+
+      if (returnTo) {
+        const decodedReturnTo = decodeURIComponent(returnTo);
+        navigate(decodedReturnTo, { replace: true });
+      } else {
+        navigate('/exercicios', { replace: true });
+      }
     } catch (err) {
       const error = err as Error;
       console.error('❌ Erro ao criar cópia:', error);
@@ -650,7 +679,14 @@ const CopiaExercicio = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/exercicios')} className="h-10 w-10 p-0">
+          <Button variant="ghost" onClick={() => {
+            const returnTo = searchParams.get('returnTo');
+            if (returnTo) {
+              navigate(decodeURIComponent(returnTo), { replace: true });
+            } else {
+              navigate('/exercicios', { replace: true });
+            }
+          }} className="h-10 w-10 p-0">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
@@ -670,7 +706,14 @@ const CopiaExercicio = () => {
           {/* Layout Desktop */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <Button variant="ghost" onClick={() => navigate('/exercicios')} className="h-10 w-10 p-0">
+                <Button variant="ghost" onClick={() => {
+                  const returnTo = searchParams.get('returnTo');
+                  if (returnTo) {
+                    navigate(decodeURIComponent(returnTo), { replace: true });
+                  } else {
+                    navigate('/exercicios', { replace: true });
+                  }
+                }} className="h-10 w-10 p-0">
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <div className="flex-1">

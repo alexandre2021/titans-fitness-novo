@@ -263,10 +263,10 @@ const EditarExercicioPadrao = () => {
   // useEffect para carregar exercício
   useEffect(() => {
     const fetchExercicio = async () => {
-      if (!id || !user) { navigate('/exercicios'); return; }
+      if (!id || !user) { handleVoltar(); return; }
       if (user.email !== ADMIN_EMAIL) {
         toast.error("Acesso Negado");
-        navigate('/exercicios');
+        handleVoltar();
         return;
       }
 
@@ -300,7 +300,7 @@ const EditarExercicioPadrao = () => {
         setInitialMediaUrls({ imagem_1_url: data.imagem_1_url, imagem_2_url: data.imagem_2_url, video_url: data.video_url, video_thumbnail_path: data.video_thumbnail_path });
       } catch (error) {
         toast.error("Erro ao carregar exercício", { description: (error as Error).message });
-        navigate('/exercicios');
+        handleVoltar();
       } finally {
         setLoading(false);
       }
@@ -452,28 +452,28 @@ const EditarExercicioPadrao = () => {
         }
       }
 
-      const { data: functionData, error } = await supabase.functions.invoke('update-exercicio-padrao', {
-        body: {
-          exercicioId: id,
-          updates: {
-            nome: formData.nome.trim(),
-            descricao: formData.descricao.trim(),
-            grupo_muscular: formData.grupo_muscular,
-            equipamento: formData.equipamento,
-            dificuldade: formData.dificuldade,
-            instrucoes: instrucoesList.filter(i => i.trim()).join('#'),
-            grupo_muscular_primario: formData.grupo_muscular_primario.trim() || null,
-            grupos_musculares_secundarios: formData.grupos_musculares_secundarios.trim() || null,
-            cover_media_url: coverMediaKey ? String(coverMediaKey) : null,
-            ...finalMediaUrls,
-            video_thumbnail_path: finalMediaUrls.video_thumbnail_path,
-            youtube_url: midias.youtube_url as string || null,
-          }
-        }
-      });
+      // Atualizar exercício padrão diretamente no banco (RLS policy garante permissão)
+      const { error } = await supabase
+        .from('exercicios')
+        .update({
+          nome: formData.nome.trim(),
+          descricao: formData.descricao.trim(),
+          grupo_muscular: formData.grupo_muscular,
+          equipamento: formData.equipamento,
+          dificuldade: formData.dificuldade,
+          instrucoes: instrucoesList.filter(i => i.trim()).join('#'),
+          grupo_muscular_primario: formData.grupo_muscular_primario.trim() || null,
+          grupos_musculares_secundarios: formData.grupos_musculares_secundarios.trim() || null,
+          cover_media_url: coverMediaKey ? String(coverMediaKey) : null,
+          imagem_1_url: finalMediaUrls.imagem_1_url,
+          imagem_2_url: finalMediaUrls.imagem_2_url,
+          video_url: finalMediaUrls.video_url,
+          video_thumbnail_path: finalMediaUrls.video_thumbnail_path,
+          youtube_url: midias.youtube_url as string || null,
+        })
+        .eq('id', id);
 
       if (error) throw error;
-      if (functionData && functionData.error) throw new Error(functionData.error);
 
       toast.success("Exercício Padrão Atualizado", {
         description: `O exercício "${formData.nome.trim()}" foi atualizado com sucesso.`

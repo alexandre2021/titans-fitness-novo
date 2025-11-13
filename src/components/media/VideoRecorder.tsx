@@ -91,7 +91,12 @@ export function VideoRecorder({ open, onOpenChange, onRecordingComplete }: Video
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 360 } },
+        video: {
+          facingMode: 'environment',
+          width: { ideal: 360 },
+          height: { ideal: 640 },
+          aspectRatio: { ideal: 9/16 }
+        },
         audio: false,
       });
 
@@ -196,6 +201,7 @@ export function VideoRecorder({ open, onOpenChange, onRecordingComplete }: Video
     >
         <div className="text-left text-white relative p-4 border-b border-gray-800 flex-shrink-0">
           <h2 className="text-lg font-semibold">Gravador de Vídeo</h2>
+          <p className="text-sm text-gray-300 mt-1">📱 Mantenha o celular em pé (vertical)</p>
           <Button
             variant="ghost"
             size="icon"

@@ -835,10 +835,12 @@ export type Database = {
           dificuldade: string
           duracao_semanas: number
           id: string
+          modelo_padrao_id: string | null
           nome: string
           objetivo: string | null
           observacoes_rotina: string | null
-          professor_id: string
+          professor_id: string | null
+          tipo: string | null
           treinos_por_semana: number
           updated_at: string
         }
@@ -848,10 +850,12 @@ export type Database = {
           dificuldade: string
           duracao_semanas: number
           id?: string
+          modelo_padrao_id?: string | null
           nome: string
           objetivo?: string | null
           observacoes_rotina?: string | null
-          professor_id: string
+          professor_id?: string | null
+          tipo?: string | null
           treinos_por_semana: number
           updated_at?: string
         }
@@ -861,14 +865,23 @@ export type Database = {
           dificuldade?: string
           duracao_semanas?: number
           id?: string
+          modelo_padrao_id?: string | null
           nome?: string
           objetivo?: string | null
           observacoes_rotina?: string | null
-          professor_id?: string
+          professor_id?: string | null
+          tipo?: string | null
           treinos_por_semana?: number
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "modelos_rotina_modelo_padrao_id_fkey"
+            columns: ["modelo_padrao_id"]
+            isOneToOne: false
+            referencedRelation: "modelos_rotina"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "modelos_rotina_professor_id_fkey"
             columns: ["professor_id"]

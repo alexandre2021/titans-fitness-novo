@@ -46,6 +46,10 @@ import RotinaCriacao from "./pages/RotinaCriacao";
 import MeusModelos from "./pages/MeusModelos";
 import NovoModelo from "./pages/NovoModelo";
 import EditarModelo from "./pages/EditarModelo";
+import CopiaModelo from "./pages/CopiaModelo";
+import NovoModeloPadrao from "./pages/NovoModeloPadrao";
+import EditarModeloPadrao from "./pages/EditarModeloPadrao";
+import DetalhesModelo from "./pages/DetalhesModelo";
 import EsqueciSenha from "./pages/EsqueciSenha";
 import Mais from "./pages/Mais";
 import NovoModeloSelecao from "./pages/NovoModeloSelecao";
@@ -117,9 +121,10 @@ const router = createBrowserRouter([
       // Rotas de criação de modelo e rotina (sem layout principal para modo de foco)
       { path: "/modelos/novo", element: <NovoModelo /> },
       { path: "/modelos/editar/:modeloId", element: <EditarModelo /> },
+      { path: "/modelos/novo-padrao", element: <NovoModeloPadrao /> },
+      { path: "/modelos/editar-padrao/:modeloId", element: <EditarModeloPadrao /> },
       { path: "/rotinas-criar/:alunoId", element: <RotinaCriacao /> },
-      { path: "/selecionar-modelo", element: <NovoModeloSelecao /> },
-      
+
       // Rotas protegidas com layout (PT e Aluno)
       {
         element: <ProtectedRoutes />,
@@ -150,6 +155,9 @@ const router = createBrowserRouter([
           { path: "/mensagens-pt", element: <MensagensPT /> },
           { path: "/perfil-pt", element: <PerfilPT /> },
           { path: "/meus-modelos", element: <MeusModelos /> },
+          { path: "/modelos/detalhes/:modeloId", element: <DetalhesModelo /> },
+          { path: "/modelos/copia/:id", element: <CopiaModelo /> },
+          { path: "/selecionar-modelo", element: <NovoModeloSelecao /> },
           { path: "/configuracoes-pt", element: <ConfiguracoesPT /> },
           { path: "/avaliacoes", element: <AvaliacoesPT /> },
           { path: "/rotinas", element: <RotinasPT /> }, 

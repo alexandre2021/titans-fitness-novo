@@ -186,7 +186,14 @@ const ExerciciosPT = () => {
   }, [exercicioParaExcluir, isDeleting, excluirExercicio]);
 
   const handleExcluirExercicio = async (exercicioId: string) => {
-    const exercicio = exerciciosPersonalizados.find(e => e.id === exercicioId);
+    // Buscar em personalizados primeiro
+    let exercicio = exerciciosPersonalizados.find(e => e.id === exercicioId);
+
+    // Se não encontrou e é admin, buscar em padrão
+    if (!exercicio && isAdmin) {
+      exercicio = exerciciosPadrao.find(e => e.id === exercicioId);
+    }
+
     if (exercicio) {
       setExercicioParaExcluir(exercicio);
       setShowDeleteDialog(true);
@@ -252,105 +259,94 @@ const ExerciciosPT = () => {
         </div>
       )}
 
+      {/* Busca e Filtros */}
+      <div className="space-y-4">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Buscar exercícios..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex-shrink-0 md:hidden relative h-10 w-10 p-0 [&_svg]:size-6"
+            aria-label="Mostrar filtros"
+          >
+            <Filter />
+            {temFiltrosAvancadosAtivos && (
+              <span className="absolute top-[-2px] left-[-2px] block h-3 w-3 rounded-full bg-secondary ring-2 ring-white" />
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowFilters(!showFilters)}
+            className="hidden md:flex items-center gap-2 relative"
+          >
+            <Filter className="h-4 w-4" />
+            Filtros
+            {temFiltrosAvancadosAtivos && (
+              <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-secondary ring-1 ring-background" />
+            )}
+          </Button>
+        </div>
+
+        {showFilters && (
+          <div className="p-4 border rounded-lg bg-background">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+              <div className="space-y-2 flex-1">
+                <Label htmlFor="filtro-grupo">Grupo Muscular</Label>
+                <CustomSelect
+                  inputId="filtro-grupo"
+                  value={GRUPOS_MUSCULARES_OPTIONS.find(opt => opt.value === filtros.grupoMuscular)}
+                  onChange={(option) => setFiltros(prev => ({ ...prev, grupoMuscular: option ? String(option.value) : 'todos' }))}
+                  options={GRUPOS_MUSCULARES_OPTIONS}
+                />
+              </div>
+              <div className="space-y-2 flex-1">
+                <Label htmlFor="filtro-equipamento">Equipamento</Label>
+                <CustomSelect
+                  inputId="filtro-equipamento"
+                  value={EQUIPAMENTOS_OPTIONS.find(opt => opt.value === filtros.equipamento)}
+                  onChange={(option) => setFiltros(prev => ({ ...prev, equipamento: option ? String(option.value) : 'todos' }))}
+                  options={EQUIPAMENTOS_OPTIONS}
+                />
+              </div>
+              <div className="space-y-2 flex-1">
+                <Label htmlFor="filtro-dificuldade">Dificuldade</Label>
+                <CustomSelect
+                  inputId="filtro-dificuldade"
+                  value={DIFICULDADES_OPTIONS.find(opt => opt.value === filtros.dificuldade)}
+                  onChange={(option) => setFiltros(prev => ({ ...prev, dificuldade: option ? String(option.value) : 'todos' }))}
+                  options={DIFICULDADES_OPTIONS}
+                />
+              </div>
+              {temFiltrosAtivos && (
+                <Button variant="outline" size="sm" onClick={limparFiltros} className="flex items-center gap-2 w-full sm:w-auto flex-shrink-0">
+                  <X className="h-4 w-4" />
+                  Limpar
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "padrao" | "personalizados")}>
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto md:mx-0">
           <TabsTrigger value="padrao">
-            Padrão ({exerciciosPadrao.length})
+            Aplicativo ({exerciciosPadrao.length})
           </TabsTrigger>
           <TabsTrigger value="personalizados">
-            Personalizados ({exerciciosPersonalizados.length})
+            Meus Exercícios ({exerciciosPersonalizados.length})
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="padrao" className="space-y-4 mt-4">
-          <div className="space-y-4">
-            <div className="flex gap-2 md:hidden">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Buscar exercícios..."
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Button
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex-shrink-0 relative h-10 w-10 p-0 [&_svg]:size-6"
-                aria-label="Mostrar filtros"
-              >
-                <Filter />
-                {temFiltrosAvancadosAtivos && (
-                  <span className="absolute top-[-2px] left-[-2px] block h-3 w-3 rounded-full bg-secondary ring-2 ring-white" />
-                )}
-              </Button>
-            </div>
-
-            <div className="hidden md:flex gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Buscar exercícios..."
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Button
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 relative"
-              >
-                <Filter className="h-4 w-4" />
-                Filtros
-                {temFiltrosAvancadosAtivos && (
-                  <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-secondary ring-1 ring-background" />
-                )}
-              </Button>
-            </div>
-          </div>
-
-          {showFilters && (
-            <div className="p-4 border rounded-lg bg-background">
-              <div className="flex flex-col sm:flex-row sm:items-end gap-4">
-                <div className="space-y-2 flex-1"> 
-                  <Label htmlFor="filtro-grupo">Grupo Muscular</Label>
-                  <CustomSelect
-                    inputId="filtro-grupo"
-                    value={GRUPOS_MUSCULARES_OPTIONS.find(opt => opt.value === filtros.grupoMuscular)}
-                    onChange={(option) => setFiltros(prev => ({ ...prev, grupoMuscular: option ? String(option.value) : 'todos' }))}
-                    options={GRUPOS_MUSCULARES_OPTIONS}
-                  />
-                </div>
-                <div className="space-y-2 flex-1"> 
-                  <Label htmlFor="filtro-equipamento">Equipamento</Label>
-                  <CustomSelect
-                    inputId="filtro-equipamento"
-                    value={EQUIPAMENTOS_OPTIONS.find(opt => opt.value === filtros.equipamento)}
-                    onChange={(option) => setFiltros(prev => ({ ...prev, equipamento: option ? String(option.value) : 'todos' }))}
-                    options={EQUIPAMENTOS_OPTIONS}
-                  />
-                </div>
-                <div className="space-y-2 flex-1"> 
-                  <Label htmlFor="filtro-dificuldade">Dificuldade</Label>
-                  <CustomSelect
-                    inputId="filtro-dificuldade"
-                    value={DIFICULDADES_OPTIONS.find(opt => opt.value === filtros.dificuldade)}
-                    onChange={(option) => setFiltros(prev => ({ ...prev, dificuldade: option ? String(option.value) : 'todos' }))}
-                    options={DIFICULDADES_OPTIONS}
-                  />
-                </div>
-                {temFiltrosAtivos && (
-                  <Button variant="outline" size="sm" onClick={limparFiltros} className="flex items-center gap-2 w-full sm:w-auto flex-shrink-0">
-                    <X className="h-4 w-4" />
-                    Limpar
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-
+        <TabsContent value="padrao" className="space-y-4 mt-6">
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span>{exerciciosFiltrados.length} exercício(s) encontrado(s)</span>
           </div>
@@ -385,94 +381,10 @@ const ExerciciosPT = () => {
           )}
         </TabsContent>
 
-        <TabsContent value="personalizados" className="space-y-4 mt-4">
-          <div className="space-y-4">
-            <div className="flex gap-2 md:hidden">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Buscar exercícios..."
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Button
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex-shrink-0 relative h-10 w-10 p-0 [&_svg]:size-6"
-                aria-label="Mostrar filtros"
-              >
-                <Filter />
-                {temFiltrosAvancadosAtivos && (
-                  <span className="absolute top-[-2px] left-[-2px] block h-3 w-3 rounded-full bg-secondary ring-2 ring-white" />
-                )}
-              </Button>
-            </div>
-
-            <div className="hidden md:flex gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Buscar exercícios..."
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Button
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 relative"
-              >
-                <Filter className="h-4 w-4" />
-                Filtros
-                {temFiltrosAvancadosAtivos && (
-                  <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-secondary ring-1 ring-background" />
-                )}
-              </Button>
-            </div>
+        <TabsContent value="personalizados" className="space-y-4 mt-6">
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <span>{exerciciosFiltrados.length} exercício(s) encontrado(s)</span>
           </div>
-
-          {showFilters && (
-            <div className="p-4 border rounded-lg bg-background">
-              <div className="flex flex-col sm:flex-row sm:items-end gap-4">
-                <div className="space-y-2 flex-1"> 
-                  <Label htmlFor="filtro-grupo-p">Grupo Muscular</Label>
-                  <CustomSelect
-                    inputId="filtro-grupo-p"
-                    value={GRUPOS_MUSCULARES_OPTIONS.find(opt => opt.value === filtros.grupoMuscular)}
-                    onChange={(option) => setFiltros(prev => ({ ...prev, grupoMuscular: option ? String(option.value) : 'todos' }))}
-                    options={GRUPOS_MUSCULARES_OPTIONS}
-                  />
-                </div>
-                <div className="space-y-2 flex-1"> 
-                  <Label htmlFor="filtro-equipamento-p">Equipamento</Label>
-                  <CustomSelect
-                    inputId="filtro-equipamento-p"
-                    value={EQUIPAMENTOS_OPTIONS.find(opt => opt.value === filtros.equipamento)}
-                    onChange={(option) => setFiltros(prev => ({ ...prev, equipamento: option ? String(option.value) : 'todos' }))}
-                    options={EQUIPAMENTOS_OPTIONS}
-                  />
-                </div>
-                <div className="space-y-2 flex-1"> 
-                  <Label htmlFor="filtro-dificuldade-p">Dificuldade</Label>
-                  <CustomSelect
-                    inputId="filtro-dificuldade-p"
-                    value={DIFICULDADES_OPTIONS.find(opt => opt.value === filtros.dificuldade)}
-                    onChange={(option) => setFiltros(prev => ({ ...prev, dificuldade: option ? String(option.value) : 'todos' }))}
-                    options={DIFICULDADES_OPTIONS}
-                  />
-                </div>
-                {temFiltrosAtivos && (
-                  <Button variant="outline" size="sm" onClick={limparFiltros} className="flex items-center gap-2 w-full sm:w-auto flex-shrink-0">
-                    <X className="h-4 w-4" />
-                    Limpar
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
 
           {exerciciosPersonalizados.length === 0 && busca === '' && filtros.grupoMuscular === 'todos' ? (
             <Card className="border-dashed">
@@ -528,7 +440,7 @@ const ExerciciosPT = () => {
               Excluir Exercício
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir o exercício personalizado{" "}
+              Tem certeza que deseja excluir o exercício {exercicioParaExcluir?.tipo === 'padrao' ? 'padrão' : 'personalizado'}{" "}
               <span className="font-semibold text-foreground">"{exercicioParaExcluir?.nome}"</span>?
               <br />
               Esta ação não pode ser desfeita.

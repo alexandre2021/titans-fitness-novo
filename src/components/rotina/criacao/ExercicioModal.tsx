@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Search, Link, Dumbbell, Filter, Check, Info, Plus, ShoppingBag, Trash2, List } from 'lucide-react';
+import { X, Search, Link, Dumbbell, Filter, Check, Info, Plus, ShoppingBag, Trash2, List, Camera } from 'lucide-react';
 import Modal from 'react-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,7 @@ import { useExercicios } from '@/hooks/useExercicios';
 import { ExercicioDetalhesModal } from '../execucao/shared/ExercicioDetalhesModal';
 import { Tables } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 // Constantes
 const EQUIPAMENTOS = [
@@ -74,6 +75,86 @@ type CombinacaoIncompleta = {
 };
 
 export type ItemSacola = ExercicioSimples | CombinacaoCompleta | CombinacaoIncompleta;
+
+// Componente interno para exibir mídia do exercício
+const ExercicioMedia: React.FC<{ exercicio: Tables<'exercicios'> }> = ({ exercicio }) => {
+  const [mediaUrl, setMediaUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isVideo, setIsVideo] = useState(false);
+
+  useEffect(() => {
+    const loadMedia = async () => {
+      setIsLoading(true);
+
+      const coverColumnName = exercicio.cover_media_url;
+      let mediaPath: string | null = null;
+      let isVideoType = false;
+
+      // Prioridade 1: Se cover_media_url é 'video_url', usar thumbnail
+      if (coverColumnName === 'video_url' && exercicio.video_thumbnail_path) {
+        mediaPath = exercicio.video_thumbnail_path;
+        isVideoType = true;
+      } else {
+        // Prioridade 2: Usar a coluna especificada em cover_media_url
+        if (coverColumnName) {
+          mediaPath = (exercicio[coverColumnName as keyof Tables<'exercicios'>] as string | null) || null;
+          isVideoType = coverColumnName === 'video_url';
+        }
+
+        // Prioridade 3: Fallback para imagem_1_url ou imagem_2_url
+        if (!mediaPath) {
+          mediaPath = exercicio.imagem_1_url || exercicio.imagem_2_url || null;
+        }
+      }
+
+      if (mediaPath) {
+        try {
+          const bucketType = exercicio.tipo === 'padrao' ? 'exercicios-padrao' : 'exercicios';
+          const { data, error } = await supabase.functions.invoke('get-image-url', {
+            body: { filename: mediaPath, bucket_type: bucketType }
+          });
+
+          if (!error && data?.url) {
+            setMediaUrl(data.url);
+            setIsVideo(isVideoType);
+          }
+        } catch (error) {
+          console.error('Erro ao carregar mídia:', error);
+        }
+      }
+
+      setIsLoading(false);
+    };
+
+    loadMedia();
+  }, [exercicio]);
+
+  return (
+    <div className="relative h-32 bg-muted/30 border-b flex items-center justify-center overflow-hidden">
+      {isLoading ? (
+        <div className="animate-pulse bg-muted-foreground/20 w-full h-full" />
+      ) : mediaUrl ? (
+        <div className="w-full h-full flex items-center justify-center relative">
+          <img
+            src={mediaUrl}
+            alt={exercicio.nome}
+            className="max-w-full max-h-full object-contain"
+          />
+          {isVideo && (
+            <div className="absolute top-1 left-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded">
+              Vídeo
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center text-muted-foreground/40">
+          <Camera className="h-8 w-8 mb-1" />
+          <span className="text-xs">Sem mídia</span>
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface Props {
   isOpen: boolean;
@@ -542,7 +623,7 @@ export const ExercicioModal: React.FC<Props> = ({
                     </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {exerciciosFiltrados.map((exercicio: Tables<'exercicios'>) => {
                       const estaNaSacola = exercicioEstaNaSacola(exercicio.id);
                       const jaAdicionado = exerciciosJaAdicionados.includes(exercicio.id);
@@ -552,19 +633,23 @@ export const ExercicioModal: React.FC<Props> = ({
                         <div
                           key={String(exercicio.id)}
                           className={`
-                            relative p-4 border rounded-lg transition-all
-                            ${estaNaSacola 
-                              ? 'border-[#ba3c15] bg-[#ba3c15]/5 ring-2 ring-[#ba3c15]/30 cursor-pointer' 
+                            relative border rounded-lg transition-all overflow-hidden
+                            ${estaNaSacola
+                              ? 'border-[#ba3c15] bg-[#ba3c15]/5 ring-2 ring-[#ba3c15]/30 cursor-pointer'
                               : podeSelecionar
                                 ? 'border-gray-200 cursor-pointer hover:border-[#ba3c15] hover:bg-[#ba3c15]/5'
                                 : 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-60'
                             }
                           `}
-                          onClick={() => podeSelecionar && handleClickExercicio(exercicio)}
-                          title={estaNaSacola ? 'Clique para ver na sacola' : jaAdicionado ? 'Já adicionado ao treino' : 'Clique para selecionar'}
                         >
-                          {/* Ícones do canto superior direito */}
-                          <div className="absolute top-2 right-2 flex items-center gap-1">
+                          {/* Conteúdo do card */}
+                          <div
+                            className="p-4"
+                            onClick={() => podeSelecionar && handleClickExercicio(exercicio)}
+                            title={estaNaSacola ? 'Clique para ver na sacola' : jaAdicionado ? 'Já adicionado ao treino' : 'Clique para selecionar'}
+                          >
+                            {/* Ícones do canto superior direito */}
+                            <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
                             {/* Botão de detalhes */}
                             <Button
                               variant="ghost"
@@ -613,9 +698,9 @@ export const ExercicioModal: React.FC<Props> = ({
                             {exercicio.nome}
                           </h4>
 
-                          <div className="flex flex-wrap gap-2 mb-2">
-                            <Badge 
-                              variant="outline" 
+                          <div className="flex flex-wrap gap-2 mb-3">
+                            <Badge
+                              variant="outline"
                               className={CORES_GRUPOS_MUSCULARES[exercicio.grupo_muscular] || 'bg-gray-100'}
                             >
                               {exercicio.grupo_muscular}
@@ -623,7 +708,7 @@ export const ExercicioModal: React.FC<Props> = ({
                             <Badge variant="outline">
                               {exercicio.equipamento}
                             </Badge>
-                            <Badge 
+                            <Badge
                               variant="outline"
                               className={CORES_DIFICULDADES[exercicio.dificuldade] || 'bg-gray-100'}
                             >
@@ -635,12 +720,10 @@ export const ExercicioModal: React.FC<Props> = ({
                               </Badge>
                             )}
                           </div>
+                          </div>
 
-                          {exercicio.descricao && (
-                            <p className="text-sm text-gray-600 line-clamp-2">
-                              {exercicio.descricao}
-                            </p>
-                          )}
+                          {/* Mídia do exercício */}
+                          <ExercicioMedia exercicio={exercicio} />
                         </div>
                       );
                     })}

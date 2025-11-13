@@ -1,6 +1,6 @@
 // pages/NovoExercicio.tsx
 import { useState, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,11 +20,12 @@ import CustomSelect from "@/components/ui/CustomSelect";
 
 const NovoExercicio = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const toast = sonnerToast;
   const isMobile = useIsMobile();
-  
+
   const [saving, setSaving] = useState(false);
-  
+
   // Usuário autenticado
   const { user } = useAuth();
   
@@ -286,9 +287,18 @@ const NovoExercicio = () => {
   const handleDeleteMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
     try {
       const mediaKeyToDelete = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'video_url';
-      
-      setMidias(prev => ({ ...prev, [mediaKeyToDelete]: null }));
-      
+
+      // Se estiver deletando vídeo, também deleta o thumbnail
+      if (type === 'video') {
+        setMidias(prev => ({
+          ...prev,
+          video_url: null,
+          video_thumbnail_path: null
+        }));
+      } else {
+        setMidias(prev => ({ ...prev, [mediaKeyToDelete]: null }));
+      }
+
       if (coverMediaKey === mediaKeyToDelete) {
         setCoverMediaKey(null);
       }
@@ -437,7 +447,15 @@ const NovoExercicio = () => {
       if (error) throw error;
 
       console.log('✅ Exercício criado:', exercicio);
-      navigate('/exercicios');
+
+      const returnTo = searchParams.get('returnTo');
+
+      if (returnTo) {
+        const decodedReturnTo = decodeURIComponent(returnTo);
+        navigate(decodedReturnTo, { replace: true });
+      } else {
+        navigate('/exercicios', { replace: true });
+      }
       
     } catch (error) {
       console.error('❌ Erro ao criar exercício:', error);
@@ -457,7 +475,14 @@ const NovoExercicio = () => {
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
-                onClick={() => navigate('/exercicios')}
+                onClick={() => {
+                  const returnTo = searchParams.get('returnTo');
+                  if (returnTo) {
+                    navigate(decodeURIComponent(returnTo), { replace: true });
+                  } else {
+                    navigate('/exercicios', { replace: true });
+                  }
+                }}
                 className="h-10 w-10 p-0"
               >
                 <ArrowLeft className="h-4 w-4" />

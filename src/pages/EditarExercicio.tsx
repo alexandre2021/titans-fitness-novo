@@ -331,8 +331,17 @@ const EditarExercicio = () => {
     const urlMap = { imagem1: 'imagem_1_url', imagem2: 'imagem_2_url', video: 'video_url' };
     const mediaKeyToDelete = urlMap[type];
 
-    // Limpa a mídia
-    setMidias(prev => ({ ...prev, [mediaKeyToDelete]: null }));
+    // Se estiver deletando vídeo, também deleta o thumbnail
+    if (type === 'video') {
+      setMidias(prev => ({
+        ...prev,
+        video_url: null,
+        video_thumbnail_path: null
+      }));
+    } else {
+      // Limpa a mídia
+      setMidias(prev => ({ ...prev, [mediaKeyToDelete]: null }));
+    }
 
     // Se a mídia removida era a capa, limpa a seleção para que a próxima seja escolhida
     if (coverMediaKey === mediaKeyToDelete) {
@@ -360,14 +369,17 @@ const EditarExercicio = () => {
 
   useEffect(() => {
     const fetchExercicio = async () => {
-      if (!id || !user) { navigate('/exercicios', { state: { activeTab: 'personalizados' } }); return; }
+      if (!id || !user) {
+        handleVoltar();
+        return;
+      }
 
       try {
         const { data, error } = await supabase.from('exercicios').select('*').eq('id', id).single();
         if (error || !data) throw new Error('Exercício não encontrado ou erro ao buscar.');
         if (data.tipo !== 'personalizado' || data.professor_id !== user.id) {
           toast.error("Acesso Negado", { description: "Você não pode editar este exercício." });
-          navigate('/exercicios', { state: { activeTab: 'personalizados' } });
+          handleVoltar();
           return;
         }
 
@@ -400,7 +412,7 @@ const EditarExercicio = () => {
       } catch (error) {
         console.error('Erro ao carregar exercício:', error);
         toast.error("Erro", { description: "Não foi possível carregar o exercício." });
-      navigate('/exercicios', { state: { activeTab: 'personalizados' } });
+        handleVoltar();
       } finally {
         setLoading(false);
       }
@@ -524,9 +536,16 @@ const EditarExercicio = () => {
       .eq('id', id)
       .eq('professor_id', user.id);
 
-      if (error) throw error;      
+      if (error) throw error;
 
-      navigate('/exercicios', { state: { activeTab: 'personalizados' } });
+      const returnTo = searchParams.get('returnTo');
+
+      if (returnTo) {
+        const decodedReturnTo = decodeURIComponent(returnTo);
+        navigate(decodedReturnTo, { replace: true });
+      } else {
+        navigate('/exercicios', { replace: true, state: { activeTab: 'personalizados' } });
+      }
     } catch (error) {
       const err = error as Error;
       console.error('Erro ao salvar alterações:', err);

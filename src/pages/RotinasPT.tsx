@@ -457,11 +457,11 @@ return (
           <Card key={aluno.id} className="relative">
             <CardHeader>
               <CardTitle className="flex items-center gap-3">
-                <Avatar className="h-8 w-8">
+                <Avatar className="h-10 w-10">
                   {aluno.avatar_type === 'image' && aluno.avatar_image_url ? (
                     <AvatarImage src={aluno.avatar_image_url} alt={aluno.nome_completo} />
                   ) : (
-                    <AvatarFallback style={{ backgroundColor: aluno.avatar_color || '#ccc' }} className="text-white font-semibold">
+                    <AvatarFallback style={{ backgroundColor: aluno.avatar_color || '#ccc' }} className="text-white font-medium text-sm">
                       {aluno.avatar_letter || aluno.nome_completo?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   )}

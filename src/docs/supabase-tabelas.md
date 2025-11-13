@@ -364,12 +364,12 @@ Este documento descreve a estrutura completa das tabelas do banco de dados no no
 **Descrição**: (OBSOLETA) Esta tabela foi removida. O histórico de rotinas agora é gerenciado pela coluna `status` na tabela `rotinas`.
 
 ### Tabela: `public.modelos_rotina`
-**Descrição**: Armazena os modelos de rotina (templates) criados pelos Professores.
+**Descrição**: Armazena os modelos de rotina (templates) criados pelos Professores ou pelo Sistema (padrão).
 
 | Coluna | Posição | Tipo de Dado | Nulável | Padrão | Tipo de Restrição | Nome da Restrição | Chave Estrangeira |
 |---|---|---|---|---|---|---|---|
 | `id` | 1 | `uuid` | False | `gen_random_uuid()` | `PRIMARY KEY` | `modelos_rotina_pkey` | |
-| `professor_id` | 2 | `uuid` | False | | `FOREIGN KEY (ON DELETE CASCADE)` | `modelos_rotina_professor_id_fkey` | `public.professores(id)` |
+| `professor_id` | 2 | `uuid` | **True** | | `FOREIGN KEY (ON DELETE CASCADE)` | `modelos_rotina_professor_id_fkey` | `public.professores(id)` |
 | `nome` | 3 | `character varying` | False | | | | |
 | `descricao` | 4 | `text` | True | | | | |
 | `objetivo` | 5 | `character varying` | True | | | | |
@@ -379,6 +379,39 @@ Este documento descreve a estrutura completa das tabelas do banco de dados no no
 | `observacoes_rotina` | 9 | `text` | True | | | | |
 | `created_at` | 10 | `timestamp with time zone` | False | `now()` | | | |
 | `updated_at` | 11 | `timestamp with time zone` | False | `now()` | | | |
+| `tipo` | 12 | `character varying` | True | `'personalizado'` | `CHECK` | `modelos_rotina_tipo_check` | |
+| `modelo_padrao_id` | 13 | `uuid` | True | | `FOREIGN KEY (ON DELETE SET NULL)` | `modelos_rotina_modelo_padrao_id_fkey` | `public.modelos_rotina(id)` |
+
+**Tipos de Modelo**: padrao, personalizado
+**MUDANÇA IMPORTANTE**:
+- `professor_id` agora é **nullable** - NULL para modelos padrão criados pelo sistema
+- `tipo` diferencia modelos padrão (visíveis para todos) de personalizados (só do professor)
+- `modelo_padrao_id` referencia o modelo original quando um professor copia um modelo padrão
+
+**Constraints**:
+- `modelos_rotina_tipo_check`: Garante que `tipo` seja 'padrao' ou 'personalizado'
+- `check_tipo_professor`:
+  - Se `tipo = 'padrao'`, então `professor_id` deve ser NULL
+  - Se `tipo = 'personalizado'`, então `professor_id` deve ser NOT NULL
+
+**Políticas de Segurança (RLS)**:
+- `select_modelos_policy`: Professores veem modelos padrão + seus personalizados. Admin vê tudo.
+  ```sql
+  USING (tipo = 'padrao' OR professor_id = auth.uid() OR auth.uid() IN (SELECT id FROM admins))
+  ```
+- `insert_modelos_policy`: Professores criam apenas personalizados. Admin cria qualquer tipo.
+  ```sql
+  WITH CHECK ((tipo = 'personalizado' AND professor_id = auth.uid()) OR auth.uid() IN (SELECT id FROM admins))
+  ```
+- `update_modelos_policy`: Apenas dono ou admin podem editar.
+  ```sql
+  USING (professor_id = auth.uid() OR auth.uid() IN (SELECT id FROM admins))
+  WITH CHECK (professor_id = auth.uid() OR auth.uid() IN (SELECT id FROM admins))
+  ```
+- `delete_modelos_policy`: Apenas dono ou admin podem deletar.
+  ```sql
+  USING (professor_id = auth.uid() OR auth.uid() IN (SELECT id FROM admins))
+  ```
 
 ---
 

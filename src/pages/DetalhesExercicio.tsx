@@ -21,6 +21,8 @@ const DetalhesExercicio = () => {
   const [searchParams] = useSearchParams(); // Adicionar esta linha
   const { user } = useAuth();
   const isMobile = useIsMobile();
+  const ADMIN_EMAIL = 'contato@titans.fitness';
+  const isAdmin = user?.email === ADMIN_EMAIL;
 
   const [loading, setLoading] = useState(true);
   const [exercicio, setExercicio] = useState<Exercicio | null>(null);
@@ -143,7 +145,7 @@ const DetalhesExercicio = () => {
     const fetchExercicio = async () => {
       if (!id || !user) {
         // Se não houver ID, volta para a lista sem estado específico
-        navigate('/exercicios');
+        handleVoltar();
         return;
       }
 
@@ -188,7 +190,7 @@ const DetalhesExercicio = () => {
         toast.error("Erro", {
           description: "Não foi possível carregar os detalhes do exercício."
         })
-        navigate('/exercicios'); // Em caso de erro, volta sem estado
+        handleVoltar(); // Em caso de erro, volta com filtros preservados
       } finally {
         setLoading(false);
       }
@@ -224,7 +226,12 @@ const DetalhesExercicio = () => {
 
   const handleEditar = () => {
     if (!exercicio) return;
-    navigate(`/exercicios/editar/${exercicio.id}`);
+
+    if (exercicio.tipo === 'padrao') {
+      navigate(`/exercicios/editar-padrao/${exercicio.id}`);
+    } else {
+      navigate(`/exercicios/editar/${exercicio.id}`);
+    }
   };
 
   const handleViewMedia = (url: string) => {
@@ -250,7 +257,7 @@ const DetalhesExercicio = () => {
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
-              onClick={() => navigate('/exercicios')}
+            onClick={handleVoltar}
             className="h-10 w-10 p-0"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -298,7 +305,27 @@ const DetalhesExercicio = () => {
             </div>
           </div>
 
-          {/* Nenhuma ação no topo, visualização apenas */}
+          {/* Botões de ação */}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleCriarCopia}
+              className="flex items-center gap-2"
+            >
+              <Copy className="h-4 w-4" />
+              Criar Cópia
+            </Button>
+
+            {(exercicio.tipo === 'personalizado' || (exercicio.tipo === 'padrao' && isAdmin)) && (
+              <Button
+                onClick={handleEditar}
+                className="flex items-center gap-2"
+              >
+                <Edit className="h-4 w-4" />
+                Editar
+              </Button>
+            )}
+          </div>
         </div>
       )}
 
