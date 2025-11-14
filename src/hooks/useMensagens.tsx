@@ -40,11 +40,12 @@ export const useMensagens = (conversaId: string | null) => {
 
     setLoading(true);
     try {
-      // 1. Busca as mensagens simples
+      // 1. Busca as mensagens simples (excluindo as deletadas)
       const { data: mensagensData, error: mensagensError } = await supabase
         .from('mensagens')
         .select('*')
         .eq('conversa_id', conversaId)
+        .is('deleted_at', null)
         .order('created_at', { ascending: true });
 
       if (mensagensError) throw mensagensError;
@@ -192,7 +193,7 @@ export const useMensagens = (conversaId: string | null) => {
         async (payload) => {
           const novaMensagemPayload = payload.new as MensagemPayload;
           const isMine = novaMensagemPayload.remetente_id === user.id;
-          
+
           // Se a mensagem foi enviada pelo próprio usuário,
           // ela já foi adicionada via atualização otimista.
           // Ignoramos o evento Realtime para evitar duplicação.
@@ -209,6 +210,23 @@ export const useMensagens = (conversaId: string | null) => {
           // Se a mensagem não é minha e a janela está visível, marca como lida
           if (!isMine && document.visibilityState === 'visible') {
             await marcarComoLidas();
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'mensagens',
+          filter: `conversa_id=eq.${conversaId}`,
+        },
+        async (payload) => {
+          const mensagemAtualizada = payload.new as MensagemPayload;
+
+          // Se a mensagem foi deletada (deleted_at não é null), remove da lista
+          if (mensagemAtualizada.deleted_at) {
+            setMensagens(prev => prev.filter(msg => msg.id !== mensagemAtualizada.id));
           }
         }
       )
@@ -262,11 +280,34 @@ export const useMensagens = (conversaId: string | null) => {
     }
   };
 
+  const deletarMensagem = async (mensagemId: string): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+      const { error } = await supabase
+        .from('mensagens')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', mensagemId)
+        .eq('remetente_id', user.id); // Garante que só pode deletar própria mensagem
+
+      if (error) throw error;
+
+      // Atualização otimista: remove a mensagem localmente
+      setMensagens(prev => prev.filter(msg => msg.id !== mensagemId));
+
+      return true;
+    } catch (error) {
+      console.error('Erro ao deletar mensagem:', error);
+      return false;
+    }
+  };
+
   return {
     mensagens,
     loading,
     sending,
     enviarMensagem,
+    deletarMensagem,
     refetch: fetchMensagens,
   };
 };

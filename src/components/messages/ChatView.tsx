@@ -1,12 +1,22 @@
 // src/components/messages/ChatView.tsx
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Send, Loader2, Smile, ShieldAlert } from 'lucide-react';
+import { Send, Loader2, Smile, ShieldAlert, Trash2 } from 'lucide-react';
 import { useMensagens } from '@/hooks/useMensagens';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 
 export interface ConversaUI {
@@ -48,7 +58,9 @@ export const ChatView = ({ conversa, onEditGroup }: ChatViewProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isInitialLoad = useRef(true);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { mensagens, loading, sending, enviarMensagem } = useMensagens(conversa.id);
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
+  const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+  const { mensagens, loading, sending, enviarMensagem, deletarMensagem } = useMensagens(conversa.id);
 
   const ADMIN_USER_ID = import.meta.env.VITE_ADMIN_USER_ID;
   const isReadOnly = conversa.outroParticipanteId === ADMIN_USER_ID;
@@ -93,6 +105,23 @@ export const ChatView = ({ conversa, onEditGroup }: ChatViewProps) => {
     }
   };
 
+  const handleDeleteMessage = (messageId: string) => {
+    setMessageToDelete(messageId);
+  };
+
+  const confirmDelete = async () => {
+    if (!messageToDelete) return;
+
+    setDeletingMessageId(messageToDelete);
+    await deletarMensagem(messageToDelete);
+    setDeletingMessageId(null);
+    setMessageToDelete(null);
+  };
+
+  const cancelDelete = () => {
+    setMessageToDelete(null);
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-full">
@@ -120,16 +149,16 @@ export const ChatView = ({ conversa, onEditGroup }: ChatViewProps) => {
             {mensagens.map((msg) => (
               <div
                 key={msg.id}
-                className={`flex ${msg.isMine ? 'justify-end' : 'justify-start'} gap-2`}
+                className={`flex ${msg.isMine ? 'justify-end' : 'justify-start'} gap-2 group`}
               >
                 {!msg.isMine && (
                   <Avatar className="h-8 w-8">
-                    <AvatarImage 
+                    <AvatarImage
                       src={
                         conversa.isGroup && msg.remetente?.avatar_url
                           ? msg.remetente.avatar_url
                           : conversa.avatar.url
-                      } 
+                      }
                       alt={
                         conversa.isGroup && msg.remetente?.nome
                           ? msg.remetente.nome
@@ -138,7 +167,7 @@ export const ChatView = ({ conversa, onEditGroup }: ChatViewProps) => {
                     />
                     <AvatarFallback
                       style={{
-                        backgroundColor: 
+                        backgroundColor:
                           conversa.isGroup && msg.remetente?.avatar_color
                             ? msg.remetente.avatar_color
                             : conversa.avatar.color || '#ccc',
@@ -154,26 +183,43 @@ export const ChatView = ({ conversa, onEditGroup }: ChatViewProps) => {
                     </AvatarFallback>
                   </Avatar>
                 )}
-                <div
-                  className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                    msg.isMine
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
-                  }`}
-                >
-                  {!msg.isMine && conversa.isGroup && msg.remetente && (
-                    <p className="text-xs font-bold text-primary mb-1">
-                      {msg.remetente.nome}
-                    </p>
-                  )}
-                  <p className="whitespace-pre-wrap break-words">{msg.conteudo}</p>
-                  <p
-                    className={`text-xs mt-1 ${
-                      msg.isMine ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                <div className="flex items-start gap-2">
+                  <div
+                    className={`max-w-[70%] rounded-lg px-4 py-2 ${
+                      msg.isMine
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted'
                     }`}
                   >
-                    {formatMessageTime(msg.created_at)}
-                  </p>
+                    {!msg.isMine && conversa.isGroup && msg.remetente && (
+                      <p className="text-xs font-bold text-primary mb-1">
+                        {msg.remetente.nome}
+                      </p>
+                    )}
+                    <p className="whitespace-pre-wrap break-words">{msg.conteudo}</p>
+                    <p
+                      className={`text-xs mt-1 ${
+                        msg.isMine ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                      }`}
+                    >
+                      {formatMessageTime(msg.created_at)}
+                    </p>
+                  </div>
+                  {msg.isMine && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => handleDeleteMessage(msg.id)}
+                      disabled={deletingMessageId === msg.id}
+                    >
+                      {deletingMessageId === msg.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      )}
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}
@@ -216,6 +262,23 @@ export const ChatView = ({ conversa, onEditGroup }: ChatViewProps) => {
           </Button>
         </div>
       )}
+
+      <AlertDialog open={messageToDelete !== null} onOpenChange={(open) => !open && cancelDelete()}>
+        <AlertDialogContent className="z-[250]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apagar mensagem?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta mensagem será apagada para todos. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelDelete}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Apagar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
