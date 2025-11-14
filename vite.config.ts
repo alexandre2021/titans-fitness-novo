@@ -75,6 +75,12 @@ export default defineConfig({
             type: 'image/png',
             purpose: 'any maskable',
           },
+          {
+            src: 'pwa-192x192.png',
+            sizes: '96x96',
+            type: 'image/png',
+            purpose: 'monochrome',
+          },
         ],
       },
     }),

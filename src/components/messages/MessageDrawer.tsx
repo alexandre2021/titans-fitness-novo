@@ -124,6 +124,20 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right', onUnreadCountCha
   // Handler para ativar notificações
   const handleEnableNotifications = async () => {
     console.log('🔔 [MessageDrawer] Botão "Ativar agora" clicado');
+
+    // Verifica se as notificações foram negadas
+    if (permission === 'denied') {
+      alert(
+        'Notificações bloqueadas!\n\n' +
+        'Para ativar:\n' +
+        '1. Clique no ícone de cadeado/informações na barra de endereço\n' +
+        '2. Encontre "Notificações"\n' +
+        '3. Altere para "Permitir"\n' +
+        '4. Recarregue a página'
+      );
+      return;
+    }
+
     try {
       const success = await subscribe();
       console.log('🔔 [MessageDrawer] Resultado:', success);
@@ -132,11 +146,22 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right', onUnreadCountCha
         console.log('✅ [MessageDrawer] Banner ocultado');
       } else {
         console.error('❌ [MessageDrawer] Falha ao ativar notificações');
-        alert('Não foi possível ativar as notificações. Verifique as permissões do navegador.');
+        alert(
+          'Não foi possível ativar as notificações.\n\n' +
+          'Possíveis causas:\n' +
+          '• Permissão bloqueada no navegador\n' +
+          '• Service Worker não está ativo\n' +
+          '• Conexão instável\n\n' +
+          'Tente recarregar a página ou verifique as configurações do navegador.'
+        );
       }
     } catch (error) {
       console.error('❌ [MessageDrawer] Erro ao ativar:', error);
-      alert('Erro ao ativar notificações: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+      alert(
+        'Erro ao ativar notificações:\n\n' +
+        (error instanceof Error ? error.message : 'Erro desconhecido') +
+        '\n\nTente recarregar a página.'
+      );
     }
   };
 
