@@ -203,6 +203,7 @@ export const useNotificationPermission = (): UseNotificationPermissionReturn => 
 
       console.log('✅ [subscribe] Salvo no Supabase com sucesso!');
       setIsSubscribed(true);
+      setPermission('granted'); // Atualiza estado imediatamente
       return true;
     } catch (error) {
       console.error('❌ [subscribe] Erro ao registrar subscription:', error);

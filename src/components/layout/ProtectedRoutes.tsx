@@ -120,13 +120,13 @@ const ProtectedRoutes = () => {
             <Suspense fallback={null}>
               <MessagesButton
                 onClick={() => setMessagesDrawerOpen(true)}
-                position="bottom-left"
                 unreadCount={unreadCount}
               />
               <MessagesDrawer
                 isOpen={isMessagesDrawerOpen}
                 onClose={handleDrawerClose}
                 direction="left"
+                onUnreadCountChange={setUnreadCount}
               />
             </Suspense>
           </>
@@ -147,13 +147,13 @@ const ProtectedRoutes = () => {
           <Suspense fallback={null}>
             <MessagesButton
               onClick={() => setMessagesDrawerOpen(true)}
-              position="top-right"
               unreadCount={unreadCount}
             />
             <MessagesDrawer
               isOpen={isMessagesDrawerOpen}
               onClose={handleDrawerClose}
               direction="right"
+              onUnreadCountChange={setUnreadCount}
             />
           </Suspense>
         </>

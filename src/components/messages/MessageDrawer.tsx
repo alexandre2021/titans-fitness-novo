@@ -111,18 +111,32 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right', onUnreadCountCha
 
   // Verificar se deve mostrar banner de notificações
   useEffect(() => {
+    console.log('🔔 [MessageDrawer] useEffect - isOpen:', isOpen, 'isSupported:', isSupported, 'permission:', permission);
     if (isOpen && isSupported && permission !== 'granted') {
+      console.log('🔔 [MessageDrawer] Mostrando banner de notificações');
       setShowNotificationBanner(true);
     } else {
+      console.log('🔔 [MessageDrawer] Ocultando banner de notificações');
       setShowNotificationBanner(false);
     }
   }, [isOpen, isSupported, permission]);
 
   // Handler para ativar notificações
   const handleEnableNotifications = async () => {
-    const success = await subscribe();
-    if (success) {
-      setShowNotificationBanner(false);
+    console.log('🔔 [MessageDrawer] Botão "Ativar agora" clicado');
+    try {
+      const success = await subscribe();
+      console.log('🔔 [MessageDrawer] Resultado:', success);
+      if (success) {
+        setShowNotificationBanner(false);
+        console.log('✅ [MessageDrawer] Banner ocultado');
+      } else {
+        console.error('❌ [MessageDrawer] Falha ao ativar notificações');
+        alert('Não foi possível ativar as notificações. Verifique as permissões do navegador.');
+      }
+    } catch (error) {
+      console.error('❌ [MessageDrawer] Erro ao ativar:', error);
+      alert('Erro ao ativar notificações: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
     }
   };
 
@@ -402,9 +416,15 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right', onUnreadCountCha
                           Receba alertas quando receber novas mensagens, mesmo com o app fechado.
                         </p>
                         <Button
-                          onClick={handleEnableNotifications}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('🔔 [Button] onClick disparado!');
+                            handleEnableNotifications();
+                          }}
                           disabled={isLoadingNotification}
                           size="sm"
+                          type="button"
                           className="mt-2 bg-amber-600 hover:bg-amber-700 text-white"
                         >
                           {isLoadingNotification ? (

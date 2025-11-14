@@ -29,17 +29,17 @@ const MessagesButton = ({ onClick, unreadCount }: MessagesButtonProps) => {
       >
         <MessageSquare />
 
-        {/* Badge de mensagens não lidas */}
+        {/* Badge de mensagens não lidas - canto superior direito */}
         {unreadCount != null && unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
             {unreadCount}
           </span>
         )}
 
-        {/* Badge de alerta de notificações desabilitadas */}
-        {showNotificationAlert && unreadCount === 0 && (
+        {/* Badge de alerta de notificações desabilitadas - canto inferior direito */}
+        {showNotificationAlert && (
           <span
-            className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-white"
+            className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-white shadow-md"
             title="Notificações desabilitadas"
           >
             <BellOff className="h-3 w-3" />
