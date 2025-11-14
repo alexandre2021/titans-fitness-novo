@@ -74,11 +74,23 @@ const NotificationPermissionPrompt = () => {
    * Handler para aceitar notificações
    */
   const handleAccept = async () => {
-    const success = await subscribe();
-    if (success) {
-      setShowPrompt(false);
-      // Remove do storage se aceitar
-      localStorage.removeItem(STORAGE_KEY);
+    try {
+      console.log('🔔 Tentando ativar notificações...');
+      const success = await subscribe();
+      console.log('🔔 Resultado da subscrição:', success);
+
+      if (success) {
+        setShowPrompt(false);
+        // Remove do storage se aceitar
+        localStorage.removeItem(STORAGE_KEY);
+        console.log('✅ Notificações ativadas com sucesso!');
+      } else {
+        console.error('❌ Falha ao ativar notificações');
+        alert('Não foi possível ativar as notificações. Por favor, tente novamente ou ative manualmente nas configurações do navegador.');
+      }
+    } catch (error) {
+      console.error('❌ Erro ao ativar notificações:', error);
+      alert('Erro ao ativar notificações: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
     }
   };
 

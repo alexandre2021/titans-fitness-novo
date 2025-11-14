@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { X, ArrowLeft, Loader2, Search, Users, Settings, ShieldAlert } from "lucide-react";
+import { X, ArrowLeft, Loader2, Search, Users, Settings, ShieldAlert, Bell } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "../ui/input";
@@ -10,6 +10,7 @@ import { CreateGroupView } from "./CreateGroupView";
 import { GroupInfoView } from "./GroupInfoView";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "../ui/card";
+import { useNotificationPermission } from "@/hooks/useNotificationPermission";
 
 export interface ConversaUI {
   id: string;
@@ -102,7 +103,28 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right', onUnreadCountCha
   const [adminConversation, setAdminConversation] = useState<ConversaUI | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Hook de notificações
+  const { permission, isSupported, subscribe, isLoading: isLoadingNotification } = useNotificationPermission();
+  const [showNotificationBanner, setShowNotificationBanner] = useState(false);
+
   const isProfessor = user?.user_metadata?.user_type === 'professor';
+
+  // Verificar se deve mostrar banner de notificações
+  useEffect(() => {
+    if (isOpen && isSupported && permission !== 'granted') {
+      setShowNotificationBanner(true);
+    } else {
+      setShowNotificationBanner(false);
+    }
+  }, [isOpen, isSupported, permission]);
+
+  // Handler para ativar notificações
+  const handleEnableNotifications = async () => {
+    const success = await subscribe();
+    if (success) {
+      setShowNotificationBanner(false);
+    }
+  };
 
   const fetchConversas = useCallback(async () => {
     if (!user) return;
@@ -342,7 +364,7 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right', onUnreadCountCha
               {/* 1. Card Fixo do Administrador */}
               {adminConversation && (
                 <div className="p-4 border-b">
-                  <Card 
+                  <Card
                     className="bg-blue-50 border-blue-200 hover:bg-blue-100 cursor-pointer transition-colors"
                     onClick={() => handleConversationClick(adminConversation)}
                   >
@@ -362,6 +384,51 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right', onUnreadCountCha
                       )}
                     </div>
                   </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {/* 1.5. Banner de Notificações */}
+              {showNotificationBanner && (
+                <div className="p-4 border-b">
+                  <Card className="bg-amber-50 border-amber-200">
+                    <CardContent className="p-3 flex items-start gap-3">
+                      <div className="flex-shrink-0 h-10 w-10 rounded-full bg-amber-500 flex items-center justify-center">
+                        <Bell className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-amber-900 text-sm">Ative as notificações</p>
+                        <p className="text-xs text-amber-700 mt-1">
+                          Receba alertas quando receber novas mensagens, mesmo com o app fechado.
+                        </p>
+                        <Button
+                          onClick={handleEnableNotifications}
+                          disabled={isLoadingNotification}
+                          size="sm"
+                          className="mt-2 bg-amber-600 hover:bg-amber-700 text-white"
+                        >
+                          {isLoadingNotification ? (
+                            <>
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              Ativando...
+                            </>
+                          ) : (
+                            <>
+                              <Bell className="h-3 w-3 mr-1" />
+                              Ativar agora
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowNotificationBanner(false)}
+                        className="h-6 w-6 p-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </CardContent>
                   </Card>
                 </div>
               )}

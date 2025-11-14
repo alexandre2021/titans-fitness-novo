@@ -136,40 +136,56 @@ export const useNotificationPermission = (): UseNotificationPermissionReturn => 
    * Registra uma nova subscription
    */
   const subscribe = useCallback(async (): Promise<boolean> => {
+    console.log('🔔 [subscribe] Iniciando processo...');
+    console.log('🔔 [subscribe] isSupported:', isSupported);
+    console.log('🔔 [subscribe] user:', user?.id);
+
     if (!isSupported || !user) {
+      console.error('❌ [subscribe] Navegador não suportado ou usuário não logado');
       return false;
     }
 
     if (!VAPID_PUBLIC_KEY) {
-      console.error('VAPID_PUBLIC_KEY não configurada');
+      console.error('❌ [subscribe] VAPID_PUBLIC_KEY não configurada');
       return false;
     }
 
+    console.log('🔔 [subscribe] VAPID_PUBLIC_KEY:', VAPID_PUBLIC_KEY.substring(0, 20) + '...');
     setIsLoading(true);
 
     try {
       // Primeiro, garante que tem permissão
+      console.log('🔔 [subscribe] Solicitando permissão...');
       const hasPermission = await requestPermission();
+      console.log('🔔 [subscribe] Permissão concedida:', hasPermission);
+
       if (!hasPermission) {
+        console.error('❌ [subscribe] Permissão negada pelo usuário');
         return false;
       }
 
       // Aguarda o service worker estar pronto
+      console.log('🔔 [subscribe] Aguardando Service Worker...');
       const registration = await navigator.serviceWorker.ready;
+      console.log('✅ [subscribe] Service Worker pronto');
 
       // Verifica se já existe uma subscription
       let subscription = await registration.pushManager.getSubscription();
+      console.log('🔔 [subscribe] Subscription existente:', !!subscription);
 
       // Se não existe, cria uma nova
       if (!subscription) {
+        console.log('🔔 [subscribe] Criando nova subscription...');
         const vapidKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
         subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: vapidKey as unknown as BufferSource,
         });
+        console.log('✅ [subscribe] Subscription criada:', subscription.endpoint);
       }
 
       // Salva no Supabase
+      console.log('🔔 [subscribe] Salvando no Supabase...');
       const { error } = await supabase
         .from('push_subscriptions')
         .upsert({
@@ -180,12 +196,16 @@ export const useNotificationPermission = (): UseNotificationPermissionReturn => 
           onConflict: 'endpoint'
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [subscribe] Erro ao salvar no Supabase:', error);
+        throw error;
+      }
 
+      console.log('✅ [subscribe] Salvo no Supabase com sucesso!');
       setIsSubscribed(true);
       return true;
     } catch (error) {
-      console.error('Erro ao registrar subscription:', error);
+      console.error('❌ [subscribe] Erro ao registrar subscription:', error);
       return false;
     } finally {
       setIsLoading(false);
