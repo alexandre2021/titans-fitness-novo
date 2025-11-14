@@ -3,6 +3,8 @@
  * Executa as queries de verificação via Supabase client
  */
 
+/* eslint-disable */
+
 import { createClient } from '@supabase/supabase-js';
 import 'dotenv/config';
 

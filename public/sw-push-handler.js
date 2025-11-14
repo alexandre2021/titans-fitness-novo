@@ -16,8 +16,8 @@ self.addEventListener('push', (event) => {
 
     const options = {
       body: data.body,
-      icon: data.icon || '/pwa-512x512.png', // Ícone grande e colorido
-      badge: data.badge || '/favicon.png', // Badge monocromático pequeno (barra superior)
+      icon: data.icon || '/pwa-512x512.png', // Ícone grande e colorido (notificação expandida)
+      badge: data.badge || '/pwa-192x192.png', // Badge para barra superior do Android
       image: data.image, // Imagem grande (opcional)
       data: data.data || {},
       tag: data.tag || 'message-notification',
