@@ -42,7 +42,6 @@ BEGIN
           'title', 'Nova mensagem',
           'body', sender_name || ': ' || LEFT(NEW.conteudo, 50) || CASE WHEN LENGTH(NEW.conteudo) > 50 THEN '...' ELSE '' END,
           'icon', '/pwa-512x512.png',
-          'badge', '/notification-badge.svg',
           'tag', 'message-' || NEW.conversa_id,
           'data', jsonb_build_object(
             'url', '/mensagens-pt',

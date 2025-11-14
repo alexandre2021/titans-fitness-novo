@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Criar Badge de Notificação</title>
+</head>
+<body>
+    <canvas id="canvas" width="96" height="96"></canvas>
+    <br>
+    <button onclick="downloadBadge()">Download Badge (PNG)</button>
+    <script>
+        // Cria badge monocromático (ícone de mensagem branco, fundo transparente)
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Fundo transparente
+        ctx.clearRect(0, 0, 96, 96);
+
+        // Desenha ícone de mensagem em branco
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+
+        // Retângulo arredondado (balão de mensagem)
+        const x = 12;
+        const y = 16;
+        const width = 72;
+        const height = 52;
+        const radius = 8;
+
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+        ctx.lineTo(x + width, y + height - radius);
+        ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        ctx.lineTo(x + radius, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
+        ctx.fill();
+
+        // Triangulozinho (ponta do balão) - canto inferior esquerdo
+        ctx.beginPath();
+        ctx.moveTo(20, 68);
+        ctx.lineTo(28, 68);
+        ctx.lineTo(16, 80);
+        ctx.closePath();
+        ctx.fill();
+
+        function downloadBadge() {
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'notification-badge.png';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+
+        // Download automático
+        setTimeout(() => {
+            console.log('Badge criado! Clique no botão para baixar.');
+        }, 100);
+    </script>
+</body>
+</html>
