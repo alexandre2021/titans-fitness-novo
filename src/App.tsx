@@ -76,6 +76,7 @@ import ExecucaoExecutarTreino from "./pages/ExecucaoExecutarTreino";
 // IMPORTAÇÕES PARA PWA
 import PwaUpdateNotification from "@/components/pwa/PwaUpdateNotification";
 import PwaInstallPrompt from "@/components/pwa/PwaInstallPrompt";
+import NotificationPermissionPrompt from "@/components/notifications/NotificationPermissionPrompt";
 import AdminPostGuard from "./components/auth/AdminPostGuard";
 import Calendario from "./pages/Calendario";
 import Professores from "./pages/Professores";
@@ -205,6 +206,7 @@ const App = () => {
           <RouterProvider router={router} />
           <PwaUpdateNotification />
           <PwaInstallPrompt />
+          <NotificationPermissionPrompt />
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>

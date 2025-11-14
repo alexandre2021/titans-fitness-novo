@@ -19,17 +19,18 @@ const MessagesButton = lazy(() => import('@/components/messages/MessageButton'))
 // A funcionalidade do assistente de IA foi pausada, então o componente não é mais renderizado.
 // import HelpChat from "@/pages/HelpChat";
 
-const PTLayout = lazy(() => import('./PTLayout'));
-const AlunoLayout = lazy(() => import('./AlunoLayout'));
-
 const ProtectedRoutes = () => {
   const { user, loading: authLoading } = useAuth();
   const [userType, setUserType] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const location = useLocation();
   const isMobile = useMediaQuery("(max-width: 767px)");
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isMessagesDrawerOpen, setMessagesDrawerOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  const handleDrawerClose = () => {
+    setMessagesDrawerOpen(false);
+  };
 
   useEffect(() => {
     const determineUserType = async () => {
@@ -85,24 +86,83 @@ const ProtectedRoutes = () => {
     );
   }
 
+  if (!user) {
+    return null;
+  }
+
+  const isFocusedMode =
+    location.pathname.startsWith('/rotinas-criar/') ||
+    location.pathname.startsWith('/execucao-rotina/executar-treino/');
+
+  let Sidebar, MobileHeader, BottomNav;
+
   switch (userType) {
     case 'aluno':
-      return (
-        <Suspense fallback={<div>Carregando layout do aluno...</div>}>
-          <AlunoLayout />
-        </Suspense>
-      );
+      Sidebar = AlunoSidebar;
+      MobileHeader = AlunoMobileHeader;
+      BottomNav = AlunoBottomNav;
+      break;
     case 'professor':
-      return (
-        <Suspense fallback={<div>Carregando layout do professor...</div>}>
-          <PTLayout />
-        </Suspense>
-      );
+      Sidebar = PTSidebar;
+      MobileHeader = PTMobileHeader;
+      BottomNav = PTBottomNav;
+      break;
     default:
-      // Se não for aluno nem professor, ou para rotas que não precisam de layout,
-      // apenas renderiza o Outlet para que as rotas filhas possam ser exibidas.
       return <Outlet />;
   }
+
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-background">
+        {!isFocusedMode && (
+          <>
+            <MobileHeader />
+            <Suspense fallback={null}>
+              <MessagesButton
+                onClick={() => setMessagesDrawerOpen(true)}
+                position="bottom-left"
+                unreadCount={unreadCount}
+              />
+              <MessagesDrawer
+                isOpen={isMessagesDrawerOpen}
+                onClose={handleDrawerClose}
+                direction="left"
+              />
+            </Suspense>
+          </>
+        )}
+        <main className={`p-4 ${isFocusedMode ? 'pt-6' : 'pt-20 pb-16'}`}>
+          <Outlet />
+        </main>
+        {!isFocusedMode && <BottomNav />}
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      {!isFocusedMode && (
+        <>
+          <Sidebar />
+          <Suspense fallback={null}>
+            <MessagesButton
+              onClick={() => setMessagesDrawerOpen(true)}
+              position="top-right"
+              unreadCount={unreadCount}
+            />
+            <MessagesDrawer
+              isOpen={isMessagesDrawerOpen}
+              onClose={handleDrawerClose}
+              direction="right"
+            />
+          </Suspense>
+        </>
+      )}
+      <main className={`flex-1 p-6 ${!isFocusedMode ? 'pl-72' : ''}`}>
+        <Outlet />
+      </main>
+    </div>
+  );
 };
 
 export default ProtectedRoutes;
