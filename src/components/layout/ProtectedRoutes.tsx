@@ -32,6 +32,22 @@ const ProtectedRoutes = () => {
     setMessagesDrawerOpen(false);
   };
 
+  // Listener para abrir drawer quando notificação é clicada
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'OPEN_MESSAGES_DRAWER') {
+        console.log('📬 Abrindo drawer de mensagens via notificação');
+        setMessagesDrawerOpen(true);
+      }
+    };
+
+    navigator.serviceWorker?.addEventListener('message', handleMessage);
+
+    return () => {
+      navigator.serviceWorker?.removeEventListener('message', handleMessage);
+    };
+  }, []);
+
   useEffect(() => {
     const determineUserType = async () => {
       if (authLoading) {

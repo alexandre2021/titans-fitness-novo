@@ -17,7 +17,7 @@ self.addEventListener('push', (event) => {
     const options = {
       body: data.body,
       icon: data.icon || '/pwa-512x512.png', // Ícone grande e colorido (notificação expandida)
-      badge: data.badge || '/pwa-192x192.png', // Badge para barra superior do Android
+      badge: data.badge || '/notification-badge.svg', // Badge monocromático para barra superior
       image: data.image, // Imagem grande (opcional)
       data: data.data || {},
       tag: data.tag || 'message-notification',
@@ -51,24 +51,22 @@ self.addEventListener('notificationclick', (event) => {
       // Se já existe uma janela aberta, foca nela
       for (const client of clientList) {
         if (client.url.includes(self.registration.scope) && 'focus' in client) {
-          return client.focus().then((client) => {
-            // Navega para a URL da notificação se disponível
-            if (event.notification.data && event.notification.data.url) {
-              const url = event.notification.data.url;
-              // Se a URL for relativa, adiciona o scope
-              const targetUrl = url.startsWith('/') ? self.registration.scope + url.substring(1) : url;
-              return client.navigate(targetUrl);
-            }
-            return client;
+          return client.focus().then((focusedClient) => {
+            // Envia mensagem para o cliente abrir o drawer de mensagens
+            focusedClient.postMessage({
+              type: 'OPEN_MESSAGES_DRAWER',
+              data: event.notification.data
+            });
+            return focusedClient;
           });
         }
       }
 
-      // Se não existe janela aberta, abre uma nova
+      // Se não existe janela aberta, abre uma nova na home
       if (clients.openWindow) {
-        const url = event.notification.data?.url || '/';
-        const targetUrl = url.startsWith('/') ? self.registration.scope + url.substring(1) : url;
-        return clients.openWindow(targetUrl);
+        // Abre na rota principal (index-professor ou index-aluno)
+        // O MessageDrawer pode ser aberto depois via postMessage
+        return clients.openWindow(self.registration.scope);
       }
     })
   );
