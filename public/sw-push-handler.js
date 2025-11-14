@@ -16,13 +16,20 @@ self.addEventListener('push', (event) => {
 
     const options = {
       body: data.body,
-      icon: data.icon || '/pwa-192x192.png',
-      badge: data.badge || '/pwa-192x192.png',
+      icon: data.icon || '/pwa-512x512.png', // Ícone grande e colorido
+      badge: data.badge || '/favicon.png', // Badge monocromático pequeno (barra superior)
+      image: data.image, // Imagem grande (opcional)
       data: data.data || {},
-      tag: data.tag || 'notification',
+      tag: data.tag || 'message-notification',
+      renotify: true, // Re-notifica se já existe uma com a mesma tag
       requireInteraction: false,
-      vibrate: [200, 100, 200],
+      vibrate: [200, 100, 200, 100, 200], // Padrão de vibração personalizado
+      silent: false,
       actions: data.actions || [],
+      // Propriedades visuais adicionais
+      dir: 'auto',
+      lang: 'pt-BR',
+      timestamp: Date.now(),
     };
 
     event.waitUntil(
