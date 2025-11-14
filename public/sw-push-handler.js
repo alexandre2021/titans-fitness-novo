@@ -62,11 +62,12 @@ self.addEventListener('notificationclick', (event) => {
         }
       }
 
-      // Se não existe janela aberta, abre uma nova na home
+      // Se não existe janela aberta, abre uma nova com parâmetro especial
       if (clients.openWindow) {
-        // Abre na rota principal (index-professor ou index-aluno)
-        // O MessageDrawer pode ser aberto depois via postMessage
-        return clients.openWindow(self.registration.scope);
+        // Adiciona parâmetro para indicar que veio de notificação
+        const url = new URL(self.registration.scope);
+        url.searchParams.set('openMessages', 'true');
+        return clients.openWindow(url.toString());
       }
     })
   );

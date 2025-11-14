@@ -48,6 +48,21 @@ const ProtectedRoutes = () => {
     };
   }, []);
 
+  // Detecta se veio de notificação via URL e abre o drawer após login
+  useEffect(() => {
+    if (!authLoading && user) {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('openMessages') === 'true') {
+        console.log('📬 Abrindo drawer - usuário veio de notificação');
+        setMessagesDrawerOpen(true);
+        // Remove o parâmetro da URL
+        params.delete('openMessages');
+        const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+  }, [authLoading, user]);
+
   useEffect(() => {
     const determineUserType = async () => {
       if (authLoading) {
