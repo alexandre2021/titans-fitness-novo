@@ -196,7 +196,7 @@ export const ChatView = ({ conversa, onEditGroup }: ChatViewProps) => {
                         {msg.remetente.nome}
                       </p>
                     )}
-                    <p style={{ wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'pre-wrap' }}>{msg.conteudo}</p>
+                    <p style={{ wordBreak: 'normal', overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' }}>{msg.conteudo}</p>
                     <p
                       className={`text-xs mt-1 ${
                         msg.isMine ? 'text-primary-foreground/70' : 'text-muted-foreground'
