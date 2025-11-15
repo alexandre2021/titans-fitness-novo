@@ -1,12 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { VAPID_PUBLIC_KEY } from '@/config/vapid';
 
-// VAPID Public Key - deve ser gerada com: npx web-push generate-vapid-keys
-// Será configurada como variável de ambiente
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
-
-// Debug: Log para verificar se a variável está sendo injetada no build
+// Debug: Log para verificar se a variável está sendo carregada
 console.log('🔑 VAPID_PUBLIC_KEY carregada:', VAPID_PUBLIC_KEY ? `${VAPID_PUBLIC_KEY.substring(0, 20)}...` : 'undefined');
 
 export type NotificationPermissionState = 'default' | 'granted' | 'denied' | 'unsupported';
