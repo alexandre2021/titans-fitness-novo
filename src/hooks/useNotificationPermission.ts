@@ -6,6 +6,9 @@ import { supabase } from '@/integrations/supabase/client';
 // Será configurada como variável de ambiente
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 
+// Debug: Log para verificar se a variável está sendo injetada no build
+console.log('🔑 VAPID_PUBLIC_KEY carregada:', VAPID_PUBLIC_KEY ? `${VAPID_PUBLIC_KEY.substring(0, 20)}...` : 'undefined');
+
 export type NotificationPermissionState = 'default' | 'granted' | 'denied' | 'unsupported';
 
 interface UseNotificationPermissionReturn {
