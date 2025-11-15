@@ -27,8 +27,20 @@ function PwaUpdateNotification() {
     // Isso evita recriar os listeners se a instância de `r` mudar.
     let intervalId: number | undefined;
     let registration: ServiceWorkerRegistration | undefined;
+    let lastCheckTime = 0;
+    const CHECK_COOLDOWN = 30000; // 30 segundos de cooldown entre verificações
 
     const checkForUpdate = () => {
+      const now = Date.now();
+      const timeSinceLastCheck = now - lastCheckTime;
+
+      if (timeSinceLastCheck < CHECK_COOLDOWN) {
+        console.log(`[PWA] ⏱️ Cooldown ativo. Última verificação há ${Math.round(timeSinceLastCheck / 1000)}s. Aguarde ${Math.round((CHECK_COOLDOWN - timeSinceLastCheck) / 1000)}s`);
+        return;
+      }
+
+      lastCheckTime = now;
+      console.log('[PWA] ✅ Verificando atualizações...');
       registration?.update();
     };
 
