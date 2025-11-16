@@ -61,7 +61,16 @@ export const useNotificationPermission = (): UseNotificationPermissionReturn => 
     }
 
     try {
-      const registration = await navigator.serviceWorker.ready;
+      // Timeout de 5 segundos para evitar travamento
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Service Worker timeout')), 5000)
+      );
+
+      const registration = await Promise.race([
+        navigator.serviceWorker.ready,
+        timeoutPromise
+      ]) as ServiceWorkerRegistration;
+
       const subscription = await registration.pushManager.getSubscription();
 
       setIsSubscribed(!!subscription);
@@ -103,7 +112,7 @@ export const useNotificationPermission = (): UseNotificationPermissionReturn => 
 
     setPermission(Notification.permission as NotificationPermissionState);
     checkSubscriptionStatus();
-  }, [isSupported, checkSubscriptionStatus]);
+  }, [isSupported, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
    * Solicita permissão ao usuário

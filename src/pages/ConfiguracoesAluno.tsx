@@ -1,4 +1,4 @@
-// src/pages/ConfiguracoesPT.tsx
+// src/pages/ConfiguracoesAluno.tsx
 
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +8,7 @@ import { Bell, BellOff, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNotificationPermission } from '@/hooks/useNotificationPermission';
 
-const ConfiguracoesPT = () => {
+const ConfiguracoesAluno = () => {
   const {
     permission,
     isSubscribed,
@@ -98,7 +98,7 @@ const ConfiguracoesPT = () => {
             Notificações
           </CardTitle>
           <CardDescription>
-            Receba notificações sobre novas mensagens de alunos
+            Receba notificações sobre novas mensagens dos seus professores
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -180,4 +180,4 @@ const ConfiguracoesPT = () => {
   );
 };
 
-export default ConfiguracoesPT;
+export default ConfiguracoesAluno;

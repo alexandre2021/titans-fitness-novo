@@ -2,10 +2,10 @@
 // Esta página funciona como a tela "Mais" do aplicativo, geralmente acessada
 // por um ícone na barra de navegação principal (especialmente no mobile).
 // Ela serve para agrupar links de navegação adicionais que não cabem no menu principal.
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Link } from 'react-router-dom';
-import { ChevronRight, BookCopy, SquarePen, Home, LifeBuoy, BarChart3 } from 'lucide-react';
+import { ChevronRight, BookCopy, SquarePen, Home, LifeBuoy, BarChart3, Settings } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const Mais = () => {
@@ -53,11 +53,16 @@ const Mais = () => {
       baseProfessorLinks.splice(avaliacoesIndex + 1, 0, { href: "/meus-posts", label: "Meus Posts", icon: SquarePen });
     }
   }
-  baseProfessorLinks.push({ href: "/app/ajuda", label: "Central de Ajuda", icon: LifeBuoy }, { href: "/", label: "Home", icon: Home });
-  
+  baseProfessorLinks.push(
+    { href: "/configuracoes-pt", label: "Configurações", icon: Settings },
+    { href: "/app/ajuda", label: "Central de Ajuda", icon: LifeBuoy },
+    { href: "/", label: "Home", icon: Home }
+  );
+
   const professorLinks = baseProfessorLinks;
 
   const alunoLinks = [
+    { href: "/configuracoes-aluno", label: "Configurações", icon: Settings },
     { href: "/app/ajuda", label: "Central de Ajuda", icon: LifeBuoy },
     { href: "/", label: "Home", icon: Home },
   ];

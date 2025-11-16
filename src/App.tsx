@@ -35,6 +35,7 @@ import AgendaPT from "./pages/AgendaPT";
 import MensagensPT from "./pages/MensagensPT";
 import PerfilPT from "./pages/PerfilPT";
 import ConfiguracoesPT from "./pages/ConfiguracoesPT";
+import ConfiguracoesAluno from "./pages/ConfiguracoesAluno";
 import DetalhesAluno from "./pages/DetalhesAluno";
 import AlunosParQ from "./pages/AlunosParQ";
 import PaginaRotinas from "./pages/PaginaRotinas";
@@ -177,6 +178,7 @@ const router = createBrowserRouter([
           { path: "/minhas-rotinas", element: <PaginaRotinas modo="aluno" /> },
           { path: "/avaliacoes-aluno", element: <AvaliacoesAluno /> },
           { path: "/perfil-aluno", element: <PerfilAluno /> },
+          { path: "/configuracoes-aluno", element: <ConfiguracoesAluno /> },
           { 
             path: "/professores/detalhes/:id", 
             element: <DetalhesProfessor /> 
