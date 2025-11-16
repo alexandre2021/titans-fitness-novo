@@ -104,22 +104,26 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right', onUnreadCountCha
   const [searchTerm, setSearchTerm] = useState("");
 
   // Hook de notificações
-  const { permission, isSupported, subscribe, isLoading: isLoadingNotification } = useNotificationPermission();
+  const { permission, isSupported, subscribe, isLoading: isLoadingNotification, isSubscribed } = useNotificationPermission();
   const [showNotificationBanner, setShowNotificationBanner] = useState(false);
 
   const isProfessor = user?.user_metadata?.user_type === 'professor';
 
   // Verificar se deve mostrar banner de notificações
   useEffect(() => {
-    console.log('🔔 [MessageDrawer] useEffect - isOpen:', isOpen, 'isSupported:', isSupported, 'permission:', permission);
-    if (isOpen && isSupported && permission !== 'granted') {
-      console.log('🔔 [MessageDrawer] Mostrando banner de notificações');
+    console.log('🔔 [MessageDrawer] useEffect - isOpen:', isOpen, 'isSupported:', isSupported, 'permission:', permission, 'isSubscribed:', isSubscribed);
+    // Mostra o banner se: drawer está aberto, navegador suporta, tem permissão MAS não está inscrito
+    if (isOpen && isSupported && permission === 'granted' && !isSubscribed) {
+      console.log('🔔 [MessageDrawer] Mostrando banner de notificações (permissão concedida mas não inscrito)');
+      setShowNotificationBanner(true);
+    } else if (isOpen && isSupported && permission !== 'granted') {
+      console.log('🔔 [MessageDrawer] Mostrando banner de notificações (sem permissão)');
       setShowNotificationBanner(true);
     } else {
       console.log('🔔 [MessageDrawer] Ocultando banner de notificações');
       setShowNotificationBanner(false);
     }
-  }, [isOpen, isSupported, permission]);
+  }, [isOpen, isSupported, permission, isSubscribed]);
 
   // Handler para ativar notificações
   const handleEnableNotifications = async () => {
