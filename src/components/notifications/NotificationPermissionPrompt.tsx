@@ -6,8 +6,15 @@ import { useNotificationPermission } from '@/hooks/useNotificationPermission';
 import { useAuth } from '@/hooks/useAuth';
 
 const PROMPT_DELAY_MS = 30000; // 30 segundos após login
-const STORAGE_KEY = 'notification_prompt_dismissed';
+const STORAGE_KEY_PREFIX = 'notification_prompt_dismissed';
 const STORAGE_EXPIRY_DAYS = 7; // Perguntar novamente após 7 dias se negado
+
+/**
+ * Gera chave de localStorage específica para o usuário
+ */
+const getStorageKey = (userId: string): string => {
+  return `${STORAGE_KEY_PREFIX}_${userId}`;
+};
 
 /**
  * Componente que solicita permissão para notificações push
@@ -41,8 +48,9 @@ const NotificationPermissionPrompt = () => {
       return;
     }
 
-    // Verifica se usuário já dismissou recentemente
-    const dismissedData = localStorage.getItem(STORAGE_KEY);
+    // Verifica se usuário já dismissou recentemente (usando chave específica do usuário)
+    const storageKey = getStorageKey(user.id);
+    const dismissedData = localStorage.getItem(storageKey);
     if (dismissedData) {
       try {
         const { timestamp, count } = JSON.parse(dismissedData);
@@ -74,6 +82,8 @@ const NotificationPermissionPrompt = () => {
    * Handler para aceitar notificações
    */
   const handleAccept = async () => {
+    if (!user) return;
+
     try {
       console.log('🔔 Tentando ativar notificações...');
       const success = await subscribe();
@@ -81,8 +91,9 @@ const NotificationPermissionPrompt = () => {
 
       if (success) {
         setShowPrompt(false);
-        // Remove do storage se aceitar
-        localStorage.removeItem(STORAGE_KEY);
+        // Remove do storage se aceitar (usando chave específica do usuário)
+        const storageKey = getStorageKey(user.id);
+        localStorage.removeItem(storageKey);
         console.log('✅ Notificações ativadas com sucesso!');
       } else {
         console.error('❌ Falha ao ativar notificações');
@@ -98,10 +109,13 @@ const NotificationPermissionPrompt = () => {
    * Handler para recusar/adiar notificações
    */
   const handleDismiss = () => {
+    if (!user) return;
+
     setShowPrompt(false);
 
-    // Incrementa contador de dismisses
-    const dismissedData = localStorage.getItem(STORAGE_KEY);
+    // Incrementa contador de dismisses (usando chave específica do usuário)
+    const storageKey = getStorageKey(user.id);
+    const dismissedData = localStorage.getItem(storageKey);
     let count = 1;
 
     if (dismissedData) {
@@ -114,7 +128,7 @@ const NotificationPermissionPrompt = () => {
     }
 
     localStorage.setItem(
-      STORAGE_KEY,
+      storageKey,
       JSON.stringify({
         timestamp: Date.now(),
         count,

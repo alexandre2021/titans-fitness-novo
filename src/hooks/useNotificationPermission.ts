@@ -15,6 +15,7 @@ interface UseNotificationPermissionReturn {
   requestPermission: () => Promise<boolean>;
   subscribe: () => Promise<boolean>;
   unsubscribe: () => Promise<boolean>;
+  cleanupOnLogout: () => Promise<void>;
   isSupported: boolean;
 }
 
@@ -248,6 +249,30 @@ export const useNotificationPermission = (): UseNotificationPermissionReturn => 
     }
   }, [isSupported, user]);
 
+  /**
+   * Limpa subscription do usuário no logout (sem precisar de permissão)
+   * Apenas remove do banco de dados
+   */
+  const cleanupOnLogout = useCallback(async (): Promise<void> => {
+    if (!user) {
+      return;
+    }
+
+    try {
+      console.log('🧹 Limpando subscriptions do usuário no logout...');
+
+      // Remove todas as subscriptions deste usuário do banco
+      await supabase
+        .from('push_subscriptions')
+        .delete()
+        .eq('user_id', user.id);
+
+      console.log('✅ Subscriptions limpas do banco de dados');
+    } catch (error) {
+      console.error('❌ Erro ao limpar subscriptions no logout:', error);
+    }
+  }, [user]);
+
   return {
     permission,
     isSubscribed,
@@ -255,6 +280,7 @@ export const useNotificationPermission = (): UseNotificationPermissionReturn => 
     requestPermission,
     subscribe,
     unsubscribe,
+    cleanupOnLogout,
     isSupported,
   };
 };

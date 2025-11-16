@@ -183,9 +183,9 @@ export const ChatView = ({ conversa, onEditGroup }: ChatViewProps) => {
                     </AvatarFallback>
                   </Avatar>
                 )}
-                <div className="flex items-start gap-2">
+                <div className="flex items-start gap-2 flex-1 min-w-0">
                   <div
-                    className={`max-w-[70%] rounded-lg px-4 py-2 ${
+                    className={`max-w-[70%] rounded-lg px-4 py-2 inline-block ${
                       msg.isMine
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-muted'
@@ -196,7 +196,7 @@ export const ChatView = ({ conversa, onEditGroup }: ChatViewProps) => {
                         {msg.remetente.nome}
                       </p>
                     )}
-                    <p style={{ wordBreak: 'normal', overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' }}>{msg.conteudo}</p>
+                    <p className="break-words whitespace-pre-wrap">{msg.conteudo}</p>
                     <p
                       className={`text-xs mt-1 ${
                         msg.isMine ? 'text-primary-foreground/70' : 'text-muted-foreground'

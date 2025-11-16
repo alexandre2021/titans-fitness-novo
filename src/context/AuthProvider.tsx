@@ -62,10 +62,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    queryClient.clear();
-    // Navegar para a landing page após o logout
-    window.location.replace('/login');
+    try {
+      // Limpa o estado local primeiro
+      setUser(null);
+      setSession(null);
+
+      // Limpa o cache do React Query
+      queryClient.clear();
+
+      // Limpa a sessão do Supabase
+      await supabase.auth.signOut();
+
+      // Aguarda um momento para garantir que a sessão foi limpa
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Redireciona para a página de login
+      window.location.replace('/login');
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      // Mesmo com erro, tenta redirecionar
+      window.location.replace('/login');
+    }
   };
 
   const value = { user, session, loading, signOut };
