@@ -76,8 +76,8 @@ export default defineConfig({
             purpose: 'any maskable',
           },
           {
-            src: 'pwa-192x192.png',
-            sizes: '96x96',
+            src: 'notification-badge.png',
+            sizes: '72x72',
             type: 'image/png',
             purpose: 'monochrome',
           },
