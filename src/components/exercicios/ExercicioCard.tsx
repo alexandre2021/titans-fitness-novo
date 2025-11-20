@@ -98,6 +98,9 @@ export const ExercicioCard = ({ exercicio, onCriarCopia, onExcluir, isAdmin, loc
   }, [isVisible, mediaUrl, isLoading, exercicio, getMediaUrl]);
 
   const handleNavigation = (path: string) => {
+    // Salva posição do scroll antes de navegar
+    sessionStorage.setItem('exercicios-scroll-position', window.scrollY.toString());
+
     const returnToUrl = encodeURIComponent(location.pathname + location.search);
     navigate(`${path}?returnTo=${returnToUrl}`);
   };

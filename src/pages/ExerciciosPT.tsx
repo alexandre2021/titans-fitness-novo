@@ -118,6 +118,15 @@ const ExerciciosPT = () => {
     }
   }, [activeTab, busca, filtros.grupoMuscular, filtros.equipamento, filtros.dificuldade, navigate, location.search]);
 
+  // Restaura posição do scroll quando volta da edição
+  useEffect(() => {
+    const savedScrollPosition = sessionStorage.getItem('exercicios-scroll-position');
+    if (savedScrollPosition) {
+      window.scrollTo(0, parseInt(savedScrollPosition));
+      sessionStorage.removeItem('exercicios-scroll-position');
+    }
+  }, []);
+
   useEffect(() => {
     const handleScroll = () => {
       setShowScrollTopButton(window.scrollY > 300);
