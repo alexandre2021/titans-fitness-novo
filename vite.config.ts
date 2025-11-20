@@ -52,7 +52,7 @@ export default defineConfig({
       },
       // Configuração explícita para desenvolvimento
       devOptions: {
-        enabled: false, // Desabilita em DEV
+        enabled: true, // Habilita em DEV para testar notificações
         type: 'module',
       },
       manifest: {

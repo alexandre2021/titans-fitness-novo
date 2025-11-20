@@ -311,7 +311,7 @@ const EditarExercicioPadrao = () => {
   const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = type === 'video' ? 'video/*' : 'image/jpeg, image/png, image/webp, image/gif';
+    input.accept = type === 'video' ? 'video/*' : 'image/jpeg, image/png, image/webp';
     if (isMobile) input.capture = type === 'video' ? 'user' : 'environment';
 
     input.onchange = async (event) => {
@@ -385,6 +385,7 @@ const EditarExercicioPadrao = () => {
 
   const uploadFile = async (file: File | string | null): Promise<string | null> => {
     if (!file || !(file instanceof File)) return null;
+
     try {
       const uniqueFilename = `padrao_${Date.now()}_${file.name.replace(/\s/g, '_')}`;
       const { data: presignedData, error: presignedError } = await supabase.functions.invoke('upload-media', {

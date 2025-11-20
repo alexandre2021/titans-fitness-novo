@@ -59,7 +59,6 @@
     "@tiptap/starter-kit": "^3.7.0",
     "@types/axios": "^0.9.36",
     "axios": "^1.11.0",
-    "browser-image-compression": "^2.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",

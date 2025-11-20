@@ -10,6 +10,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const queryClient = useQueryClient();
 
+  // Função para limpar todo o storage e cache quando detectar mudança de usuário
+  const clearAllCacheAndStorage = async () => {
+    console.log('🧹 Limpando cache e storage devido a mudança de usuário...');
+
+    // Limpa React Query cache
+    queryClient.clear();
+
+    // Limpa localStorage (exceto a chave do último usuário que vamos atualizar)
+    const keysToKeep = ['sb-prvfvlyzfyprjliqniki-auth-token'];
+    const allKeys = Object.keys(localStorage);
+    allKeys.forEach(key => {
+      if (!keysToKeep.some(keepKey => key.includes(keepKey))) {
+        localStorage.removeItem(key);
+      }
+    });
+
+    // Limpa sessionStorage
+    sessionStorage.clear();
+
+    // Limpa cache do Service Worker se disponível
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(name => caches.delete(name)));
+    }
+
+    console.log('✅ Cache e storage limpos com sucesso');
+  };
+
   useEffect(() => {
     let mounted = true;
 
@@ -31,6 +59,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error('Error getting session:', error);
         }
         if (mounted) {
+          // Detecta mudança de usuário
+          const lastUserId = localStorage.getItem('last_user_id');
+          const currentUserId = sessionData?.user?.id;
+
+          if (currentUserId && lastUserId && lastUserId !== currentUserId) {
+            console.log('🔄 Detectada mudança de usuário. Limpando cache...');
+            await clearAllCacheAndStorage();
+          }
+
+          // Atualiza o ID do último usuário
+          if (currentUserId) {
+            localStorage.setItem('last_user_id', currentUserId);
+          } else {
+            localStorage.removeItem('last_user_id');
+          }
+
           setSession(sessionData);
           setUser(sessionData?.user ?? null);
           setLoading(false);
@@ -48,6 +92,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, sessionData) => {
         if (mounted) {
+          // Detecta mudança de usuário no onChange também
+          const lastUserId = localStorage.getItem('last_user_id');
+          const currentUserId = sessionData?.user?.id;
+
+          if (currentUserId && lastUserId && lastUserId !== currentUserId) {
+            console.log('🔄 Detectada mudança de usuário. Limpando cache...');
+            await clearAllCacheAndStorage();
+          }
+
+          // Atualiza o ID do último usuário
+          if (currentUserId) {
+            localStorage.setItem('last_user_id', currentUserId);
+          } else if (_event === 'SIGNED_OUT') {
+            localStorage.removeItem('last_user_id');
+          }
+
           setSession(sessionData);
           setUser(sessionData?.user ?? null);
           setLoading(false);
@@ -59,7 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [queryClient]);
 
   const signOut = async () => {
     try {
@@ -67,8 +127,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setSession(null);
 
-      // Limpa o cache do React Query
-      queryClient.clear();
+      // Remove o ID do último usuário
+      localStorage.removeItem('last_user_id');
+
+      // Limpa todo o cache e storage
+      await clearAllCacheAndStorage();
 
       // Limpa a sessão do Supabase
       await supabase.auth.signOut();

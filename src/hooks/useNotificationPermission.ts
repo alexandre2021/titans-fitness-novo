@@ -112,6 +112,18 @@ export const useNotificationPermission = (): UseNotificationPermissionReturn => 
 
     setPermission(Notification.permission as NotificationPermissionState);
     checkSubscriptionStatus();
+
+    // Listener para sincronizar mudanças entre componentes
+    const handleSubscriptionChange = () => {
+      console.log('🔄 Sincronizando estado de notificações entre componentes...');
+      checkSubscriptionStatus();
+    };
+
+    window.addEventListener('notification-subscription-changed', handleSubscriptionChange);
+
+    return () => {
+      window.removeEventListener('notification-subscription-changed', handleSubscriptionChange);
+    };
   }, [isSupported, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
@@ -214,6 +226,10 @@ export const useNotificationPermission = (): UseNotificationPermissionReturn => 
       console.log('✅ [subscribe] Salvo no Supabase com sucesso!');
       setIsSubscribed(true);
       setPermission('granted'); // Atualiza estado imediatamente
+
+      // Dispara evento para sincronizar outros componentes
+      window.dispatchEvent(new CustomEvent('notification-subscription-changed'));
+
       return true;
     } catch (error) {
       console.error('❌ [subscribe] Erro ao registrar subscription:', error);
@@ -249,6 +265,10 @@ export const useNotificationPermission = (): UseNotificationPermissionReturn => 
       }
 
       setIsSubscribed(false);
+
+      // Dispara evento para sincronizar outros componentes
+      window.dispatchEvent(new CustomEvent('notification-subscription-changed'));
+
       return true;
     } catch (error) {
       console.error('Erro ao remover subscription:', error);

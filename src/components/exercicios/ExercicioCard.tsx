@@ -115,7 +115,7 @@ export const ExercicioCard = ({ exercicio, onCriarCopia, onExcluir, isAdmin, loc
       {/* ✅ CONTEÚDO NO TOPO */}
       <CardContent className="p-4 pb-2 flex-grow flex flex-col">
         <div className="flex items-start justify-between gap-2 mb-2">
-          <h3 className="font-semibold text-foreground line-clamp-2 flex-1">{exercicio.nome}</h3>
+          <h3 className="font-semibold text-foreground line-clamp-3 flex-1">{exercicio.nome}</h3>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button

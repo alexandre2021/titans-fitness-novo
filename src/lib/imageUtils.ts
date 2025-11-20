@@ -1,6 +1,5 @@
 // c:\Users\alexa\titans-fitness-novo\src\lib\imageUtils.ts
 
-import imageCompression from 'browser-image-compression';
 import { type Area } from 'react-easy-crop';
 
 // Converte um arquivo para uma string base64 (Data URL)
@@ -101,34 +100,60 @@ export const optimizeAndCropImage = async (
 };
 
 // Redimensiona e otimiza uma imagem a partir de um arquivo, sem corte.
-// Usa a biblioteca browser-image-compression para lidar com EXIF e otimização.
+// Usa APIs nativas do navegador para redimensionamento e otimização.
 export const resizeAndOptimizeImage = async (
   file: File,
   maxWidth: number
 ): Promise<File | null> => {
   console.log('🔍 [resizeAndOptimizeImage] Iniciado com arquivo:', { name: file.name, size: file.size, type: file.type });
-  const options = {
-    maxSizeMB: 1.5, // Define um alvo de tamanho máximo para o arquivo
-    maxWidthOrHeight: maxWidth, // Redimensiona com base na maior dimensão
-    useWebWorker: true, // Usa Web Worker para não travar a UI
-    initialQuality: 0.85, // Qualidade inicial
-    // A chave para o problema: lê e corrige a orientação da foto
-    exifOrientation: -1,
-  };
-
-  console.log('🔍 [resizeAndOptimizeImage] Opções de compressão:', options);
 
   try {
-    console.log('🔍 [resizeAndOptimizeImage] Iniciando compressão...');
-    const compressedFile = await imageCompression(file, options);
-    console.log('✅ [resizeAndOptimizeImage] Sucesso! Arquivo comprimido:', { name: compressedFile.name, size: compressedFile.size, type: compressedFile.type });
-    
-    // Garante que o retorno seja sempre um objeto File com um nome, resolvendo a ambiguidade File/Blob.
-    // A biblioteca pode retornar um Blob sem nome em alguns casos, o que quebra a lógica de upload.
-    const finalFile = new File([compressedFile], compressedFile.name || `image_${Date.now()}.jpg`, { type: compressedFile.type });
-    return finalFile;
+    const imageSrc = await fileToDataURL(file);
+    const image = await createImage(imageSrc);
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    // Calcula as dimensões mantendo a proporção
+    let width = image.width;
+    let height = image.height;
+
+    if (width > maxWidth || height > maxWidth) {
+      if (width > height) {
+        height = (height / width) * maxWidth;
+        width = maxWidth;
+      } else {
+        width = (width / height) * maxWidth;
+        height = maxWidth;
+      }
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+
+    // Desenha a imagem redimensionada
+    ctx.drawImage(image, 0, 0, width, height);
+
+    // Converte para blob com qualidade 85%
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          console.error('❌ [resizeAndOptimizeImage] Erro ao converter para blob');
+          resolve(null);
+          return;
+        }
+        const finalFile = new File([blob], file.name || `image_${Date.now()}.jpg`, { type: 'image/jpeg' });
+        console.log('✅ [resizeAndOptimizeImage] Sucesso! Arquivo processado:', {
+          name: finalFile.name,
+          size: finalFile.size,
+          type: finalFile.type
+        });
+        resolve(finalFile);
+      }, 'image/jpeg', 0.85);
+    });
   } catch (error) {
-    console.error('❌ [resizeAndOptimizeImage] Erro durante a compressão:', error);
+    console.error('❌ [resizeAndOptimizeImage] Erro durante o processamento:', error);
     return null;
   }
 };

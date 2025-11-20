@@ -1,5 +1,5 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Dumbbell, BarChart3, LogOut, User, Home, Copy, LifeBuoy } from "lucide-react";
+import { LayoutDashboard, Dumbbell, BarChart3, LogOut, User, Home, Copy, LifeBuoy, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
@@ -160,6 +160,10 @@ const AlunoSidebar = () => {
               <DropdownMenuItem onClick={() => navigate('/perfil-aluno')}>
                 <User className="mr-2 h-5 w-5" />
                 <span className="text-base">Meu Perfil</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/configuracoes-aluno')}>
+                <Settings className="mr-2 h-5 w-5" />
+                <span className="text-base">Configurações</span>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
