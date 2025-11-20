@@ -121,11 +121,17 @@ const ExerciciosPT = () => {
   // Restaura posição do scroll quando volta da edição
   useEffect(() => {
     const savedScrollPosition = sessionStorage.getItem('exercicios-scroll-position');
-    if (savedScrollPosition) {
-      window.scrollTo(0, parseInt(savedScrollPosition));
-      sessionStorage.removeItem('exercicios-scroll-position');
+    if (savedScrollPosition && initialLoadComplete) {
+      // Usa requestAnimationFrame para garantir que o DOM foi atualizado
+      requestAnimationFrame(() => {
+        // Usa setTimeout para dar tempo dos exercícios filtrados renderizarem
+        setTimeout(() => {
+          window.scrollTo(0, parseInt(savedScrollPosition));
+          sessionStorage.removeItem('exercicios-scroll-position');
+        }, 100);
+      });
     }
-  }, []);
+  }, [initialLoadComplete]);
 
   useEffect(() => {
     const handleScroll = () => {
