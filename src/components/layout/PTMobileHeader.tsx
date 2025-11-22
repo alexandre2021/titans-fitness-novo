@@ -185,8 +185,8 @@ const PTMobileHeader = () => {
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-14 w-14 rounded-full">
-            <Avatar className="h-14 w-14">
+          <Button variant="ghost" size="sm" className="h-10 w-10 rounded-full p-0">
+            <Avatar className="h-10 w-10">
               {getAvatarContent()}
             </Avatar>
           </Button>

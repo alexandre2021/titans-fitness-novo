@@ -515,7 +515,7 @@ const ExerciciosPT = () => {
         <div className="fixed bottom-36 md:bottom-24 right-4 md:right-6 z-50">
           <Button
             onClick={scrollToTop}
-            className="rounded-full h-14 w-14 p-0 shadow-lg flex items-center justify-center md:h-12 md:w-12 [&_svg]:size-8 md:[&_svg]:size-6"
+            className="rounded-full h-12 w-12 p-0 shadow-lg flex items-center justify-center [&_svg]:size-7 md:h-12 md:w-12 md:[&_svg]:size-6"
             aria-label="Voltar ao topo"
             variant="secondary"
           >
