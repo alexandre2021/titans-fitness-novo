@@ -69,12 +69,12 @@ const PwaInstallPrompt = () => {
     console.log(`PWA setup user response: ${outcome}`);
 
     if (outcome === 'accepted') {
-      // Mostra toast de loading que auto-fecha após 6 segundos
+      // Mostra toast de loading que auto-fecha após 8 segundos
       const toastId = toast.loading('Instalando aplicativo... Aguarde alguns segundos');
 
       setTimeout(() => {
         toast.dismiss(toastId);
-      }, 6000);
+      }, 8000);
     }
 
     setInstallPromptEvent(null); // O prompt só pode ser usado uma vez.

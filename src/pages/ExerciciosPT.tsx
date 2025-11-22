@@ -286,17 +286,19 @@ const ExerciciosPT = () => {
               className="pl-10"
             />
           </div>
-          <Button
-            variant="outline"
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex-shrink-0 md:hidden relative h-10 w-10 p-0 [&_svg]:size-6"
-            aria-label="Mostrar filtros"
-          >
-            <Filter />
+          <div className="relative flex-shrink-0 z-30">
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              className="md:hidden h-10 w-10 p-0"
+              aria-label="Mostrar filtros"
+            >
+              <Filter className="h-6 w-6" />
+            </Button>
             {temFiltrosAvancadosAtivos && (
-              <span className="absolute top-[-2px] left-[-2px] block h-3 w-3 rounded-full bg-secondary ring-2 ring-white" />
+              <span className="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-secondary ring-2 ring-background pointer-events-none md:hidden" />
             )}
-          </Button>
+          </div>
           <Button
             variant="outline"
             onClick={() => setShowFilters(!showFilters)}
