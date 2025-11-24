@@ -202,7 +202,7 @@ Este documento descreve a estrutura completa das tabelas do banco de dados no no
 | `observacoes_rotina` | 18 | `text` | True | `` | `` | `` |  |
 
 **Status Possíveis**: Rascunho, Ativa, Bloqueada, Concluída, Cancelada  
-**Objetivos Comuns**: Emagrecimento, Ganho de massa, Condicionamento, Reabilitação  
+**Objetivos Comuns**: Emagrecimento, Hipertrofia, Condicionamento, Reabilitação  
 **MUDANÇA**: Professor pode criar rotina para qualquer aluno que o segue
 
 ---
@@ -886,7 +886,7 @@ BEGIN
 
     -- 7. Criar uma rotina para o Aluno João com o Professor Carlos
     INSERT INTO public.rotinas (nome, objetivo, aluno_id, professor_id, treinos_por_semana, dificuldade, duracao_semanas, data_inicio, valor_total, forma_pagamento, status) VALUES
-    ('Hipertrofia Total - João', 'Ganho de massa', aluno_joao_id, prof_carlos_id, 3, 'Intermediário', 8, '2025-01-20', 150.00, 'PIX', 'Ativa')
+    ('Hipertrofia Total - João', 'Hipertrofia', aluno_joao_id, prof_carlos_id, 3, 'Intermediário', 8, '2025-01-20', 150.00, 'PIX', 'Ativa')
     RETURNING id INTO rotina_joao_id;
 
     -- 8. Criar treinos para a rotina do João
@@ -938,7 +938,7 @@ BEGIN
 
     -- 14. Criar um modelo de rotina para o Professor Carlos
     INSERT INTO public.modelos_rotina (professor_id, nome, objetivo, dificuldade, treinos_por_semana, duracao_semanas) VALUES
-    (prof_carlos_id, 'Hipertrofia Essencial 3x', 'Ganho de massa', 'Intermediário', 3, 8) RETURNING id INTO modelo_rotina_id;
+    (prof_carlos_id, 'Hipertrofia Essencial 3x', 'Hipertrofia', 'Intermediário', 3, 8) RETURNING id INTO modelo_rotina_id;
 
     INSERT INTO public.modelos_treino (modelo_rotina_id, nome, grupos_musculares, ordem) VALUES
     (modelo_rotina_id, 'Push Day', ARRAY['Peito', 'Ombros', 'Tríceps'], 1) RETURNING id INTO modelo_treino_id;

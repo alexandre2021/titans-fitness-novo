@@ -226,7 +226,7 @@ const AlunosRotinaDetalhes = () => {
   const getObjetivoBadge = (objetivo: string) => {
     const objetivoColors = {
       'Emagrecimento': 'bg-orange-100 text-orange-800',
-      'Ganho de massa': 'bg-blue-100 text-blue-800',
+      'Hipertrofia': 'bg-blue-100 text-blue-800',
       'Definição muscular': 'bg-purple-100 text-purple-800',
       'Condicionamento físico': 'bg-green-100 text-green-800',
       'Reabilitação': 'bg-yellow-100 text-yellow-800',

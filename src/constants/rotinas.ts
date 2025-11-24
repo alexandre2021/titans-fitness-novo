@@ -1,7 +1,7 @@
 // src/constants/rotinas.ts
 
 export const STATUS_ROTINA = ['Ativa', 'Rascunho', 'Bloqueada', 'Concluída', 'Cancelada'] as const;
-export const OBJETIVOS = ['Ganho de massa', 'Emagrecimento', 'Definição muscular', 'Condicionamento físico', 'Reabilitação', 'Performance esportiva'] as const;
+export const OBJETIVOS = ['Hipertrofia', 'Emagrecimento', 'Definição muscular', 'Condicionamento físico', 'Reabilitação', 'Performance esportiva'] as const;
 export const DIFICULDADES = ['Baixa', 'Média', 'Alta'] as const;
 export const FREQUENCIAS = [1, 2, 3, 4, 5, 6, 7] as const;
 export const GRUPOS_MUSCULARES = ['Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Abdômen', 'Pernas', 'Glúteos', 'Panturrilha'] as const;

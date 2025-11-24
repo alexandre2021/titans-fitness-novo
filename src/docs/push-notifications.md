@@ -592,13 +592,7 @@ VITE_VAPID_PUBLIC_KEY=BEfGVqEIzT7DfD03GsElCrob1RahDrGNCUF6xXoQ68e64U1xiFhxrqzo-G
 
 **Configurado via Supabase Dashboard > Database > Custom Postgres Configuration**:
 
-Ou via tabela `app_settings` (já criada):
-```sql
-INSERT INTO app_settings (key, value)
-VALUES
-  ('supabase_url', 'https://prvfvlyzfyprjliqniki.supabase.co'),
-  ('service_role_key', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...');
-```
+Configure as variáveis necessárias diretamente no Postgres ou use variáveis de ambiente do Edge Function.
 
 ### 3. Extensões PostgreSQL
 
@@ -779,11 +773,9 @@ WHERE created_at < NOW() - INTERVAL '90 days';
    SELECT * FROM pg_extension WHERE extname = 'pg_net';
    ```
 
-2. **Database settings configurados?**
-   ```sql
-   SELECT * FROM app_settings
-   WHERE key IN ('supabase_url', 'service_role_key');
-   ```
+2. **Variáveis de ambiente configuradas?**
+   - Verifique se as variáveis VAPID estão configuradas na Edge Function
+   - Confirme que as keys do Supabase estão acessíveis
 
 3. **Função e trigger existem?**
    ```sql

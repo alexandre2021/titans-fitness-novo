@@ -290,10 +290,10 @@ const ExerciciosPT = () => {
             <Button
               variant="outline"
               onClick={() => setShowFilters(!showFilters)}
-              className="md:hidden h-10 w-10 p-0"
+              className="flex-shrink-0 md:hidden h-10 w-10 p-0 [&_svg]:size-6"
               aria-label="Mostrar filtros"
             >
-              <Filter className="h-6 w-6" />
+              <Filter />
             </Button>
             {temFiltrosAvancadosAtivos && (
               <span className="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-secondary ring-2 ring-background pointer-events-none md:hidden" />

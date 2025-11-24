@@ -254,6 +254,43 @@ export const useMensagens = (conversaId: string | null) => {
 
       if (msgError) throw msgError;
 
+      // Envia push notification para o destinatário
+      const { data: conversaData } = await supabase
+        .from('conversas')
+        .select('professor_id, aluno_id')
+        .eq('id', conversaId)
+        .single();
+
+      if (conversaData) {
+        const recipientId = conversaData.professor_id === user.id
+          ? conversaData.aluno_id
+          : conversaData.professor_id;
+
+        // Chama Edge Function para enviar push notification
+        try {
+          await supabase.functions.invoke('send-push-notification', {
+            body: {
+              recipientId,
+              payload: {
+                title: 'Nova mensagem',
+                body: conteudo.substring(0, 50) + (conteudo.length > 50 ? '...' : ''),
+                icon: '/pwa-192x192.png',
+                badge: '/pwa-192x192.png',
+                data: {
+                  url: '/mensagens-pt',
+                  messageId: novaMensagem.id,
+                  senderId: user.id,
+                  conversaId: conversaId,
+                },
+              },
+            },
+          });
+        } catch (pushError) {
+          // Não interrompe o fluxo se push notification falhar
+          console.error('Erro ao enviar push notification:', pushError);
+        }
+      }
+
       const { error: updateError } = await supabase
         .from('conversas')
         .update({
