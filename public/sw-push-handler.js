@@ -3,40 +3,43 @@
 
 // Handler para receber notificações push
 self.addEventListener('push', (event) => {
-  console.log('Push notification recebida:', event);
+  console.log('🔔 Push notification recebida:', event);
 
   if (!event.data) {
-    console.log('Push sem dados');
+    console.log('❌ Push sem dados');
     return;
   }
 
   try {
     const data = event.data.json();
-    console.log('Dados da notificação:', data);
+    console.log('📦 Dados completos da notificação:', JSON.stringify(data, null, 2));
+    console.log('🎯 Badge path:', data.badge);
+    console.log('🖼️ Icon path:', data.icon);
 
     const options = {
       body: data.body,
-      icon: data.icon || '/pwa-192x192.png', // Fallback para ícone existente
-      badge: data.badge || '/notification-badge.png', // Badge monocromático
-      image: data.image, // Imagem grande (opcional)
+      icon: data.icon || '/pwa-192x192.png',
+      badge: data.badge || '/notification-badge.png',
+      image: data.image,
       data: data.data || {},
       tag: data.tag || 'message-notification',
-      renotify: true, // Re-notifica se já existe uma com a mesma tag
+      renotify: true,
       requireInteraction: false,
-      vibrate: [200, 100, 200, 100, 200], // Padrão de vibração personalizado
+      vibrate: [200, 100, 200, 100, 200],
       silent: false,
       actions: data.actions || [],
-      // Propriedades visuais adicionais
       dir: 'auto',
       lang: 'pt-BR',
       timestamp: Date.now(),
     };
 
+    console.log('✨ Options da notificação:', JSON.stringify(options, null, 2));
+
     event.waitUntil(
       self.registration.showNotification(data.title, options)
     );
   } catch (error) {
-    console.error('Erro ao processar push notification:', error);
+    console.error('❌ Erro ao processar push notification:', error);
   }
 });
 
