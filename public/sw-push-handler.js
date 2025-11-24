@@ -16,8 +16,8 @@ self.addEventListener('push', (event) => {
 
     const options = {
       body: data.body,
-      icon: data.icon || '/notification-icon.png', // Ícone específico para notificações (com fundo colorido)
-      badge: data.badge || '/notification-badge.png', // Badge para barra de status (ícone monocromático pequeno)
+      icon: data.icon || '/pwa-192x192.png', // Fallback para ícone existente
+      badge: data.badge || '/notification-badge.png', // Badge monocromático
       image: data.image, // Imagem grande (opcional)
       data: data.data || {},
       tag: data.tag || 'message-notification',

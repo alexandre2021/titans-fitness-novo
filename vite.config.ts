@@ -90,7 +90,7 @@ export default defineConfig({
           },
           {
             src: 'notification-badge.png',
-            sizes: '72x72',
+            sizes: '96x96',
             type: 'image/png',
             purpose: 'monochrome'
           }
