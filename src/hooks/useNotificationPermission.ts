@@ -61,16 +61,8 @@ export const useNotificationPermission = (): UseNotificationPermissionReturn => 
     }
 
     try {
-      // Timeout de 5 segundos para evitar travamento
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Service Worker timeout')), 5000)
-      );
-
-      const registration = await Promise.race([
-        navigator.serviceWorker.ready,
-        timeoutPromise
-      ]) as ServiceWorkerRegistration;
-
+      // Tenta sem timeout primeiro (SW pode estar lento mas funcional)
+      const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
 
       setIsSubscribed(!!subscription);
