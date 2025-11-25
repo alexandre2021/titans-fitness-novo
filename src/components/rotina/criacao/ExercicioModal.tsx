@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Search, Link, Dumbbell, Filter, Check, Info, Plus, ShoppingBag, Trash2, List, Camera } from 'lucide-react';
+import { X, Search, Link, Dumbbell, Filter, Check, Info, Plus, ShoppingBag, Trash2, List, Camera, ChevronUp, ChevronDown } from 'lucide-react';
 import Modal from 'react-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -162,6 +162,7 @@ interface Props {
   onConcluir: (itens: ItemSacola[]) => void; // ✅ CORREÇÃO: Prop para lidar com a sacola inteira
   gruposMuscularesFiltro: string[];
   exerciciosJaAdicionados: string[];
+  exerciciosIniciais?: ItemSacola[]; // Nova prop para preencher a sacola ao abrir na edição
 }
 
 export const ExercicioModal: React.FC<Props> = ({
@@ -169,7 +170,8 @@ export const ExercicioModal: React.FC<Props> = ({
   onClose,
   onConcluir,
   gruposMuscularesFiltro,
-  exerciciosJaAdicionados
+  exerciciosJaAdicionados,
+  exerciciosIniciais = []
 }) => {
   const grupoMuscularOptions = useMemo(() => [
     { value: 'todos', label: 'Todos os grupos' },
@@ -229,8 +231,15 @@ export const ExercicioModal: React.FC<Props> = ({
       } else {
         setFiltros(prev => ({ ...prev, grupo_muscular: 'todos' }));
       }
+
+      // Inicializa a sacola com os exercícios existentes (se houver)
+      if (exerciciosIniciais && exerciciosIniciais.length > 0) {
+        setSacola(exerciciosIniciais);
+      } else {
+        setSacola([]);
+      }
     }
-  }, [isOpen, gruposMuscularesFiltro]);
+  }, [isOpen, gruposMuscularesFiltro, exerciciosIniciais]);
 
   // Quando troca o tipo de série, descarta combinação incompleta
   useEffect(() => {
@@ -255,6 +264,13 @@ export const ExercicioModal: React.FC<Props> = ({
   const atualizarFiltro = (campo: string, valor: string) => {
     setFiltros(prev => ({ ...prev, [campo]: valor }));
   };
+
+  // Verificar se tem filtros ativos (exceto busca)
+  const temFiltrosAvancadosAtivos =
+    filtros.grupo_muscular !== 'todos' ||
+    filtros.tipo !== 'todos' ||
+    filtros.equipamento !== 'todos' ||
+    filtros.dificuldade !== 'todos';
 
   // Filtrar exercícios
   const exerciciosFiltrados = exerciciosDisponiveis.filter(exercicio => {
@@ -373,6 +389,19 @@ export const ExercicioModal: React.FC<Props> = ({
   // Remover item da sacola
   const removerItemSacola = (index: number) => {
     setSacola(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Mover item na sacola (reordenar)
+  const moverItemSacola = (index: number, direcao: 'cima' | 'baixo') => {
+    setSacola(prev => {
+      const novoArray = [...prev];
+      const novoIndice = direcao === 'cima' ? index - 1 : index + 1;
+
+      // Troca de posição
+      [novoArray[index], novoArray[novoIndice]] = [novoArray[novoIndice], novoArray[index]];
+
+      return novoArray;
+    });
   };
 
   // Cancelar combinação incompleta
@@ -528,10 +557,13 @@ export const ExercicioModal: React.FC<Props> = ({
                   <Button
                     variant="outline"
                     onClick={() => setShowFiltros(prev => !prev)}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 relative"
                   >
                     <Filter className="h-4 w-4" />
                     Filtros
+                    {temFiltrosAvancadosAtivos && (
+                      <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-secondary ring-1 ring-background" />
+                    )}
                   </Button>
                 </div>
 
@@ -641,20 +673,21 @@ export const ExercicioModal: React.FC<Props> = ({
                                 : 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-60'
                             }
                           `}
+                          onClick={() => podeSelecionar && handleClickExercicio(exercicio)}
+                          title={estaNaSacola ? 'Clique para ver na sacola' : jaAdicionado ? 'Já adicionado ao treino' : 'Clique para selecionar'}
                         >
                           {/* Conteúdo do card */}
-                          <div
-                            className="p-4"
-                            onClick={() => podeSelecionar && handleClickExercicio(exercicio)}
-                            title={estaNaSacola ? 'Clique para ver na sacola' : jaAdicionado ? 'Já adicionado ao treino' : 'Clique para selecionar'}
-                          >
+                          <div className="p-4">
                             {/* Ícones do canto superior direito */}
                             <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
                             {/* Botão de detalhes */}
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={(e) => mostrarDetalhes(exercicio.id, e)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                mostrarDetalhes(exercicio.id, e);
+                              }}
                               className="h-6 w-6 p-0 hover:bg-blue-100 rounded-full"
                               title="Ver detalhes do exercício"
                             >
@@ -763,13 +796,37 @@ export const ExercicioModal: React.FC<Props> = ({
                         <span>Séries Simples ({sacola.filter(i => i.tipo === 'simples').length})</span>
                       </h4>
                       <div className="space-y-2">
-                        {sacola.map((item, index) => 
+                        {sacola.map((item, index) =>
                           item.tipo === 'simples' ? (
                             <div
                               key={index}
                               className="flex items-center justify-between bg-white p-3 rounded-lg border border-[#ba3c15]/20 hover:border-[#ba3c15] transition-colors"
                             >
                               <div className="flex items-center gap-2 flex-1">
+                                {/* Setas de reordenação */}
+                                <div className="flex flex-col -space-y-2">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => moverItemSacola(index, 'cima')}
+                                    disabled={index === 0}
+                                    className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                  >
+                                    <ChevronUp className="h-5 w-5" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => moverItemSacola(index, 'baixo')}
+                                    disabled={index === sacola.length - 1}
+                                    className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                  >
+                                    <ChevronDown className="h-5 w-5" />
+                                  </Button>
+                                </div>
+
                                 <div className="w-6 h-6 bg-[#ba3c15] rounded flex items-center justify-center flex-shrink-0">
                                   <span className="text-white text-xs font-bold">S</span>
                                 </div>
@@ -808,7 +865,7 @@ export const ExercicioModal: React.FC<Props> = ({
                         <span>Séries Combinadas ({sacola.filter(i => i.tipo === 'combinacao').length})</span>
                       </h4>
                       <div className="space-y-3">
-                        {sacola.map((item, index) => 
+                        {sacola.map((item, index) =>
                           item.tipo === 'combinacao' ? (
                             <div
                               key={index}
@@ -816,6 +873,30 @@ export const ExercicioModal: React.FC<Props> = ({
                             >
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
+                                  {/* Setas de reordenação */}
+                                  <div className="flex flex-col -space-y-2">
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => moverItemSacola(index, 'cima')}
+                                      disabled={index === 0}
+                                      className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                    >
+                                      <ChevronUp className="h-5 w-5" />
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => moverItemSacola(index, 'baixo')}
+                                      disabled={index === sacola.length - 1}
+                                      className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                    >
+                                      <ChevronDown className="h-5 w-5" />
+                                    </Button>
+                                  </div>
+
                                   <div className="w-6 h-6 bg-[#004B87] rounded flex items-center justify-center">
                                     <span className="text-white text-xs font-bold">C</span>
                                   </div>

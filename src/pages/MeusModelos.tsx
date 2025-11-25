@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import Modal from 'react-modal';
-import { Plus, MoreVertical, BookCopy, Trash2, Edit, AlertTriangle, Repeat, Search, Filter, X, Copy, Eye, Target, BicepsFlexed, Clock } from "lucide-react";
+import { Plus, MoreVertical, BookCopy, Trash2, Edit, AlertTriangle, Repeat, Search, Filter, X, Copy, Eye, Target, BicepsFlexed, Clock, Users } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -286,7 +286,7 @@ const MeusModelos = () => {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
                     <div className="flex items-center gap-2">
                       <Target className="h-4 w-4 text-muted-foreground" />
                       <div>
@@ -299,6 +299,13 @@ const MeusModelos = () => {
                       <div>
                         <p className="text-sm text-muted-foreground">Dificuldade</p>
                         <p className="font-medium capitalize">{modelo.dificuldade}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Gênero</p>
+                        <p className="font-medium">{modelo.genero || 'Ambos'}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -382,7 +389,7 @@ const MeusModelos = () => {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
                     <div className="flex items-center gap-2">
                       <Target className="h-4 w-4 text-muted-foreground" />
                       <div>
@@ -395,6 +402,13 @@ const MeusModelos = () => {
                       <div>
                         <p className="text-sm text-muted-foreground">Dificuldade</p>
                         <p className="font-medium capitalize">{modelo.dificuldade}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Gênero</p>
+                        <p className="font-medium">{modelo.genero || 'Ambos'}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">

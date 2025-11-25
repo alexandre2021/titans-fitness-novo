@@ -27,13 +27,14 @@ import { SerieSimples } from "@/components/rotina/criacao/SerieSimples";
 import { SerieCombinada } from "@/components/rotina/criacao/SerieCombinada";
 import { ExercicioModal } from "@/components/rotina/criacao/ExercicioModal";
 import CustomSelect from "@/components/ui/CustomSelect";
-import { OBJETIVOS_OPTIONS, DIFICULDADES_OPTIONS, FREQUENCIAS_OPTIONS, DURACAO_OPTIONS, GRUPOS_MUSCULARES, CORES_GRUPOS_MUSCULARES } from "@/constants/rotinas";
+import { OBJETIVOS_OPTIONS, DIFICULDADES_OPTIONS, FREQUENCIAS_OPTIONS, DURACAO_OPTIONS, GENEROS_OPTIONS, GRUPOS_MUSCULARES, CORES_GRUPOS_MUSCULARES } from "@/constants/rotinas";
 
 // --- Tipos ---
 type ModeloConfiguracaoData = {
   nome: string;
   objetivo: string;
   dificuldade: string;
+  genero: string;
   treinos_por_semana: number | undefined;
   duracao_semanas: number | undefined;
   observacoes_rotina?: string;
@@ -109,6 +110,7 @@ const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar }: ModeloConfig
       nome: "",
       objetivo: "",
       dificuldade: "",
+      genero: "Ambos",
       treinos_por_semana: undefined,
       duracao_semanas: undefined,
       observacoes_rotina: "",
@@ -127,6 +129,7 @@ const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar }: ModeloConfig
     if (!formData.nome || formData.nome.trim().length < 3) newErrors.nome = "O nome do modelo deve ter pelo menos 3 caracteres.";
     if (!formData.objetivo) newErrors.objetivo = "O objetivo é obrigatório.";
     if (!formData.dificuldade) newErrors.dificuldade = "A dificuldade é obrigatória.";
+    if (!formData.genero) newErrors.genero = "O gênero é obrigatório.";
     if (!formData.treinos_por_semana) newErrors.treinos_por_semana = "A frequência é obrigatória.";
     if (!formData.duracao_semanas) newErrors.duracao_semanas = "A duração é obrigatória.";
     setErrors(newErrors);
@@ -186,6 +189,17 @@ const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar }: ModeloConfig
                 placeholder="Selecione a dificuldade"
               />
               {errors.dificuldade && <p className="text-sm text-destructive mt-1">{errors.dificuldade}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="genero">Gênero</Label>
+              <CustomSelect
+                inputId="genero"
+                value={GENEROS_OPTIONS.find(opt => opt.value === formData.genero)}
+                onChange={(option) => handleInputChange('genero', option ? option.value : '')}
+                options={GENEROS_OPTIONS}
+                placeholder="Selecione o gênero"
+              />
+              {errors.genero && <p className="text-sm text-destructive mt-1">{errors.genero}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="frequencia">Frequência</Label>
@@ -431,59 +445,145 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
   const [exercicios, setExercicios] = useState<Record<string, ExercicioModelo[]>>(initialData || {});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [treinoAtual, setTreinoAtual] = useState<TreinoTemp | null>(null);
+  const [exerciciosIniciais, setExerciciosIniciais] = useState<import('@/components/rotina/criacao/ExercicioModal').ItemSacola[]>([]);
+  const [treinosExpandidos, setTreinosExpandidos] = useState<Record<string, boolean>>(() => {
+    // Inicia com todos os treinos expandidos
+    const inicial: Record<string, boolean> = {};
+    treinos.forEach(t => inicial[t.id] = true);
+    return inicial;
+  });
   const { getExercicioInfo } = useExercicioLookup();
 
   useEffect(() => {
     onUpdate({ exercicios });
   }, [exercicios, onUpdate]);
 
-  const handleAbrirModal = (treino: TreinoTemp) => {
+  const toggleTreino = (treinoId: string) => {
+    setTreinosExpandidos(prev => ({ ...prev, [treinoId]: !prev[treinoId] }));
+  };
+
+  const handleAbrirModal = async (treino: TreinoTemp) => {
     setTreinoAtual(treino);
+
+    // Busca exercícios completos do banco para preencher a sacola
+    const exerciciosDoTreino = exercicios[treino.id] || [];
+    const exerciciosIds = exerciciosDoTreino.flatMap(ex =>
+      ex.tipo === 'simples'
+        ? [ex.exercicio_1_id]
+        : [ex.exercicio_1_id, ex.exercicio_2_id!]
+    ).filter(Boolean);
+
+    if (exerciciosIds.length > 0) {
+      try {
+        const { data: exerciciosCompletos, error } = await supabase
+          .from('exercicios')
+          .select('*')
+          .in('id', exerciciosIds);
+
+        if (!error && exerciciosCompletos) {
+          const exerciciosMap = new Map(exerciciosCompletos.map(e => [e.id, e]));
+
+          const sacola: import('@/components/rotina/criacao/ExercicioModal').ItemSacola[] = exerciciosDoTreino.flatMap(ex => {
+            if (ex.tipo === 'simples') {
+              const exercicio = exerciciosMap.get(ex.exercicio_1_id);
+              if (!exercicio) return [];
+              return [{
+                tipo: 'simples' as const,
+                exercicio
+              }] as import('@/components/rotina/criacao/ExercicioModal').ItemSacola[];
+            } else {
+              const ex1 = exerciciosMap.get(ex.exercicio_1_id);
+              const ex2 = exerciciosMap.get(ex.exercicio_2_id!);
+              if (!ex1 || !ex2) return [];
+              return [{
+                tipo: 'combinacao' as const,
+                exercicios: [ex1, ex2] as [Tables<'exercicios'>, Tables<'exercicios'>]
+              }] as import('@/components/rotina/criacao/ExercicioModal').ItemSacola[];
+            }
+          });
+
+          setExerciciosIniciais(sacola);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar exercícios:', error);
+        setExerciciosIniciais([]);
+      }
+    } else {
+      setExerciciosIniciais([]);
+    }
+
     setIsModalOpen(true);
   };
 
   const handleAdicionarExercicios = (itensSacola: any[]) => {
-    if (!treinoAtual || itensSacola.length === 0) return;
+    if (!treinoAtual) return;
 
-    const exerciciosParaAdicionar: ExercicioModelo[] = itensSacola.map(item => {
+    const exerciciosAtuais = exercicios[treinoAtual.id] || [];
+
+    // Monta a lista final respeitando a ordem da sacola
+    const exerciciosFinais: ExercicioModelo[] = itensSacola.flatMap(item => {
       if (item.tipo === 'simples') {
-        return {
-          id: `ex_modelo_${Date.now()}_${Math.random()}`,
-          exercicio_1_id: item.exercicio.id,
-          tipo: 'simples' as const,
-          series: [{
-            id: `serie_${Date.now()}_${Math.random()}`,
-            numero_serie: 1,
-            repeticoes: 0,
-            carga: 0,
-            intervalo_apos_serie: 60
-          }],
-          intervalo_apos_exercicio: 90
-        };
+        // Procura se já existe um exercício com o mesmo exercicio_1_id
+        const exercicioExistente = exerciciosAtuais.find(
+          ex => ex.tipo === 'simples' && ex.exercicio_1_id === item.exercicio.id
+        );
+
+        if (exercicioExistente) {
+          // Se já existe, mantém com todas as configurações (séries, intervalos, etc)
+          return exercicioExistente;
+        } else {
+          // Se é novo, cria com valores padrão
+          return {
+            id: `ex_modelo_${Date.now()}_${Math.random()}`,
+            exercicio_1_id: item.exercicio.id,
+            tipo: 'simples' as const,
+            series: [{
+              id: `serie_${Date.now()}_${Math.random()}`,
+              numero_serie: 1,
+              repeticoes: undefined,
+              carga: undefined,
+              intervalo_apos_serie: 60
+            }],
+            intervalo_apos_exercicio: 90
+          };
+        }
       } else if (item.tipo === 'combinacao') {
-        return {
-          id: `ex_modelo_${Date.now()}_${Math.random()}`,
-          exercicio_1_id: item.exercicios[0].id,
-          exercicio_2_id: item.exercicios[1].id,
-          tipo: 'combinada' as const,
-          series: [{
-            id: `serie_comb_${Date.now()}_${Math.random()}`,
-            numero_serie: 1,
-            repeticoes_1: 0,
-            carga_1: 0,
-            repeticoes_2: 0,
-            carga_2: 0,
-            intervalo_apos_serie: 90
-          }],
-          intervalo_apos_exercicio: 120
-        };
+        // Procura se já existe uma combinação com os mesmos exercícios
+        const exercicioExistente = exerciciosAtuais.find(
+          ex => ex.tipo === 'combinada' &&
+               ex.exercicio_1_id === item.exercicios[0].id &&
+               ex.exercicio_2_id === item.exercicios[1].id
+        );
+
+        if (exercicioExistente) {
+          // Se já existe, mantém com todas as configurações
+          return exercicioExistente;
+        } else {
+          // Se é novo, cria com valores padrão
+          return {
+            id: `ex_modelo_${Date.now()}_${Math.random()}`,
+            exercicio_1_id: item.exercicios[0].id,
+            exercicio_2_id: item.exercicios[1].id,
+            tipo: 'combinada' as const,
+            series: [{
+              id: `serie_comb_${Date.now()}_${Math.random()}`,
+              numero_serie: 1,
+              repeticoes_1: undefined,
+              carga_1: undefined,
+              repeticoes_2: undefined,
+              carga_2: undefined,
+              intervalo_apos_serie: 90
+            }],
+            intervalo_apos_exercicio: 120
+          };
+        }
       }
-      return null;
-    }).filter(Boolean) as ExercicioModelo[];
+      return [];
+    });
 
     setExercicios(prev => ({
       ...prev,
-      [treinoAtual.id]: [...(prev[treinoAtual.id] || []), ...exerciciosParaAdicionar]
+      [treinoAtual.id]: exerciciosFinais
     }));
     setIsModalOpen(false);
   };
@@ -494,6 +594,19 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
 
   const handleAtualizarExercicio = (treinoId: string, exercicioId: string, dados: Partial<ExercicioModelo>) => {
     setExercicios(prev => ({ ...prev, [treinoId]: (prev[treinoId] || []).map(ex => ex.id === exercicioId ? { ...ex, ...dados } : ex) }));
+  };
+
+  const handleMoverExercicio = (treinoId: string, exercicioIndex: number, direcao: 'cima' | 'baixo') => {
+    setExercicios(prev => {
+      const exerciciosDoTreino = [...(prev[treinoId] || [])];
+      const novoIndice = direcao === 'cima' ? exercicioIndex - 1 : exercicioIndex + 1;
+
+      // Troca de posição
+      [exerciciosDoTreino[exercicioIndex], exerciciosDoTreino[novoIndice]] =
+        [exerciciosDoTreino[novoIndice], exerciciosDoTreino[exercicioIndex]];
+
+      return { ...prev, [treinoId]: exerciciosDoTreino };
+    });
   };
 
   const treinosCompletos = treinos.filter(t => exercicios[t.id] && exercicios[t.id].length > 0).length;
@@ -519,12 +632,28 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
             </CardContent>
           </Card>
           <div className="space-y-4">
-            {treinos.map(treino => (
+            {treinos.map(treino => {
+              const isExpandido = treinosExpandidos[treino.id] ?? true;
+              const qtdExercicios = (exercicios[treino.id] || []).length;
+              return (
               <Card key={treino.id}>
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{treino.nome}</CardTitle>
-                    <p className="text-sm text-muted-foreground">{treino.grupos_musculares.join(', ')}</p>
+                  <div className="flex items-center gap-3 flex-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleTreino(treino.id)}
+                      className="p-1 h-8 w-8"
+                    >
+                      {isExpandido ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                    </Button>
+                    <div>
+                      <CardTitle className="text-lg">{treino.nome}</CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        {treino.grupos_musculares.join(', ')} • {qtdExercicios} exercício{qtdExercicios !== 1 ? 's' : ''}
+                      </p>
+                    </div>
                   </div>
                   {/* Botão para Mobile: redondo, apenas com ícone */}
                   <Button type="button" variant="default" onClick={() => handleAbrirModal(treino)} className="md:hidden rounded-full h-10 w-10 p-0 flex-shrink-0 [&_svg]:size-6">
@@ -535,7 +664,7 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
                     <Plus className="h-4 w-4 mr-2" /> Exercício
                   </Button>
                 </CardHeader>
-                <CardContent>
+                {isExpandido && <CardContent>
                   {(exercicios[treino.id] || []).length > 0 ? (
                     <div className="space-y-4">
                       {exercicios[treino.id].map((ex, exercicioIndex) => {
@@ -543,11 +672,36 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
                         const exercicioInfo2 = ex.exercicio_2_id ? getExercicioInfo(ex.exercicio_2_id) : null;
                         const nomeExercicio = ex.tipo === 'combinada' && exercicioInfo2 ? `${exercicioInfo1.nome} + ${exercicioInfo2.nome}` : exercicioInfo1.nome;
                         const isUltimoExercicioDoTreino = exercicioIndex === exercicios[treino.id].length - 1;
+                        const isPrimeiroExercicio = exercicioIndex === 0;
                         return (
                           <div key={ex.id} className="border-t pt-4 first:border-t-0 first:pt-0">
-                            <div className="flex items-start justify-between mb-3">
-                              <h4 className="font-medium text-gray-900">{nomeExercicio}</h4>
-                              <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoverExercicio(treino.id, ex.id)} className="text-gray-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></Button>
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <div className="flex flex-col -space-y-2">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleMoverExercicio(treino.id, exercicioIndex, 'cima')}
+                                    disabled={isPrimeiroExercicio}
+                                    className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                  >
+                                    <ChevronUp className="h-5 w-5" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleMoverExercicio(treino.id, exercicioIndex, 'baixo')}
+                                    disabled={isUltimoExercicioDoTreino}
+                                    className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                  >
+                                    <ChevronDown className="h-5 w-5" />
+                                  </Button>
+                                </div>
+                                <h4 className="font-medium text-gray-900">{nomeExercicio}</h4>
+                              </div>
+                              <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoverExercicio(treino.id, ex.id)} className="text-gray-400 hover:text-red-500 h-8 w-8 p-0"><Trash2 className="h-4 w-4" /></Button>
                             </div>
                             {ex.tipo === 'simples' ? (
                               <SerieSimples exercicio={ex} treinoId={treino.id} isUltimoExercicio={isUltimoExercicioDoTreino} onUpdate={dados => handleAtualizarExercicio(treino.id, ex.id, dados)} />
@@ -564,9 +718,10 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
                       <p className="text-muted-foreground">Nenhum exercício adicionado.</p>
                     </div>
                   )}
-                </CardContent>
+                </CardContent>}
               </Card>
-            ))}
+              );
+            })}
           </div>
 
           {/* Espaçamento para botões fixos */}
@@ -615,6 +770,7 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
           onConcluir={handleAdicionarExercicios}
           gruposMuscularesFiltro={treinoAtual?.grupos_musculares || []}
           exerciciosJaAdicionados={treinoAtual ? (exercicios[treinoAtual.id] || []).flatMap(ex => [ex.exercicio_1_id, ex.exercicio_2_id]).filter(Boolean) as string[] : []}
+          exerciciosIniciais={exerciciosIniciais}
         />}
       </CardContent>
     </Card>
@@ -700,6 +856,7 @@ const EditarModeloPadrao = () => {
             nome: rotina.nome,
             objetivo: rotina.objetivo,
             dificuldade: rotina.dificuldade,
+            genero: rotina.genero || "Ambos",
             treinos_por_semana: rotina.treinos_por_semana,
             duracao_semanas: rotina.duracao_semanas,
             observacoes_rotina: rotina.observacoes_rotina || "",
@@ -735,6 +892,7 @@ const EditarModeloPadrao = () => {
         nome: configuracao.nome,
         objetivo: configuracao.objetivo,
         dificuldade: configuracao.dificuldade,
+        genero: configuracao.genero,
         treinos_por_semana: configuracao.treinos_por_semana,
         duracao_semanas: configuracao.duracao_semanas,
         observacoes_rotina: configuracao.observacoes_rotina,

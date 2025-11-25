@@ -31,7 +31,7 @@ import {
   Dificuldade, 
   Aluno
 } from '@/types/rotina.types';
-import { OBJETIVOS_OPTIONS, DIFICULDADES_OPTIONS, DURACAO_OPTIONS, GRUPOS_MUSCULARES, CORES_GRUPOS_MUSCULARES, STORAGE_KEY_ROTINA_CRIACAO } from '@/constants/rotinas';
+import { OBJETIVOS_OPTIONS, DIFICULDADES_OPTIONS, DURACAO_OPTIONS, GENEROS_OPTIONS, GRUPOS_MUSCULARES, CORES_GRUPOS_MUSCULARES, STORAGE_KEY_ROTINA_CRIACAO } from '@/constants/rotinas';
 import { Tables } from '@/integrations/supabase/types';
 
 // Reusable Components
@@ -76,6 +76,7 @@ type ModeloConfiguracaoData = {
   nome: string;
   objetivo: Objetivo | '';
   dificuldade: Dificuldade | '';
+  genero: string;
   duracao_semanas: number | undefined;
   treinos_por_semana: number | undefined;
   data_inicio: string;
@@ -129,6 +130,7 @@ const RotinaConfiguracaoStep = ({ onAvancar, initialData, onCancelar, aluno, onU
       nome: `Rotina para ${aluno?.nome_completo?.split(' ')[0] || 'Aluno'}`,
       objetivo: '',
       dificuldade: '',
+      genero: 'Ambos',
       duracao_semanas: 1,
       treinos_por_semana: 1,
       data_inicio: new Date().toISOString().split('T')[0],
@@ -148,6 +150,7 @@ const RotinaConfiguracaoStep = ({ onAvancar, initialData, onCancelar, aluno, onU
     if (!formData.nome || formData.nome.trim().length < 3) newErrors.nome = "O nome da rotina deve ter pelo menos 3 caracteres.";
     if (!formData.objetivo) newErrors.objetivo = "O objetivo é obrigatório.";
     if (!formData.dificuldade) newErrors.dificuldade = "A dificuldade é obrigatória.";
+    if (!formData.genero) newErrors.genero = "O gênero é obrigatório.";
     if (!formData.duracao_semanas) newErrors.duracao_semanas = "A duração é obrigatória.";
     if (!formData.treinos_por_semana) newErrors.treinos_por_semana = "A frequência é obrigatória.";
     setErrors(newErrors);
@@ -188,6 +191,11 @@ const RotinaConfiguracaoStep = ({ onAvancar, initialData, onCancelar, aluno, onU
               <Label htmlFor="dificuldade">Dificuldade</Label>
               <CustomSelect inputId="dificuldade" options={DIFICULDADES_OPTIONS} value={DIFICULDADES_OPTIONS.find(o => o.value === formData.dificuldade)} onChange={(opt) => handleInputChange('dificuldade', opt ? opt.value : '')} placeholder="Selecione..."/>
               {errors.dificuldade && <p className="text-sm text-destructive mt-1">{errors.dificuldade}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="genero">Gênero</Label>
+              <CustomSelect inputId="genero" options={GENEROS_OPTIONS} value={GENEROS_OPTIONS.find(o => o.value === formData.genero)} onChange={(opt) => handleInputChange('genero', opt ? opt.value : '')} placeholder="Selecione..."/>
+              {errors.genero && <p className="text-sm text-destructive mt-1">{errors.genero}</p>}
             </div>
           </div>
           <div className="grid md:grid-cols-2 gap-4">
@@ -418,7 +426,17 @@ const RotinaTreinosStep = ({ onAvancar, onVoltar, initialData, configuracao, onC
 const RotinaExerciciosStep = ({ onFinalizar, onVoltar, exercicios, treinos, setExercicios, onCancelar, isSaving }: RotinaExerciciosStepProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [treinoAtual, setTreinoAtual] = useState<TreinoTemp | null>(null);
+  const [exerciciosIniciais, setExerciciosIniciais] = useState<ItemSacola[]>([]);
+  const [treinosExpandidos, setTreinosExpandidos] = useState<Record<string, boolean>>(() => {
+    const inicial: Record<string, boolean> = {};
+    treinos.forEach(t => inicial[t.id] = true);
+    return inicial;
+  });
   const { getExercicioInfo } = useExercicioLookup();
+
+  const toggleTreino = (treinoId: string) => {
+    setTreinosExpandidos(prev => ({ ...prev, [treinoId]: !prev[treinoId] }));
+  };
 
   // ✅ NOVO: Salvar exercícios ao voltar
   const handleVoltarClick = () => {
@@ -427,10 +445,58 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, exercicios, treinos, setE
     onVoltar();
   };
 
-  const handleAbrirModal = (treino: TreinoTemp) => {
+  const handleAbrirModal = async (treino: TreinoTemp) => {
     console.log('🔍 Abrindo modal para treino:', treino.id);
     console.log('📦 Exercícios atuais do treino:', exercicios[treino.id]);
     setTreinoAtual(treino);
+
+    // Busca exercícios completos do banco para preencher a sacola
+    const exerciciosDoTreino = exercicios[treino.id] || [];
+    const exerciciosIds = exerciciosDoTreino.flatMap(ex =>
+      ex.tipo === 'simples'
+        ? [ex.exercicio_1_id]
+        : [ex.exercicio_1_id, ex.exercicio_2_id!]
+    ).filter(Boolean);
+
+    if (exerciciosIds.length > 0) {
+      try {
+        const { data: exerciciosCompletos, error } = await supabase
+          .from('exercicios')
+          .select('*')
+          .in('id', exerciciosIds);
+
+        if (!error && exerciciosCompletos) {
+          const exerciciosMap = new Map(exerciciosCompletos.map(e => [e.id, e]));
+
+          const sacola: ItemSacola[] = exerciciosDoTreino.flatMap(ex => {
+            if (ex.tipo === 'simples') {
+              const exercicio = exerciciosMap.get(ex.exercicio_1_id);
+              if (!exercicio) return [];
+              return [{
+                tipo: 'simples' as const,
+                exercicio
+              }] as ItemSacola[];
+            } else {
+              const ex1 = exerciciosMap.get(ex.exercicio_1_id);
+              const ex2 = exerciciosMap.get(ex.exercicio_2_id!);
+              if (!ex1 || !ex2) return [];
+              return [{
+                tipo: 'combinacao' as const,
+                exercicios: [ex1, ex2] as [Tables<'exercicios'>, Tables<'exercicios'>]
+              }] as ItemSacola[];
+            }
+          });
+
+          setExerciciosIniciais(sacola);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar exercícios:', error);
+        setExerciciosIniciais([]);
+      }
+    } else {
+      setExerciciosIniciais([]);
+    }
+
     setIsModalOpen(true);
   };
 
@@ -438,33 +504,65 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, exercicios, treinos, setE
   const handleAdicionarMultiplosExercicios = (itens: ItemSacola[]) => {
     if (!treinoAtual) return;
 
-    const novosExerciciosParaTreino = itens.flatMap(item => {
+    const exerciciosAtuais = exercicios[treinoAtual.id] || [];
+
+    // Monta a lista final respeitando a ordem da sacola
+    const exerciciosFinais = itens.flatMap(item => {
       if (item.tipo === 'simples') {
-        return {
-          id: `ex_modelo_${Date.now()}_${Math.random()}`,
-          exercicio_1_id: item.exercicio.id,
-          tipo: 'simples',
-          series: [{ id: `serie_${Date.now()}`, numero_serie: 1, repeticoes: 0, carga: 0, intervalo_apos_serie: 60 }],
-          intervalo_apos_exercicio: 90
-        };
+        // Procura se já existe um exercício com o mesmo exercicio_1_id
+        const exercicioExistente = exerciciosAtuais.find(
+          ex => ex.tipo === 'simples' && ex.exercicio_1_id === item.exercicio.id
+        );
+
+        if (exercicioExistente) {
+          // Se já existe, mantém com todas as configurações (séries, intervalos, etc)
+          return exercicioExistente;
+        } else {
+          // Se é novo, cria com valores padrão
+          return {
+            id: `ex_modelo_${Date.now()}_${Math.random()}`,
+            exercicio_1_id: item.exercicio.id,
+            tipo: 'simples',
+            series: [{ id: `serie_${Date.now()}`, numero_serie: 1, repeticoes: undefined, carga: undefined, intervalo_apos_serie: 60 }],
+            intervalo_apos_exercicio: 90
+          };
+        }
       } else if (item.tipo === 'combinacao') {
-        return {
-          id: `ex_modelo_${Date.now()}_${Math.random()}`,
-          exercicio_1_id: item.exercicios[0].id,
-          exercicio_2_id: item.exercicios[1].id,
-          tipo: 'combinada',
-          series: [{ id: `serie_comb_${Date.now()}`, numero_serie: 1, repeticoes_1: 0, carga_1: 0, repeticoes_2: 0, carga_2: 0, intervalo_apos_serie: 90 }],
-          intervalo_apos_exercicio: 120
-        };
+        // Procura se já existe uma combinação com os mesmos exercícios
+        const exercicioExistente = exerciciosAtuais.find(
+          ex => ex.tipo === 'combinada' &&
+               ex.exercicio_1_id === item.exercicios[0].id &&
+               ex.exercicio_2_id === item.exercicios[1].id
+        );
+
+        if (exercicioExistente) {
+          // Se já existe, mantém com todas as configurações
+          return exercicioExistente;
+        } else {
+          // Se é novo, cria com valores padrão
+          return {
+            id: `ex_modelo_${Date.now()}_${Math.random()}`,
+            exercicio_1_id: item.exercicios[0].id,
+            exercicio_2_id: item.exercicios[1].id,
+            tipo: 'combinada',
+            series: [{ id: `serie_comb_${Date.now()}`, numero_serie: 1, repeticoes_1: undefined, carga_1: undefined, repeticoes_2: undefined, carga_2: undefined, intervalo_apos_serie: 90 }],
+            intervalo_apos_exercicio: 120
+          };
+        }
       }
       return [];
     });
 
     setExercicios({
       ...exercicios,
-      [treinoAtual.id]: [...(exercicios[treinoAtual.id] || []), ...novosExerciciosParaTreino],
+      [treinoAtual.id]: exerciciosFinais,
     });
-    toast.success(`${novosExerciciosParaTreino.length} item(ns) adicionado(s) ao treino.`);
+
+    // Calcula quantos exercícios são realmente novos
+    const novosCount = exerciciosFinais.length - exerciciosAtuais.length;
+    if (novosCount > 0) {
+      toast.success(`${novosCount} item(ns) adicionado(s) ao treino.`);
+    }
   };
 
   const handleRemoverExercicio = (treinoId: string, exercicioId: string) => {
@@ -517,12 +615,28 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, exercicios, treinos, setE
       </Card>
       
         <div className="space-y-4">
-        {treinos.map(treino => (
-          <Card key={treino.id} className={exercicios[treino.id]?.length > 0 ? "border-green-200" : "border-gray-200"}>
+        {treinos.map(treino => {
+          const isExpandido = treinosExpandidos[treino.id] ?? true;
+          const qtdExercicios = (exercicios[treino.id] || []).length;
+          return (
+          <Card key={treino.id} className={qtdExercicios > 0 ? "border-green-200" : "border-gray-200"}>
             <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-lg">{treino.nome}</CardTitle>
-                <p className="text-sm text-muted-foreground">{treino.grupos_musculares.join(', ')}</p>
+              <div className="flex items-center gap-3 flex-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleTreino(treino.id)}
+                  className="p-1 h-8 w-8"
+                >
+                  {isExpandido ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                </Button>
+                <div>
+                  <CardTitle className="text-lg">{treino.nome}</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    {treino.grupos_musculares.join(', ')} • {qtdExercicios} exercício{qtdExercicios !== 1 ? 's' : ''}
+                  </p>
+                </div>
               </div>
               {/* Botão para Mobile: redondo, apenas com ícone */}
               <Button type="button" variant="default" onClick={() => handleAbrirModal(treino)} className="md:hidden rounded-full h-10 w-10 p-0 flex-shrink-0 [&_svg]:size-6">
@@ -533,7 +647,7 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, exercicios, treinos, setE
                 <Plus className="h-4 w-4 mr-2" /> Exercício
               </Button>
             </CardHeader>
-            <CardContent>
+            {isExpandido && <CardContent>
               {(exercicios[treino.id] || []).length > 0 ? (
                 <div className="space-y-4">
                   {exercicios[treino.id].map((ex, exIndex) => {
@@ -575,9 +689,10 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, exercicios, treinos, setE
                   <p className="text-muted-foreground">Nenhum exercício adicionado.</p>
                 </div>
               )}
-            </CardContent>
+            </CardContent>}
           </Card>
-        ))}
+          );
+        })}
         </div>
         
         {/* Espaçamento para botões fixos */}
@@ -607,12 +722,13 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, exercicios, treinos, setE
           </div>
         </div>
         {isModalOpen && (
-          <ExercicioModal 
-            isOpen={isModalOpen} 
-            onClose={() => setIsModalOpen(false)} 
-            onConcluir={handleAdicionarMultiplosExercicios} 
+          <ExercicioModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            onConcluir={handleAdicionarMultiplosExercicios}
             gruposMuscularesFiltro={treinoAtual?.grupos_musculares || []}
             exerciciosJaAdicionados={treinoAtual ? (exercicios[treinoAtual.id] || []).flatMap(ex => [ex.exercicio_1_id, ex.exercicio_2_id]).filter(Boolean) as string[] : []}
+            exerciciosIniciais={exerciciosIniciais}
           />)}
       </div>
       </CardContent>
@@ -790,6 +906,7 @@ const RotinaCriacao = () => {
             nome: configuracao.nome,
             objetivo: configuracao.objetivo,
             dificuldade: configuracao.dificuldade,
+            genero: configuracao.genero,
             treinos_por_semana: configuracao.treinos_por_semana,
             duracao_semanas: configuracao.duracao_semanas,
             data_inicio: configuracao.data_inicio,
@@ -921,6 +1038,7 @@ const RotinaCriacao = () => {
             nome: configuracao.nome,
             objetivo: configuracao.objetivo,
             dificuldade: configuracao.dificuldade,
+            genero: configuracao.genero,
             treinos_por_semana: configuracao.treinos_por_semana,
             duracao_semanas: configuracao.duracao_semanas,
             data_inicio: configuracao.data_inicio,
@@ -977,6 +1095,7 @@ const RotinaCriacao = () => {
             nome: configuracao.nome,
             objetivo: configuracao.objetivo,
             dificuldade: configuracao.dificuldade,
+            genero: configuracao.genero,
             treinos_por_semana: configuracao.treinos_por_semana,
             duracao_semanas: configuracao.duracao_semanas,
             data_inicio: configuracao.data_inicio,

@@ -87,6 +87,12 @@ const OBJETIVOS = [
   'Performance esportiva'
 ];
 
+const GENEROS = [
+  'Feminino',
+  'Masculino',
+  'Ambos'
+];
+
 const CORES_OBJETIVOS = {
   'Emagrecimento': 'bg-orange-100 text-orange-800',
   'Hipertrofia': 'bg-blue-100 text-blue-800',

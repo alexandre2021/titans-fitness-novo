@@ -29,8 +29,8 @@ export const SerieSimples = ({ exercicio, treinoId, isUltimoExercicio, onUpdate 
     const novaSerie: SerieModelo = {
       id: `serie_simples_${Date.now()}`,
       numero_serie: exercicio.series.length + 1,
-      repeticoes: 0,
-      carga: 0,
+      repeticoes: undefined,
+      carga: undefined,
       intervalo_apos_serie: 60,
     };
     onUpdate({ series: [...exercicio.series, novaSerie] });
@@ -46,14 +46,16 @@ export const SerieSimples = ({ exercicio, treinoId, isUltimoExercicio, onUpdate 
     onUpdate({ intervalo_apos_exercicio: valor });
   };
 
-  // Valores seguros para inputs
-  const getValorSeguro = (valor: number | undefined, padrao: number): string => {
-    return (valor !== undefined ? valor : padrao).toString();
+  // Retorna valor do input: vazio se não definido/0, ou o valor real
+  const getValorRepeticoes = (serie: SerieModelo): string => {
+    if (serie.repeticoes === undefined || serie.repeticoes === 0) return '';
+    return serie.repeticoes.toString();
   };
 
   const getValorCarga = (serie: SerieModelo): string => {
     if (isPesoCorporal) return 'Peso Corporal';
-    return serie.carga && serie.carga > 0 ? serie.carga.toString() : '';
+    if (serie.carga === undefined || serie.carga === 0) return '';
+    return serie.carga.toString();
   };
 
   return (
@@ -75,12 +77,15 @@ export const SerieSimples = ({ exercicio, treinoId, isUltimoExercicio, onUpdate 
                   <Label className="text-xs text-gray-600">Rep</Label>
                   <Input
                     type="number"
-                    value={getValorSeguro(serie.repeticoes, 12)}
-                    onChange={(e) => handleUpdateSerie(serie.id, 'repeticoes', Number(e.target.value))}
-                    min="1"
+                    value={getValorRepeticoes(serie)}
+                    onChange={(e) => {
+                      const valor = e.target.value === '' ? 0 : Number(e.target.value);
+                      handleUpdateSerie(serie.id, 'repeticoes', valor);
+                    }}
+                    min="0"
                     max="100"
                     className="text-center h-9"
-                    placeholder="12"
+                    placeholder="0"
                   />
                 </div>
                 
@@ -89,7 +94,10 @@ export const SerieSimples = ({ exercicio, treinoId, isUltimoExercicio, onUpdate 
                   <Input
                     type={isPesoCorporal ? "text" : "number"}
                     value={getValorCarga(serie)}
-                    onChange={(e) => handleUpdateSerie(serie.id, 'carga', Number(e.target.value))}
+                    onChange={(e) => {
+                      const valor = e.target.value === '' ? 0 : Number(e.target.value);
+                      handleUpdateSerie(serie.id, 'carga', valor);
+                    }}
                     disabled={isPesoCorporal}
                     min="0"
                     step="0.5"
@@ -185,7 +193,7 @@ export const SerieSimples = ({ exercicio, treinoId, isUltimoExercicio, onUpdate 
                 </Label>
                 <Input
                   type="number"
-                  value={getValorSeguro(serie.intervalo_apos_serie, 60)}
+                  value={serie.intervalo_apos_serie !== undefined ? serie.intervalo_apos_serie : 60}
                   onChange={(e) => handleUpdateSerie(serie.id, 'intervalo_apos_serie', parseInt(e.target.value) || 0)}
                   min="0"
                   max="600"

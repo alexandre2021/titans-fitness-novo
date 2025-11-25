@@ -34,10 +34,10 @@ export const SerieCombinada = ({ exercicio, treinoId, isUltimoExercicio, onUpdat
     const novaSerie: SerieModelo = {
       id: `serie_comb_${Date.now()}`,
       numero_serie: exercicio.series.length + 1,
-      repeticoes_1: 0,
-      carga_1: 0,
-      repeticoes_2: 0,
-      carga_2: 0,
+      repeticoes_1: undefined,
+      carga_1: undefined,
+      repeticoes_2: undefined,
+      carga_2: undefined,
       intervalo_apos_serie: 90,
     };
     onUpdate({ series: [...exercicio.series, novaSerie] });
@@ -53,19 +53,27 @@ export const SerieCombinada = ({ exercicio, treinoId, isUltimoExercicio, onUpdat
     onUpdate({ intervalo_apos_exercicio: valor });
   };
 
-  // Valores seguros para inputs
-  const getValorSeguro = (valor: number | undefined, padrao: number): string => {
-    return (valor !== undefined ? valor : padrao).toString();
+  // Retorna valor do input: vazio se não definido/0, ou o valor real
+  const getValorRepeticoes1 = (serie: SerieModelo): string => {
+    if (serie.repeticoes_1 === undefined || serie.repeticoes_1 === 0) return '';
+    return serie.repeticoes_1.toString();
+  };
+
+  const getValorRepeticoes2 = (serie: SerieModelo): string => {
+    if (serie.repeticoes_2 === undefined || serie.repeticoes_2 === 0) return '';
+    return serie.repeticoes_2.toString();
   };
 
   const getValorCarga1 = (serie: SerieModelo): string => {
     if (isPesoCorporal1) return 'Peso Corporal';
-    return serie.carga_1 && serie.carga_1 > 0 ? serie.carga_1.toString() : '';
+    if (serie.carga_1 === undefined || serie.carga_1 === 0) return '';
+    return serie.carga_1.toString();
   };
 
   const getValorCarga2 = (serie: SerieModelo): string => {
     if (isPesoCorporal2) return 'Peso Corporal';
-    return serie.carga_2 && serie.carga_2 > 0 ? serie.carga_2.toString() : '';
+    if (serie.carga_2 === undefined || serie.carga_2 === 0) return '';
+    return serie.carga_2.toString();
   };
 
   return (
@@ -105,21 +113,27 @@ export const SerieCombinada = ({ exercicio, treinoId, isUltimoExercicio, onUpdat
                       <Label className="text-xs text-gray-600">Rep</Label>
                       <Input
                         type="number"
-                        value={getValorSeguro(serie.repeticoes_1, 12)}
-                        onChange={(e) => handleUpdateSerie(serie.id, 'repeticoes_1', Number(e.target.value))}
-                        min="1"
+                        value={getValorRepeticoes1(serie)}
+                        onChange={(e) => {
+                          const valor = e.target.value === '' ? 0 : Number(e.target.value);
+                          handleUpdateSerie(serie.id, 'repeticoes_1', valor);
+                        }}
+                        min="0"
                         max="100"
                         className="text-center h-9"
-                        placeholder="12"
+                        placeholder="0"
                       />
                     </div>
-                    
+
                     <div className="space-y-1">
                       <Label className="text-xs text-gray-600">Carga (kg)</Label>
                       <Input
                         type={isPesoCorporal1 ? "text" : "number"}
                         value={getValorCarga1(serie)}
-                        onChange={(e) => handleUpdateSerie(serie.id, 'carga_1', Number(e.target.value))}
+                        onChange={(e) => {
+                          const valor = e.target.value === '' ? 0 : Number(e.target.value);
+                          handleUpdateSerie(serie.id, 'carga_1', valor);
+                        }}
                         disabled={isPesoCorporal1}
                         min="0"
                         step="0.5"
@@ -145,21 +159,27 @@ export const SerieCombinada = ({ exercicio, treinoId, isUltimoExercicio, onUpdat
                         <Label className="text-xs text-gray-600">Rep</Label>
                         <Input
                           type="number"
-                          value={getValorSeguro(serie.repeticoes_2, 12)}
-                          onChange={(e) => handleUpdateSerie(serie.id, 'repeticoes_2', Number(e.target.value))}
-                          min="1"
+                          value={getValorRepeticoes2(serie)}
+                          onChange={(e) => {
+                            const valor = e.target.value === '' ? 0 : Number(e.target.value);
+                            handleUpdateSerie(serie.id, 'repeticoes_2', valor);
+                          }}
+                          min="0"
                           max="100"
                           className="text-center h-9"
-                          placeholder="12"
+                          placeholder="0"
                         />
                       </div>
-                      
+
                       <div className="space-y-1">
                         <Label className="text-xs text-gray-600">Carga (kg)</Label>
                         <Input
                           type={isPesoCorporal2 ? "text" : "number"}
                           value={getValorCarga2(serie)}
-                          onChange={(e) => handleUpdateSerie(serie.id, 'carga_2', Number(e.target.value))}
+                          onChange={(e) => {
+                            const valor = e.target.value === '' ? 0 : Number(e.target.value);
+                            handleUpdateSerie(serie.id, 'carga_2', valor);
+                          }}
                           disabled={isPesoCorporal2}
                           min="0"
                           step="0.5"
@@ -195,7 +215,7 @@ export const SerieCombinada = ({ exercicio, treinoId, isUltimoExercicio, onUpdat
                 </Label>
                 <Input
                   type="number"
-                  value={getValorSeguro(serie.intervalo_apos_serie, 90)}
+                  value={serie.intervalo_apos_serie !== undefined ? serie.intervalo_apos_serie : 90}
                   onChange={(e) => handleUpdateSerie(serie.id, 'intervalo_apos_serie', parseInt(e.target.value) || 0)}
                   min="0"
                   max="600"

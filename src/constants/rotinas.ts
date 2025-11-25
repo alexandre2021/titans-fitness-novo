@@ -4,6 +4,7 @@ export const STATUS_ROTINA = ['Ativa', 'Rascunho', 'Bloqueada', 'Concluída', 'C
 export const OBJETIVOS = ['Hipertrofia', 'Emagrecimento', 'Definição muscular', 'Condicionamento físico', 'Reabilitação', 'Performance esportiva'] as const;
 export const DIFICULDADES = ['Baixa', 'Média', 'Alta'] as const;
 export const FREQUENCIAS = [1, 2, 3, 4, 5, 6, 7] as const;
+export const GENEROS = ['Feminino', 'Masculino', 'Ambos'] as const;
 export const GRUPOS_MUSCULARES = ['Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Abdômen', 'Pernas', 'Glúteos', 'Panturrilha'] as const;
 
 export const CORES_GRUPOS_MUSCULARES: { [key: string]: string } = {
@@ -31,6 +32,8 @@ export const FORMAS_PAGAMENTO = [
 export const OBJETIVOS_OPTIONS = OBJETIVOS.map(o => ({ value: o, label: o }));
 
 export const DIFICULDADES_OPTIONS = DIFICULDADES.map(d => ({ value: d, label: d }));
+
+export const GENEROS_OPTIONS = GENEROS.map(g => ({ value: g, label: g }));
 
 export const FREQUENCIAS_OPTIONS = FREQUENCIAS.map(f => ({ value: String(f), label: `${f}x / semana` }));
 
