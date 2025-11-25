@@ -61,10 +61,25 @@ export const useNotificationPermission = (): UseNotificationPermissionReturn => 
     }
 
     try {
-      // Tenta sem timeout primeiro (SW pode estar lento mas funcional)
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      // Timeout de 3 segundos - se travar, ignora
+      const timeoutPromise = new Promise<null>((resolve) =>
+        setTimeout(() => resolve(null), 3000)
+      );
 
+      const registration = await Promise.race([
+        navigator.serviceWorker.ready,
+        timeoutPromise
+      ]);
+
+      // Se deu timeout, assume que não tem subscription e para por aqui
+      if (!registration) {
+        console.warn('⚠️ Service Worker não respondeu em 3s, assumindo sem subscription');
+        setIsSubscribed(false);
+        setIsLoading(false);
+        return;
+      }
+
+      const subscription = await registration.pushManager.getSubscription();
       setIsSubscribed(!!subscription);
 
       // Verifica se a subscription existe no banco de dados

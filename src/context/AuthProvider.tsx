@@ -35,6 +35,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await Promise.all(cacheNames.map(name => caches.delete(name)));
     }
 
+    // Desregistra o Service Worker para garantir estado limpo
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map(reg => reg.unregister()));
+      console.log('🔄 Service Worker desregistrado');
+    }
+
     console.log('✅ Cache e storage limpos com sucesso');
   };
 
@@ -123,6 +130,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      console.log('🚪 Iniciando processo de logout...');
+
       // Limpa o estado local primeiro
       setUser(null);
       setSession(null);
@@ -130,21 +139,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Remove o ID do último usuário
       localStorage.removeItem('last_user_id');
 
-      // Limpa todo o cache e storage
-      await clearAllCacheAndStorage();
-
-      // Limpa a sessão do Supabase
+      // Limpa a sessão do Supabase ANTES de limpar cache/SW
       await supabase.auth.signOut();
 
-      // Aguarda um momento para garantir que a sessão foi limpa
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Limpa todo o cache, storage e desregistra Service Worker
+      await clearAllCacheAndStorage();
 
-      // Redireciona para a página de login
-      window.location.replace('/login');
+      // Aguarda um momento para garantir que tudo foi limpo
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      console.log('✅ Logout completo, redirecionando...');
+
+      // Força reload completo (não apenas navegação) para garantir estado limpo
+      window.location.href = '/login';
+      window.location.reload();
     } catch (error) {
-      console.error('Erro ao fazer logout:', error);
-      // Mesmo com erro, tenta redirecionar
-      window.location.replace('/login');
+      console.error('❌ Erro ao fazer logout:', error);
+      // Mesmo com erro, força reload completo
+      window.location.href = '/login';
+      window.location.reload();
     }
   };
 
