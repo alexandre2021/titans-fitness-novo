@@ -306,7 +306,7 @@ const SortableEditarTreinoCard = ({ id, treino, index, atualizarCampoTreino, adi
           <CardTitle className="flex items-center justify-between text-lg">
             <div {...listeners} className="flex items-center cursor-grab p-2 -m-2 rounded-lg">
               <GripVertical className="h-5 w-5 mr-2 text-gray-400" />
-              {treino.nome}
+              Treino {String.fromCharCode(65 + index)}
             </div>
             {treinoCompleto && (
               <Badge className="bg-green-100 text-green-800 text-xs flex items-center gap-1">
@@ -658,7 +658,7 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
             </CardContent>
           </Card>
           <div className="space-y-4">
-            {treinos.map(treino => {
+            {treinos.map((treino, index) => {
               const isExpandido = treinosExpandidos[treino.id] ?? false;
               const qtdExercicios = (exercicios[treino.id] || []).length;
               return (
@@ -675,7 +675,7 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
                       {isExpandido ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
                     </Button>
                     <div>
-                      <CardTitle className="text-lg">{treino.nome}</CardTitle>
+                      <CardTitle className="text-lg">Treino {String.fromCharCode(65 + index)}</CardTitle>
                       <p className="text-sm text-muted-foreground">
                         {treino.grupos_musculares.join(', ')} • {qtdExercicios} exercício{qtdExercicios !== 1 ? 's' : ''}
                       </p>
