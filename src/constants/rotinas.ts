@@ -4,8 +4,8 @@ export const STATUS_ROTINA = ['Ativa', 'Rascunho', 'Bloqueada', 'Concluída', 'C
 export const OBJETIVOS = ['Hipertrofia', 'Emagrecimento', 'Definição muscular', 'Condicionamento físico', 'Reabilitação', 'Performance esportiva'] as const;
 export const DIFICULDADES = ['Baixa', 'Média', 'Alta'] as const;
 export const FREQUENCIAS = [1, 2, 3, 4, 5, 6, 7] as const;
-export const GENEROS = ['Feminino', 'Masculino', 'Ambos'] as const;
-export const GRUPOS_MUSCULARES = ['Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Abdômen', 'Pernas', 'Glúteos', 'Panturrilha'] as const;
+export const GENEROS = ['Feminino', 'Masculino', 'Todos'] as const;
+export const GRUPOS_MUSCULARES = ['Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Antebraço', 'Abdômen', 'Pernas', 'Glúteos', 'Panturrilha'] as const;
 
 export const CORES_GRUPOS_MUSCULARES: { [key: string]: string } = {
   'Peito': 'bg-red-100 text-red-800',
@@ -14,6 +14,7 @@ export const CORES_GRUPOS_MUSCULARES: { [key: string]: string } = {
   'Ombros': 'bg-yellow-100 text-yellow-800',
   'Bíceps': 'bg-purple-100 text-purple-800',
   'Tríceps': 'bg-pink-100 text-pink-800',
+  'Antebraço': 'bg-teal-100 text-teal-800',
   'Abdômen': 'bg-orange-100 text-orange-800',
   'Glúteos': 'bg-violet-100 text-violet-800',
   'Panturrilha': 'bg-indigo-100 text-indigo-800'
@@ -46,6 +47,8 @@ export const FILTRO_OBJETIVOS_OPTIONS = [{ value: 'todos', label: 'Todos' }, ...
 export const FILTRO_DIFICULDADES_OPTIONS = [{ value: 'todos', label: 'Todas' }, ...DIFICULDADES_OPTIONS];
 
 export const FILTRO_FREQUENCIAS_OPTIONS = [{ value: 'todos', label: 'Todas' }, ...FREQUENCIAS_OPTIONS];
+
+export const FILTRO_GENEROS_OPTIONS = [{ value: 'todos', label: 'Todos' }, ...GENEROS_OPTIONS];
 
 export const STORAGE_KEY_NOVO_MODELO = 'modelo_em_criacao';
 export const STORAGE_KEY_ROTINA_CRIACAO = 'rotina_em_criacao';

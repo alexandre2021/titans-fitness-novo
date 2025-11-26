@@ -34,13 +34,12 @@ import { SerieSimples } from "@/components/rotina/criacao/SerieSimples";
 import { SerieCombinada } from "@/components/rotina/criacao/SerieCombinada";
 import { ExercicioModal, ItemSacola } from "@/components/rotina/criacao/ExercicioModal";
 import CustomSelect from "@/components/ui/CustomSelect";
-import { OBJETIVOS_OPTIONS, DIFICULDADES_OPTIONS, FREQUENCIAS_OPTIONS, DURACAO_OPTIONS, GENEROS_OPTIONS, GRUPOS_MUSCULARES, CORES_GRUPOS_MUSCULARES, STORAGE_KEY_NOVO_MODELO } from "@/constants/rotinas";
+import { OBJETIVOS_OPTIONS, DIFICULDADES_OPTIONS, FREQUENCIAS_OPTIONS, DURACAO_OPTIONS, GRUPOS_MUSCULARES, CORES_GRUPOS_MUSCULARES, STORAGE_KEY_NOVO_MODELO } from "@/constants/rotinas";
 
 type ModeloConfiguracaoData = {
   nome: string;
   objetivo: string;
   dificuldade: string;
-  genero: string;
   treinos_por_semana: number | undefined;
   duracao_semanas: number | undefined;
   observacoes_rotina?: string;
@@ -117,7 +116,6 @@ const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar }: ModeloConfig
       nome: "",
       objetivo: "",
       dificuldade: "",
-      genero: "Ambos",
       treinos_por_semana: undefined,
       duracao_semanas: undefined,
       observacoes_rotina: "",
@@ -132,7 +130,6 @@ const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar }: ModeloConfig
     }
     if (!formData.objetivo) newErrors.objetivo = "O objetivo é obrigatório.";
     if (!formData.dificuldade) newErrors.dificuldade = "A dificuldade é obrigatória.";
-    if (!formData.genero) newErrors.genero = "O gênero é obrigatório.";
     if (!formData.treinos_por_semana) newErrors.treinos_por_semana = "A frequência é obrigatória.";
     if (!formData.duracao_semanas) newErrors.duracao_semanas = "A duração é obrigatória.";
 
@@ -198,17 +195,6 @@ const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar }: ModeloConfig
                 placeholder="Selecione a dificuldade"
               />
               {errors.dificuldade && <p className="text-sm text-destructive mt-1">{errors.dificuldade}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="genero">Gênero</Label>
-              <CustomSelect
-                inputId="genero"
-                value={GENEROS_OPTIONS.find(opt => opt.value === formData.genero)}
-                onChange={(option) => handleInputChange('genero', option ? option.value : '')}
-                options={GENEROS_OPTIONS}
-                placeholder="Selecione o gênero"
-              />
-              {errors.genero && <p className="text-sm text-destructive mt-1">{errors.genero}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="frequencia">Frequência</Label>
@@ -339,11 +325,16 @@ const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCance
 
       // Renomeia e reordena todos os treinos
       const nomesTreinos = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
-      return novosTreinos.map((treino, i) => ({
-        ...treino, 
-        nome: `Treino ${nomesTreinos[i] || String.fromCharCode(65 + i)}`, 
+      const treinosAtualizados = novosTreinos.map((treino, i) => ({
+        ...treino,
+        nome: `Treino ${nomesTreinos[i] || String.fromCharCode(65 + i)}`,
         ordem: i + 1
       }));
+
+      // Propaga mudanças para o componente pai
+      onUpdate({ treinos: treinosAtualizados });
+
+      return treinosAtualizados;
     });
   }
 
@@ -480,7 +471,7 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
   const [exerciciosIniciais, setExerciciosIniciais] = useState<ItemSacola[]>([]);
   const [treinosExpandidos, setTreinosExpandidos] = useState<Record<string, boolean>>(() => {
     const inicial: Record<string, boolean> = {};
-    treinos.forEach(t => inicial[t.id] = true);
+    treinos.forEach(t => inicial[t.id] = false);
     return inicial;
   });
   const { getExercicioInfo } = useExercicioLookup();
@@ -672,7 +663,7 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
       
         <div className="space-y-4">
         {treinos.map(treino => {
-          const isExpandido = treinosExpandidos[treino.id] ?? true;
+          const isExpandido = treinosExpandidos[treino.id] ?? false;
           const qtdExercicios = (exercicios[treino.id] || []).length;
           return (
           <Card key={treino.id} className={qtdExercicios > 0 ? "border-green-200" : "border-gray-200"}>
@@ -960,7 +951,6 @@ const NovoModeloPadrao = () => {
           nome: configuracao.nome,
           objetivo: configuracao.objetivo,
           dificuldade: configuracao.dificuldade,
-          genero: configuracao.genero,
           treinos_por_semana: configuracao.treinos_por_semana,
           duracao_semanas: configuracao.duracao_semanas,
           observacoes_rotina: configuracao.observacoes_rotina || null,

@@ -10,7 +10,7 @@
  * - Evitar dependências complexas entre contextos diferentes
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { X, Search, Link, Dumbbell, Filter, Check, Info, Plus, ShoppingBag, Trash2, List, Camera, ChevronUp, ChevronDown } from 'lucide-react';
 import Modal from 'react-modal';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import CustomSelect from '@/components/ui/CustomSelect';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useExercicios } from '@/hooks/useExercicios';
 import { ExercicioDetalhesModal } from '../execucao/shared/ExercicioDetalhesModal';
 import { Tables } from '@/integrations/supabase/types';
@@ -47,6 +57,7 @@ const CORES_GRUPOS_MUSCULARES: {[key: string]: string} = {
   'Ombros': 'bg-yellow-100 text-yellow-800 border-yellow-200',
   'Bíceps': 'bg-purple-100 text-purple-800 border-purple-200',
   'Tríceps': 'bg-pink-100 text-pink-800 border-pink-200',
+  'Antebraço': 'bg-teal-100 text-teal-800 border-teal-200',
   'Abdômen': 'bg-orange-100 text-orange-800 border-orange-200',
   'Glúteos': 'bg-violet-100 text-violet-800 border-violet-200',
   'Panturrilha': 'bg-indigo-100 text-indigo-800 border-indigo-200'
@@ -219,27 +230,57 @@ export const ExercicioModal: React.FC<Props> = ({
   // Estado para controlar visibilidade dos filtros
   const [showFiltros, setShowFiltros] = useState(false);
 
+  // Estado para controlar o diálogo de confirmação ao limpar sacola
+  const [showClearConfirmation, setShowClearConfirmation] = useState(false);
+
+  // Estado para controlar o diálogo de confirmação ao remover item individual
+  const [itemParaRemover, setItemParaRemover] = useState<number | null>(null);
+
+  // Usar ref para rastrear mudanças (não causa re-render)
+  const temMudancasRef = useRef(false);
+  const [showConfirmClose, setShowConfirmClose] = useState(false);
+
   // Todos os exercícios disponíveis
   const exerciciosDisponiveis = [...exerciciosPadrao, ...exerciciosPersonalizados];
+
+  // IDs dos exercícios que estão sendo editados (vieram via exerciciosIniciais)
+  const idsEmEdicao = useMemo(() => {
+    return exerciciosIniciais.flatMap(item => {
+      if (item.tipo === 'simples') {
+        return [item.exercicio.id];
+      } else if (item.tipo === 'combinacao') {
+        return [item.exercicios[0].id, item.exercicios[1].id];
+      } else if (item.tipo === 'combinacao_incompleta') {
+        return [item.exercicio.id];
+      }
+      return [];
+    });
+  }, [exerciciosIniciais]);
+
+  // Filtrar exerciciosJaAdicionados para excluir os que estão sendo editados
+  const exerciciosJaAdicionadosFiltrados = useMemo(() => {
+    return exerciciosJaAdicionados.filter(id => !idsEmEdicao.includes(id));
+  }, [exerciciosJaAdicionados, idsEmEdicao]);
 
   // Resetar quando modal abre
   useEffect(() => {
     if (isOpen) {
-      setViewAtiva('selecao'); // Sempre começa na view de seleção
+      setViewAtiva('selecao');
+      temMudancasRef.current = false; // Reseta flag ao abrir
+
       if (gruposMuscularesFiltro.length === 1) {
         setFiltros(prev => ({ ...prev, grupo_muscular: gruposMuscularesFiltro[0] }));
       } else {
         setFiltros(prev => ({ ...prev, grupo_muscular: 'todos' }));
       }
 
-      // Inicializa a sacola com os exercícios existentes (se houver)
       if (exerciciosIniciais && exerciciosIniciais.length > 0) {
         setSacola(exerciciosIniciais);
       } else {
         setSacola([]);
       }
     }
-  }, [isOpen, gruposMuscularesFiltro, exerciciosIniciais]);
+  }, [isOpen, gruposMuscularesFiltro]);
 
   // Quando troca o tipo de série, descarta combinação incompleta
   useEffect(() => {
@@ -301,7 +342,7 @@ export const ExercicioModal: React.FC<Props> = ({
   const temExerciciosPersonalizados = exerciciosDisponiveis.some(ex => ex.tipo === 'personalizado');
 
   // Verificar se exercício está na sacola
-  const exercicioEstaNaSacola = (exercicioId: string): boolean => {
+  const exercicioEstaNaSacola = useCallback((exercicioId: string): boolean => {
     return sacola.some(item => {
       if (item.tipo === 'simples') {
         return item.exercicio.id === exercicioId;
@@ -312,7 +353,7 @@ export const ExercicioModal: React.FC<Props> = ({
       }
       return false;
     });
-  };
+  }, [sacola]);
 
   // Função para mostrar detalhes do exercício
   const mostrarDetalhes = (exercicioId: string, event: React.MouseEvent) => {
@@ -338,19 +379,19 @@ export const ExercicioModal: React.FC<Props> = ({
       nome: exercicio.nome,
       id: exercicio.id,
       tipoSerie,
-      jaAdicionadoAoTreino: exerciciosJaAdicionados.includes(exercicio.id),
+      jaAdicionadoAoTreino: exerciciosJaAdicionadosFiltrados.includes(exercicio.id),
       estaNaSacola: exercicioEstaNaSacola(exercicio.id),
       combinacaoIncompleta: combinacaoIncompleta ? combinacaoIncompleta.exercicio.nome : 'nenhuma',
       sacolaAtual: sacola.map(item => ({
         tipo: item.tipo,
-        exercicio: item.tipo === 'simples' || item.tipo === 'combinacao_incompleta' 
-          ? item.exercicio.nome 
+        exercicio: item.tipo === 'simples' || item.tipo === 'combinacao_incompleta'
+          ? item.exercicio.nome
           : `${item.exercicios[0].nome} + ${item.exercicios[1].nome}`
       }))
     });
 
     // Se já foi adicionado ao treino, não faz nada
-    if (exerciciosJaAdicionados.includes(exercicio.id)) {
+    if (exerciciosJaAdicionadosFiltrados.includes(exercicio.id)) {
       console.log('❌ Exercício já adicionado ao treino');
       return;
     }
@@ -366,6 +407,7 @@ export const ExercicioModal: React.FC<Props> = ({
     if (tipoSerie === 'simples') {
       console.log('✅ Adicionando como série simples');
       setSacola(prev => [...prev, { tipo: 'simples', exercicio }]);
+      temMudancasRef.current = true; // Marca que há mudanças
     } else {
       // Modo combinada
       if (combinacaoIncompleta) {
@@ -378,40 +420,76 @@ export const ExercicioModal: React.FC<Props> = ({
             exercicios: [combinacaoIncompleta.exercicio, exercicio]
           }
         ]);
+        temMudancasRef.current = true; // Marca que há mudanças
       } else {
         console.log('✅ Iniciando nova combinação (1/2)');
         // Inicia uma combinação
         setSacola(prev => [...prev, { tipo: 'combinacao_incompleta', exercicio }]);
+        temMudancasRef.current = true; // Marca que há mudanças
       }
     }
   };
 
   // Remover item da sacola
   const removerItemSacola = (index: number) => {
-    setSacola(prev => prev.filter((_, i) => i !== index));
+    setItemParaRemover(index);
+  };
+
+  const confirmarRemocaoItem = () => {
+    if (itemParaRemover === null) return;
+
+    const novaSacola = sacola.filter((_, i) => i !== itemParaRemover);
+    setSacola(novaSacola);
+    setItemParaRemover(null);
+    setViewAtiva('selecao');
+    temMudancasRef.current = true; // Marca que há mudanças
   };
 
   // Mover item na sacola (reordenar)
   const moverItemSacola = (index: number, direcao: 'cima' | 'baixo') => {
-    setSacola(prev => {
-      const novoArray = [...prev];
-      const novoIndice = direcao === 'cima' ? index - 1 : index + 1;
+    console.log('🔄 Movendo item, marcando temMudancas=true');
+    const novoArray = [...sacola];
+    const novoIndice = direcao === 'cima' ? index - 1 : index + 1;
 
-      // Troca de posição
-      [novoArray[index], novoArray[novoIndice]] = [novoArray[novoIndice], novoArray[index]];
+    [novoArray[index], novoArray[novoIndice]] = [novoArray[novoIndice], novoArray[index]];
 
-      return novoArray;
-    });
+    setSacola(novoArray);
+    temMudancasRef.current = true; // Marca que há mudanças
+    console.log('✅ temMudancas setado para true');
   };
 
   // Cancelar combinação incompleta
   const cancelarCombinacaoIncompleta = () => {
     setSacola(prev => prev.filter(item => item.tipo !== 'combinacao_incompleta'));
+    temMudancasRef.current = true; // Marca que há mudanças
   };
 
   // Limpar toda a sacola
   const limparSacola = () => {
     setSacola([]);
+    setViewAtiva('selecao');
+    temMudancasRef.current = true; // Marca que há mudanças
+  };
+
+  // Tentar fechar o modal
+  const handleTentarFechar = useCallback(() => {
+    console.log('❌ Tentando fechar, temMudancas:', temMudancasRef.current);
+    if (temMudancasRef.current) {
+      console.log('⚠️ Há mudanças, abrindo modal de confirmação');
+      setShowConfirmClose(true);
+    } else {
+      console.log('✅ Sem mudanças, fechando direto');
+      onClose();
+    }
+  }, [onClose]);
+
+  // Confirmar e salvar mudanças ao fechar
+  const handleConfirmarFechamento = () => {
+    const itensCompletos = sacola.filter(item => item.tipo !== 'combinacao_incompleta');
+    onConcluir(itensCompletos);
+    temMudancasRef.current = false;
+    setShowConfirmClose(false);
+    onClose();
   };
 
   // Adicionar exercícios ao treino
@@ -426,7 +504,7 @@ export const ExercicioModal: React.FC<Props> = ({
       toast.warning('1 exercício descartado (combinação incompleta)');
     }
 
-    // Limpar sacola e voltar para view de seleção
+    temMudancasRef.current = false; // Reseta flag de mudanças
     onClose(); // ✅ CORREÇÃO: Fecha o modal ao concluir.
   };
 
@@ -446,7 +524,7 @@ export const ExercicioModal: React.FC<Props> = ({
       {/* Modal principal de exercícios */}
       <Modal
         isOpen={isOpen}
-        onRequestClose={onClose}
+        onRequestClose={handleTentarFechar}
         shouldCloseOnOverlayClick={true}
         shouldCloseOnEsc={true}
         className="bg-white rounded-lg max-w-4xl max-h-[90vh] w-full outline-none flex flex-col"
@@ -485,7 +563,7 @@ export const ExercicioModal: React.FC<Props> = ({
             <Button
               variant="ghost"
               size="sm"
-              onClick={onClose}
+              onClick={handleTentarFechar}
               className="h-8 w-8 p-0"
             >
               <X className="h-4 w-4" />
@@ -658,7 +736,7 @@ export const ExercicioModal: React.FC<Props> = ({
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {exerciciosFiltrados.map((exercicio: Tables<'exercicios'>) => {
                       const estaNaSacola = exercicioEstaNaSacola(exercicio.id);
-                      const jaAdicionado = exerciciosJaAdicionados.includes(exercicio.id);
+                      const jaAdicionado = exerciciosJaAdicionadosFiltrados.includes(exercicio.id);
                       const podeSelecionar = !jaAdicionado;
 
                       return (
@@ -788,20 +866,16 @@ export const ExercicioModal: React.FC<Props> = ({
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {/* Exercícios Simples */}
-                  {sacola.some(item => item.tipo === 'simples') && (
-                    <div>
-                      <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-                        <Dumbbell className="h-4 w-4 text-[#ba3c15]" />
-                        <span>Séries Simples ({sacola.filter(i => i.tipo === 'simples').length})</span>
-                      </h4>
-                      <div className="space-y-2">
-                        {sacola.map((item, index) =>
-                          item.tipo === 'simples' ? (
-                            <div
-                              key={index}
-                              className="flex items-center justify-between bg-white p-3 rounded-lg border border-[#ba3c15]/20 hover:border-[#ba3c15] transition-colors"
-                            >
+                  {/* Lista Unificada de Exercícios */}
+                  <div>
+                    <h4 className="text-sm font-medium mb-3">
+                      Exercícios na Sacola ({sacola.length})
+                    </h4>
+                    <div className="space-y-2">
+                      {sacola.map((item, index) => (
+                        <div key={index}>
+                          {item.tipo === 'simples' ? (
+                            <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-[#ba3c15]/20 hover:border-[#ba3c15] transition-colors">
                               <div className="flex items-center gap-2 flex-1">
                                 {/* Setas de reordenação */}
                                 <div className="flex flex-col -space-y-2">
@@ -851,26 +925,8 @@ export const ExercicioModal: React.FC<Props> = ({
                                 <Trash2 className="h-4 w-4 text-red-600" />
                               </Button>
                             </div>
-                          ) : null
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Combinações Completas */}
-                  {sacola.some(item => item.tipo === 'combinacao') && (
-                    <div>
-                      <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-                        <Link className="h-4 w-4 text-[#004B87]" />
-                        <span>Séries Combinadas ({sacola.filter(i => i.tipo === 'combinacao').length})</span>
-                      </h4>
-                      <div className="space-y-3">
-                        {sacola.map((item, index) =>
-                          item.tipo === 'combinacao' ? (
-                            <div
-                              key={index}
-                              className="bg-white p-3 rounded-lg border border-[#004B87]/20 hover:border-[#004B87] transition-colors"
-                            >
+                          ) : item.tipo === 'combinacao' ? (
+                            <div className="bg-white p-3 rounded-lg border border-[#004B87]/20 hover:border-[#004B87] transition-colors">
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
                                   {/* Setas de reordenação */}
@@ -901,7 +957,7 @@ export const ExercicioModal: React.FC<Props> = ({
                                     <span className="text-white text-xs font-bold">C</span>
                                   </div>
                                   <span className="text-xs font-medium text-gray-600">
-                                    Combinação {sacola.filter((i, idx) => idx <= index && i.tipo === 'combinacao').length}
+                                    Combinação
                                   </span>
                                 </div>
                                 <Button
@@ -938,11 +994,11 @@ export const ExercicioModal: React.FC<Props> = ({
                                 </div>
                               </div>
                             </div>
-                          ) : null
-                        )}
-                      </div>
+                          ) : null}
+                        </div>
+                      ))}
                     </div>
-                  )}
+                  </div>
 
                   {/* Combinação Incompleta */}
                   {combinacaoIncompleta && (
@@ -979,7 +1035,7 @@ export const ExercicioModal: React.FC<Props> = ({
                   <div className="pt-4 border-t">
                     <Button
                       variant="outline"
-                      onClick={limparSacola}
+                      onClick={() => setShowClearConfirmation(true)}
                       className="w-full flex items-center justify-center gap-2 hover:bg-red-50 hover:border-red-300"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -1036,6 +1092,74 @@ export const ExercicioModal: React.FC<Props> = ({
           </div>
         )}
       </Modal>
+
+      {/* Diálogo de confirmação para remover item individual */}
+      <AlertDialog open={itemParaRemover !== null} onOpenChange={(open) => !open && setItemParaRemover(null)}>
+        <AlertDialogContent className="z-[70]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover Exercício?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover este exercício da sacola? As alterações serão salvas automaticamente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setItemParaRemover(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmarRemocaoItem}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Diálogo de confirmação para limpar sacola */}
+      <AlertDialog open={showClearConfirmation} onOpenChange={setShowClearConfirmation}>
+        <AlertDialogContent className="z-[70]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Limpar Sacola?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover todos os exercícios da sacola? Você precisará clicar em "Concluir" para salvar as alterações.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                limparSacola();
+                setShowClearConfirmation(false);
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Limpar Tudo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Diálogo de confirmação ao fechar com mudanças */}
+      <AlertDialog open={showConfirmClose} onOpenChange={setShowConfirmClose}>
+        <AlertDialogContent className="z-[70]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Salvar Alterações?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você fez alterações na sacola. Deseja salvar antes de fechar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setShowConfirmClose(false); onClose(); }}>
+              Descartar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmarFechamento}
+              className="bg-[#ba3c15] hover:bg-[#9a3212] text-white"
+            >
+              Salvar e Fechar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Modal de detalhes do exercício */}
       <ExercicioDetalhesModal

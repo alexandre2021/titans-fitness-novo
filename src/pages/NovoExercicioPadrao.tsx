@@ -85,7 +85,7 @@ const NovoExercicioPadrao = () => {
   const [showVideoRecorder, setShowVideoRecorder] = useState(false);
   const [showDeleteMediaDialog, setShowDeleteMediaDialog] = useState<string | null>(null);
 
-  const gruposMusculares = ['Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Abdômen', 'Pernas', 'Glúteos', 'Panturrilha'];
+  const gruposMusculares = ['Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Antebraço', 'Abdômen', 'Pernas', 'Glúteos', 'Panturrilha'];
   const equipamentos = ['Barra', 'Halteres', 'Máquina', 'Peso Corporal', 'Cabo', 'Kettlebell', 'Fitas de Suspensão', 'Elásticos', 'Bola Suíça', 'Bolas Medicinais', 'Landmine', 'Bola Bosu'];
   const dificuldades = ['Baixa', 'Média', 'Alta'];
 

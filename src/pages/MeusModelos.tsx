@@ -39,6 +39,7 @@ const MeusModelos = () => {
 
   const [modeloParaExcluir, setModeloParaExcluir] = useState<ModeloRotina | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [dropdownAberto, setDropdownAberto] = useState<string | null>(null);
 
   const temFiltrosAvancadosAtivos = filtros.objetivo !== 'todos' || filtros.dificuldade !== 'todos' || filtros.frequencia !== 'todos';
 
@@ -256,7 +257,10 @@ const MeusModelos = () => {
                         <Badge className="bg-blue-100 text-blue-800">Padrão</Badge>
                       </div>
                     </div>
-                    <DropdownMenu>
+                    <DropdownMenu
+                      open={dropdownAberto === modelo.id}
+                      onOpenChange={(open) => setDropdownAberto(open ? modelo.id : null)}
+                    >
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4">
                           <MoreVertical />
@@ -286,7 +290,7 @@ const MeusModelos = () => {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                     <div className="flex items-center gap-2">
                       <Target className="h-4 w-4 text-muted-foreground" />
                       <div>
@@ -302,10 +306,10 @@ const MeusModelos = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <Repeat className="h-4 w-4 text-muted-foreground" />
                       <div>
-                        <p className="text-sm text-muted-foreground">Gênero</p>
-                        <p className="font-medium">{modelo.genero || 'Ambos'}</p>
+                        <p className="text-sm text-muted-foreground">Frequência</p>
+                        <p className="font-medium">{modelo.treinos_por_semana}x por semana</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -313,13 +317,6 @@ const MeusModelos = () => {
                       <div>
                         <p className="text-sm text-muted-foreground">Duração</p>
                         <p className="font-medium">{modelo.duracao_semanas} semanas</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Repeat className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">Frequência</p>
-                        <p className="font-medium">{modelo.treinos_por_semana}x por semana</p>
                       </div>
                     </div>
                   </div>
@@ -363,7 +360,10 @@ const MeusModelos = () => {
                         )}
                       </div>
                     </div>
-                    <DropdownMenu>
+                    <DropdownMenu
+                      open={dropdownAberto === modelo.id}
+                      onOpenChange={(open) => setDropdownAberto(open ? modelo.id : null)}
+                    >
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4">
                           <MoreVertical />
@@ -389,7 +389,7 @@ const MeusModelos = () => {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                     <div className="flex items-center gap-2">
                       <Target className="h-4 w-4 text-muted-foreground" />
                       <div>
@@ -405,10 +405,10 @@ const MeusModelos = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <Repeat className="h-4 w-4 text-muted-foreground" />
                       <div>
-                        <p className="text-sm text-muted-foreground">Gênero</p>
-                        <p className="font-medium">{modelo.genero || 'Ambos'}</p>
+                        <p className="text-sm text-muted-foreground">Frequência</p>
+                        <p className="font-medium">{modelo.treinos_por_semana}x por semana</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -416,13 +416,6 @@ const MeusModelos = () => {
                       <div>
                         <p className="text-sm text-muted-foreground">Duração</p>
                         <p className="font-medium">{modelo.duracao_semanas} semanas</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Repeat className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">Frequência</p>
-                        <p className="font-medium">{modelo.treinos_por_semana}x por semana</p>
                       </div>
                     </div>
                   </div>

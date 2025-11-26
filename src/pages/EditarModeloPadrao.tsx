@@ -27,14 +27,13 @@ import { SerieSimples } from "@/components/rotina/criacao/SerieSimples";
 import { SerieCombinada } from "@/components/rotina/criacao/SerieCombinada";
 import { ExercicioModal } from "@/components/rotina/criacao/ExercicioModal";
 import CustomSelect from "@/components/ui/CustomSelect";
-import { OBJETIVOS_OPTIONS, DIFICULDADES_OPTIONS, FREQUENCIAS_OPTIONS, DURACAO_OPTIONS, GENEROS_OPTIONS, GRUPOS_MUSCULARES, CORES_GRUPOS_MUSCULARES } from "@/constants/rotinas";
+import { OBJETIVOS_OPTIONS, DIFICULDADES_OPTIONS, FREQUENCIAS_OPTIONS, DURACAO_OPTIONS, GRUPOS_MUSCULARES, CORES_GRUPOS_MUSCULARES } from "@/constants/rotinas";
 
 // --- Tipos ---
 type ModeloConfiguracaoData = {
   nome: string;
   objetivo: string;
   dificuldade: string;
-  genero: string;
   treinos_por_semana: number | undefined;
   duracao_semanas: number | undefined;
   observacoes_rotina?: string;
@@ -110,7 +109,6 @@ const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar }: ModeloConfig
       nome: "",
       objetivo: "",
       dificuldade: "",
-      genero: "Ambos",
       treinos_por_semana: undefined,
       duracao_semanas: undefined,
       observacoes_rotina: "",
@@ -129,7 +127,6 @@ const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar }: ModeloConfig
     if (!formData.nome || formData.nome.trim().length < 3) newErrors.nome = "O nome do modelo deve ter pelo menos 3 caracteres.";
     if (!formData.objetivo) newErrors.objetivo = "O objetivo é obrigatório.";
     if (!formData.dificuldade) newErrors.dificuldade = "A dificuldade é obrigatória.";
-    if (!formData.genero) newErrors.genero = "O gênero é obrigatório.";
     if (!formData.treinos_por_semana) newErrors.treinos_por_semana = "A frequência é obrigatória.";
     if (!formData.duracao_semanas) newErrors.duracao_semanas = "A duração é obrigatória.";
     setErrors(newErrors);
@@ -189,17 +186,6 @@ const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar }: ModeloConfig
                 placeholder="Selecione a dificuldade"
               />
               {errors.dificuldade && <p className="text-sm text-destructive mt-1">{errors.dificuldade}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="genero">Gênero</Label>
-              <CustomSelect
-                inputId="genero"
-                value={GENEROS_OPTIONS.find(opt => opt.value === formData.genero)}
-                onChange={(option) => handleInputChange('genero', option ? option.value : '')}
-                options={GENEROS_OPTIONS}
-                placeholder="Selecione o gênero"
-              />
-              {errors.genero && <p className="text-sm text-destructive mt-1">{errors.genero}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="frequencia">Frequência</Label>
@@ -282,7 +268,7 @@ const SortableEditarTreinoCard = ({ id, treino, index, atualizarCampoTreino, adi
           <CardTitle className="flex items-center justify-between text-lg">
             <div {...listeners} className="flex items-center cursor-grab p-2 -m-2 rounded-lg">
               <GripVertical className="h-5 w-5 mr-2 text-gray-400" />
-              Treino {String.fromCharCode(65 + index)}
+              {treino.nome}
             </div>
             {treinoCompleto && (
               <Badge className="bg-green-100 text-green-800 text-xs flex items-center gap-1">
@@ -447,9 +433,9 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
   const [treinoAtual, setTreinoAtual] = useState<TreinoTemp | null>(null);
   const [exerciciosIniciais, setExerciciosIniciais] = useState<import('@/components/rotina/criacao/ExercicioModal').ItemSacola[]>([]);
   const [treinosExpandidos, setTreinosExpandidos] = useState<Record<string, boolean>>(() => {
-    // Inicia com todos os treinos expandidos
+    // Inicia com todos os treinos colapsados
     const inicial: Record<string, boolean> = {};
-    treinos.forEach(t => inicial[t.id] = true);
+    treinos.forEach(t => inicial[t.id] = false);
     return inicial;
   });
   const { getExercicioInfo } = useExercicioLookup();
@@ -633,7 +619,7 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
           </Card>
           <div className="space-y-4">
             {treinos.map(treino => {
-              const isExpandido = treinosExpandidos[treino.id] ?? true;
+              const isExpandido = treinosExpandidos[treino.id] ?? false;
               const qtdExercicios = (exercicios[treino.id] || []).length;
               return (
               <Card key={treino.id}>
@@ -856,7 +842,6 @@ const EditarModeloPadrao = () => {
             nome: rotina.nome,
             objetivo: rotina.objetivo,
             dificuldade: rotina.dificuldade,
-            genero: rotina.genero || "Ambos",
             treinos_por_semana: rotina.treinos_por_semana,
             duracao_semanas: rotina.duracao_semanas,
             observacoes_rotina: rotina.observacoes_rotina || "",
@@ -892,7 +877,6 @@ const EditarModeloPadrao = () => {
         nome: configuracao.nome,
         objetivo: configuracao.objetivo,
         dificuldade: configuracao.dificuldade,
-        genero: configuracao.genero,
         treinos_por_semana: configuracao.treinos_por_semana,
         duracao_semanas: configuracao.duracao_semanas,
         observacoes_rotina: configuracao.observacoes_rotina,

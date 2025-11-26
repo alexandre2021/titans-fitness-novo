@@ -78,6 +78,7 @@ const RotinasPT = () => {
   const [loadingModelos, setLoadingModelos] = useState(false);
   const [temModelos, setTemModelos] = useState(false);
   const [isCheckingRotina, setIsCheckingRotina] = useState<string | null>(null); // ID do aluno sendo verificado
+  const [dropdownAberto, setDropdownAberto] = useState<string | null>(null);
 
   useEffect(() => {
     // Limpa o sessionStorage ao montar a página para evitar carregar rascunhos de outros contextos
@@ -548,7 +549,10 @@ return (
                                               <Badge className={rotina.status === 'Concluída' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'}>{rotina.status}</Badge>
                                             </div>
                                           </div>
-                                          <DropdownMenu>
+                                          <DropdownMenu
+                                            open={dropdownAberto === rotina.id}
+                                            onOpenChange={(open) => setDropdownAberto(open ? rotina.id : null)}
+                                          >
                                             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4" onClick={(e) => e.stopPropagation()} disabled={isUpdatingStatus}><MoreVertical /></Button></DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                               <DropdownMenuItem onClick={() => handleVerDetalhesEncerrada(rotinaCardProps)}><Eye className="mr-2 h-5 w-5" /><span className="text-base">Ver Detalhes</span></DropdownMenuItem>
@@ -592,7 +596,10 @@ return (
                                   <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1 mb-2"><UserIcon className="h-3 w-3" /><span>Criada por você</span></div>
                                   <div className="flex items-center gap-2 mb-2 mt-2"><Badge className={isAtiva ? 'bg-green-100 text-green-800' : isBloqueada ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}>{rotina.status}</Badge></div>
                                 </div>
-                                <DropdownMenu>
+                                <DropdownMenu
+                                  open={dropdownAberto === rotina.id}
+                                  onOpenChange={(open) => setDropdownAberto(open ? rotina.id : null)}
+                                >
                                   <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4" onClick={(e) => e.stopPropagation()} disabled={isUpdatingStatus}><MoreVertical /></Button></DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
                                     {isRascunho ? (<DropdownMenuItem onClick={() => handleContinuarRascunho(rotinaCardProps)}><Play className="mr-2 h-5 w-5" /><span className="text-base">Continuar Edição</span></DropdownMenuItem>) : (<DropdownMenuItem onClick={() => navigate(`/alunos-rotinas/${rotina.aluno_id}/${rotina.id}`)}><Eye className="mr-2 h-5 w-5" /><span className="text-base">Detalhes</span></DropdownMenuItem>)}

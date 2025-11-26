@@ -73,6 +73,7 @@ const NovoExercicio = () => {
     'Ombros',
     'Bíceps',
     'Tríceps',
+    'Antebraço',
     'Abdômen',
     'Pernas',
     'Glúteos',

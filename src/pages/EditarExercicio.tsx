@@ -76,7 +76,7 @@ const EditarExercicio = () => {
   const [showDeleteMediaDialog, setShowDeleteMediaDialog] = useState<string | null>(null);
 
   const gruposMusculares = [
-    'Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps',
+    'Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Antebraço',
     'Abdômen', 'Pernas', 'Glúteos', 'Panturrilha'
   ];
 

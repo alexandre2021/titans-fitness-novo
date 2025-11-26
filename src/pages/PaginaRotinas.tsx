@@ -158,6 +158,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showDetalhesModal, setShowDetalhesModal] = useState(false);
+  const [dropdownAberto, setDropdownAberto] = useState<string | null>(null);
   
   const handleNovaRotinaClick = async () => {
     // ✅ NOVA VERIFICAÇÃO: Checar se já existe uma rotina ativa ou bloqueada
@@ -542,7 +543,10 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
     // ✅ ALTERAÇÃO: Unifica o menu para rotinas Concluídas e Canceladas
     if (rotina.status === 'Concluída' || rotina.status === 'Cancelada') {
       return (
-        <DropdownMenu>
+        <DropdownMenu
+          open={dropdownAberto === rotina.id}
+          onOpenChange={(open) => setDropdownAberto(open ? rotina.id : null)}
+        >
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4"><MoreVertical /></Button>
           </DropdownMenuTrigger>
@@ -564,7 +568,10 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
     }
 
     return (
-      <DropdownMenu>
+      <DropdownMenu
+        open={dropdownAberto === rotina.id}
+        onOpenChange={(open) => setDropdownAberto(open ? rotina.id : null)}
+      >
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p--0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4" disabled={isUpdatingStatus}><MoreVertical /></Button>
         </DropdownMenuTrigger>
@@ -889,7 +896,10 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
                                 Criado em: {new Date(rotina.created_at).toLocaleDateString('pt-BR')}
                               </p>
                             </div>
-                            <DropdownMenu>
+                            <DropdownMenu
+                              open={dropdownAberto === rotina.id}
+                              onOpenChange={(open) => setDropdownAberto(open ? rotina.id : null)}
+                            >
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4"><MoreVertical /></Button>
                               </DropdownMenuTrigger>

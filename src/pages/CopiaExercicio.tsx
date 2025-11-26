@@ -83,7 +83,7 @@ const CopiaExercicio = () => {
   const [loadingImages, setLoadingImages] = useState(false);
 
   const gruposMusculares = [
-    'Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Abdômen', 'Pernas', 'Glúteos', 'Panturrilha'
+    'Peito', 'Costas', 'Ombros', 'Bíceps', 'Tríceps', 'Antebraço', 'Abdômen', 'Pernas', 'Glúteos', 'Panturrilha'
   ];
 
   const equipamentos = [
