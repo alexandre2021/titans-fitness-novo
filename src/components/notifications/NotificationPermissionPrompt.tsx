@@ -79,13 +79,13 @@ const NotificationPermissionPrompt = () => {
   }, [user, isSupported, permission]);
 
   /**
-   * Handler para aceitar notificações
+   * Handler para aceitar alertas
    */
   const handleAccept = async () => {
     if (!user) return;
 
     try {
-      console.log('🔔 Tentando ativar notificações...');
+      console.log('🔔 Tentando ativar alertas...');
       const success = await subscribe();
       console.log('🔔 Resultado da subscrição:', success);
 
@@ -94,19 +94,19 @@ const NotificationPermissionPrompt = () => {
         // Remove do storage se aceitar (usando chave específica do usuário)
         const storageKey = getStorageKey(user.id);
         localStorage.removeItem(storageKey);
-        console.log('✅ Notificações ativadas com sucesso!');
+        console.log('✅ Alertas ativados com sucesso!');
       } else {
-        console.error('❌ Falha ao ativar notificações');
-        alert('Não foi possível ativar as notificações. Por favor, tente novamente ou ative manualmente nas configurações do navegador.');
+        console.error('❌ Falha ao ativar alertas');
+        alert('Não foi possível ativar os alertas. Por favor, tente novamente ou ative manualmente nas configurações do navegador.');
       }
     } catch (error) {
-      console.error('❌ Erro ao ativar notificações:', error);
-      alert('Erro ao ativar notificações: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
+      console.error('❌ Erro ao ativar alertas:', error);
+      alert('Erro ao ativar alertas: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
     }
   };
 
   /**
-   * Handler para recusar/adiar notificações
+   * Handler para recusar/adiar alertas
    */
   const handleDismiss = () => {
     if (!user) return;
@@ -152,7 +152,7 @@ const NotificationPermissionPrompt = () => {
       <div className="flex items-center justify-between p-6 border-b">
         <h2 className="text-lg font-semibold flex items-center gap-2">
           <Bell className="h-5 w-5 text-primary" />
-          Ativar Notificações
+          Ativar Alertas
         </h2>
         <Button variant="ghost" size="sm" onClick={handleDismiss} className="h-8 w-8 p-0">
           <X className="h-4 w-4" />
@@ -161,7 +161,7 @@ const NotificationPermissionPrompt = () => {
 
       <div className="p-6 space-y-4">
         <p className="text-sm">
-          Receba notificações instantâneas quando:
+          Receba alertas instantâneos quando:
         </p>
         <ul className="text-sm space-y-2 ml-4 list-disc text-muted-foreground">
           <li>Você receber novas mensagens</li>
@@ -169,7 +169,7 @@ const NotificationPermissionPrompt = () => {
           <li>Houver atualizações relevantes para você</li>
         </ul>
         <p className="text-xs text-muted-foreground">
-          Você pode desativar as notificações a qualquer momento nas configurações do seu navegador.
+          Você pode desativar os alertas a qualquer momento nas configurações do seu navegador.
         </p>
       </div>
 
@@ -184,7 +184,7 @@ const NotificationPermissionPrompt = () => {
           className="w-full sm:w-auto"
         >
           <Bell className="h-4 w-4 mr-2" />
-          {isLoading ? 'Ativando...' : 'Permitir Notificações'}
+          {isLoading ? 'Ativando...' : 'Permitir Alertas'}
         </Button>
       </div>
     </Modal>

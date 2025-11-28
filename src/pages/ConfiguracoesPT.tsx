@@ -26,20 +26,20 @@ const ConfiguracoesPT = () => {
       if (enabled) {
         const success = await subscribe();
         if (success) {
-          toast.success('Notificações ativadas com sucesso!');
+          toast.success('Alertas ativados com sucesso!');
         } else {
-          toast.error('Não foi possível ativar as notificações. Verifique as permissões do navegador.');
+          toast.error('Não foi possível ativar os alertas. Verifique as permissões do navegador.');
         }
       } else {
         const success = await unsubscribe();
         if (success) {
-          toast.success('Notificações desativadas.');
+          toast.success('Alertas desativados.');
         } else {
-          toast.error('Erro ao desativar notificações.');
+          toast.error('Erro ao desativar alertas.');
         }
       }
     } catch (error) {
-      console.error('Erro ao alternar notificações:', error);
+      console.error('Erro ao alternar alertas:', error);
       toast.error('Ocorreu um erro. Tente novamente.');
     } finally {
       setIsToggling(false);
@@ -90,19 +90,19 @@ const ConfiguracoesPT = () => {
         </p>
       </div>
 
-      {/* Seção: Notificações */}
+      {/* Seção: Alertas */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bell className="h-5 w-5" />
-            Notificações
+            Alertas de Mensagem
           </CardTitle>
           <CardDescription>
-            Receba notificações sobre novas mensagens de alunos
+            Receba alertas sobre novas mensagens de alunos
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Status das Notificações */}
+          {/* Status dos Alertas */}
           <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
             <div className="flex items-center gap-3">
               <StatusIcon className={`h-5 w-5 ${status.color}`} />
@@ -113,16 +113,16 @@ const ConfiguracoesPT = () => {
             </div>
           </div>
 
-          {/* Toggle de Notificações */}
+          {/* Toggle de Alertas */}
           {isSupported && permission !== 'denied' && (
             <div className="flex items-center justify-between p-4 border rounded-lg">
               <div className="space-y-0.5 flex-1">
                 <Label htmlFor="notifications-toggle" className="text-base font-medium cursor-pointer">
-                  Notificações Push
+                  Alertas de Mensagem
                   {isLoading && <span className="ml-2 text-xs text-muted-foreground">(verificando...)</span>}
                 </Label>
                 <p className="text-sm text-muted-foreground">
-                  Receba alertas quando você receber novas mensagens
+                  Receba avisos quando você receber novas mensagens
                 </p>
               </div>
               <Switch
@@ -138,10 +138,10 @@ const ConfiguracoesPT = () => {
           {permission === 'denied' && (
             <div className="p-4 border border-destructive/50 rounded-lg bg-destructive/10">
               <p className="text-sm font-medium text-destructive mb-2">
-                Notificações bloqueadas
+                Alertas bloqueados
               </p>
               <p className="text-sm text-muted-foreground">
-                Você bloqueou as notificações deste site. Para ativá-las novamente,
+                Você bloqueou os alertas deste site. Para ativá-los novamente,
                 acesse as configurações do navegador e permita notificações para este site.
               </p>
             </div>
@@ -151,11 +151,11 @@ const ConfiguracoesPT = () => {
           {!isSupported && (
             <div className="p-4 border rounded-lg bg-muted/50">
               <p className="text-sm font-medium mb-2">
-                Notificações não disponíveis
+                Alertas não disponíveis
               </p>
               <p className="text-sm text-muted-foreground">
-                Seu navegador não suporta notificações push. Considere usar um navegador
-                moderno como Chrome, Firefox, Safari ou Edge para receber notificações.
+                Seu navegador não suporta alertas push. Considere usar um navegador
+                moderno como Chrome, Firefox, Safari ou Edge para receber alertas.
               </p>
             </div>
           )}

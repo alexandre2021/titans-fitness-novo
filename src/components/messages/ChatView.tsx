@@ -136,7 +136,7 @@ export const ChatView = ({ conversa, onEditGroup }: ChatViewProps) => {
         {mensagens.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
             {isReadOnly ? (
-              <p>Nenhuma notificação</p>
+              <p>Nenhuma mensagem do sistema</p>
             ) : (
               <>
                 <p>Nenhuma mensagem ainda.</p>

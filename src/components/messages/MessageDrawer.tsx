@@ -129,10 +129,10 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right', onUnreadCountCha
   const handleEnableNotifications = async () => {
     console.log('🔔 [MessageDrawer] Botão "Ativar agora" clicado');
 
-    // Verifica se as notificações foram negadas
+    // Verifica se os alertas foram negados
     if (permission === 'denied') {
       alert(
-        'Notificações bloqueadas!\n\n' +
+        'Alertas bloqueados!\n\n' +
         'Para ativar:\n' +
         '1. Clique no ícone de cadeado/informações na barra de endereço\n' +
         '2. Encontre "Notificações"\n' +
@@ -149,9 +149,9 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right', onUnreadCountCha
         setShowNotificationBanner(false);
         console.log('✅ [MessageDrawer] Banner ocultado');
       } else {
-        console.error('❌ [MessageDrawer] Falha ao ativar notificações');
+        console.error('❌ [MessageDrawer] Falha ao ativar alertas');
         alert(
-          'Não foi possível ativar as notificações.\n\n' +
+          'Não foi possível ativar os alertas.\n\n' +
           'Possíveis causas:\n' +
           '• Permissão bloqueada no navegador\n' +
           '• Service Worker não está ativo\n' +
@@ -162,7 +162,7 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right', onUnreadCountCha
     } catch (error) {
       console.error('❌ [MessageDrawer] Erro ao ativar:', error);
       alert(
-        'Erro ao ativar notificações:\n\n' +
+        'Erro ao ativar alertas:\n\n' +
         (error instanceof Error ? error.message : 'Erro desconhecido') +
         '\n\nTente recarregar a página.'
       );
@@ -203,17 +203,17 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right', onUnreadCountCha
 
       // Separa a conversa do admin das outras
       // NOTA PARA MANUTENÇÃO FUTURA:
-      // A conversa com o "Administrador" é um canal de notificações do sistema para o usuário.
+      // A conversa com o "Administrador" é um canal de mensagens do sistema para o usuário.
       // Atualmente, existem 4 cenários principais que geram uma mensagem aqui:
       // 1. Boas-vindas: Uma mensagem é enviada quando um novo usuário (aluno ou PT) se cadastra.
       // 2. Rotina Cancelada: Quando um professor é excluído por inatividade, suas rotinas
-      //    são canceladas e os alunos afetados recebem uma notificação do sistema.
+      //    são canceladas e os alunos afetados recebem uma mensagem do sistema.
       // 3. Rotina Excluída: Quando um professor exclui uma rotina de um aluno, o aluno
-      //    recebe uma notificação.
+      //    recebe uma mensagem do sistema.
       // 4. Aviso de Inatividade: O sistema envia um aviso para usuários que estão inativos
       //    há mais de 60 dias, antes de a conta ser excluída (conforme a cron `check-inactive-users`).
       //
-      // Essas notificações são enviadas pela Edge Function `enviar-notificacao`, que tem como
+      // Essas mensagens do sistema são enviadas pela Edge Function `enviar-notificacao`, que tem como
       // remetente o ID do administrador (VITE_ADMIN_USER_ID).
       const rawAdminId = import.meta.env.VITE_ADMIN_USER_ID;
       let adminId: string | null = null;
@@ -236,7 +236,7 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right', onUnreadCountCha
           id: `placeholder-admin-${adminId}`, // ID temporário
           nome: 'Administrador',
           outroParticipanteId: adminId,
-          ultimaMsg: 'Nenhuma notificação',
+          ultimaMsg: 'Nenhuma mensagem do sistema',
           naoLidas: 0,
           isGroup: false,
           updated_at: new Date(0).toISOString(),
@@ -375,9 +375,13 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right', onUnreadCountCha
           </Button>
         )}
         <h2 className="text-lg font-semibold flex-1 truncate">
-          {view === 'chat' && activeConversation ? activeConversation.nome : 
-           view === 'group-info' ? 'Informações do Grupo' : 
-           'Mensagens'}
+          {view === 'chat' && activeConversation
+            ? (activeConversation.outroParticipanteId === import.meta.env.VITE_ADMIN_USER_ID
+                ? 'Mensagens do Sistema'
+                : activeConversation.nome)
+            : view === 'group-info'
+              ? 'Informações do Grupo'
+              : 'Mensagens'}
         </h2>
         <div className="flex items-center flex-shrink-0">
           {view === 'list' && isProfessor && (
@@ -418,8 +422,8 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right', onUnreadCountCha
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-blue-900">{adminConversation.nome}</p>
-                      <p className="text-xs text-blue-700 truncate">{adminConversation.ultimaMsg || 'Nenhuma notificação'}</p>
+                      <p className="font-semibold text-blue-900">Mensagens do Sistema</p>
+                      <p className="text-xs text-blue-700 truncate">{adminConversation.ultimaMsg || 'Nenhuma mensagem do sistema'}</p>
                     </div>
                     <div>
                       {adminConversation.naoLidas > 0 && (
@@ -431,7 +435,7 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right', onUnreadCountCha
                 </div>
               )}
 
-              {/* 1.5. Banner de Notificações */}
+              {/* 1.5. Banner de Alertas */}
               {showNotificationBanner && (
                 <div className="p-4 border-b">
                   <Card className="bg-amber-50 border-amber-200">
@@ -440,9 +444,9 @@ const MessagesDrawer = ({ isOpen, onClose, direction = 'right', onUnreadCountCha
                         <Bell className="h-5 w-5 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-amber-900 text-sm">Ative as notificações</p>
+                        <p className="font-semibold text-amber-900 text-sm">Ative os Alertas de Mensagem</p>
                         <p className="text-xs text-amber-700 mt-1">
-                          Receba alertas quando receber novas mensagens, mesmo com o app fechado.
+                          Receba avisos quando receber novas mensagens, mesmo com o app fechado.
                         </p>
                         <Button
                           onClick={(e) => {

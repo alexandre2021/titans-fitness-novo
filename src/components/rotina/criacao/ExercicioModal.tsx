@@ -396,10 +396,10 @@ export const ExercicioModal: React.FC<Props> = ({
       return;
     }
 
-    // Se já está na sacola (em qualquer forma), abre a view da sacola
+    // Se já está na sacola (em qualquer forma), mostra toast
     if (exercicioEstaNaSacola(exercicio.id)) {
-      console.log('📦 Exercício já está na sacola - abrindo view sacola');
-      setViewAtiva('sacola');
+      console.log('📦 Exercício já está na sacola - mostrando toast');
+      toast.info('Este exercício já foi adicionado à sacola');
       return;
     }
 

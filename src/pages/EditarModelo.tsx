@@ -1,15 +1,12 @@
 import { useState, useEffect, FormEvent, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
 
 import { Button } from "@/components/ui/button";
-import { Check, ChevronLeft, ChevronRight, GripVertical, Plus, Trash2, X, Dumbbell, ChevronUp, ChevronDown, Loader2 } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Plus, Trash2, X, Dumbbell, ChevronUp, ChevronDown, Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -26,6 +23,21 @@ import { SerieCombinada } from "@/components/rotina/criacao/SerieCombinada";
 import { ExercicioModal, type ItemSacola } from "@/components/rotina/criacao/ExercicioModal";
 import CustomSelect from "@/components/ui/CustomSelect";
 import { OBJETIVOS_OPTIONS, DIFICULDADES_OPTIONS, FREQUENCIAS_OPTIONS, DURACAO_OPTIONS, GRUPOS_MUSCULARES, CORES_GRUPOS_MUSCULARES } from "@/constants/rotinas";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  horizontalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 // --- Tipos ---
 type ModeloConfiguracaoData = {
@@ -281,53 +293,140 @@ const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar, onSalvarESair,
   );
 };
 
-const SortableEditarTreinoCard = ({ id, treino, index, atualizarCampoTreino, adicionarGrupoMuscular, removerGrupoMuscular }: {
-  id: string;
-  treino: TreinoTemp;
-  index: number;
-  atualizarCampoTreino: (index: number, campo: keyof TreinoTemp, valor: string | number) => void;
-  adicionarGrupoMuscular: (index: number, grupo: string) => void;
-  removerGrupoMuscular: (index: number, grupo: string) => void;
+// Componente para badge arrastável de grupo muscular
+const SortableBadge = ({ grupo, treinoIndex, removerGrupoMuscular }: {
+  grupo: string;
+  treinoIndex: number;
+  removerGrupoMuscular: (treinoIndex: number, grupo: string) => void;
 }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: grupo });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    zIndex: isDragging ? 10 : undefined,
+    opacity: isDragging ? 0.5 : 1,
   };
 
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <Badge
+        variant="secondary"
+        className={`${CORES_GRUPOS_MUSCULARES[grupo] || 'bg-gray-100 text-gray-800'} cursor-grab active:cursor-grabbing hover:opacity-80 touch-none`}
+      >
+        {grupo}
+        <X
+          className="h-3 w-3 ml-1.5"
+          onClick={(e) => {
+            e.stopPropagation();
+            removerGrupoMuscular(treinoIndex, grupo);
+          }}
+        />
+      </Badge>
+    </div>
+  );
+};
+
+const EditarTreinoCard = ({ treino, index, totalTreinos, atualizarCampoTreino, adicionarGrupoMuscular, removerGrupoMuscular, reordenarGruposMuscular, moverTreinoCima, moverTreinoBaixo }: {
+  treino: TreinoTemp;
+  index: number;
+  totalTreinos: number;
+  atualizarCampoTreino: (index: number, campo: keyof TreinoTemp, valor: string | number) => void;
+  adicionarGrupoMuscular: (index: number, grupo: string) => void;
+  removerGrupoMuscular: (index: number, grupo: string) => void;
+  reordenarGruposMuscular: (treinoIndex: number, oldIndex: number, newIndex: number) => void;
+  moverTreinoCima: (index: number) => void;
+  moverTreinoBaixo: (index: number) => void;
+}) => {
   const treinoCompleto = treino.nome && treino.nome.trim().length >= 2 && treino.grupos_musculares.length > 0;
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = treino.grupos_musculares.indexOf(active.id as string);
+      const newIndex = treino.grupos_musculares.indexOf(over.id as string);
+      reordenarGruposMuscular(index, oldIndex, newIndex);
+    }
+  };
+
   return (
-    <div ref={setNodeRef} style={style} {...attributes}>
-      <Card className={treinoCompleto ? "border-green-200" : "border-gray-200"}>
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center justify-between text-lg">
-            <div {...listeners} className="flex items-center cursor-grab p-2 -m-2 rounded-lg">
-              <GripVertical className="h-5 w-5 mr-2 text-gray-400" />
-              Treino {String.fromCharCode(65 + index)}
+    <Card className={treinoCompleto ? "border-green-200" : "border-gray-200"}>
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center justify-between text-lg">
+          <div className="flex items-center gap-2">
+            <div className="flex flex-col -space-y-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => moverTreinoCima(index)}
+                disabled={index === 0}
+                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+              >
+                <ChevronUp className="h-5 w-5" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => moverTreinoBaixo(index)}
+                disabled={index === totalTreinos - 1}
+                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+              >
+                <ChevronDown className="h-5 w-5" />
+              </Button>
             </div>
-            {treinoCompleto && (
-              <Badge className="bg-green-100 text-green-800 text-xs flex items-center gap-1">
-                <Check className="h-3 w-3 mr-1" />
-                Completo
-              </Badge>
-            )}
-          </CardTitle>
-        </CardHeader>
+            <span>Treino {String.fromCharCode(65 + index)}</span>
+          </div>
+          {treinoCompleto && (
+            <Badge className="bg-green-100 text-green-800 text-xs flex items-center gap-1">
+              <Check className="h-3 w-3 mr-1" />
+              Completo
+            </Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
         <CardContent className="space-y-4 pt-0">
           <div className="space-y-2">
             <Label>Grupos Musculares</Label>
-            <div className="flex flex-wrap gap-2 min-h-[2.5rem] p-2 border rounded-md bg-gray-50">
-              {treino.grupos_musculares.length > 0 ? (
-                treino.grupos_musculares.map(grupo => (
-                  <Badge key={grupo} variant="secondary" className={`${CORES_GRUPOS_MUSCULARES[grupo] || 'bg-gray-100 text-gray-800'} cursor-pointer hover:opacity-80`} onClick={() => removerGrupoMuscular(index, grupo)}>
-                    {grupo} <X className="h-3 w-3 ml-1.5" />
-                  </Badge>
-                ))
-              ) : <span className="text-gray-500 text-sm p-1">Selecione os grupos abaixo</span>}
-            </div>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={treino.grupos_musculares}
+                strategy={horizontalListSortingStrategy}
+              >
+                <div className="flex flex-wrap gap-2 min-h-[2.5rem] p-2 border rounded-md bg-gray-50">
+                  {treino.grupos_musculares.length > 0 ? (
+                    treino.grupos_musculares.map((grupo) => (
+                      <SortableBadge
+                        key={grupo}
+                        grupo={grupo}
+                        treinoIndex={index}
+                        removerGrupoMuscular={removerGrupoMuscular}
+                      />
+                    ))
+                  ) : <span className="text-gray-500 text-sm p-1">Selecione os grupos abaixo</span>}
+                </div>
+              </SortableContext>
+            </DndContext>
           </div>
           <div className="space-y-2">
             <Label className="text-sm text-gray-600">Adicionar Grupos:</Label>
@@ -343,7 +442,6 @@ const SortableEditarTreinoCard = ({ id, treino, index, atualizarCampoTreino, adi
           </div>
         </CardContent>
       </Card>
-    </div>
   );
 };
 
@@ -376,21 +474,34 @@ const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCance
   const atualizarCampoTreino = (treinoIndex: number, campo: keyof TreinoTemp, valor: string | number) => {
     setTreinos(prev => prev.map((treino, index) => index === treinoIndex ? { ...treino, [campo]: valor } : treino));
   };
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      const oldIndex = treinos.findIndex((t) => t.id === active.id);
-      const newIndex = treinos.findIndex((t) => t.id === over.id);
-      setTreinos((items) => arrayMove(items, oldIndex, newIndex).map((item, index) => ({ ...item, ordem: index + 1 })));
-    }
-  }
+  const moverTreinoCima = (index: number) => {
+    if (index === 0) return;
+    setTreinos(prev => {
+      const newTreinos = [...prev];
+      [newTreinos[index - 1], newTreinos[index]] = [newTreinos[index], newTreinos[index - 1]];
+      return newTreinos.map((t, i) => ({ ...t, ordem: i + 1 }));
+    });
+  };
+
+  const moverTreinoBaixo = (index: number) => {
+    if (index === treinos.length - 1) return;
+    setTreinos(prev => {
+      const newTreinos = [...prev];
+      [newTreinos[index], newTreinos[index + 1]] = [newTreinos[index + 1], newTreinos[index]];
+      return newTreinos.map((t, i) => ({ ...t, ordem: i + 1 }));
+    });
+  };
+
+  const reordenarGruposMuscular = (treinoIndex: number, oldIndex: number, newIndex: number) => {
+    setTreinos(prev => prev.map((treino, index) => {
+      if (index === treinoIndex) {
+        const novosGrupos = arrayMove(treino.grupos_musculares, oldIndex, newIndex);
+        return { ...treino, grupos_musculares: novosGrupos };
+      }
+      return treino;
+    }));
+  };
 
   const treinosCompletos = treinos.filter(t => t.nome && t.nome.trim().length >= 2 && t.grupos_musculares.length > 0).length;
   const requisitosAtendidos = treinosCompletos === treinos.length;
@@ -425,15 +536,22 @@ const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCance
               </div>
             </CardContent>
           </Card>
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={treinos.map(t => t.id)} strategy={verticalListSortingStrategy}>
-              <div className="space-y-4">
-                {treinos.map((treino, index) => (
-                  <SortableEditarTreinoCard key={treino.id} id={treino.id} treino={treino} index={index} atualizarCampoTreino={atualizarCampoTreino} adicionarGrupoMuscular={adicionarGrupoMuscular} removerGrupoMuscular={removerGrupoMuscular} />
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
+          <div className="space-y-4">
+            {treinos.map((treino, index) => (
+              <EditarTreinoCard
+                key={treino.id}
+                treino={treino}
+                index={index}
+                totalTreinos={treinos.length}
+                atualizarCampoTreino={atualizarCampoTreino}
+                adicionarGrupoMuscular={adicionarGrupoMuscular}
+                removerGrupoMuscular={removerGrupoMuscular}
+                reordenarGruposMuscular={reordenarGruposMuscular}
+                moverTreinoCima={moverTreinoCima}
+                moverTreinoBaixo={moverTreinoBaixo}
+              />
+            ))}
+          </div>
 
           {/* Espaçamento para botões fixos */}
           <div className="pb-20 md:pb-6" />
@@ -909,7 +1027,7 @@ const EditarModelo = () => {
 
       const treinosParaInserir = treinos.map((treino: TreinoTemp, index: number) => ({
         modelo_rotina_id: modeloId,
-        nome: treino.nome,
+        nome: `Treino ${String.fromCharCode(65 + index)}`,
         grupos_musculares: treino.grupos_musculares,
         ordem: index + 1,
         observacoes: treino.observacoes,
@@ -1015,28 +1133,83 @@ const EditarModelo = () => {
     setEtapa('treinos');
   };
 
-  const handleAvancarTreinos = (data: TreinoTemp[]) => {
+  const handleAvancarTreinos = async (data: TreinoTemp[]) => {
     const oldTreinos = modeloEmEdicao.treinos || [];
     const oldExercicios = modeloEmEdicao.exercicios || {};
     const newExercicios = { ...oldExercicios };
-    let exerciciosForamResetados = false;
-    
-    data.forEach(newTreino => {
+
+    let totalExerciciosRemovidos = 0;
+    let gruposRemovidos: string[] = [];
+
+    // Para cada treino, verificar se grupos foram removidos
+    for (const newTreino of data) {
       const oldTreino = oldTreinos.find(t => t.id === newTreino.id);
-      
-      const oldGrupos = oldTreino ? [...oldTreino.grupos_musculares].sort() : [];
-      const newGrupos = [...newTreino.grupos_musculares].sort();
+      if (!oldTreino) continue;
 
-      if (JSON.stringify(oldGrupos) !== JSON.stringify(newGrupos)) {
-        if (newExercicios[newTreino.id] && newExercicios[newTreino.id].length > 0) {
-          exerciciosForamResetados = true;
+      // Identifica grupos que foram removidos
+      const removedGroups = oldTreino.grupos_musculares.filter(
+        g => !newTreino.grupos_musculares.includes(g)
+      );
+
+      if (removedGroups.length === 0) continue;
+
+      gruposRemovidos.push(...removedGroups);
+
+      // Buscar exercícios deste treino
+      const exerciciosDoTreino = newExercicios[newTreino.id] || [];
+      if (exerciciosDoTreino.length === 0) continue;
+
+      // Coletar todos os IDs de exercícios para buscar no banco
+      const exercicioIds = new Set<string>();
+      exerciciosDoTreino.forEach(ex => {
+        exercicioIds.add(ex.exercicio_1_id);
+        if (ex.exercicio_2_id) exercicioIds.add(ex.exercicio_2_id);
+      });
+
+      // Buscar grupo_muscular de todos os exercícios
+      const { data: exerciciosData } = await supabase
+        .from('exercicios')
+        .select('id, grupo_muscular')
+        .in('id', Array.from(exercicioIds));
+
+      if (!exerciciosData) continue;
+
+      // Criar mapa id -> grupo_muscular
+      const grupoMap = new Map(exerciciosData.map(ex => [ex.id, ex.grupo_muscular]));
+
+      // Filtrar exercícios que devem ser mantidos
+      const exerciciosFiltrados = exerciciosDoTreino.filter(ex => {
+        const grupo1 = grupoMap.get(ex.exercicio_1_id);
+        const grupo2 = ex.exercicio_2_id ? grupoMap.get(ex.exercicio_2_id) : null;
+
+        // Se é combinado e qualquer exercício é do grupo removido, remove
+        if (ex.tipo === 'combinada') {
+          const deveRemover = removedGroups.includes(grupo1!) || (grupo2 && removedGroups.includes(grupo2));
+          if (deveRemover) {
+            totalExerciciosRemovidos++;
+            return false;
+          }
+          return true;
         }
-        delete newExercicios[newTreino.id];
-      }
-    });
 
-    if (exerciciosForamResetados) {
-      toast.info("Exercícios reiniciados", { description: "Os exercícios de alguns treinos foram reiniciados devido à mudança nos grupos musculares." });
+        // Se é simples, remove apenas se o grupo foi removido
+        if (removedGroups.includes(grupo1!)) {
+          totalExerciciosRemovidos++;
+          return false;
+        }
+        return true;
+      });
+
+      newExercicios[newTreino.id] = exerciciosFiltrados;
+    }
+
+    // Notificar usuário se exercícios foram removidos
+    if (totalExerciciosRemovidos > 0) {
+      const gruposUnicos = Array.from(new Set(gruposRemovidos));
+      toast.info(
+        `${totalExerciciosRemovidos} exercício${totalExerciciosRemovidos > 1 ? 's foram removidos' : ' foi removido'}`,
+        { description: `Grupo${gruposUnicos.length > 1 ? 's' : ''} removido${gruposUnicos.length > 1 ? 's' : ''}: ${gruposUnicos.join(', ')}` }
+      );
     }
 
     updateState({ treinos: data, exercicios: newExercicios });
@@ -1185,7 +1358,7 @@ const EditarModelo = () => {
 
       const treinosParaInserir = treinos.map((treino: TreinoTemp, index: number) => ({
         modelo_rotina_id: modeloId,
-        nome: treino.nome,
+        nome: `Treino ${String.fromCharCode(65 + index)}`,
         grupos_musculares: treino.grupos_musculares,
         ordem: index + 1,
         observacoes: treino.observacoes,

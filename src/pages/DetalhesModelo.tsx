@@ -358,19 +358,15 @@ const DetalhesModelo = () => {
                   Exercício {index + 1}
                 </span>
               </div>
+              {isCombinada && (
+                <Badge variant="outline" className="mb-2 bg-purple-100 text-purple-800">
+                  Exercício Combinado
+                </Badge>
+              )}
               <CardTitle className="text-base">
                 {exercicio1?.nome || 'Exercício não encontrado'}
+                {isCombinada && ` + ${exercicio2?.nome || 'Exercício não encontrado'}`}
               </CardTitle>
-              {isCombinada && (
-                <>
-                  <Badge variant="outline" className="mt-2 bg-purple-100 text-purple-800">
-                    Exercício Combinado
-                  </Badge>
-                  <div className="mt-2 text-sm font-medium text-muted-foreground">
-                    + {exercicio2?.nome || 'Exercício não encontrado'}
-                  </div>
-                </>
-              )}
             </div>
           </div>
         </CardHeader>

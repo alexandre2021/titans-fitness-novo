@@ -128,6 +128,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [queryClient]);
 
+  // Auto-renovação de token antes de expirar
+  useEffect(() => {
+    if (!session?.expires_at) return;
+
+    const expiresAt = session.expires_at * 1000; // Converter para ms
+    const now = Date.now();
+    const timeUntilExpiry = expiresAt - now;
+
+    // Renova 5 minutos antes de expirar
+    const refreshTime = timeUntilExpiry - (5 * 60 * 1000);
+
+    // Se já passou do tempo de renovação, renova imediatamente
+    if (refreshTime <= 0) {
+      console.log('⏰ Token expirando em breve, renovando agora...');
+      supabase.auth.refreshSession();
+      return;
+    }
+
+    console.log(`🔄 Token será renovado automaticamente em ${Math.round(refreshTime / 1000 / 60)} minutos`);
+
+    const refreshTimer = setTimeout(async () => {
+      console.log('⏰ Renovando token automaticamente...');
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error) {
+        console.error('❌ Erro ao renovar token:', error);
+      } else {
+        console.log('✅ Token renovado com sucesso');
+      }
+    }, refreshTime);
+
+    return () => clearTimeout(refreshTimer);
+  }, [session?.expires_at]);
+
   const signOut = async () => {
     try {
       console.log('🚪 Iniciando processo de logout...');

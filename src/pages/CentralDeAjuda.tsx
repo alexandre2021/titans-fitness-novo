@@ -17,7 +17,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { ShieldAlert, Plus, GripVertical, Edit, Trash2, Loader2, Pencil, FolderPlus, Search, Filter, ImagePlus, MessageSquare, Calendar, FilePlus, Save, RefreshCw, ChevronUp, ChevronDown, History, Info } from "lucide-react";
+import { ShieldAlert, Plus, GripVertical, Edit, Trash2, Loader2, Pencil, FolderPlus, Search, Filter, ImagePlus, MessageSquare, Calendar, FilePlus, Save, RefreshCw, ChevronUp, ChevronDown, History, Info, Users } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -244,6 +244,22 @@ const ArticleForm = ({ article, onOpenChange, categories }: { article?: Article 
     }
   }, [editor]);
 
+  const handleInsertUsersIcon = useCallback((closeModal: () => void) => {
+    if (editor) {
+      const usersIconSvg = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#f3f4f6"/><g transform="translate(4, 4)" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></g></svg>')}`;
+      editor.chain().focus().setImage({ src: usersIconSvg, alt: 'Ícone de Grupo' }).run();
+      closeModal();
+    }
+  }, [editor]);
+
+  const handleInsertTrashIcon = useCallback((closeModal: () => void) => {
+    if (editor) {
+      const trashIconSvg = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#f3f4f6"/><g transform="translate(4, 4)" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></g></svg>')}`;
+      editor.chain().focus().setImage({ src: trashIconSvg, alt: 'Ícone de Lixeira' }).run();
+      closeModal();
+    }
+  }, [editor]);
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-1">
@@ -348,9 +364,18 @@ const ArticleForm = ({ article, onOpenChange, categories }: { article?: Article 
                     </div>
                     <span className="text-xs">Info</span>
                   </Button>
-                  {/* Placeholders para completar a linha de 6 */}
-                  <div className="h-20"></div>
-                  <div className="h-20"></div>
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleInsertUsersIcon(() => setIsIconModalOpen(false))}>
+                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                      <Users className="h-5 w-5" />
+                    </div>
+                    <span className="text-xs">Grupo</span>
+                  </Button>
+                  <Button variant="outline" className="h-20 flex-col gap-2" onClick={() => handleInsertTrashIcon(() => setIsIconModalOpen(false))}>
+                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                      <Trash2 className="h-5 w-5" />
+                    </div>
+                    <span className="text-xs">Lixeira</span>
+                  </Button>
                 </div>
               </DialogContent>
             </Dialog>

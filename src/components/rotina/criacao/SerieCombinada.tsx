@@ -43,6 +43,22 @@ export const SerieCombinada = ({ exercicio, treinoId, isUltimoExercicio, onUpdat
     onUpdate({ series: [...exercicio.series, novaSerie] });
   };
 
+  const handleCopiarUltimaSerie = () => {
+    const ultimaSerie = exercicio.series[exercicio.series.length - 1];
+    if (!ultimaSerie) return;
+
+    const novaSerie: SerieModelo = {
+      id: `serie_comb_${Date.now()}`,
+      numero_serie: exercicio.series.length + 1,
+      repeticoes_1: ultimaSerie.repeticoes_1,
+      carga_1: ultimaSerie.carga_1,
+      repeticoes_2: ultimaSerie.repeticoes_2,
+      carga_2: ultimaSerie.carga_2,
+      intervalo_apos_serie: ultimaSerie.intervalo_apos_serie || 90,
+    };
+    onUpdate({ series: [...exercicio.series, novaSerie] });
+  };
+
   const handleRemoveSerie = (serieId: string) => {
     if (exercicio.series.length <= 1) return;
     const novasSeries = exercicio.series.filter(s => s.id !== serieId).map((s, i) => ({ ...s, numero_serie: i + 1 }));
@@ -229,17 +245,27 @@ export const SerieCombinada = ({ exercicio, treinoId, isUltimoExercicio, onUpdat
         );
       })}
 
-      {/* Botão adicionar série */}
-      <Button 
-        type="button" 
-        variant="outline" 
-        size="sm" 
-        onClick={handleAddSerie} 
-        className="w-full border-dashed"
-      >
-        <Plus className="h-4 w-4 mr-2" /> 
-        Adicionar Série Combinada
-      </Button>
+      {/* Botões adicionar série */}
+      <div className="flex flex-col md:flex-row gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleAddSerie}
+          className="flex-1 border-dashed"
+        >
+          Adicionar Série
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={handleCopiarUltimaSerie}
+          className="flex-1 bg-gray-100 hover:bg-gray-200"
+        >
+          Copiar Última Série
+        </Button>
+      </div>
 
       {/* Intervalo entre exercícios */}
       {!isUltimoExercicio && (
