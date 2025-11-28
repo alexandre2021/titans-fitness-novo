@@ -277,10 +277,20 @@ const SortableBadge = ({ grupo, treinoIndex, removerGrupoMuscular }: {
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div
+      ref={setNodeRef}
+      style={{
+        ...style,
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        WebkitTouchCallout: 'none',
+      }}
+      {...attributes}
+      {...listeners}
+    >
       <Badge
         variant="secondary"
-        className={`${CORES_GRUPOS_MUSCULARES[grupo] || 'bg-gray-100 text-gray-800'} cursor-grab active:cursor-grabbing hover:opacity-80 touch-none`}
+        className={`${CORES_GRUPOS_MUSCULARES[grupo] || 'bg-gray-100 text-gray-800'} cursor-grab active:cursor-grabbing hover:opacity-80 touch-none select-none`}
       >
         {grupo}
         <X
@@ -311,7 +321,8 @@ const EditarTreinoCard = ({ treino, index, totalTreinos, atualizarCampoTreino, a
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        delay: 150,
+        tolerance: 5,
       },
     })
   );
@@ -483,12 +494,12 @@ const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCance
         <div className="space-y-6">
           <Card className="bg-blue-50 border-blue-200">
             <CardContent className="pt-4">
-              <div className="flex items-center gap-3">
-                <div className="flex-1">
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
                   <p className="font-medium text-blue-900">Requisitos para continuar:</p>
-                  <p className="text-sm text-blue-700">Adicione pelo menos 1 grupo muscular em cada treino.</p>
+                  <Badge className={requisitosAtendidos ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"}>{treinosCompletos}/{treinos.length} completos</Badge>
                 </div>
-                <Badge className={requisitosAtendidos ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"}>{treinosCompletos}/{treinos.length} completos</Badge>
+                <p className="text-sm text-blue-700">Adicione pelo menos 1 grupo muscular em cada treino.</p>
               </div>
             </CardContent>
           </Card>
@@ -726,12 +737,12 @@ const ModeloExercicios = ({ onFinalizar, onVoltar, initialData, treinos, onUpdat
         <div className="space-y-6">
           <Card className="bg-blue-50 border-blue-200">
             <CardContent className="pt-4">
-              <div className="flex items-center gap-3">
-                <div className="flex-1">
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
                   <p className="font-medium text-blue-900">Requisitos para finalizar:</p>
-                  <p className="text-sm text-blue-700">Adicione pelo menos 1 exercício em cada treino.</p>
+                  <Badge className={requisitosAtendidos ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"}>{treinosCompletos}/{treinos.length} completos</Badge>
                 </div>
-                <Badge className={requisitosAtendidos ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"}>{treinosCompletos}/{treinos.length} completos</Badge>
+                <p className="text-sm text-blue-700">Adicione pelo menos 1 exercício em cada treino.</p>
               </div>
             </CardContent>
           </Card>
