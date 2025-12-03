@@ -589,6 +589,17 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, exercicios, treinos, setE
 
   const requisitosAtendidos = treinos.every(t => exercicios[t.id] && exercicios[t.id].length > 0);
 
+  // DEBUG: Log para verificar o estado
+  console.log('🔍 DEBUG Etapa 3:');
+  console.log('Treinos:', treinos.map(t => ({ id: t.id, nome: t.nome })));
+  console.log('Exercicios (keys):', Object.keys(exercicios));
+  console.log('Exercicios (completo):', exercicios);
+  console.log('Requisitos atendidos?', requisitosAtendidos);
+  treinos.forEach(t => {
+    const hasExercicios = exercicios[t.id] && exercicios[t.id].length > 0;
+    console.log(`Treino ${t.nome} (${t.id}): ${hasExercicios ? 'TEM' : 'NÃO TEM'} exercícios (${exercicios[t.id]?.length || 0})`);
+  });
+
   return (
     <Card>
       <CardHeader>
@@ -975,10 +986,10 @@ const RotinaCriacao = () => {
                 const seriesParaInserir = exercicio.series.map(s => ({
                   exercicio_id: exercicioCriado.id,
                   numero_serie: s.numero_serie,
-                  repeticoes: s.repeticoes ?? 0, carga: s.carga ?? 0,
-                  repeticoes_1: s.repeticoes_1 ?? 0, carga_1: s.carga_1 ?? 0,
-                  repeticoes_2: s.repeticoes_2 ?? 0, carga_2: s.carga_2 ?? 0,
-                  tem_dropset: s.tem_dropset ?? false, carga_dropset: s.carga_dropset ?? 0,
+                  repeticoes: s.repeticoes ?? null, carga: s.carga ?? null,
+                  repeticoes_1: s.repeticoes_1 ?? null, carga_1: s.carga_1 ?? null,
+                  repeticoes_2: s.repeticoes_2 ?? null, carga_2: s.carga_2 ?? null,
+                  tem_dropset: s.tem_dropset ?? false, carga_dropset: s.carga_dropset ?? null,
                   intervalo_apos_serie: s.intervalo_apos_serie ?? 60
                 }));
                 const { error: erroSeries } = await supabase.from('series').insert(seriesParaInserir);
@@ -1139,10 +1150,10 @@ const RotinaCriacao = () => {
           const seriesParaInserir = exercicio.series.map(serie => ({
             exercicio_id: exercicioCriado.id,
             numero_serie: serie.numero_serie,
-            repeticoes: serie.repeticoes ?? 0, carga: serie.carga ?? 0,
-            repeticoes_1: serie.repeticoes_1 ?? 0, carga_1: serie.carga_1 ?? 0,
-            repeticoes_2: serie.repeticoes_2 ?? 0, carga_2: serie.carga_2 ?? 0,
-            tem_dropset: serie.tem_dropset ?? false, carga_dropset: serie.carga_dropset ?? 0,
+            repeticoes: serie.repeticoes ?? null, carga: serie.carga ?? null,
+            repeticoes_1: serie.repeticoes_1 ?? null, carga_1: serie.carga_1 ?? null,
+            repeticoes_2: serie.repeticoes_2 ?? null, carga_2: serie.carga_2 ?? null,
+            tem_dropset: serie.tem_dropset ?? false, carga_dropset: serie.carga_dropset ?? null,
             intervalo_apos_serie: serie.intervalo_apos_serie ?? 60,
           }));
           if (seriesParaInserir.length > 0) {

@@ -79,7 +79,6 @@ interface ModeloConfiguracaoProps {
   onAvancar: (data: ModeloConfiguracaoData) => void;
   initialData?: ModeloConfiguracaoData;
   onCancelar: () => void;
-  onSalvarESair: (data: ModeloConfiguracaoData) => void;
   isSaving: boolean;
 }
 
@@ -97,7 +96,6 @@ interface ModeloTreinosProps {
   configuracao?: ModeloConfiguracaoData;
   onCancelar: () => void;
   onUpdate: (data: Partial<ModeloEmCriacao>) => void;
-  onSalvarESair: (data: TreinoTemp[]) => void;
   isSaving: boolean;
 }
 
@@ -112,7 +110,7 @@ interface ModeloExerciciosProps {
 }
 
 // --- Etapa 1: Componente de Configuração ---
-const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar, onSalvarESair, isSaving }: ModeloConfiguracaoProps) => {
+const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar, isSaving }: ModeloConfiguracaoProps) => {
   console.log('📝 ModeloConfiguracao recebeu initialData:', initialData);
 
   const [formData, setFormData] = useState<ModeloConfiguracaoData>(
@@ -166,12 +164,6 @@ const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar, onSalvarESair,
     e.preventDefault();
     if (validateForm()) {
       onAvancar(formData);
-    }
-  }
-
-  function handleSalvarESair() {
-    if (validateForm()) {
-      onSalvarESair(formData);
     }
   }
 
@@ -259,19 +251,6 @@ const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar, onSalvarESair,
               <Button type="button" variant="ghost" onClick={onCancelar} size="lg" disabled={isSaving}>
                   Cancelar
               </Button>
-              <Button type="button" variant="outline" onClick={handleSalvarESair} size="lg" disabled={isSaving}>
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Salvando...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Salvar e Sair
-                    </>
-                  )}
-              </Button>
               <Button type="submit" size="lg" disabled={isSaving}>
                   Avançar para Treinos <ChevronRight className="h-4 w-4 ml-2" />
               </Button>
@@ -282,19 +261,6 @@ const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar, onSalvarESair,
           <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 md:hidden z-50">
             <div className="flex justify-end gap-2">
                 <Button type="button" variant="ghost" onClick={onCancelar} size="lg" disabled={isSaving}>Cancelar</Button>
-                <Button type="button" variant="outline" onClick={handleSalvarESair} size="lg" disabled={isSaving}>
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Salvando...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Salvar
-                    </>
-                  )}
-                </Button>
                 <Button type="submit" size="lg" disabled={isSaving}>Avançar</Button>
             </div>
           </div>
@@ -305,7 +271,7 @@ const ModeloConfiguracao = ({ onAvancar, initialData, onCancelar, onSalvarESair,
 };
 
 // --- Etapa 2: Componente de Treinos ---
-const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCancelar, onUpdate, onSalvarESair, isSaving }: ModeloTreinosProps) => {
+const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCancelar, onUpdate, isSaving }: ModeloTreinosProps) => {
   const isInitialMount = useRef(true);
   const [treinos, setTreinos] = useState<TreinoTemp[]>(() => {
     if (initialData && initialData.length > 0) {
@@ -425,12 +391,6 @@ const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCance
     onVoltar();
   };
 
-  const handleSalvarESair = () => {
-    if (requisitosAtendidos) {
-      onSalvarESair(treinos);
-    }
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -493,19 +453,6 @@ const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCance
             <Button variant="ghost" onClick={onCancelar} size="lg" disabled={isSaving}>
                 Cancelar
             </Button>
-            <Button variant="outline" onClick={handleSalvarESair} disabled={!requisitosAtendidos || isSaving} size="lg">
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Salvar e Sair
-                  </>
-                )}
-            </Button>
             <Button onClick={handleProximo} disabled={!requisitosAtendidos || isSaving} size="lg">
               Avançar para Exercícios <ChevronRight className="h-4 w-4 ml-2" />
             </Button>
@@ -518,19 +465,6 @@ const ModeloTreinos = ({ onAvancar, onVoltar, initialData, configuracao, onCance
             <Button variant="outline" onClick={handleVoltarClick} size="lg" disabled={isSaving}>Voltar</Button>
             <div className="flex items-center gap-2">
               <Button variant="ghost" onClick={onCancelar} size="lg" disabled={isSaving}>Cancelar</Button>
-              <Button variant="outline" onClick={handleSalvarESair} disabled={!requisitosAtendidos || isSaving} size="lg">
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Salvar
-                  </>
-                )}
-              </Button>
               <Button onClick={handleProximo} disabled={!requisitosAtendidos || isSaving} size="lg">Avançar</Button>
             </div>
         </div>
@@ -1258,10 +1192,10 @@ const NovoModelo = ({ isCopia = false, modeloOriginal, returnTab = 'personalizad
   const renderEtapa = () => {
     console.log('🎨 Renderizando etapa:', etapa, 'modeloEmCriacao:', modeloEmCriacao);
     switch (etapa) {
-      case 'configuracao': return <ModeloConfiguracao onAvancar={handleAvancarConfiguracao} initialData={modeloEmCriacao.configuracao} onCancelar={handleCancelar} onSalvarESair={handleSalvarESairEtapa1} isSaving={isSaving} />;
-      case 'treinos': return <ModeloTreinos onAvancar={handleAvancarTreinos} onVoltar={handleVoltar} initialData={modeloEmCriacao.treinos} configuracao={modeloEmCriacao.configuracao} onCancelar={handleCancelar} onUpdate={updateStorage} onSalvarESair={handleSalvarESairEtapa2} isSaving={isSaving} />;
+      case 'configuracao': return <ModeloConfiguracao onAvancar={handleAvancarConfiguracao} initialData={modeloEmCriacao.configuracao} onCancelar={handleCancelar} isSaving={isSaving} />;
+      case 'treinos': return <ModeloTreinos onAvancar={handleAvancarTreinos} onVoltar={handleVoltar} initialData={modeloEmCriacao.treinos} configuracao={modeloEmCriacao.configuracao} onCancelar={handleCancelar} onUpdate={updateStorage} isSaving={isSaving} />;
       case 'exercicios': return <ModeloExercicios onFinalizar={handleFinalizarModelo} onVoltar={handleVoltar} initialData={modeloEmCriacao.exercicios} treinos={modeloEmCriacao.treinos || []} onUpdate={updateStorage} onCancelar={handleCancelar} isSaving={isSaving} />;
-      default: return <ModeloConfiguracao onAvancar={handleAvancarConfiguracao} initialData={modeloEmCriacao.configuracao} onCancelar={handleCancelar} onSalvarESair={handleSalvarESairEtapa1} isSaving={isSaving} />;
+      default: return <ModeloConfiguracao onAvancar={handleAvancarConfiguracao} initialData={modeloEmCriacao.configuracao} onCancelar={handleCancelar} isSaving={isSaving} />;
     }
   };
 

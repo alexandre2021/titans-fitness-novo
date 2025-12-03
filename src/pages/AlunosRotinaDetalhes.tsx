@@ -459,15 +459,15 @@ const AlunosRotinaDetalhes = () => {
                                 {exercicio2Info ? (
                                   <div className="flex gap-4">
                                     <span>{serie.repeticoes_1 || 12} repetições</span>
-                                    {serie.carga_1 && <span>{serie.carga_1}kg</span>}
+                                    {(serie.carga_1 != null && serie.carga_1 > 0) && <span>{serie.carga_1}kg</span>}
                                     <span>+</span>
                                     <span>{serie.repeticoes_2 || 12} repetições</span>
-                                    {serie.carga_2 && <span>{serie.carga_2}kg</span>}
+                                    {(serie.carga_2 != null && serie.carga_2 > 0) && <span>{serie.carga_2}kg</span>}
                                   </div>
                                 ) : (
                                   <div className="flex gap-4">
                                     <span>{serie.repeticoes || 12} repetições</span>
-                                    {serie.carga && <span>{serie.carga}kg</span>}
+                                    {(serie.carga != null && serie.carga > 0) && <span>{serie.carga}kg</span>}
                                     {serie.tem_dropset && (
                                       <Badge variant="outline" className="bg-orange-100 text-orange-800 text-xs">Drop Set</Badge>
                                     )}
@@ -483,15 +483,15 @@ const AlunosRotinaDetalhes = () => {
                                     {exercicio2Info ? (
                                       <div className="flex items-center gap-1">
                                         <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">{serie.repeticoes_1 || 12} rep</span>
-                                        {serie.carga_1 && <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded">{serie.carga_1}kg</span>}
+                                        {(serie.carga_1 != null && serie.carga_1 > 0) && <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded">{serie.carga_1}kg</span>}
                                         <span className="text-gray-500">+</span>
                                         <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">{serie.repeticoes_2 || 12} rep</span>
-                                        {serie.carga_2 && <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded">{serie.carga_2}kg</span>}
+                                        {(serie.carga_2 != null && serie.carga_2 > 0) && <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded">{serie.carga_2}kg</span>}
                                       </div>
                                     ) : (
                                       <div className="flex items-center gap-1">
                                         <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">{serie.repeticoes || 12} rep</span>
-                                        {serie.carga && <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded">{serie.carga}kg</span>}
+                                        {(serie.carga != null && serie.carga > 0) && <span className="bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded">{serie.carga}kg</span>}
                                         {serie.tem_dropset && <span className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-xs">Drop</span>}
                                       </div>
                                     )}
@@ -502,17 +502,8 @@ const AlunosRotinaDetalhes = () => {
 
                             {/* LINHA SEPARADORA COM INTERVALO */}
                             {serie.intervalo_apos_serie && serieIndex < exercicio.series.length - 1 && (
-                              <div className="flex items-center justify-center py-2">
-                                <div className="hidden md:flex md:items-center md:gap-2 text-sm text-muted-foreground">
-                                  <div className="h-px bg-border flex-1"></div>
-                                  <span className="bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-xs font-medium">⏱️ Intervalo: {serie.intervalo_apos_serie} segundos</span>
-                                  <div className="h-px bg-border flex-1"></div>
-                                </div>
-                                <div className="md:hidden flex items-center gap-2 w-full">
-                                  <div className="h-px bg-border flex-1"></div>
-                                  <span className="bg-purple-50 text-purple-700 px-2 py-1 rounded text-xs font-medium">⏱️ {serie.intervalo_apos_serie}s</span>
-                                  <div className="h-px bg-border flex-1"></div>
-                                </div>
+                              <div className="py-2">
+                                <span className="bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-xs font-medium inline-block">⏱️ Intervalo entre séries: {serie.intervalo_apos_serie}s</span>
                               </div>
                             )}
                           </div>
@@ -521,9 +512,8 @@ const AlunosRotinaDetalhes = () => {
 
                       {/* Intervalo entre exercícios */}
                       {exercicio.intervalo_apos_exercicio && exercicioIndex < treino.exercicios.length - 1 && (
-                        <div className="mt-2 text-sm text-muted-foreground">
-                          <span className="hidden md:inline">Intervalo para próximo exercício: {exercicio.intervalo_apos_exercicio}s</span>
-                          <span className="md:hidden bg-green-50 text-green-700 px-2 py-1 rounded text-xs inline-block">⏭️ {exercicio.intervalo_apos_exercicio}s para próximo exercício</span>
+                        <div className="mt-2">
+                          <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-medium inline-block">⏱️ Intervalo entre exercícios: {exercicio.intervalo_apos_exercicio}s</span>
                         </div>
                       )}
 

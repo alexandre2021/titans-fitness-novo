@@ -155,6 +155,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   const [showCriarModal, setShowCriarModal] = useState(false);
   const [loadingModelos, setLoadingModelos] = useState(false);
   const [temModelos, setTemModelos] = useState(false);
+  const [temModelosPadrao, setTemModelosPadrao] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showDetalhesModal, setShowDetalhesModal] = useState(false);
@@ -176,10 +177,12 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
       return;
     }
 
-    // Check if PT has models to decide which options to show
+    // Check if PT has models and if there are default models
     setLoadingModelos(true);
     try {
         if (!user) return;
+
+        // Check for personalized models
         const { count, error } = await supabase
             .from('modelos_rotina')
             .select('*', { count: 'exact', head: true })
@@ -187,9 +190,19 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
 
         if (error) throw error;
         setTemModelos((count || 0) > 0);
+
+        // Check for default models
+        const { count: padraoCount, error: padraoError } = await supabase
+            .from('modelos_rotina')
+            .select('*', { count: 'exact', head: true })
+            .eq('tipo', 'padrao');
+
+        if (padraoError) throw padraoError;
+        setTemModelosPadrao((padraoCount || 0) > 0);
     } catch (error) {
         console.error("Erro ao verificar modelos:", error);
-        setTemModelos(false); // Assume no models on error
+        setTemModelos(false);
+        setTemModelosPadrao(false);
     } finally {
         setLoadingModelos(false);
     }
@@ -1161,7 +1174,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Verificando modelos...
               </Button>
-          ) : temModelos ? (
+          ) : (temModelosPadrao || temModelos) ? (
               <Button onClick={handleUsarModelo} className="w-full" variant="outline" size="lg">
                   Usar um Modelo
               </Button>

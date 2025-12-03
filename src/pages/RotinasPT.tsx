@@ -77,6 +77,7 @@ const RotinasPT = () => {
   const [showCriarOpcoesModal, setShowCriarOpcoesModal] = useState(false);
   const [loadingModelos, setLoadingModelos] = useState(false);
   const [temModelos, setTemModelos] = useState(false);
+  const [temModelosPadrao, setTemModelosPadrao] = useState(false);
   const [isCheckingRotina, setIsCheckingRotina] = useState<string | null>(null); // ID do aluno sendo verificado
   const [dropdownAberto, setDropdownAberto] = useState<string | null>(null);
 
@@ -136,11 +137,18 @@ const RotinasPT = () => {
     const checkForModels = async () => {
       setLoadingModelos(true);
       try {
+        // Check for personalized models
         const { count, error } = await supabase.from('modelos_rotina').select('*', { count: 'exact', head: true }).eq('professor_id', user.id);
         if (error) throw error;
         setTemModelos((count || 0) > 0);
+
+        // Check for default models
+        const { count: padraoCount, error: padraoError } = await supabase.from('modelos_rotina').select('*', { count: 'exact', head: true }).eq('tipo', 'padrao');
+        if (padraoError) throw padraoError;
+        setTemModelosPadrao((padraoCount || 0) > 0);
       } catch (error) {
         setTemModelos(false);
+        setTemModelosPadrao(false);
       } finally {
         setLoadingModelos(false);
       }
@@ -664,7 +672,7 @@ return (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Verificando modelos...
             </Button>
-          ) : temModelos ? (
+          ) : (temModelosPadrao || temModelos) ? (
             <Button onClick={handleUsarModelo} className="w-full" variant="outline" size="lg">
               Usar um Modelo
             </Button>

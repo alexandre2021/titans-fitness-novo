@@ -79,7 +79,11 @@ const CopiaModelo = () => {
         for (const treino of (treinos as any[]) || []) {
           const exercicios = await fetchExerciciosDoTreino(treino.id);
           treinosComExercicios.push({
-            ...treino,
+            id: treino.id,
+            nome: treino.nome,
+            grupos_musculares: treino.grupos_musculares || [],
+            observacoes: treino.observacoes,
+            ordem: treino.ordem,
             exercicios
           });
         }
