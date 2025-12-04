@@ -18,13 +18,13 @@ const LandingFooter = () => {
               profissionalizar seu trabalho e potencializar os resultados dos seus alunos.
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="text-gray-500 hover:text-gray-800 transition-colors">
+              <a href="https://www.instagram.com/titansfitnessapp/" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-800 transition-colors">
                 Instagram
               </a>
-              <a href="#" className="text-gray-500 hover:text-gray-800 transition-colors">
+              <a href="https://www.linkedin.com/in/alexandre-ramos-266709398/" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-800 transition-colors">
                 LinkedIn
               </a>
-              <a href="#" className="text-gray-500 hover:text-gray-800 transition-colors">
+              <a href="https://www.youtube.com/@TitansFitnessApp" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-800 transition-colors">
                 YouTube
               </a>
             </div>
