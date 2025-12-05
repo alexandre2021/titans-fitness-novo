@@ -40,7 +40,7 @@ const Landing = () => {
         </section>
 
         {/* Funcionalidades Section - Empilhadas */}
-        <section id="funcionalidades-professor" className="py-12 md:py-20 bg-muted/40">
+        <section id="funcionalidades-professor" className="py-12 md:py-20 bg-white">
           <div className="container mx-auto px-4">
             <div className="text-center">
               <h2 className="text-4xl md:text-5xl font-extrabold tracking-tighter">
@@ -56,7 +56,7 @@ const Landing = () => {
           </div>
         </section>
 
-        <section id="funcionalidades-aluno" className="py-12 md:py-20 bg-background">
+        <section id="funcionalidades-aluno" className="py-12 md:py-20 bg-white">
           <div className="container mx-auto px-4">
             <div className="text-center">
               <h2 className="text-4xl md:text-5xl font-extrabold tracking-tighter">
