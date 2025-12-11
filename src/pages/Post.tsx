@@ -1,8 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import ReactQuill from 'react-quill';
 import { supabase } from '@/integrations/supabase/client';
-import 'react-quill/dist/quill.bubble.css'; // Adicione esta linha
 import type { Tables } from '@/integrations/supabase/types';
 import { toast } from 'sonner';
 
@@ -192,9 +190,10 @@ const PostPage = () => {
           </picture>
         )}
 
-        <div className="prose prose-lg max-w-none dark:prose-invert">
-          <ReactQuill value={post.content as string} readOnly={true} theme="bubble" />
-        </div>
+        <div
+          className="prose prose-lg max-w-none dark:prose-invert [&_p]:mb-4 [&_h2]:mt-8 [&_h2]:mb-4 [&_h3]:mt-6 [&_h3]:mb-3 [&_ul]:mb-4 [&_li]:mb-2"
+          dangerouslySetInnerHTML={{ __html: post.content as string }}
+        />
       </article>
     </div>
   );

@@ -48,6 +48,7 @@ const NovoPost = () => {
   const [desktopImage, setDesktopImage] = useState<ImageState>(null);
   const [mobileImage, setMobileImage] = useState<ImageState>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isHtmlMode, setIsHtmlMode] = useState(false);
 
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
   const [activeCropper, setActiveCropper] = useState<CropType | null>(null);
@@ -300,34 +301,57 @@ const NovoPost = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="content">Conteúdo</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="content">Conteúdo</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsHtmlMode(!isHtmlMode)}
+                  disabled={isSaving}
+                >
+                  {isHtmlMode ? 'Modo Visual' : 'Modo HTML'}
+                </Button>
+              </div>
               <Controller
                 name="content"
                 control={control}
                 render={({ field }) => (
-                  <ReactQuill
-                    theme="snow"
-                    value={field.value}
-                    onChange={field.onChange}
-                    readOnly={isSaving}
-                    modules={{
-                      toolbar: [
-                        [{ 'header': [2, 3, false] }],
-                        ['bold', 'italic', 'underline'],
-                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                        [{ 'indent': '-1'}, { 'indent': '+1' }],
-                        ['link'],
-                        ['clean']
-                      ],
-                    }}
-                    formats={[
-                      'header',
-                      'bold', 'italic', 'underline',
-                      'list', 'bullet', 'indent',
-                      'link'
-                    ]}
-                    className="bg-white [&>.ql-container_.ql-editor]:min-h-[300px]"
-                  />
+                  <>
+                    {isHtmlMode ? (
+                      <Textarea
+                        value={field.value}
+                        onChange={field.onChange}
+                        disabled={isSaving}
+                        className="font-mono text-sm min-h-[300px]"
+                        placeholder="Cole seu HTML aqui..."
+                      />
+                    ) : (
+                      <ReactQuill
+                        theme="snow"
+                        value={field.value}
+                        onChange={field.onChange}
+                        readOnly={isSaving}
+                        modules={{
+                          toolbar: [
+                            [{ 'header': [2, 3, false] }],
+                            ['bold', 'italic', 'underline'],
+                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                            [{ 'indent': '-1'}, { 'indent': '+1' }],
+                            ['link', 'image', 'video'],
+                            ['clean']
+                          ],
+                        }}
+                        formats={[
+                          'header',
+                          'bold', 'italic', 'underline',
+                          'list', 'bullet', 'indent',
+                          'link', 'image', 'video'
+                        ]}
+                        className="bg-white [&>.ql-container_.ql-editor]:min-h-[300px]"
+                      />
+                    )}
+                  </>
                 )}
               />
               {errors.content && <p className="text-destructive text-sm mt-1">{errors.content.message}</p>}
