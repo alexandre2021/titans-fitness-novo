@@ -89,7 +89,7 @@ const AlunoMobileHeader = () => {
   const { title, subtitle, showBackButton, backPath } = getPageConfig();
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-20 flex items-center justify-between p-4 border-b bg-background md:hidden">
+    <header className="fixed top-0 left-0 right-0 z-20 h-20 flex items-center justify-between px-4 border-b shadow-sm bg-gray-50/80 backdrop-blur-sm md:hidden">
       <div className="flex items-center gap-2 flex-1 min-w-0">
         {showBackButton && (
           <Button variant="ghost" size="icon" className="h-10 w-10 flex-shrink-0" onClick={() => (backPath ? navigate(backPath) : navigate(-1))}>

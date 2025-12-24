@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { slugify } from "@/utils/slugify";
-import { fileToDataURL, optimizeAndCropImage, validateImageFile } from "@/lib/imageUtils";
+import { fileToDataURL, optimizeAndCropImage, validateImageFile, normalizeFilename } from "@/lib/imageUtils";
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -142,6 +142,7 @@ const NovoPost = () => {
       const uploadImage = async (image: ImageState, suffix: string): Promise<string | null> => {
         if (!image) return null;
         const fileName = `post_${user.id}_${Date.now()}_${suffix}.jpg`;
+        const normalizedFileName = normalizeFilename(fileName);
         const { data: uploadData, error: functionError } = await supabase.functions.invoke('upload-media', {
           body: { action: 'generate_upload_url', filename: fileName, bucket_type: 'posts' },
         });
@@ -152,7 +153,7 @@ const NovoPost = () => {
 
         const uploadResponse = await fetch(uploadData.signedUrl, { method: 'PUT', body: image.file });
         if (!uploadResponse.ok) throw new Error('Falha no upload para o Cloudflare R2.');
-        return fileName;
+        return normalizedFileName;
       };
 
       const [desktopFileName, mobileFileName] = await Promise.all([

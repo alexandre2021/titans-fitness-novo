@@ -358,16 +358,9 @@ const CopiaExercicio = () => {
     input.click();
   };
 
-  const handleRecordingComplete = ({ 
-    videoBlob, 
-    thumbnailBlob 
-  }: { 
-    videoBlob: Blob, 
-    thumbnailBlob: Blob 
-  }) => {
-    const videoFile = new File([videoBlob], `gravacao_${Date.now()}.webm`, { type: 'video/webm' });    
-    const thumbnailFile = new File([thumbnailBlob], `thumbnail_${Date.now()}.jpeg`, { type: 'image/jpeg' });    
-    setMidias(prev => ({ ...prev, video_url: videoFile, video_thumbnail_path: thumbnailFile }));
+  const handleRecordingComplete = ({ videoBlob }: { videoBlob: Blob }) => {
+    const videoFile = new File([videoBlob], `gravacao_${Date.now()}.webm`, { type: 'video/webm' });
+    setMidias(prev => ({ ...prev, video_url: videoFile }));
     setShowVideoRecorder(false);
   };
 

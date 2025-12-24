@@ -154,7 +154,7 @@ const PTMobileHeader = () => {
   const { title, subtitle, showBackButton, backPath, showInfoButton } = getPageConfig();
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-20 flex items-center justify-between p-4 border-b bg-background md:hidden">
+    <header className="fixed top-0 left-0 right-0 z-20 h-20 flex items-center justify-between px-4 border-b shadow-sm bg-gray-50/80 backdrop-blur-sm md:hidden">
       <div className="flex items-center gap-2 flex-1 min-w-0">
         {showBackButton && (
           <Button variant="ghost" size="icon" className="h-10 w-10 flex-shrink-0" onClick={() => (backPath ? navigate(backPath) : navigate(-1))}>
@@ -185,8 +185,8 @@ const PTMobileHeader = () => {
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-10 w-10 rounded-full p-0">
-            <Avatar className="h-10 w-10">
+          <Button variant="ghost" size="sm" className="h-12 w-12 rounded-full">
+            <Avatar className="h-12 w-12">
               {getAvatarContent()}
             </Avatar>
           </Button>

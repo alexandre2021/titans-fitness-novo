@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +36,7 @@ const NovoModeloSelecao = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [activeTab, setActiveTab] = useState<'padrao' | 'personalizado'>('padrao');
   const [selecionandoModeloId, setSelecionandoModeloId] = useState<string | null>(null);
+  const filtersRef = useRef<HTMLDivElement>(null);
 
   const temFiltrosAvancadosAtivos = filtros.objetivo !== 'todos' || filtros.dificuldade !== 'todos' || filtros.frequencia !== 'todos';
 
@@ -109,6 +110,20 @@ const NovoModeloSelecao = () => {
 
     fetchData();
   }, [user, alunoId, navigate]);
+
+  // Fechar filtros ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showFilters && filtersRef.current && !filtersRef.current.contains(event.target as Node)) {
+        setShowFilters(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showFilters]);
 
   const handleSelecionarModelo = async (modelo: ModeloRotina) => {
     if (!alunoId || !aluno) return;
@@ -349,18 +364,7 @@ const NovoModeloSelecao = () => {
           <Button
             variant="outline"
             onClick={() => setShowFilters(!showFilters)}
-            className="flex-shrink-0 md:hidden relative h-10 w-10 p-0 [&_svg]:size-6"
-            aria-label="Mostrar filtros"
-          >
-            <Filter />
-            {temFiltrosAvancadosAtivos && (
-              <span className="absolute top-[-2px] left-[-2px] block h-3 w-3 rounded-full bg-secondary ring-2 ring-white" />
-            )}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setShowFilters(!showFilters)}
-            className="hidden md:flex items-center gap-2 relative"
+            className="flex-shrink-0 items-center gap-2 relative"
           >
             <Filter className="h-4 w-4" />
             Filtros
@@ -371,7 +375,18 @@ const NovoModeloSelecao = () => {
         </div>
 
         {showFilters && (
-          <div className="p-4 border rounded-lg bg-background">
+          <div ref={filtersRef} className="p-4 border rounded-lg bg-background">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-semibold">Filtros</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowFilters(false)}
+                className="h-8 w-8 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
             <div className="flex flex-col sm:flex-row sm:items-end gap-4">
               <div className="space-y-2 flex-1">
                 <Label htmlFor="filtro-objetivo">Objetivo</Label>
@@ -401,7 +416,7 @@ const NovoModeloSelecao = () => {
                 />
               </div>
               {temFiltrosAtivos && (
-                <Button variant="outline" size="sm" onClick={limparFiltros} className="flex items-center gap-2 w-full sm:w-auto flex-shrink-0">
+                <Button variant="default" size="sm" onClick={limparFiltros} className="flex items-center gap-2 w-full sm:w-auto flex-shrink-0">
                   <X className="h-4 w-4" />
                   Limpar
                 </Button>

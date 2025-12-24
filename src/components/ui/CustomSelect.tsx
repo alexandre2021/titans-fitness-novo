@@ -53,7 +53,7 @@ function CustomSelectComponent<
       menuList: () => 'max-h-60 p-1',
       option: (state) =>
         cn(
-          'relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-2 text-sm outline-none',
+          'relative flex w-full cursor-default select-none items-center rounded-sm py-2.5 pl-2 pr-2 text-sm outline-none',
           state.isFocused && 'bg-primary/10 text-primary',
           state.isSelected && 'bg-primary text-primary-foreground',
           state.isDisabled && 'pointer-events-none opacity-50'

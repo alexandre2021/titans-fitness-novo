@@ -55,10 +55,10 @@ export const FiltrosAlunos: React.FC<FiltrosAlunosProps> = ({ filtros, onFiltros
           variant="outline"
           size="sm"
           onClick={() => setShowFiltros((v) => !v)}
-          className="flex items-center gap-1 px-3 flex-shrink-0"
+          className="flex items-center gap-2 flex-shrink-0"
         >
           <Filter className="h-4 w-4" />
-          <span className="hidden xs:inline">Filtros</span>
+          Filtros
         </Button>
       </div>
 

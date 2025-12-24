@@ -272,16 +272,9 @@ const NovoExercicio = () => {
     }));
   }, [midias]);
 
-  const handleRecordingComplete = ({ 
-    videoBlob, 
-    thumbnailBlob 
-  }: { 
-    videoBlob: Blob, 
-    thumbnailBlob: Blob 
-  }) => {
-    const videoFile = new File([videoBlob], `gravacao_${Date.now()}.webm`, { type: 'video/webm' });    
-    const thumbnailFile = new File([thumbnailBlob], `thumbnail_${Date.now()}.jpeg`, { type: 'image/jpeg' });    
-    setMidias(prev => ({ ...prev, video_url: videoFile, video_thumbnail_path: thumbnailFile }));
+  const handleRecordingComplete = ({ videoBlob }: { videoBlob: Blob }) => {
+    const videoFile = new File([videoBlob], `gravacao_${Date.now()}.webm`, { type: 'video/webm' });
+    setMidias(prev => ({ ...prev, video_url: videoFile }));
     setShowVideoRecorder(false);
   };
 
@@ -844,12 +837,11 @@ const NovoExercicio = () => {
                       >
                         {isMobile ? (
                             <div className="flex flex-col items-center leading-tight">
-                              <div className="flex items-center gap-2"><Video className="h-4 w-4" /> <span>Gravar</span></div>
-                              <span className="text-xs block font-normal">(Segure em pé)</span>
+                              <div className="flex items-center gap-2"><Video className="h-4 w-4" /> <span>Gravar Vídeo</span></div>
                             </div>
                         ) : (
                           <>
-                            <Upload className="h-4 w-4" /> Selecionar Vídeo
+                            <Video className="h-4 w-4" /> Gravar Vídeo
                           </>
                         )}
                       </Button>

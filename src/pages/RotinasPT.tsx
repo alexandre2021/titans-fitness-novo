@@ -380,7 +380,7 @@ const RotinasPT = () => {
   }
 
 return (
-  <div className="space-y-6">
+  <div className="space-y-6 pt-6">
     {isDesktop && (
       <div>
           <div className="flex items-center gap-2">

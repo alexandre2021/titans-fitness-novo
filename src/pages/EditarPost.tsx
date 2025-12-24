@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { fileToDataURL, optimizeAndCropImage, validateImageFile } from '@/lib/imageUtils';
+import { fileToDataURL, optimizeAndCropImage, validateImageFile, normalizeFilename } from '@/lib/imageUtils';
 import type { Tables } from "@/integrations/supabase/types";
 
 import { Button } from '@/components/ui/button';
@@ -184,13 +184,14 @@ const EditarPost = () => {
 
       const uploadImage = async (file: File, suffix: string): Promise<string | null> => {
         const fileName = `post_${user.id}_${Date.now()}_${suffix}.jpg`;
+        const normalizedFileName = normalizeFilename(fileName);
         const { data: uploadData } = await supabase.functions.invoke('upload-media', {
           body: { action: 'generate_upload_url', filename: fileName, bucket_type: 'posts' },
         });
         if (!uploadData?.signedUrl) throw new Error('Falha ao obter URL de upload.');
         const uploadResponse = await fetch(uploadData.signedUrl, { method: 'PUT', body: file });
         if (!uploadResponse.ok) throw new Error('Falha no upload para o R2.');
-        return fileName;
+        return normalizedFileName;
       };
 
       const deleteImage = async (filename: string) => {

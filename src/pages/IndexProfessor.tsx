@@ -238,17 +238,6 @@ const IndexProfessor = () => {
 
   return (
     <>
-      <div className="space-y-6 pb-20 md:pb-0">
-      {/* Header */}
-      {isDesktop && (
-        <div>
-          <h1 className="text-3xl font-bold">Inicial</h1>
-          <p className="text-muted-foreground">
-            Bem-vindo, {user?.user_metadata?.full_name || 'Professor(a)'}!
-          </p>
-        </div>
-      )}
-
       {/* Botão Flutuante para Agenda */}
       <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
         <Button
@@ -259,6 +248,17 @@ const IndexProfessor = () => {
           <Calendar />
         </Button>
       </div>
+
+      <div className="space-y-6 pt-6 pb-20 md:pb-0">
+      {/* Header */}
+      {isDesktop && (
+        <div>
+          <h1 className="text-3xl font-bold">Inicial</h1>
+          <p className="text-muted-foreground">
+            Bem-vindo, {user?.user_metadata?.full_name || 'Professor(a)'}!
+          </p>
+        </div>
+      )}
 
       {/* Cards de Estatísticas */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

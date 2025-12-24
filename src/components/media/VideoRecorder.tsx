@@ -4,11 +4,10 @@ import { Camera, X, Circle } from 'lucide-react';
 import { toast as sonnerToast } from "sonner";
 import Modal from 'react-modal';
 
-// MODIFICAÇÃO 1: Atualiza a interface para retornar o vídeo E o thumbnail
 interface VideoRecorderProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onRecordingComplete: (files: { videoBlob: Blob, thumbnailBlob: Blob }) => void;
+  onRecordingComplete: (files: { videoBlob: Blob }) => void;
 }
 
 export function VideoRecorder({ open, onOpenChange, onRecordingComplete }: VideoRecorderProps) {
@@ -16,59 +15,9 @@ export function VideoRecorder({ open, onOpenChange, onRecordingComplete }: Video
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [countdown, setCountdown] = useState(12);
-
-  // --- FUNÇÃO AUXILIAR PARA CAPTURAR O THUMBNAIL (A FOTO) ---
-  const captureThumbnail = useCallback(async (videoBlob: Blob): Promise<Blob> => {
-    return new Promise((resolve, reject) => {
-      // Cria um elemento de vídeo temporário
-      const video = document.createElement('video');
-      video.src = URL.createObjectURL(videoBlob);
-      video.autoplay = true;
-      video.muted = true;
-      video.crossOrigin = 'anonymous'; 
-      
-      // Quando o vídeo carrega os metadados (incluindo dimensões)
-      video.onloadedmetadata = () => {
-        video.currentTime = 0; // Garante que começamos no primeiro frame
-
-        // Aguarda o frame estar pronto para desenhar
-        video.onseeked = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          const ctx = canvas.getContext('2d');
-          
-          if (ctx) {
-            // Desenha o frame do vídeo no canvas
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            // Converte o canvas para um Blob de imagem (JPEG para compressão e eficiência)
-            canvas.toBlob((blob) => {
-              // Limpeza
-              URL.revokeObjectURL(video.src); 
-              video.remove();
-              
-              if (blob) {
-                resolve(blob);
-              } else {
-                reject(new Error("Falha ao gerar o Blob do thumbnail."));
-              }
-            }, 'image/jpeg', 0.85); // 0.85 é uma boa qualidade de compressão
-          } else {
-            reject(new Error("Contexto 2D do Canvas indisponível."));
-          }
-        };
-      };
-
-      video.onerror = (e) => {
-        URL.revokeObjectURL(video.src);
-        video.remove();
-        reject(new Error("Erro ao carregar os dados do vídeo para thumbnail."));
-      };
-    });
-  }, []);
 
   // --- LÓGICA DE PARADA DA GRAVAÇÃO ---
   const stopRecording = useCallback(() => {
@@ -105,7 +54,9 @@ export function VideoRecorder({ open, onOpenChange, onRecordingComplete }: Video
         videoRef.current.srcObject = stream;
       }
 
-      const recordedChunks: Blob[] = [];
+      // Limpa chunks anteriores
+      recordedChunksRef.current = [];
+
       const recorder = new MediaRecorder(stream, {
         mimeType: 'video/webm; codecs=vp9',
         videoBitsPerSecond: 500000, // 500 kbps
@@ -115,36 +66,30 @@ export function VideoRecorder({ open, onOpenChange, onRecordingComplete }: Video
 
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          recordedChunks.push(event.data);
+          console.log(`📦 [VideoRecorder] Chunk recebido: ${event.data.size} bytes`);
+          recordedChunksRef.current.push(event.data);
         }
       };
 
-      // MODIFICAÇÃO 2: Lógica de processamento e retorno no onstop
       recorder.onstop = async () => {
+        console.log(`🛑 [VideoRecorder] Gravação parada. Total de chunks: ${recordedChunksRef.current.length}`);
+
         // Para todas as tracks do stream (limpeza da câmera)
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => track.stop());
           streamRef.current = null;
         }
-        
-        const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
-        
-        try {
-          // GERA O THUMBNAIL ANTES DE CHAMAR O CALLBACK
-          const thumbnailBlob = await captureThumbnail(videoBlob);
-          
-          // Retorna os dois blobs para a página-mãe
-          onRecordingComplete({ videoBlob, thumbnailBlob });
-          
-        } catch (error) {
-          console.error("Erro no processamento de vídeo ou thumbnail:", error);
-          toast.error("Erro de Processamento", { description: "Falha ao gerar o thumbnail do vídeo." });
-        } finally {
-            onOpenChange(false); // Fecha o modal após o processamento (sucesso ou falha)
-        }
+
+        const videoBlob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+        console.log(`🎬 [VideoRecorder] VideoBlob criado: ${(videoBlob.size / 1024 / 1024).toFixed(2)}MB`);
+
+        // Retorna apenas o vídeo (sem thumbnail)
+        onRecordingComplete({ videoBlob });
+        onOpenChange(false);
       };
 
-      recorder.start();
+      console.log(`▶️ [VideoRecorder] Iniciando gravação...`);
+      recorder.start(1000); // Captura dados a cada 1 segundo
       setIsRecording(true);
 
     } catch (err) {
@@ -152,7 +97,7 @@ export function VideoRecorder({ open, onOpenChange, onRecordingComplete }: Video
       toast.error("Erro de Câmera", { description: "Não foi possível acessar a câmera. Verifique as permissões." });
       onOpenChange(false);
     }
-  }, [toast, onRecordingComplete, onOpenChange, captureThumbnail]);
+  }, [toast, onRecordingComplete, onOpenChange]);
 
   // Limpeza ao fechar o modal ou limite de tempo
   useEffect(() => {
@@ -173,21 +118,26 @@ export function VideoRecorder({ open, onOpenChange, onRecordingComplete }: Video
   }, [isRecording, stopRecording]);
 
   useEffect(() => {
-    if (!open) {
-      // Limpeza de stream quando o modal é fechado
+    if (open) {
+      // Quando o modal abrir, inicia gravação automaticamente
+      console.log('🔴 [VideoRecorder] Modal aberto, iniciando gravação...');
+      startRecording();
+    } else {
+      // Limpeza quando o modal fecha
+      console.log('🔴 [VideoRecorder] Modal fechado, limpando recursos...');
       if (streamRef.current) {
          streamRef.current.getTracks().forEach(track => track.stop());
          streamRef.current = null;
       }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+        mediaRecorderRef.current = null;
+      }
       setIsRecording(false);
       setCountdown(12);
-    } else {
-        // Se o modal abrir, mas não estiver gravando, tenta iniciar
-        if (!isRecording) {
-            startRecording();
-        }
     }
-  }, [open, isRecording, startRecording]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
 
   return (

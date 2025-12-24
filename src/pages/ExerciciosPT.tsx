@@ -59,6 +59,8 @@ const ExerciciosPT = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showScrollTopButton, setShowScrollTopButton] = useState(false);
   const deletingRef = useRef(false);
+  const filtersRef = useRef<HTMLDivElement>(null);
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
 
   // Efeito de LEITURA: Sincroniza o estado interno com os parâmetros da URL
   useEffect(() => {
@@ -143,6 +145,26 @@ const ExerciciosPT = () => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
+
+  // Fechar filtros ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showFilters &&
+        filtersRef.current &&
+        !filtersRef.current.contains(event.target as Node) &&
+        filterButtonRef.current &&
+        !filterButtonRef.current.contains(event.target as Node)
+      ) {
+        setShowFilters(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showFilters]);
 
   const scrollToTop = () => {
     window.scrollTo({
@@ -262,7 +284,7 @@ const ExerciciosPT = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-6">
       {isDesktop && (
         <div className="items-center justify-between">
           <div>
@@ -286,23 +308,11 @@ const ExerciciosPT = () => {
               className="pl-10"
             />
           </div>
-          <div className="relative flex-shrink-0 z-30">
-            <Button
-              variant="outline"
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex-shrink-0 md:hidden h-10 w-10 p-0 [&_svg]:size-6"
-              aria-label="Mostrar filtros"
-            >
-              <Filter />
-            </Button>
-            {temFiltrosAvancadosAtivos && (
-              <span className="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-secondary ring-2 ring-background pointer-events-none md:hidden" />
-            )}
-          </div>
           <Button
+            ref={filterButtonRef}
             variant="outline"
             onClick={() => setShowFilters(!showFilters)}
-            className="hidden md:flex items-center gap-2 relative"
+            className="flex-shrink-0 items-center gap-2 relative"
           >
             <Filter className="h-4 w-4" />
             Filtros
@@ -313,7 +323,18 @@ const ExerciciosPT = () => {
         </div>
 
         {showFilters && (
-          <div className="p-4 border rounded-lg bg-background">
+          <div ref={filtersRef} className="p-4 border rounded-lg bg-background">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-semibold">Filtros</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowFilters(false)}
+                className="h-8 w-8 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
             <div className="flex flex-col sm:flex-row sm:items-end gap-4">
               <div className="space-y-2 flex-1">
                 <Label htmlFor="filtro-grupo">Grupo Muscular</Label>
@@ -343,7 +364,7 @@ const ExerciciosPT = () => {
                 />
               </div>
               {temFiltrosAtivos && (
-                <Button variant="outline" size="sm" onClick={limparFiltros} className="flex items-center gap-2 w-full sm:w-auto flex-shrink-0">
+                <Button variant="default" size="sm" onClick={limparFiltros} className="flex items-center gap-2 w-full sm:w-auto flex-shrink-0">
                   <X className="h-4 w-4" />
                   Limpar
                 </Button>
@@ -399,10 +420,6 @@ const ExerciciosPT = () => {
         </TabsContent>
 
         <TabsContent value="personalizados" className="space-y-4 mt-6">
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span>{exerciciosFiltrados.length} exercício(s) encontrado(s)</span>
-          </div>
-
           {exerciciosPersonalizados.length === 0 && busca === '' && filtros.grupoMuscular === 'todos' ? (
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-16 text-center">

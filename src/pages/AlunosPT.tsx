@@ -100,6 +100,8 @@ const AlunosPT = () => {
   const { alunos, loading, filtros, setFiltros, desvincularAluno, totalAlunos } = useAlunos(fetchTrigger);
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [showFilters, setShowFilters] = useState(false);
+  const filtersRef = useRef<HTMLDivElement>(null);
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
 
   // Estados para o modal de adicionar aluno
   const [isSearching, setIsSearching] = useState(false);
@@ -115,6 +117,25 @@ const AlunosPT = () => {
   const refetchAlunos = () => {
     setFetchTrigger(prev => prev + 1);
   };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showFilters &&
+        filtersRef.current &&
+        !filtersRef.current.contains(event.target as Node) &&
+        filterButtonRef.current &&
+        !filterButtonRef.current.contains(event.target as Node)
+      ) {
+        setShowFilters(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showFilters]);
 
   const codigoForm = useForm<CodigoFormData>({
     resolver: zodResolver(codigoSchema),
@@ -358,7 +379,7 @@ const AlunosPT = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-6">
       {isDesktop && (
         <div className="items-center justify-between">
           <div className="flex items-center gap-2">
@@ -403,20 +424,10 @@ const AlunosPT = () => {
                 />
               </div>
               <Button
+                ref={filterButtonRef}
                 variant="outline"
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex-shrink-0 md:hidden relative h-10 w-10 p-0 [&_svg]:size-6"
-                aria-label="Mostrar filtros"
-              >
-                <Filter />
-                {temFiltrosAvancadosAtivos && (
-                  <span className="absolute top-[-2px] left-[-2px] block h-3 w-3 rounded-full bg-secondary ring-2 ring-white" />
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-                className="hidden md:flex items-center gap-2 relative"
+                className="flex-shrink-0 items-center gap-2 relative"
               >
                 <Filter className="h-4 w-4" />
                 Filtros
@@ -427,7 +438,18 @@ const AlunosPT = () => {
             </div>
 
             {showFilters && (
-              <div className="p-4 border rounded-lg bg-background">
+              <div ref={filtersRef} className="p-4 border rounded-lg bg-background">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-base font-semibold">Filtros</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowFilters(false)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="filtro-situacao">Situação</Label>
@@ -449,7 +471,7 @@ const AlunosPT = () => {
                   </div>
                   {temFiltrosAtivos && (
                     <div className="flex items-end">
-                      <Button variant="outline" size="sm" onClick={limparFiltros} className="flex items-center gap-2 w-full sm:w-auto">
+                      <Button variant="default" size="sm" onClick={limparFiltros} className="flex items-center gap-2 w-full sm:w-auto">
                         <X className="h-4 w-4" />
                         Limpar
                       </Button>

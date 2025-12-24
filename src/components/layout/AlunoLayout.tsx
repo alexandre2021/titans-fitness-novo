@@ -25,7 +25,7 @@ const AlunoLayout: React.FC<AlunoLayoutProps> = ({ isFocusedMode = false }) => {
     return (
       <div className="min-h-screen bg-background">
         {!isFocusedMode && <AlunoMobileHeader />}
-        <main className={`p-4 ${isFocusedMode ? 'pt-6' : 'pt-24 pb-16'}`}>
+        <main className={`px-4 pb-16 ${isFocusedMode ? 'pt-6' : ''}`}>
           <Outlet />
         </main>
         {!isFocusedMode && <AlunoBottomNav />}

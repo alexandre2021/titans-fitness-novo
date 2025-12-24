@@ -314,16 +314,9 @@ const EditarExercicio = () => {
     input.click();
   };
 
-  const handleRecordingComplete = ({
-    videoBlob,
-    thumbnailBlob
-  }: {
-    videoBlob: Blob,
-    thumbnailBlob: Blob
-  }) => {
+  const handleRecordingComplete = ({ videoBlob }: { videoBlob: Blob }) => {
     const videoFile = new File([videoBlob], `gravacao_${Date.now()}.webm`, { type: 'video/webm' });
-    const thumbnailFile = new File([thumbnailBlob], `thumbnail_${Date.now()}.jpeg`, { type: 'image/jpeg' });
-    setMidias(prev => ({ ...prev, video_url: videoFile, video_thumbnail_path: thumbnailFile }));
+    setMidias(prev => ({ ...prev, video_url: videoFile }));
     setShowVideoRecorder(false);
   };
 
@@ -349,6 +342,7 @@ const EditarExercicio = () => {
     }
 
     setShowDeleteMediaDialog(null);
+    toast.success("Mídia Excluída", { description: "Lembre-se de salvar para confirmar a exclusão no banco de dados." });
   };
 
   // Efeito para definir a primeira mídia como capa automaticamente
@@ -815,7 +809,7 @@ const EditarExercicio = () => {
                     </div>
                     <div className="flex gap-2">
                       <Button type="button" variant="outline" size="sm" onClick={() => signedUrls.video && window.open(signedUrls.video, '_blank')} className="flex items-center gap-2" disabled={!signedUrls.video}><Eye className="h-4 w-4" /> Assistir</Button>
-                      <Button type="button" variant="outline" size="sm" onClick={() => { if (isMobile) { setShowVideoInfoModal(true); } else { handleSelectMedia('video'); } }} className="flex items-center gap-2" disabled={saving}>
+                      <Button type="button" variant="outline" size="sm" onClick={() => setShowVideoInfoModal(true)} className="flex items-center gap-2" disabled={saving}>
                         <Video className="h-4 w-4" /> Novo Vídeo
                       </Button>
                       <Button type="button" variant="outline" size="sm" onClick={() => setShowDeleteMediaDialog('video')} className="flex items-center gap-2"><Trash2 className="h-4 w-4" /> Excluir</Button>
@@ -828,14 +822,21 @@ const EditarExercicio = () => {
                       <Button
                         type="button"
                         variant="default"
-                        onClick={() => { if (isMobile) { setShowVideoInfoModal(true); } else { handleSelectMedia('video'); } }}
+                        onClick={() => setShowVideoInfoModal(true)}
                         className="flex items-center gap-2"
                         disabled={saving}
                       >
                         {isMobile ? (
-                          <><Video className="h-4 w-4" /> Gravar Vídeo</>
+                          <div className="flex flex-col items-center leading-tight">
+                            <div className="flex items-center gap-2">
+                              <Video className="h-4 w-4" />
+                              <span>Gravar Vídeo</span>
+                            </div>
+                          </div>
                         ) : (
-                          <><Upload className="h-4 w-4" /> Selecionar Vídeo</>
+                          <>
+                            <Video className="h-4 w-4" /> Gravar Vídeo
+                          </>
                         )}
                       </Button>
                     </div>

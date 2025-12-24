@@ -15,7 +15,7 @@ import { toast as sonnerToast } from "sonner";
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from "@/hooks/useAuth";
 import { VideoRecorder } from '@/components/media/VideoRecorder';
-import { resizeAndOptimizeImage, validateImageFile } from '@/lib/imageUtils';
+import { resizeAndOptimizeImage, validateImageFile, validateVideoFile, normalizeFilename, compressVideo, convertGifToWebp } from '@/lib/imageUtils';
 import CustomSelect from "@/components/ui/CustomSelect";
 
 const NovoExercicioPadrao = () => {
@@ -129,7 +129,7 @@ const NovoExercicioPadrao = () => {
   const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = type === 'video' ? 'video/*' : 'image/jpeg, image/png, image/webp';
+    input.accept = type === 'video' ? 'video/mp4,video/webm,video/quicktime' : 'image/jpeg, image/png, image/webp, image/gif';
     if (isMobile) { input.capture = type === 'video' ? 'user' : 'environment'; }
 
     const handleFileSelection = async (event: Event) => {
@@ -137,21 +137,61 @@ const NovoExercicioPadrao = () => {
       const file = target.files?.[0];
       if (!file) { target.value = ''; return; }
 
+      // Validação de imagem
       if (type.startsWith('imagem')) {
-        const validation = validateImageFile(file);
-        if (!validation.isValid) { toast.error("Arquivo de imagem inválido", { description: validation.error }); target.value = ''; return; }
-      } else if (type === 'video') {
-        const maxSize = 20 * 1024 * 1024;
-        if (file.size > maxSize) { toast.error("Arquivo de vídeo muito grande", { description: "O tamanho máximo para vídeos é 20MB." }); target.value = ''; return; }
+        const validation = validateImageFile(file, true); // Permite GIF
+        if (!validation.isValid) {
+          toast.error("Arquivo de imagem inválido", { description: validation.error });
+          target.value = '';
+          return;
+        }
+      }
+
+      // Validação de vídeo
+      if (type === 'video') {
+        const validation = validateVideoFile(file);
+        if (!validation.isValid) {
+          toast.error("Vídeo inválido", { description: validation.error });
+          target.value = '';
+          return;
+        }
       }
 
       if (type === 'imagem1' || type === 'imagem2') {
-        const resized = await resizeAndOptimizeImage(file, 640);
-        if (!resized) { toast.error("Erro ao processar imagem."); target.value = ''; return; }
         const key = type === 'imagem1' ? 'imagem_1_url' : 'imagem_2_url';
-        setMidias(prev => ({ ...prev, [key]: resized }));
+
+        // Se for GIF, converte para WebP estático (primeiro frame)
+        if (file.type === 'image/gif') {
+          toast.info("Convertendo GIF", { description: "Extraindo primeiro frame e convertendo para WebP..." });
+          try {
+            const webpFile = await convertGifToWebp(file);
+            toast.success("GIF convertido", { description: `Tamanho reduzido de ${(file.size / 1024 / 1024).toFixed(2)}MB para ${(webpFile.size / 1024 / 1024).toFixed(2)}MB` });
+            setMidias(prev => ({ ...prev, [key]: webpFile }));
+          } catch (error) {
+            toast.error("Erro ao converter GIF", { description: "Não foi possível converter o GIF. Tente novamente." });
+            console.error(error);
+            target.value = '';
+            return;
+          }
+        } else {
+          // Para outros formatos, redimensiona e otimiza
+          const resized = await resizeAndOptimizeImage(file, 640);
+          if (!resized) { toast.error("Erro ao processar imagem."); target.value = ''; return; }
+          setMidias(prev => ({ ...prev, [key]: resized }));
+        }
       } else if (type === 'video') {
-        setMidias(prev => ({ ...prev, video_url: file }));
+        // Comprime o vídeo antes de fazer upload
+        toast.info("Comprimindo vídeo", { description: "Aguarde enquanto o vídeo é otimizado..." });
+        try {
+          const compressed = await compressVideo(file);
+          toast.success("Vídeo comprimido", { description: `Tamanho reduzido para ${(compressed.size / 1024 / 1024).toFixed(2)}MB` });
+          setMidias(prev => ({ ...prev, video_url: compressed }));
+        } catch (error) {
+          toast.error("Erro ao comprimir vídeo", { description: "Não foi possível comprimir o vídeo. Tente novamente." });
+          console.error(error);
+          target.value = '';
+          return;
+        }
       }
       target.value = '';
     };
@@ -171,16 +211,9 @@ const NovoExercicioPadrao = () => {
     if (Object.keys(updates).length > 0) { setSignedUrls(prev => ({ ...prev, ...updates })); }
   }, [midias, signedUrls]);
 
-  const handleRecordingComplete = ({ 
-    videoBlob, 
-    thumbnailBlob 
-  }: { 
-    videoBlob: Blob, 
-    thumbnailBlob: Blob 
-  }) => {
-    const videoFile = new File([videoBlob], `gravacao_${Date.now()}.webm`, { type: 'video/webm' });    
-    const thumbnailFile = new File([thumbnailBlob], `thumbnail_${Date.now()}.jpeg`, { type: 'image/jpeg' });    
-    setMidias(prev => ({ ...prev, video_url: videoFile, video_thumbnail_path: thumbnailFile }));
+  const handleRecordingComplete = ({ videoBlob }: { videoBlob: Blob }) => {
+    const videoFile = new File([videoBlob], `gravacao_${Date.now()}.webm`, { type: 'video/webm' });
+    setMidias(prev => ({ ...prev, video_url: videoFile }));
     setShowVideoRecorder(false);
   };
 
@@ -251,19 +284,44 @@ const NovoExercicioPadrao = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const uploadFile = async (file: File | string | null): Promise<string | null> => {
+  const uploadFile = async (file: File | string | null, isOptional = false): Promise<string | null> => {
     if (!file || !(file instanceof File)) return null;
+
     try {
-      const uniqueFilename = `padrao_${Date.now()}_${file.name.replace(/\s/g, '_')}`;
+      // Normaliza o nome do arquivo removendo acentos e caracteres especiais
+      const normalizedName = normalizeFilename(file.name);
+      const uniqueFilename = `padrao_${Date.now()}_${normalizedName}`;
+
+      // Cria um novo File com o nome normalizado para evitar problemas de encoding
+      const normalizedFile = new File([file], uniqueFilename, { type: file.type });
+
+      console.log(`📤 Iniciando upload: ${file.name} -> ${uniqueFilename} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+
       const { data: presignedData, error: presignedError } = await supabase.functions.invoke('upload-media', {
         body: { action: 'generate_upload_url', filename: uniqueFilename, contentType: file.type, bucket_type: 'exercicios-padrao' }
       });
       if (presignedError || !presignedData.signedUrl) throw new Error(presignedError?.message || 'Não foi possível obter a URL de upload.');
-      const uploadResponse = await fetch(presignedData.signedUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
-      if (!uploadResponse.ok) throw new Error('Falha no upload direto para o R2.');
+
+      console.log(`🔗 URL de upload obtida para: ${uniqueFilename}`);
+
+      const uploadResponse = await fetch(presignedData.signedUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: normalizedFile });
+      if (!uploadResponse.ok) {
+        console.error(`❌ Erro no upload: ${uploadResponse.status} ${uploadResponse.statusText}`);
+        throw new Error(`Falha no upload: ${uploadResponse.status} ${uploadResponse.statusText}`);
+      }
+
+      console.log(`✅ Upload concluído com sucesso: ${uniqueFilename}`);
       return presignedData.path;
     } catch (error) {
-      console.error("Erro no upload:", error);
+      console.error('❌ Erro durante o upload:', error);
+
+      // Se é arquivo opcional (como thumbnail), apenas loga mas não interrompe
+      if (isOptional) {
+        console.warn(`⚠️ Upload opcional falhou: ${file.name}`);
+        return null;
+      }
+
+      // Se não é opcional, mostra erro e interrompe
       toast.error("Falha no Upload", { description: `Erro ao enviar o arquivo: ${(error as Error).message}` });
       throw error;
     }
@@ -280,7 +338,7 @@ const NovoExercicioPadrao = () => {
         uploadFile(midias.imagem_1_url),
         uploadFile(midias.imagem_2_url),
         uploadFile(midias.video_url),
-        uploadFile(midias.video_thumbnail_path),
+        uploadFile(midias.video_thumbnail_path, true), // Thumbnail é opcional
       ]);
 
       const { data: exercicio, error } = await supabase
@@ -498,11 +556,35 @@ const NovoExercicioPadrao = () => {
                       </Button>
                     </div>
                     <div className="flex gap-2">
-                      <Button type="button" variant="outline" size="sm" onClick={() => signedUrls.video && window.open(signedUrls.video, '_blank')} className="flex items-center gap-2" disabled={!signedUrls.video || saving}><Eye className="h-4 w-4" /> Assistir</Button><Button type="button" variant="outline" size="sm" onClick={() => { if (isMobile) { setShowVideoInfoModal(true); } else { handleSelectMedia('video'); } }} className="flex items-center gap-2" disabled={saving}><Video className="h-4 w-4" /> Novo Vídeo</Button><Button type="button" variant="outline" size="sm" onClick={() => setShowDeleteMediaDialog('video')} className="flex items-center gap-2" disabled={saving}><Trash2 className="h-4 w-4" /> Excluir</Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => signedUrls.video && window.open(signedUrls.video, '_blank')} className="flex items-center gap-2" disabled={!signedUrls.video || saving}><Eye className="h-4 w-4" /> Assistir</Button><Button type="button" variant="outline" size="sm" onClick={() => setShowVideoInfoModal(true)} className="flex items-center gap-2" disabled={saving}><Video className="h-4 w-4" /> Novo Vídeo</Button><Button type="button" variant="outline" size="sm" onClick={() => setShowDeleteMediaDialog('video')} className="flex items-center gap-2" disabled={saving}><Trash2 className="h-4 w-4" /> Excluir</Button>
                     </div>
                   </div>
                 ) : (
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center"><p className="text-sm text-muted-foreground mb-3">Adicione um vídeo para o exercício.</p><div className="flex flex-col sm:flex-row gap-2 justify-center items-center"><Button type="button" variant="default" onClick={() => setShowVideoInfoModal(true)} className="flex items-center gap-2" disabled={saving}>{isMobile ? <><Video className="h-4 w-4" /> Gravar Vídeo</> : <><Upload className="h-4 w-4" /> Selecionar Vídeo</>}</Button></div></div>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                    <p className="text-sm text-muted-foreground mb-3">Adicione um vídeo para o exercício.</p>
+                    <div className="flex flex-col sm:flex-row gap-2 justify-center items-center">
+                      <Button
+                        type="button"
+                        variant="default"
+                        onClick={() => setShowVideoInfoModal(true)}
+                        className="flex items-center gap-2"
+                        disabled={saving}
+                      >
+                        {isMobile ? (
+                          <div className="flex flex-col items-center leading-tight">
+                            <div className="flex items-center gap-2">
+                              <Video className="h-4 w-4" />
+                              <span>Gravar Vídeo</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <Video className="h-4 w-4" /> Gravar Vídeo
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

@@ -26,7 +26,7 @@ const PTLayout: React.FC<PTLayoutProps> = ({ isFocusedMode = false }) => {
     return (
       <div className="min-h-screen bg-background">
         {!isFocusedMode && <PTMobileHeader />}
-        <main className={`p-4 ${isFocusedMode ? 'pt-6' : 'pt-20 pb-16'}`}>
+        <main className={`px-4 pb-16 ${isFocusedMode ? 'pt-6' : ''}`}>
           <Outlet />
         </main>
         {!isFocusedMode && <PTBottomNav />}

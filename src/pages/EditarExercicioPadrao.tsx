@@ -15,7 +15,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from "@/hooks/useAuth";
 import { VideoRecorder } from '@/components/media/VideoRecorder';
 import { Tables } from "@/integrations/supabase/types";
-import { resizeAndOptimizeImage, validateImageFile } from '@/lib/imageUtils';
+import { resizeAndOptimizeImage, validateImageFile, validateVideoFile, normalizeFilename, compressVideo, convertGifToWebp } from '@/lib/imageUtils';
 import CustomSelect from "@/components/ui/CustomSelect";
 
 type Exercicio = Tables<"exercicios">;
@@ -311,43 +311,69 @@ const EditarExercicioPadrao = () => {
   const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = type === 'video' ? 'video/*' : 'image/jpeg, image/png, image/webp';
+    input.accept = type === 'video' ? 'video/mp4,video/webm,video/quicktime' : 'image/jpeg, image/png, image/webp, image/gif';
     if (isMobile) input.capture = type === 'video' ? 'user' : 'environment';
 
     input.onchange = async (event) => {
       const file = (event.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
-      const validation = validateImageFile(file);
-      if (type.startsWith('imagem') && !validation.isValid) {
-        toast.error("Arquivo inválido", { description: validation.error });
-        return;
+      // Validação de imagem
+      if (type.startsWith('imagem')) {
+        const validation = validateImageFile(file, true); // Permite GIF
+        if (!validation.isValid) {
+          toast.error("Arquivo inválido", { description: validation.error });
+          return;
+        }
+      }
+
+      // Validação de vídeo
+      if (type === 'video') {
+        const validation = validateVideoFile(file);
+        if (!validation.isValid) {
+          toast.error("Vídeo inválido", { description: validation.error });
+          return;
+        }
       }
 
       try {
-        const processedFile = type.startsWith('imagem')
-          ? await resizeAndOptimizeImage(file, 640)
-          : file;
+        let processedFile: File | null = null;
+
+        if (type.startsWith('imagem')) {
+          // Se for GIF, converte para WebP estático (primeiro frame)
+          if (file.type === 'image/gif') {
+            toast.info("Convertendo GIF", { description: "Extraindo primeiro frame e convertendo para WebP..." });
+            processedFile = await convertGifToWebp(file);
+            toast.success("GIF convertido", { description: `Tamanho reduzido de ${(file.size / 1024 / 1024).toFixed(2)}MB para ${(processedFile.size / 1024 / 1024).toFixed(2)}MB` });
+          } else {
+            // Para outros formatos, redimensiona e otimiza
+            processedFile = await resizeAndOptimizeImage(file, 640);
+          }
+        } else if (type === 'video') {
+          // Comprime o vídeo antes de fazer upload
+          toast.info("Comprimindo vídeo", { description: "Aguarde enquanto o vídeo é otimizado..." });
+          processedFile = await compressVideo(file);
+          toast.success("Vídeo comprimido", { description: `Tamanho reduzido para ${(processedFile.size / 1024 / 1024).toFixed(2)}MB` });
+        }
+
+        if (!processedFile) {
+          toast.error("Erro ao processar arquivo");
+          return;
+        }
+
         const key = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'video_url';
         setMidias(prev => ({ ...prev, [key]: processedFile }));
       } catch (error) {
-        toast.error("Erro ao processar imagem");
+        toast.error("Erro ao processar arquivo");
         console.error(error);
       }
     };
     input.click();
   };
 
-  const handleRecordingComplete = ({ 
-    videoBlob, 
-    thumbnailBlob 
-  }: { 
-    videoBlob: Blob, 
-    thumbnailBlob: Blob 
-  }) => {
-    const videoFile = new File([videoBlob], `gravacao_${Date.now()}.webm`, { type: 'video/webm' });    
-    const thumbnailFile = new File([thumbnailBlob], `thumbnail_${Date.now()}.jpeg`, { type: 'image/jpeg' });    
-    setMidias(prev => ({ ...prev, video_url: videoFile, video_thumbnail_path: thumbnailFile }));
+  const handleRecordingComplete = ({ videoBlob }: { videoBlob: Blob }) => {
+    const videoFile = new File([videoBlob], `gravacao_${Date.now()}.webm`, { type: 'video/webm' });
+    setMidias(prev => ({ ...prev, video_url: videoFile }));
     setShowVideoRecorder(false);
   };
 
@@ -383,19 +409,54 @@ const EditarExercicioPadrao = () => {
     toast.success("Mídia Excluída", { description: "Lembre-se de salvar para confirmar a exclusão no banco de dados." });
   }, [setMidias, setShowDeleteMediaDialog, toast, coverMediaKey]);
 
-  const uploadFile = async (file: File | string | null): Promise<string | null> => {
+  const uploadFile = async (file: File | string | null, isOptional = false): Promise<string | null> => {
     if (!file || !(file instanceof File)) return null;
 
     try {
-      const uniqueFilename = `padrao_${Date.now()}_${file.name.replace(/\s/g, '_')}`;
+      // Normaliza o nome do arquivo removendo acentos e caracteres especiais
+      const normalizedName = normalizeFilename(file.name);
+      const uniqueFilename = `padrao_${Date.now()}_${normalizedName}`;
+
+      // Cria um novo File com o nome normalizado para evitar problemas de encoding
+      const normalizedFile = new File([file], uniqueFilename, { type: file.type });
+
+      console.log(`📤 Iniciando upload:`);
+      console.log(`   Original: ${file.name}`);
+      console.log(`   Normalizado: ${normalizedName}`);
+      console.log(`   Final: ${uniqueFilename}`);
+      console.log(`   Tamanho: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+
       const { data: presignedData, error: presignedError } = await supabase.functions.invoke('upload-media', {
         body: { action: 'generate_upload_url', filename: uniqueFilename, contentType: file.type, bucket_type: 'exercicios-padrao' }
       });
       if (presignedError || !presignedData.signedUrl) throw new Error(presignedError?.message || 'Não foi possível obter a URL de upload.');
-      const uploadResponse = await fetch(presignedData.signedUrl, { method: 'PUT', body: file });
-      if (!uploadResponse.ok) throw new Error('Falha no upload direto para o R2.');
+
+      console.log(`🔗 URL de upload obtida para: ${uniqueFilename}`);
+
+      const uploadResponse = await fetch(presignedData.signedUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': file.type
+        },
+        body: normalizedFile
+      });
+      if (!uploadResponse.ok) {
+        console.error(`❌ Erro no upload: ${uploadResponse.status} ${uploadResponse.statusText}`);
+        throw new Error(`Falha no upload: ${uploadResponse.status} ${uploadResponse.statusText}`);
+      }
+
+      console.log(`✅ Upload concluído com sucesso: ${uniqueFilename}`);
       return presignedData.path;
     } catch (error) {
+      console.error('❌ Erro durante o upload:', error);
+
+      // Se é arquivo opcional (como thumbnail), apenas loga mas não interrompe
+      if (isOptional) {
+        console.warn(`⚠️ Upload opcional falhou: ${file.name}`);
+        return null;
+      }
+
+      // Se não é opcional, mostra erro e interrompe
       toast.error("Falha no Upload", { description: (error as Error).message });
       throw error;
     }
@@ -443,7 +504,9 @@ const EditarExercicioPadrao = () => {
         const initialValue = initialMediaUrls[key as keyof typeof initialMediaUrls];
 
         if (currentValue instanceof File) {
-          finalMediaUrls[key] = await uploadFile(currentValue);
+          // Thumbnail é opcional - não interrompe se falhar
+          const isOptional = key === 'video_thumbnail_path';
+          finalMediaUrls[key] = await uploadFile(currentValue, isOptional);
           if (initialValue) await deleteFile(initialValue);
         } else if (currentValue === null && initialValue) {
           finalMediaUrls[key] = null;
@@ -688,16 +751,35 @@ const EditarExercicioPadrao = () => {
                     </div>
                     <div className="flex gap-2">
                       <Button type="button" variant="outline" size="sm" onClick={() => signedUrls.video && window.open(signedUrls.video, '_blank')} className="flex items-center gap-2" disabled={!signedUrls.video}><Eye className="h-4 w-4" /> Assistir</Button>
-                      <Button type="button" variant="outline" size="sm" onClick={() => handleSelectMedia('video')} className="flex items-center gap-2" disabled={saving}><Video className="h-4 w-4" /> Novo Vídeo</Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => setShowVideoInfoModal(true)} className="flex items-center gap-2" disabled={saving}><Video className="h-4 w-4" /> Novo Vídeo</Button>
                       <Button type="button" variant="outline" size="sm" onClick={() => setShowDeleteMediaDialog('video')} className="flex items-center gap-2"><Trash2 className="h-4 w-4" /> Excluir</Button>
                     </div>
                   </div>
                 ) : (
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <p className="text-sm text-muted-foreground mb-3">Adicione um vídeo para o exercício.</p>
-                  <div className="flex justify-center">
-                    <Button type="button" variant="default" onClick={() => handleSelectMedia('video')} className="flex items-center gap-2" disabled={saving}><Upload className="h-4 w-4" /> Selecionar Vídeo</Button>
-                  </div>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                    <p className="text-sm text-muted-foreground mb-3">Adicione um vídeo para o exercício.</p>
+                    <div className="flex flex-col sm:flex-row gap-2 justify-center items-center">
+                      <Button
+                        type="button"
+                        variant="default"
+                        onClick={() => setShowVideoInfoModal(true)}
+                        className="flex items-center gap-2"
+                        disabled={saving}
+                      >
+                        {isMobile ? (
+                          <div className="flex flex-col items-center leading-tight">
+                            <div className="flex items-center gap-2">
+                              <Video className="h-4 w-4" />
+                              <span>Gravar Vídeo</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <Video className="h-4 w-4" /> Gravar Vídeo
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>

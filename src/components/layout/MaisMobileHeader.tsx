@@ -2,8 +2,8 @@ import React from 'react';
 
 const MaisMobileHeader = () => {
   return (
-    <header className="fixed top-0 left-0 right-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-      <div className="container flex h-16 items-center justify-center">
+    <header className="fixed top-0 left-0 right-0 z-20 border-b shadow-sm bg-gray-50/80 backdrop-blur-sm">
+      <div className="container flex h-20 items-center justify-center">
         <img 
           src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal.png" 
           alt="Titans Fitness" 

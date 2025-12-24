@@ -67,6 +67,7 @@ import Contato from "./pages/Contato";
 import PerguntasFrequentes from "./pages/PerguntasFrequentes";
 import Blog from "./pages/Blog";
 import NovoExercicioPadrao from "./pages/NovoExercicioPadrao";
+import TesteCompressao from "./pages/TesteCompressao";
 
 // NOVAS IMPORTAÇÕES PARA EXECUÇÃO
 import RotinasPT from "./pages/RotinasPT.tsx";
@@ -142,7 +143,8 @@ const router = createBrowserRouter([
           { path: "/exercicios/detalhes/:id", element: <DetalhesExercicio /> },
           { path: "/exercicios/novo-padrao", element: <NovoExercicioPadrao /> },
           { path: "/exercicios/editar-padrao/:id", element: <EditarExercicioPadrao /> },
-          
+          { path: "/teste-compressao", element: <TesteCompressao /> },
+
           { path: "/agenda-pt", element: <AgendaPT /> },
           // Rotas de Posts protegidas para o admin
           {
