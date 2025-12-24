@@ -130,15 +130,16 @@ export const ExercicioCard = ({ exercicio, onCriarCopia, onExcluir, isAdmin, loc
                 <MoreVertical />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="w-52">
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
                   handleNavigation(`/exercicios/detalhes/${exercicio.id}`);
                 }}
+                className="py-3"
               >
-                <Eye className="mr-2 h-5 w-5" />
-                <span className="text-base">Ver Detalhes</span>
+                <Eye className="mr-3 h-6 w-6" />
+                <span className="text-lg">Ver Detalhes</span>
               </DropdownMenuItem>
 
               {onCriarCopia && (
@@ -147,9 +148,10 @@ export const ExercicioCard = ({ exercicio, onCriarCopia, onExcluir, isAdmin, loc
                     e.stopPropagation();
                     onCriarCopia(exercicio.id);
                   }}
+                  className="py-3"
                 >
-                  <Copy className="mr-2 h-5 w-5" />
-                  <span className="text-base">Criar Cópia</span>
+                  <Copy className="mr-3 h-6 w-6" />
+                  <span className="text-lg">Criar Cópia</span>
                 </DropdownMenuItem>
               )}
 
@@ -160,9 +162,10 @@ export const ExercicioCard = ({ exercicio, onCriarCopia, onExcluir, isAdmin, loc
                       e.stopPropagation();
                       handleNavigation(`/exercicios/editar/${exercicio.id}`);
                     }}
+                    className="py-3"
                   >
-                    <Edit className="mr-2 h-5 w-5" />
-                    <span className="text-base">Editar</span>
+                    <Edit className="mr-3 h-6 w-6" />
+                    <span className="text-lg">Editar</span>
                   </DropdownMenuItem>
 
                   {onExcluir && (
@@ -171,10 +174,10 @@ export const ExercicioCard = ({ exercicio, onCriarCopia, onExcluir, isAdmin, loc
                         e.stopPropagation();
                         onExcluir(exercicio.id);
                       }}
-                      className="text-destructive focus:text-destructive"
+                      className="text-destructive focus:text-destructive py-3"
                     >
-                      <Trash2 className="mr-2 h-5 w-5" />
-                      <span className="text-base">Excluir</span>
+                      <Trash2 className="mr-3 h-6 w-6" />
+                      <span className="text-lg">Excluir</span>
                     </DropdownMenuItem>
                   )}
                 </>
@@ -187,9 +190,10 @@ export const ExercicioCard = ({ exercicio, onCriarCopia, onExcluir, isAdmin, loc
                       e.stopPropagation();
                       handleNavigation(`/exercicios/editar-padrao/${exercicio.id}`);
                     }}
+                    className="py-3"
                   >
-                    <Edit className="mr-2 h-5 w-5" />
-                    <span className="text-base">Editar Padrão</span>
+                    <Edit className="mr-3 h-6 w-6" />
+                    <span className="text-lg">Editar Padrão</span>
                   </DropdownMenuItem>
 
                   {onExcluir && (
@@ -198,10 +202,10 @@ export const ExercicioCard = ({ exercicio, onCriarCopia, onExcluir, isAdmin, loc
                         e.stopPropagation();
                         onExcluir(exercicio.id);
                       }}
-                      className="text-destructive focus:text-destructive"
+                      className="text-destructive focus:text-destructive py-3"
                     >
-                      <Trash2 className="mr-2 h-5 w-5" />
-                      <span className="text-base">Excluir</span>
+                      <Trash2 className="mr-3 h-6 w-6" />
+                      <span className="text-lg">Excluir</span>
                     </DropdownMenuItem>
                   )}
                 </>

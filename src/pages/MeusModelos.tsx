@@ -281,24 +281,24 @@ const MeusModelos = () => {
                           <MoreVertical />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => navigate(`/modelos/detalhes/${modelo.id}?returnTab=${activeTab}`)}>
-                          <Eye className="mr-2 h-5 w-5" />
-                          <span className="text-base">Ver detalhes</span>
+                      <DropdownMenuContent align="end" className="w-52">
+                        <DropdownMenuItem onClick={() => navigate(`/modelos/detalhes/${modelo.id}?returnTab=${activeTab}`)} className="py-3">
+                          <Eye className="mr-3 h-6 w-6" />
+                          <span className="text-lg">Ver detalhes</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleCopiarModelo(modelo.id)}>
-                          <Copy className="mr-2 h-5 w-5" />
-                          <span className="text-base">Criar Cópia</span>
+                        <DropdownMenuItem onClick={() => handleCopiarModelo(modelo.id)} className="py-3">
+                          <Copy className="mr-3 h-6 w-6" />
+                          <span className="text-lg">Criar Cópia</span>
                         </DropdownMenuItem>
                         {isAdmin && (
                           <>
-                            <DropdownMenuItem onClick={() => navigate(`/modelos/editar-padrao/${modelo.id}?returnTab=${activeTab}`)}>
-                              <Edit className="mr-2 h-5 w-5" />
-                              <span className="text-base">Editar Padrão</span>
+                            <DropdownMenuItem onClick={() => navigate(`/modelos/editar-padrao/${modelo.id}?returnTab=${activeTab}`)} className="py-3">
+                              <Edit className="mr-3 h-6 w-6" />
+                              <span className="text-lg">Editar Padrão</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleExcluirModelo(modelo)} className="text-destructive focus:text-destructive">
-                              <Trash2 className="mr-2 h-5 w-5" />
-                              <span className="text-base">Excluir</span>
+                            <DropdownMenuItem onClick={() => handleExcluirModelo(modelo)} className="text-destructive focus:text-destructive py-3">
+                              <Trash2 className="mr-3 h-6 w-6" />
+                              <span className="text-lg">Excluir</span>
                             </DropdownMenuItem>
                           </>
                         )}
@@ -384,22 +384,22 @@ const MeusModelos = () => {
                           <MoreVertical />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => navigate(`/modelos/detalhes/${modelo.id}?returnTab=${activeTab}`)}>
-                          <Eye className="mr-2 h-5 w-5" />
-                          <span className="text-base">Ver detalhes</span>
+                      <DropdownMenuContent align="end" className="w-52">
+                        <DropdownMenuItem onClick={() => navigate(`/modelos/detalhes/${modelo.id}?returnTab=${activeTab}`)} className="py-3">
+                          <Eye className="mr-3 h-6 w-6" />
+                          <span className="text-lg">Ver detalhes</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleCopiarModelo(modelo.id)}>
-                          <Copy className="mr-2 h-5 w-5" />
-                          <span className="text-base">Criar Cópia</span>
+                        <DropdownMenuItem onClick={() => handleCopiarModelo(modelo.id)} className="py-3">
+                          <Copy className="mr-3 h-6 w-6" />
+                          <span className="text-lg">Criar Cópia</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEditarModelo(modelo.id)}>
-                          <Edit className="mr-2 h-5 w-5" />
-                          <span className="text-base">Editar Modelo</span>
+                        <DropdownMenuItem onClick={() => handleEditarModelo(modelo.id)} className="py-3">
+                          <Edit className="mr-3 h-6 w-6" />
+                          <span className="text-lg">Editar Modelo</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleExcluirModelo(modelo)} className="text-destructive focus:text-destructive">
-                          <Trash2 className="mr-2 h-5 w-5" />
-                          <span className="text-base">Excluir</span>
+                        <DropdownMenuItem onClick={() => handleExcluirModelo(modelo)} className="text-destructive focus:text-destructive py-3">
+                          <Trash2 className="mr-3 h-6 w-6" />
+                          <span className="text-lg">Excluir</span>
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

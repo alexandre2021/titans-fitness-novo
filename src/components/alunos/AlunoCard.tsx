@@ -110,26 +110,26 @@ export const AlunoCard = ({ aluno, onDesvincular }: AlunoCardProps) => {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4"><MoreVertical /></Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => navigate(`/detalhes-aluno/${aluno.id}`)}>
-                  <Eye className="mr-2 h-5 w-5" />
-                  <span className="text-base">Ver Detalhes</span>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onClick={() => navigate(`/detalhes-aluno/${aluno.id}`)} className="py-3">
+                  <Eye className="mr-3 h-6 w-6" />
+                  <span className="text-lg">Ver Detalhes</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate(`/alunos-rotinas/${aluno.id}`)}>
-                  <FileText className="mr-2 h-5 w-5" />
-                  <span className="text-base">Rotinas</span>
+                <DropdownMenuItem onClick={() => navigate(`/alunos-rotinas/${aluno.id}`)} className="py-3">
+                  <FileText className="mr-3 h-6 w-6" />
+                  <span className="text-lg">Rotinas</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate(`/alunos-avaliacoes/${aluno.id}`)}>
-                  <BarChart3 className="mr-2 h-5 w-5" />
-                  <span className="text-base">Avaliações</span>
+                <DropdownMenuItem onClick={() => navigate(`/alunos-avaliacoes/${aluno.id}`)} className="py-3">
+                  <BarChart3 className="mr-3 h-6 w-6" />
+                  <span className="text-lg">Avaliações</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate(`/alunos-parq/${aluno.id}`)}>
-                  <ShieldQuestion className="mr-2 h-5 w-5" />
-                  <span className="text-base">PAR-Q</span>
+                <DropdownMenuItem onClick={() => navigate(`/alunos-parq/${aluno.id}`)} className="py-3">
+                  <ShieldQuestion className="mr-3 h-6 w-6" />
+                  <span className="text-lg">PAR-Q</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setShowUnlinkDialog(true)} className="text-destructive focus:text-destructive">
-                  <Trash2 className="mr-2 h-5 w-5" />
-                  <span className="text-base">Desvincular</span>
+                <DropdownMenuItem onClick={() => setShowUnlinkDialog(true)} className="text-destructive focus:text-destructive py-3">
+                  <Trash2 className="mr-3 h-6 w-6" />
+                  <span className="text-lg">Desvincular</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

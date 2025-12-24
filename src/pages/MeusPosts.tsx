@@ -148,10 +148,10 @@ const MeusPosts = () => {
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4"><MoreVertical /></Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => navigate(`/blog/${post.slug}`)} disabled={post.status !== 'published'}><Eye className="mr-2 h-4 w-4" />Ver Publicação</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => navigate(`/posts/editar/${post.slug}`)}><Edit className="mr-2 h-4 w-4" />Editar</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => abrirModalExclusao(post)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Excluir</DropdownMenuItem>
+                        <DropdownMenuContent align="end" className="w-52">
+                          <DropdownMenuItem onClick={() => navigate(`/blog/${post.slug}`)} disabled={post.status !== 'published'} className="py-3"><Eye className="mr-3 h-6 w-6" /><span className="text-lg">Ver Publicação</span></DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate(`/posts/editar/${post.slug}`)} className="py-3"><Edit className="mr-3 h-6 w-6" /><span className="text-lg">Editar</span></DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => abrirModalExclusao(post)} className="text-destructive focus:text-destructive py-3"><Trash2 className="mr-3 h-6 w-6" /><span className="text-lg">Excluir</span></DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>

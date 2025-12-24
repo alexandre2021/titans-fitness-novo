@@ -562,9 +562,9 @@ return (
                                             onOpenChange={(open) => setDropdownAberto(open ? rotina.id : null)}
                                           >
                                             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4" onClick={(e) => e.stopPropagation()} disabled={isUpdatingStatus}><MoreVertical /></Button></DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                              <DropdownMenuItem onClick={() => handleVerDetalhesEncerrada(rotinaCardProps)}><Eye className="mr-2 h-5 w-5" /><span className="text-base">Ver Detalhes</span></DropdownMenuItem>
-                                              <DropdownMenuItem onClick={() => handleExcluirRotina(rotinaCardProps)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-5 w-5" /><span className="text-base">Excluir</span></DropdownMenuItem>
+                                            <DropdownMenuContent align="end" className="w-52">
+                                              <DropdownMenuItem onClick={() => handleVerDetalhesEncerrada(rotinaCardProps)} className="py-3"><Eye className="mr-3 h-6 w-6" /><span className="text-lg">Ver Detalhes</span></DropdownMenuItem>
+                                              <DropdownMenuItem onClick={() => handleExcluirRotina(rotinaCardProps)} className="text-destructive focus:text-destructive py-3"><Trash2 className="mr-3 h-6 w-6" /><span className="text-lg">Excluir</span></DropdownMenuItem>
                                             </DropdownMenuContent>
                                           </DropdownMenu>
                                         </div>
@@ -609,12 +609,12 @@ return (
                                   onOpenChange={(open) => setDropdownAberto(open ? rotina.id : null)}
                                 >
                                   <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full p-0 flex-shrink-0 [&_svg]:size-6 md:[&_svg]:size-4" onClick={(e) => e.stopPropagation()} disabled={isUpdatingStatus}><MoreVertical /></Button></DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    {isRascunho ? (<DropdownMenuItem onClick={() => handleContinuarRascunho(rotinaCardProps)}><Play className="mr-2 h-5 w-5" /><span className="text-base">Continuar Edição</span></DropdownMenuItem>) : (<DropdownMenuItem onClick={() => navigate(`/alunos-rotinas/${rotina.aluno_id}/${rotina.id}`)}><Eye className="mr-2 h-5 w-5" /><span className="text-base">Detalhes</span></DropdownMenuItem>)}
-                                    {isAtiva && <DropdownMenuItem onClick={() => navigate(`/execucao-rotina/selecionar-treino/${rotina.id}`, { state: { modo: 'professor' } })}><Play className="mr-2 h-5 w-5" /><span className="text-base">Treinar</span></DropdownMenuItem>}
-                                    {isAtiva && <DropdownMenuItem onClick={() => handleUpdateRotinaStatus(rotinaCardProps, 'Bloqueada')}><Ban className="mr-2 h-5 w-5" /><span className="text-base">Bloquear</span></DropdownMenuItem>}
-                                    {isBloqueada && <DropdownMenuItem onClick={() => handleUpdateRotinaStatus(rotinaCardProps, 'Ativa')}><Activity className="mr-2 h-5 w-5" /><span className="text-base">Reativar</span></DropdownMenuItem>}
-                                    <DropdownMenuItem onClick={() => handleExcluirRotina(rotinaCardProps)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-5 w-5" /><span className="text-base">Excluir</span></DropdownMenuItem>
+                                  <DropdownMenuContent align="end" className="w-52">
+                                    {isRascunho ? (<DropdownMenuItem onClick={() => handleContinuarRascunho(rotinaCardProps)} className="py-3"><Play className="mr-3 h-6 w-6" /><span className="text-lg">Continuar Edição</span></DropdownMenuItem>) : (<DropdownMenuItem onClick={() => navigate(`/alunos-rotinas/${rotina.aluno_id}/${rotina.id}`)} className="py-3"><Eye className="mr-3 h-6 w-6" /><span className="text-lg">Detalhes</span></DropdownMenuItem>)}
+                                    {isAtiva && <DropdownMenuItem onClick={() => navigate(`/execucao-rotina/selecionar-treino/${rotina.id}`, { state: { modo: 'professor' } })} className="py-3"><Play className="mr-3 h-6 w-6" /><span className="text-lg">Treinar</span></DropdownMenuItem>}
+                                    {isAtiva && <DropdownMenuItem onClick={() => handleUpdateRotinaStatus(rotinaCardProps, 'Bloqueada')} className="py-3"><Ban className="mr-3 h-6 w-6" /><span className="text-lg">Bloquear</span></DropdownMenuItem>}
+                                    {isBloqueada && <DropdownMenuItem onClick={() => handleUpdateRotinaStatus(rotinaCardProps, 'Ativa')} className="py-3"><Activity className="mr-3 h-6 w-6" /><span className="text-lg">Reativar</span></DropdownMenuItem>}
+                                    <DropdownMenuItem onClick={() => handleExcluirRotina(rotinaCardProps)} className="text-destructive focus:text-destructive py-3"><Trash2 className="mr-3 h-6 w-6" /><span className="text-lg">Excluir</span></DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               </div>
