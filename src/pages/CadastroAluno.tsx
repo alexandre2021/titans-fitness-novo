@@ -63,13 +63,6 @@ export default function CadastroAluno() {
     }
   }, [searchParams]);
 
-  // Limpa reCAPTCHA quando componente desmontar (navegação para outra página)
-  useEffect(() => {
-    return () => {
-      cleanup();
-    };
-  }, [cleanup]);
-
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
