@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -41,13 +41,6 @@ export default function CadastroAluno() {
   const { executeRecaptcha, isReady: recaptchaReady, cleanup } = useRecaptcha();
 
   const RECAPTCHA_SITE_KEY_V2 = import.meta.env.VITE_RECAPTCHA_SITE_KEY_V2;
-
-  // Limpa o reCAPTCHA quando o componente é desmontado
-  useEffect(() => {
-    return () => {
-      cleanup();
-    };
-  }, [cleanup]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -248,7 +241,8 @@ export default function CadastroAluno() {
        * - Sem fricção: Confirmação de email desabilitada no Supabase
        */
 
-      // 5. Redirecionar para onboarding (sem necessidade de confirmar email)
+      // 5. Limpar reCAPTCHA e redirecionar para onboarding
+      cleanup();
       navigate("/onboarding-aluno/dados-basicos");
 
     } catch (error) {

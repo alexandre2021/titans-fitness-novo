@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -40,13 +40,6 @@ const Cadastroprofessor = () => {
   const { executeRecaptcha, isReady: recaptchaReady, cleanup } = useRecaptcha();
 
   const RECAPTCHA_SITE_KEY_V2 = import.meta.env.VITE_RECAPTCHA_SITE_KEY_V2;
-
-  // Limpa o reCAPTCHA quando o componente é desmontado
-  useEffect(() => {
-    return () => {
-      cleanup();
-    };
-  }, [cleanup]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -214,7 +207,8 @@ const Cadastroprofessor = () => {
        * - Sem fricção: Confirmação de email desabilitada no Supabase
        */
 
-      // Redirecionar para onboarding (sem necessidade de confirmar email)
+      // Limpar reCAPTCHA e redirecionar para onboarding
+      cleanup();
       navigate("/onboarding-pt/informacoes-basicas");
 
     } catch (error) {
