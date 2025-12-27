@@ -71,9 +71,9 @@ const OnboardingAlunoQuestionarioSaude = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-6 py-12">
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 sm:px-6 py-12">
       {loading ? (
-        <Card className="w-full max-w-2xl">
+        <Card className="w-[90%] max-w-2xl">
           <CardContent className="flex items-center justify-center py-12">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
@@ -82,7 +82,7 @@ const OnboardingAlunoQuestionarioSaude = () => {
           </CardContent>
         </Card>
       ) : (
-        <Card className="w-full max-w-2xl">
+        <Card className="w-[90%] max-w-2xl">
           <CardHeader className="text-center space-y-2">
             <CardTitle className="text-2xl">Questionário de Saúde</CardTitle>
             <p className="text-muted-foreground">

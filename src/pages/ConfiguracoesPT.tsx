@@ -7,8 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Bell, BellOff, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNotificationPermission } from '@/hooks/useNotificationPermission';
+import { useMediaQuery } from '@/hooks/use-media-query';
 
 const ConfiguracoesPT = () => {
+  const isDesktop = useMediaQuery("(min-width: 768px)");
   const {
     permission,
     isSubscribed,
@@ -80,15 +82,17 @@ const ConfiguracoesPT = () => {
 
   return (
     <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Settings className="h-8 w-8" />
-          Configurações
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Gerencie suas preferências do aplicativo
-        </p>
-      </div>
+      {isDesktop && (
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Settings className="h-8 w-8" />
+            Configurações
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Gerencie suas preferências do aplicativo
+          </p>
+        </div>
+      )}
 
       {/* Seção: Alertas */}
       <Card>

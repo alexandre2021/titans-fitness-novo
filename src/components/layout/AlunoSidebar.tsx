@@ -157,19 +157,19 @@ const AlunoSidebar = () => {
               </>
             )}
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => navigate('/perfil-aluno')}>
-                <User className="mr-2 h-5 w-5" />
-                <span className="text-base">Meu Perfil</span>
+              <DropdownMenuItem onClick={() => navigate('/perfil-aluno')} className="py-3">
+                <User className="mr-3 h-5 w-5" />
+                <span className="text-base font-medium">Meu Perfil</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/configuracoes-aluno')}>
-                <Settings className="mr-2 h-5 w-5" />
-                <span className="text-base">Configurações</span>
+              <DropdownMenuItem onClick={() => navigate('/configuracoes-aluno')} className="py-3">
+                <Settings className="mr-3 h-5 w-5" />
+                <span className="text-base font-medium">Configurações</span>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} className="text-red-600">
-              <LogOut className="mr-2 h-5 w-5" />
-              <span className="text-base">Sair</span>
+            <DropdownMenuItem onClick={handleLogout} className="text-red-600 py-3">
+              <LogOut className="mr-3 h-5 w-5" />
+              <span className="text-base font-medium">Sair</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

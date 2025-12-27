@@ -99,7 +99,7 @@ const PTMobileHeader = () => {
       "/app/ajuda": { title: "Central de Ajuda", subtitle: "Encontre respostas para suas dúvidas" },
       "/mensagens-pt": { title: "Mensagens" },
       "/perfil-pt": { title: "Meu Perfil" },
-      "/configuracoes-pt": { title: "Configurações" },
+      "/configuracoes-pt": { title: "Configurações", subtitle: "Gerencie suas preferências do aplicativo" },
     };
 
     if (mainPages[path]) {
@@ -216,19 +216,19 @@ const PTMobileHeader = () => {
             </>
           )}
           <DropdownMenuGroup>
-            <DropdownMenuItem onClick={() => navigate('/perfil-pt')}>
-              <User className="mr-2 h-5 w-5" />
-              <span className="text-base">Meu Perfil</span>
+            <DropdownMenuItem onClick={() => navigate('/perfil-pt')} className="py-3">
+              <User className="mr-3 h-5 w-5" />
+              <span className="text-base font-medium">Meu Perfil</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate('/configuracoes-pt')}>
-              <Settings className="mr-2 h-5 w-5" />
-              <span className="text-base">Configurações</span>
+            <DropdownMenuItem onClick={() => navigate('/configuracoes-pt')} className="py-3">
+              <Settings className="mr-3 h-5 w-5" />
+              <span className="text-base font-medium">Configurações</span>
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleLogout} className="text-red-600">
-            <LogOut className="mr-2 h-5 w-5" />
-            <span className="text-base">Sair</span>
+          <DropdownMenuItem onClick={handleLogout} className="text-red-600 py-3">
+            <LogOut className="mr-3 h-5 w-5" />
+            <span className="text-base font-medium">Sair</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

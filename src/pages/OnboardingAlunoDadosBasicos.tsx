@@ -213,16 +213,18 @@ const OnboardingAlunoDadosBasicos = () => {
         </Card>
       )}
 
-      <OnboardingContinuarModal
-        open={showQuestionarioModal}
-        onOpenChange={setShowQuestionarioModal}
-        onResponse={handleQuestionarioResponse}
-        isLoading={isLoading}
-        title="Questionário de Saúde (PAR-Q)"
-        description="Para garantir sua segurança, recomendamos fortemente que você responda a um breve questionário de saúde. Deseja fazer isso agora?"
-        confirmText="Sim, responder agora"
-        cancelText="Não, pular por enquanto"
-      />
+      {showQuestionarioModal && (
+        <OnboardingContinuarModal
+          open={showQuestionarioModal}
+          onOpenChange={setShowQuestionarioModal}
+          onResponse={handleQuestionarioResponse}
+          isLoading={isLoading}
+          title="Questionário de Saúde (PAR-Q)"
+          description="Para garantir sua segurança, recomendamos fortemente que você responda a um breve questionário de saúde. Deseja fazer isso agora?"
+          confirmText="Sim"
+          cancelText="Não"
+        />
+      )}
     </div>
   );
 };

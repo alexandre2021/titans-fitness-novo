@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,8 @@ import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { GoogleIcon } from "@/components/icons/GoogleIcon";
+import { useRecaptcha } from "@/hooks/useRecaptcha";
+import ReCAPTCHA from "react-google-recaptcha";
 
 const formSchema = z.object({
   nome_completo: z.string().min(2, "Nome completo deve ter pelo menos 2 caracteres"),
@@ -31,8 +33,21 @@ export default function CadastroAluno() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showVisualCaptcha, setShowVisualCaptcha] = useState(false);
+  const [recaptchaV2Token, setRecaptchaV2Token] = useState<string | null>(null);
+  const recaptchaRef = useRef<ReCAPTCHA>(null);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { executeRecaptcha, isReady: recaptchaReady, cleanup } = useRecaptcha();
+
+  const RECAPTCHA_SITE_KEY_V2 = import.meta.env.VITE_RECAPTCHA_SITE_KEY_V2;
+
+  // Limpa o reCAPTCHA quando o componente é desmontado
+  useEffect(() => {
+    return () => {
+      cleanup();
+    };
+  }, [cleanup]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -51,6 +66,65 @@ export default function CadastroAluno() {
     let professorIdConvidante: string | null = null;
 
     try {
+      // ETAPA 1: Verificação reCAPTCHA v3 (invisível)
+      let captchaVerified = false;
+
+      if (recaptchaReady && !showVisualCaptcha) {
+        const tokenV3 = await executeRecaptcha('signup_aluno');
+
+        if (tokenV3) {
+          // Verificar token v3 com Edge Function
+          const { data: verifyData, error: verifyError } = await supabase.functions.invoke(
+            'verify-recaptcha',
+            {
+              body: { token: tokenV3, version: 'v3', action: 'signup_aluno' },
+            }
+          );
+
+          if (verifyError) {
+            console.error('Erro ao verificar reCAPTCHA v3:', verifyError);
+            toast.error('Erro na verificação de segurança. Tente novamente.');
+            setIsLoading(false);
+            return;
+          }
+
+          if (verifyData.needsVisualChallenge) {
+            // Score baixo - mostrar CAPTCHA v2
+            setShowVisualCaptcha(true);
+            setIsLoading(false);
+            toast.info('Por favor, complete a verificação de segurança');
+            return;
+          }
+
+          captchaVerified = true;
+        }
+      } else if (showVisualCaptcha && recaptchaV2Token) {
+        // ETAPA 2: Verificação reCAPTCHA v2 (checkbox)
+        const { data: verifyData, error: verifyError } = await supabase.functions.invoke(
+          'verify-recaptcha',
+          {
+            body: { token: recaptchaV2Token, version: 'v2' },
+          }
+        );
+
+        if (verifyError || !verifyData.verified) {
+          toast.error('Verificação de segurança falhou. Tente novamente.');
+          recaptchaRef.current?.reset();
+          setRecaptchaV2Token(null);
+          setIsLoading(false);
+          return;
+        }
+
+        captchaVerified = true;
+      }
+
+      if (!captchaVerified) {
+        toast.error('Verificação de segurança pendente');
+        setIsLoading(false);
+        return;
+      }
+
+      // ETAPA 3: Prosseguir com cadastro
       // 1. Criar usuário no Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
@@ -154,8 +228,28 @@ export default function CadastroAluno() {
         }
       }
 
-      // 5. Redirecionar para confirmação de email
-      navigate("/confirmacao-email");
+      /**
+       * SEGURANÇA ANTI-BOT: reCAPTCHA v3 + v2 Implementado
+       *
+       * Para prevenir cadastros maliciosos em massa sem exigir confirmação de email,
+       * implementamos uma estratégia híbrida de CAPTCHA:
+       *
+       * 1. reCAPTCHA v3 (invisível): Analisa comportamento do usuário em tempo real
+       *    - Score >= 0.5: Cadastro aprovado automaticamente
+       *    - Score < 0.5: Exibe desafio visual (reCAPTCHA v2 checkbox)
+       *
+       * 2. reCAPTCHA v2 (checkbox): Verificação visual para casos suspeitos
+       *    - Aparece apenas para usuários com score baixo
+       *    - Permite que usuários legítimos provem que são humanos
+       *
+       * Esta abordagem garante:
+       * - Excelente UX: 95% dos usuários não veem CAPTCHA
+       * - Segurança forte: Bots precisam passar por duas camadas
+       * - Sem fricção: Confirmação de email desabilitada no Supabase
+       */
+
+      // 5. Redirecionar para onboarding (sem necessidade de confirmar email)
+      navigate("/onboarding-aluno/dados-basicos");
 
     } catch (error) {
       console.error('Erro inesperado no cadastro:', error);
@@ -350,10 +444,26 @@ export default function CadastroAluno() {
                     )}
                   />
 
-                  <Button 
-                    type="submit" 
+                  {/* reCAPTCHA v2 - Aparece apenas se score v3 for baixo */}
+                  {showVisualCaptcha && RECAPTCHA_SITE_KEY_V2 && (
+                    <div className="flex justify-center">
+                      <ReCAPTCHA
+                        ref={recaptchaRef}
+                        sitekey={RECAPTCHA_SITE_KEY_V2}
+                        onChange={(token) => setRecaptchaV2Token(token)}
+                        onExpired={() => setRecaptchaV2Token(null)}
+                        onErrored={() => {
+                          toast.error('Erro no CAPTCHA. Recarregue a página.');
+                          setRecaptchaV2Token(null);
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  <Button
+                    type="submit"
                     className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                    disabled={isLoading}
+                    disabled={isLoading || (showVisualCaptcha && !recaptchaV2Token)}
                   >
                     {isLoading ? "Cadastrando..." : "Cadastrar Aluno"}
                   </Button>

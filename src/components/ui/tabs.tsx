@@ -112,7 +112,7 @@ const TabsTrigger = React.forwardRef<
       // Layout
       "inline-flex items-center justify-center",
       "rounded-sm px-4 py-2",
-      "text-sm font-medium",
+      "text-base font-medium",
       "ring-offset-background transition-all duration-200",
       // Comportamento
       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",

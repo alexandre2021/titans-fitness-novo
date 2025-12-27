@@ -531,8 +531,8 @@ const AlunosPT = () => {
           </DialogHeader>
           <Tabs defaultValue="convidar" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="convidar">Convidar Novo Aluno</TabsTrigger>
-              <TabsTrigger value="vincular">Vincular Aluno Existente</TabsTrigger>
+              <TabsTrigger value="convidar">Convidar</TabsTrigger>
+              <TabsTrigger value="vincular">Vincular</TabsTrigger>
             </TabsList>
             <TabsContent value="convidar" className="pt-4">
               <Tabs defaultValue="email" className="w-full" onValueChange={(value) => setActiveInviteTab(value)}>
