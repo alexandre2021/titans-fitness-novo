@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -35,12 +35,33 @@ export default function CadastroAluno() {
   const [isLoading, setIsLoading] = useState(false);
   const [showVisualCaptcha, setShowVisualCaptcha] = useState(false);
   const [recaptchaV2Token, setRecaptchaV2Token] = useState<string | null>(null);
+  const [professorNome, setProfessorNome] = useState<string | null>(null);
   const recaptchaRef = useRef<ReCAPTCHA>(null);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { executeRecaptcha, isReady: recaptchaReady, cleanup } = useRecaptcha();
 
   const RECAPTCHA_SITE_KEY_V2 = import.meta.env.VITE_RECAPTCHA_SITE_KEY_V2;
+
+  // Busca o nome do professor se houver token de convite
+  useEffect(() => {
+    const conviteToken = searchParams.get('token');
+    if (conviteToken) {
+      const fetchProfessorNome = async () => {
+        const { data } = await supabase
+          .from('convites')
+          .select('professores(nome_completo)')
+          .eq('token_convite', conviteToken)
+          .eq('status', 'pendente')
+          .single();
+
+        if (data?.professores) {
+          setProfessorNome((data.professores as any).nome_completo);
+        }
+      };
+      fetchProfessorNome();
+    }
+  }, [searchParams]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -284,6 +305,14 @@ export default function CadastroAluno() {
               Preencha os dados abaixo para começar a usar a plataforma
             </CardDescription>
           </CardHeader>
+
+          {professorNome && (
+            <div className="mx-6 mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800 text-center">
+                🎯 Você está sendo convidado por <strong>{professorNome}</strong>. Ao se cadastrar, você será automaticamente vinculado a este professor.
+              </p>
+            </div>
+          )}
 
           <CardContent>
             <div className="space-y-4 mb-4">
