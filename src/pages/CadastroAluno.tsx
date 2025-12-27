@@ -48,15 +48,23 @@ export default function CadastroAluno() {
     const conviteToken = searchParams.get('token');
     if (conviteToken) {
       const fetchProfessorNome = async () => {
-        const { data } = await supabase
+        const { data: conviteData } = await supabase
           .from('convites')
-          .select('professores(nome_completo)')
+          .select('professor_id')
           .eq('token_convite', conviteToken)
           .eq('status', 'pendente')
           .single();
 
-        if (data?.professores) {
-          setProfessorNome((data.professores as any).nome_completo);
+        if (conviteData?.professor_id) {
+          const { data: professorData } = await supabase
+            .from('professores')
+            .select('nome_completo')
+            .eq('id', conviteData.professor_id)
+            .single();
+
+          if (professorData?.nome_completo) {
+            setProfessorNome(professorData.nome_completo);
+          }
         }
       };
       fetchProfessorNome();
