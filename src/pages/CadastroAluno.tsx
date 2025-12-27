@@ -63,6 +63,13 @@ export default function CadastroAluno() {
     }
   }, [searchParams]);
 
+  // Limpa reCAPTCHA quando componente desmontar (navegação para outra página)
+  useEffect(() => {
+    return () => {
+      cleanup();
+    };
+  }, [cleanup]);
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -262,8 +269,7 @@ export default function CadastroAluno() {
        * - Sem fricção: Confirmação de email desabilitada no Supabase
        */
 
-      // 5. Limpar reCAPTCHA e redirecionar para onboarding
-      cleanup();
+      // 5. Redirecionar para onboarding (cleanup automático via useEffect)
       navigate("/onboarding-aluno/dados-basicos");
 
     } catch (error) {
