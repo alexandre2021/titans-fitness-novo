@@ -172,6 +172,7 @@ export default function CadastroAluno() {
 
       // Se veio de um convite, valida o token e pega o ID do professor
       if (conviteToken) {
+        console.log('[Convite] Validando token:', conviteToken);
         const { data: conviteData, error: conviteError } = await supabase
           .from('convites')
           .select('professor_id, email_convidado')
@@ -179,10 +180,21 @@ export default function CadastroAluno() {
           .eq('status', 'pendente')
           .single();
 
+        console.log('[Convite] Resultado:', { conviteData, conviteError });
+
         if (conviteError || !conviteData) {
+          console.error('[Convite] Erro:', conviteError);
           toast.error("Convite inválido ou expirado.");
-        } else if (conviteData.email_convidado.toLowerCase() !== data.email.toLowerCase()) {
+          // Bloquear cadastro se convite inválido
+          await supabase.auth.admin.deleteUser(authData.user.id);
+          setIsLoading(false);
+          return;
+        } else if (conviteData.email_convidado && conviteData.email_convidado.toLowerCase() !== data.email.toLowerCase()) {
           toast.error("Email do convite não corresponde ao email cadastrado.");
+          // Bloquear cadastro se email não corresponder
+          await supabase.auth.admin.deleteUser(authData.user.id);
+          setIsLoading(false);
+          return;
         } else {
           professorIdConvidante = conviteData.professor_id;
         }
