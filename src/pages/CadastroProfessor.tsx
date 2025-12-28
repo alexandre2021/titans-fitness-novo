@@ -207,8 +207,12 @@ const Cadastroprofessor = () => {
        * - Sem fricção: Confirmação de email desabilitada no Supabase
        */
 
-      // Redirecionar para onboarding (cleanup automático via useEffect)
-      navigate("/onboarding-pt/informacoes-basicas");
+      // Limpar reCAPTCHA e redirecionar para onboarding
+      cleanup();
+      // Aguardar um frame para garantir que o cleanup execute antes da navegação
+      setTimeout(() => {
+        navigate("/onboarding-pt/informacoes-basicas");
+      }, 100);
 
     } catch (error) {
       console.error("Erro inesperado:", error);
