@@ -445,7 +445,8 @@ return (
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-16 text-center">
           <Users className="h-16 w-16 text-muted-foreground mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Nenhum aluno encontrado</h3>
+          <h3 className="text-xl font-semibold mb-2">Nenhum aluno encontrado</h3>
+          <p className="text-muted-foreground">Você precisa ter pelo menos um aluno cadastrado para criar rotinas de treino.</p>
         </CardContent>
       </Card>
       ) : alunosComRotinasFiltradas.length === 0 ? (
