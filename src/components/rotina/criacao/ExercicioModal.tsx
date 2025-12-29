@@ -647,9 +647,9 @@ export const ExercicioModal: React.FC<Props> = ({
 
                 {/* Filtros avançados */}
                 {showFiltros && (
-                  <div className="flex flex-col sm:flex-row gap-4 items-end">
+                  <div className="space-y-3">
                     {mostrarFiltroGrupo && (
-                      <div className="flex-1 space-y-2">
+                      <div className="w-full space-y-2">
                         <Label className="text-sm font-medium">Grupo Muscular</Label>
                         <CustomSelect
                           inputId="filtro-grupo-muscular"
@@ -661,7 +661,7 @@ export const ExercicioModal: React.FC<Props> = ({
                     )}
 
                     {temExerciciosPersonalizados && (
-                      <div className="flex-1 space-y-2">
+                      <div className="w-full space-y-2">
                         <Label className="text-sm font-medium">Tipo</Label>
                         <CustomSelect
                           inputId="filtro-tipo"
@@ -672,7 +672,7 @@ export const ExercicioModal: React.FC<Props> = ({
                       </div>
                     )}
 
-                    <div className="flex-1 space-y-2">
+                    <div className="w-full space-y-2">
                       <Label className="text-sm font-medium">Equipamento</Label>
                       <CustomSelect
                         inputId="filtro-equipamento"
@@ -682,7 +682,7 @@ export const ExercicioModal: React.FC<Props> = ({
                       />
                     </div>
 
-                    <div className="flex-1 space-y-2">
+                    <div className="w-full space-y-2">
                       <Label className="text-sm font-medium">Dificuldade</Label>
                       <CustomSelect
                         inputId="filtro-dificuldade"
@@ -693,12 +693,12 @@ export const ExercicioModal: React.FC<Props> = ({
                     </div>
 
                     {temFiltrosAtivos && (
-                      <div className="flex items-end">
+                      <div className="w-full pt-1">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={limparFiltros}
-                          className="flex items-center gap-2"
+                          className="w-full flex items-center justify-center gap-2"
                         >
                           <X className="h-4 w-4" />
                           Limpar
