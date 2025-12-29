@@ -185,7 +185,7 @@ export const ExercicioModal: React.FC<Props> = ({
   exerciciosIniciais = []
 }) => {
   const grupoMuscularOptions = useMemo(() => [
-    { value: 'todos', label: 'Todos os grupos' },
+    { value: 'todos', label: 'Todos' },
     ...gruposMuscularesFiltro.map((grupo: string) => ({ value: grupo, label: grupo }))
   ], [gruposMuscularesFiltro]);
 
@@ -695,7 +695,7 @@ export const ExercicioModal: React.FC<Props> = ({
                     {temFiltrosAtivos && (
                       <div className="w-full pt-1">
                         <Button
-                          variant="outline"
+                          variant="default"
                           size="sm"
                           onClick={limparFiltros}
                           className="w-full flex items-center justify-center gap-2"
