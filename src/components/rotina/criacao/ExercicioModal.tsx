@@ -531,9 +531,9 @@ export const ExercicioModal: React.FC<Props> = ({
         overlayClassName="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-2"
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b flex-shrink-0">
-          <div className="flex items-center justify-between mb-3">
-            {/* Toggle entre views */}
+        <div className="px-6 py-4 border-b flex-shrink-0 space-y-3">
+          {/* Linha 1: Seleção/Sacola + Fechar */}
+          <div className="flex items-center justify-between">
             <div className="flex gap-2">
               <Button
                 variant={viewAtiva === 'selecao' ? 'default' : 'outline'}
@@ -569,6 +569,52 @@ export const ExercicioModal: React.FC<Props> = ({
               <X className="h-4 w-4" />
             </Button>
           </div>
+
+          {/* Linha 2: Tipo de série (apenas na view de seleção) */}
+          {viewAtiva === 'selecao' && (
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant={tipoSerie === 'simples' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setTipoSerie('simples')}
+                className={`justify-start ${tipoSerie === 'simples' ? 'bg-[#ba3c15] hover:bg-[#9a3212] text-white' : 'border-[#ba3c15] text-[#ba3c15] hover:bg-[#ba3c15]/10'}`}
+              >
+                <Dumbbell className="h-4 w-4 mr-1" />
+                Série Simples
+              </Button>
+              <Button
+                type="button"
+                variant={tipoSerie === 'combinada' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setTipoSerie('combinada')}
+                className={`justify-start ${tipoSerie === 'combinada' ? 'bg-[#004B87] hover:bg-[#003d6e] text-white' : 'border-[#004B87] text-[#004B87] hover:bg-[#004B87]/10'}`}
+              >
+                <Link className="h-4 w-4 mr-1" />
+                Série Combinada
+              </Button>
+            </div>
+          )}
+
+          {/* Linha 3: Grupos musculares do treino (apenas na view de seleção) */}
+          {viewAtiva === 'selecao' && (
+            <div>
+              <Label className="text-sm font-medium mb-2 block">
+                Grupos musculares do treino:
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {gruposMuscularesFiltro.map((grupo: string) => (
+                  <Badge
+                    key={String(grupo)}
+                    variant="secondary"
+                    className={CORES_GRUPOS_MUSCULARES[grupo] || 'bg-gray-100 text-gray-800'}
+                  >
+                    {grupo}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Área central com scroll */}
@@ -578,48 +624,6 @@ export const ExercicioModal: React.FC<Props> = ({
             <>
               {/* Filtros */}
               <div className="px-6 py-4 border-b bg-gray-50 space-y-4">
-                {/* Grupos musculares do treino */}
-                <div>
-                  <Label className="text-sm font-medium mb-2 block">
-                    Grupos musculares do treino:
-                  </Label>
-                  <div className="flex flex-wrap gap-2">
-                    {gruposMuscularesFiltro.map((grupo: string) => (
-                      <Badge 
-                        key={String(grupo)}
-                        variant="secondary"
-                        className={CORES_GRUPOS_MUSCULARES[grupo] || 'bg-gray-100 text-gray-800'}
-                      >
-                        {grupo}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Tipo de série */}
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    variant={tipoSerie === 'simples' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setTipoSerie('simples')}
-                    className={`justify-start ${tipoSerie === 'simples' ? 'bg-[#ba3c15] hover:bg-[#9a3212] text-white' : 'border-[#ba3c15] text-[#ba3c15] hover:bg-[#ba3c15]/10'}`}
-                  >
-                    <Dumbbell className="h-4 w-4 mr-1" />
-                    Série Simples
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={tipoSerie === 'combinada' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setTipoSerie('combinada')}
-                    className={`justify-start ${tipoSerie === 'combinada' ? 'bg-[#004B87] hover:bg-[#003d6e] text-white' : 'border-[#004B87] text-[#004B87] hover:bg-[#004B87]/10'}`}
-                  >
-                    <Link className="h-4 w-4 mr-1" />
-                    Série Combinada
-                  </Button>
-                </div>
-
                 {/* Busca + Botão Filtros */}
                 <div className="flex flex-col sm:flex-row gap-4">
                   <div className="relative flex-1">
