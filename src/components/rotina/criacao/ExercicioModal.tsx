@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { X, Search, Link, Dumbbell, Filter, Check, Info, Plus, ShoppingBag, Trash2, List, Camera, ChevronUp, ChevronDown } from 'lucide-react';
+import { X, Search, Link, Dumbbell, Filter, Check, Info, Plus, Minus, ShoppingBag, Trash2, List, Camera, ChevronUp, ChevronDown } from 'lucide-react';
 import Modal from 'react-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -570,7 +570,27 @@ export const ExercicioModal: React.FC<Props> = ({
             </Button>
           </div>
 
-          {/* Linha 2: Tipo de série (apenas na view de seleção) */}
+          {/* Linha 2: Grupos musculares do treino (apenas na view de seleção) */}
+          {viewAtiva === 'selecao' && (
+            <div>
+              <Label className="text-sm font-medium mb-2 block">
+                Grupos musculares do treino:
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {gruposMuscularesFiltro.map((grupo: string) => (
+                  <Badge
+                    key={String(grupo)}
+                    variant="secondary"
+                    className={CORES_GRUPOS_MUSCULARES[grupo] || 'bg-gray-100 text-gray-800'}
+                  >
+                    {grupo}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Linha 3: Tipo de série (apenas na view de seleção) */}
           {viewAtiva === 'selecao' && (
             <div className="grid grid-cols-2 gap-2">
               <Button
@@ -593,26 +613,6 @@ export const ExercicioModal: React.FC<Props> = ({
                 <Link className="h-4 w-4 mr-1" />
                 Série Combinada
               </Button>
-            </div>
-          )}
-
-          {/* Linha 3: Grupos musculares do treino (apenas na view de seleção) */}
-          {viewAtiva === 'selecao' && (
-            <div>
-              <Label className="text-sm font-medium mb-2 block">
-                Grupos musculares do treino:
-              </Label>
-              <div className="flex flex-wrap gap-2">
-                {gruposMuscularesFiltro.map((grupo: string) => (
-                  <Badge
-                    key={String(grupo)}
-                    variant="secondary"
-                    className={CORES_GRUPOS_MUSCULARES[grupo] || 'bg-gray-100 text-gray-800'}
-                  >
-                    {grupo}
-                  </Badge>
-                ))}
-              </div>
             </div>
           )}
         </div>
@@ -761,25 +761,56 @@ export const ExercicioModal: React.FC<Props> = ({
                           className={`
                             relative border rounded-lg transition-all overflow-hidden
                             ${estaNaSacola
-                              ? 'border-[#ba3c15] bg-[#ba3c15]/5 ring-2 ring-[#ba3c15]/30 cursor-pointer'
+                              ? 'border-[#ba3c15] bg-[#ba3c15]/5 ring-2 ring-[#ba3c15]/30'
                               : podeSelecionar
-                                ? 'border-gray-200 cursor-pointer hover:border-[#ba3c15] hover:bg-[#ba3c15]/5'
-                                : 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-60'
+                                ? 'border-gray-200'
+                                : 'border-gray-100 bg-gray-50 opacity-60'
                             }
                           `}
-                          onClick={() => podeSelecionar && handleClickExercicio(exercicio)}
-                          title={estaNaSacola ? 'Clique para ver na sacola' : jaAdicionado ? 'Já adicionado ao treino' : 'Clique para selecionar'}
                         >
                           {/* Conteúdo do card */}
                           <div className="p-4">
                             {/* Ícones do canto superior direito */}
                             <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                            {/* Botão de adicionar */}
+                            {podeSelecionar && !estaNaSacola && (
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => handleClickExercicio(exercicio)}
+                                className="h-8 w-8 p-0 rounded-full"
+                                title="Adicionar à sacola"
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            )}
+
+                            {/* Botão de remover (quando está na sacola) */}
+                            {estaNaSacola && (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => {
+                                  const index = sacola.findIndex(item => {
+                                    if (item.tipo === 'simples') return item.exercicio.id === exercicio.id;
+                                    if (item.tipo === 'combinacao') return item.exercicios.some(ex => ex.id === exercicio.id);
+                                    if (item.tipo === 'combinacao_incompleta') return item.exercicio.id === exercicio.id;
+                                    return false;
+                                  });
+                                  if (index !== -1) removerItemSacola(index);
+                                }}
+                                className="h-8 w-8 p-0 rounded-full"
+                                title="Remover da sacola"
+                              >
+                                <Minus className="h-4 w-4" />
+                              </Button>
+                            )}
+
                             {/* Botão de detalhes */}
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={(e) => {
-                                e.stopPropagation();
                                 mostrarDetalhes(exercicio.id, e);
                               }}
                               className="h-6 w-6 p-0 hover:bg-blue-100 rounded-full"
