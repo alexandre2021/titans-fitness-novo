@@ -605,7 +605,7 @@ export const ExercicioModal: React.FC<Props> = ({
                     onClick={() => setTipoSerie('simples')}
                     className={`justify-start ${tipoSerie === 'simples' ? 'bg-[#ba3c15] hover:bg-[#9a3212] text-white' : 'border-[#ba3c15] text-[#ba3c15] hover:bg-[#ba3c15]/10'}`}
                   >
-                    <Dumbbell className="h-4 w-4 mr-2" />
+                    <Dumbbell className="h-4 w-4 mr-1" />
                     Série Simples
                   </Button>
                   <Button
@@ -615,7 +615,7 @@ export const ExercicioModal: React.FC<Props> = ({
                     onClick={() => setTipoSerie('combinada')}
                     className={`justify-start ${tipoSerie === 'combinada' ? 'bg-[#004B87] hover:bg-[#003d6e] text-white' : 'border-[#004B87] text-[#004B87] hover:bg-[#004B87]/10'}`}
                   >
-                    <Link className="h-4 w-4 mr-2" />
+                    <Link className="h-4 w-4 mr-1" />
                     Série Combinada
                   </Button>
                 </div>
@@ -647,7 +647,19 @@ export const ExercicioModal: React.FC<Props> = ({
 
                 {/* Filtros avançados */}
                 {showFiltros && (
-                  <div className="space-y-3">
+                  <div className="border rounded-lg p-4 bg-background space-y-3">
+                    {/* Header dos filtros */}
+                    <div className="flex items-center justify-between pb-2 border-b">
+                      <h3 className="text-base font-semibold">Filtros</h3>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowFiltros(false)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                     {mostrarFiltroGrupo && (
                       <div className="w-full space-y-2">
                         <Label className="text-sm font-medium">Grupo Muscular</Label>
