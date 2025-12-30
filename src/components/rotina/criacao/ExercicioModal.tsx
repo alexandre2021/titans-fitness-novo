@@ -1154,18 +1154,18 @@ export const ExercicioModal: React.FC<Props> = ({
       <AlertDialog open={showConfirmClose} onOpenChange={setShowConfirmClose}>
         <AlertDialogContent className="z-[70]">
           <AlertDialogHeader>
-            <AlertDialogTitle>Salvar Alterações?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-xl">Salvar Alterações?</AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
               Você fez alterações na sacola. Deseja salvar antes de fechar?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => { setShowConfirmClose(false); onClose(); }}>
+            <AlertDialogCancel onClick={() => { setShowConfirmClose(false); onClose(); }} className="text-base">
               Descartar
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmarFechamento}
-              className="bg-[#ba3c15] hover:bg-[#9a3212] text-white"
+              className="bg-[#ba3c15] hover:bg-[#9a3212] text-white text-base"
             >
               Salvar e Fechar
             </AlertDialogAction>
