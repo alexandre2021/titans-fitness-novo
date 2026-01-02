@@ -235,12 +235,13 @@ const DetalhesExercicio = () => {
       ? `/exercicios/editar-padrao/${exercicio.id}`
       : `/exercicios/editar/${exercicio.id}`;
 
-    // Se tem returnTo, passa adiante; senão, usa a URL atual como fallback
-    const finalUrl = returnTo
-      ? `${editPath}?returnTo=${returnTo}`
-      : `${editPath}?returnTo=${encodeURIComponent(location.pathname + location.search)}`;
-
-    navigate(finalUrl);
+    // Se tem returnTo, passa adiante (já está encodado, apenas passa)
+    // Senão, cria um novo returnTo para voltar à página de detalhes
+    if (returnTo) {
+      navigate(`${editPath}?returnTo=${returnTo}`);
+    } else {
+      navigate(`${editPath}?returnTo=${encodeURIComponent(location.pathname + location.search)}`);
+    }
   };
 
   const handleViewMedia = (url: string) => {
