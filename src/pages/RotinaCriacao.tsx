@@ -1230,20 +1230,23 @@ const RotinaCriacao = () => {
     <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto">
       <AlertDialog open={isCancelModalOpen} onOpenChange={setIsCancelModalOpen}>
         <AlertDialogContent>
+          <button
+            onClick={() => setIsCancelModalOpen(false)}
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none p-2 z-50"
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Continuar editando</span>
+          </button>
           <AlertDialogHeader>
-            <AlertDialogTitle>O que deseja fazer?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="!text-xl">O que deseja fazer?</AlertDialogTitle>
+            <AlertDialogDescription className="!text-base">
               Você pode salvar seu progresso como um rascunho para continuar depois ou descartar todas as alterações.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="sm:justify-center gap-2">
-            <AlertDialogCancel onClick={confirmarDescarte}>Descartar Alterações</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSaveAsDraft}>Salvar como Rascunho</AlertDialogAction>
+            <AlertDialogCancel className="!text-base" onClick={confirmarDescarte}>Descartar Alterações</AlertDialogCancel>
+            <AlertDialogAction className="!text-base" onClick={handleSaveAsDraft}>Salvar como Rascunho</AlertDialogAction>
           </AlertDialogFooter>
-          <AlertDialogCancel className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground p-2">
-              <X className="h-4 w-4" />
-              <span className="sr-only">Continuar editando</span>
-          </AlertDialogCancel>
         </AlertDialogContent>
       </AlertDialog>
       {renderEtapa()}

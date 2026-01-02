@@ -227,11 +227,20 @@ const DetalhesExercicio = () => {
   const handleEditar = () => {
     if (!exercicio) return;
 
-    if (exercicio.tipo === 'padrao') {
-      navigate(`/exercicios/editar-padrao/${exercicio.id}`);
-    } else {
-      navigate(`/exercicios/editar/${exercicio.id}`);
-    }
+    // Pega o returnTo da URL atual (vindo da lista de exercícios)
+    const returnTo = searchParams.get('returnTo');
+
+    // Monta a URL de edição com o returnTo preservado
+    const editPath = exercicio.tipo === 'padrao'
+      ? `/exercicios/editar-padrao/${exercicio.id}`
+      : `/exercicios/editar/${exercicio.id}`;
+
+    // Se tem returnTo, passa adiante; senão, usa a URL atual como fallback
+    const finalUrl = returnTo
+      ? `${editPath}?returnTo=${returnTo}`
+      : `${editPath}?returnTo=${encodeURIComponent(location.pathname + location.search)}`;
+
+    navigate(finalUrl);
   };
 
   const handleViewMedia = (url: string) => {

@@ -598,7 +598,7 @@ export const ExercicioModal: React.FC<Props> = ({
                 variant={tipoSerie === 'simples' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setTipoSerie('simples')}
-                className={`justify-start ${tipoSerie === 'simples' ? 'bg-[#ba3c15] hover:bg-[#9a3212] text-white' : 'border-[#ba3c15] text-[#ba3c15] hover:bg-[#ba3c15]/10'}`}
+                className="justify-start"
               >
                 <Dumbbell className="h-4 w-4 mr-1" />
                 Série Simples
@@ -625,7 +625,7 @@ export const ExercicioModal: React.FC<Props> = ({
               {/* Filtros */}
               <div className="px-6 py-4 border-b bg-gray-50 space-y-4">
                 {/* Busca + Botão Filtros */}
-                <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                     <Input
@@ -635,11 +635,11 @@ export const ExercicioModal: React.FC<Props> = ({
                       className="pl-10"
                     />
                   </div>
-                  
+
                   <Button
                     variant="outline"
                     onClick={() => setShowFiltros(prev => !prev)}
-                    className="flex items-center gap-2 relative"
+                    className="flex items-center gap-2 relative flex-shrink-0"
                   >
                     <Filter className="h-4 w-4" />
                     Filtros
@@ -772,53 +772,6 @@ export const ExercicioModal: React.FC<Props> = ({
                           <div className="p-4">
                             {/* Ícones do canto superior direito */}
                             <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
-                            {/* Botão de adicionar */}
-                            {podeSelecionar && !estaNaSacola && (
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={() => handleClickExercicio(exercicio)}
-                                className="h-8 w-8 p-0 rounded-full"
-                                title="Adicionar à sacola"
-                              >
-                                <Plus className="h-4 w-4" />
-                              </Button>
-                            )}
-
-                            {/* Botão de remover (quando está na sacola) */}
-                            {estaNaSacola && (
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => {
-                                  const index = sacola.findIndex(item => {
-                                    if (item.tipo === 'simples') return item.exercicio.id === exercicio.id;
-                                    if (item.tipo === 'combinacao') return item.exercicios.some(ex => ex.id === exercicio.id);
-                                    if (item.tipo === 'combinacao_incompleta') return item.exercicio.id === exercicio.id;
-                                    return false;
-                                  });
-                                  if (index !== -1) removerItemSacola(index);
-                                }}
-                                className="h-8 w-8 p-0 rounded-full"
-                                title="Remover da sacola"
-                              >
-                                <Minus className="h-4 w-4" />
-                              </Button>
-                            )}
-
-                            {/* Botão de detalhes */}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                mostrarDetalhes(exercicio.id, e);
-                              }}
-                              className="h-6 w-6 p-0 hover:bg-blue-100 rounded-full"
-                              title="Ver detalhes do exercício"
-                            >
-                              <Info className="h-4 w-4 text-blue-600" />
-                            </Button>
-
                             {jaAdicionado && !estaNaSacola && (
                               <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center" title="Já adicionado a este treino">
                                 <Check className="h-4 w-4 text-white" />
@@ -852,6 +805,21 @@ export const ExercicioModal: React.FC<Props> = ({
                             )}
                           </div>
 
+                          {/* Botão de detalhes - canto inferior esquerdo */}
+                          <div className="absolute bottom-3 left-3 z-10">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                mostrarDetalhes(exercicio.id, e);
+                              }}
+                              className="h-10 w-10 p-0 rounded-full bg-blue-50 hover:bg-blue-100 [&_svg]:size-6"
+                              title="Ver detalhes do exercício"
+                            >
+                              <Info className="text-blue-600" />
+                            </Button>
+                          </div>
+
                           <h4 className="font-medium text-gray-900 mb-2 pr-12">
                             {exercicio.nome}
                           </h4>
@@ -876,6 +844,42 @@ export const ExercicioModal: React.FC<Props> = ({
                               <Badge variant="outline" className="bg-purple-100 text-purple-800">
                                 Personalizado
                               </Badge>
+                            )}
+                          </div>
+
+                          {/* Botões de adicionar/remover - posicionamento absoluto no canto inferior direito */}
+                          <div className="absolute bottom-3 right-3 z-10">
+                            {/* Botão de adicionar (verde) */}
+                            {podeSelecionar && !estaNaSacola && (
+                              <Button
+                                size="sm"
+                                onClick={() => handleClickExercicio(exercicio)}
+                                className="h-10 w-10 p-0 rounded-full bg-green-600 hover:bg-green-700 text-white shadow-md [&_svg]:size-6"
+                                title="Adicionar à sacola"
+                              >
+                                <Plus />
+                              </Button>
+                            )}
+
+                            {/* Botão de remover (vermelho) */}
+                            {estaNaSacola && (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => {
+                                  const index = sacola.findIndex(item => {
+                                    if (item.tipo === 'simples') return item.exercicio.id === exercicio.id;
+                                    if (item.tipo === 'combinacao') return item.exercicios.some(ex => ex.id === exercicio.id);
+                                    if (item.tipo === 'combinacao_incompleta') return item.exercicio.id === exercicio.id;
+                                    return false;
+                                  });
+                                  if (index !== -1) removerItemSacola(index);
+                                }}
+                                className="h-10 w-10 p-0 rounded-full shadow-md [&_svg]:size-6"
+                                title="Remover da sacola"
+                              >
+                                <Minus />
+                              </Button>
                             )}
                           </div>
                           </div>
@@ -1144,16 +1148,16 @@ export const ExercicioModal: React.FC<Props> = ({
       <AlertDialog open={itemParaRemover !== null} onOpenChange={(open) => !open && setItemParaRemover(null)}>
         <AlertDialogContent className="z-[70]">
           <AlertDialogHeader>
-            <AlertDialogTitle>Remover Exercício?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-xl">Remover Exercício?</AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
               Tem certeza que deseja remover este exercício da sacola? As alterações serão salvas automaticamente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setItemParaRemover(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="text-base" onClick={() => setItemParaRemover(null)}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmarRemocaoItem}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-red-600 hover:bg-red-700 text-white text-base"
             >
               Remover
             </AlertDialogAction>
