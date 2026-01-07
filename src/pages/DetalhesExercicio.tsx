@@ -32,6 +32,7 @@ const DetalhesExercicio = () => {
   const [signedUrls, setSignedUrls] = useState<{
     imagem1?: string;
     imagem2?: string;
+    imagem3?: string;
     video?: string;
   }>({});
   const [loadingImages, setLoadingImages] = useState(false);
@@ -89,11 +90,12 @@ const DetalhesExercicio = () => {
       grupoMuscular: exercicio.grupo_muscular,
       imagem1: exercicio.imagem_1_url,
       imagem2: exercicio.imagem_2_url,
+      imagem3: (exercicio as any).imagem_3_url,
       video: exercicio.video_url
     });
-    
+
     try {
-      const urls: { imagem1?: string; imagem2?: string; video?: string } = {};
+      const urls: { imagem1?: string; imagem2?: string; imagem3?: string; video?: string } = {};
       
       // Carregar imagem 1 se existir
       if (exercicio.imagem_1_url) {
@@ -118,7 +120,19 @@ const DetalhesExercicio = () => {
           console.error('❌ Erro ao carregar imagem 2:', error);
         }
       }
-      
+
+      // Carregar imagem 3 se existir
+      if ((exercicio as any).imagem_3_url) {
+        try {
+          console.log(`📸 Carregando imagem 3 (${exercicio.tipo})...`);
+          const signedUrl = await getMediaUrl((exercicio as any).imagem_3_url, exercicio.tipo as 'personalizado' | 'padrao');
+          urls.imagem3 = signedUrl;
+          console.log('✅ Imagem 3 carregada');
+        } catch (error) {
+          console.error('❌ Erro ao carregar imagem 3:', error);
+        }
+      }
+
       // Carregar vídeo se existir
       if (exercicio.video_url) {
         try {
@@ -453,6 +467,35 @@ const DetalhesExercicio = () => {
                 </div>
               )}
 
+              {/* Terceira Imagem */}
+              {(exercicio as any).imagem_3_url && (
+                <div>
+                  <Label>Terceira Imagem</Label>
+                  <div className="mt-2 space-y-3">
+                    <div className="relative inline-block w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
+                    {loadingImages ? (
+                      <div className="text-sm text-muted-foreground">Carregando...</div>
+                    ) : signedUrls.imagem3 ? (
+                      <img src={signedUrls.imagem3} className="max-w-full max-h-full object-contain rounded-lg" />
+                    ) : (
+                      <div className="h-48 flex items-center justify-center text-gray-400">Mídia não disponível</div>
+                    )}
+                    </div>
+                    {signedUrls.imagem3 && (
+                      <div className="flex gap-2 mt-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewMedia(signedUrls.imagem3!)}
+                        >
+                          <Eye className="h-4 w-4 mr-2" /> Visualizar
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Vídeo */}
               {exercicio.video_url && (
                 <div>
@@ -506,7 +549,7 @@ const DetalhesExercicio = () => {
                 </div>
               )}
 
-              {!exercicio.imagem_1_url && !exercicio.imagem_2_url && !exercicio.video_url && !exercicio.youtube_url && (
+              {!exercicio.imagem_1_url && !exercicio.imagem_2_url && !(exercicio as any).imagem_3_url && !exercicio.video_url && !exercicio.youtube_url && (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   Nenhuma mídia disponível para este exercício
                 </p>
