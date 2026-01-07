@@ -68,6 +68,7 @@ const NovoExercicioPadrao = () => {
   }>({
     imagem_1_url: null,
     imagem_2_url: null,
+    imagem_3_url: null,
     video_url: null,
     youtube_url: null,
     video_thumbnail_path: null,
@@ -79,6 +80,7 @@ const NovoExercicioPadrao = () => {
   const [signedUrls, setSignedUrls] = useState<{
     imagem1?: string;
     imagem2?: string;
+    imagem3?: string;
     video?: string;
   }>({});
   const [showVideoInfoModal, setShowVideoInfoModal] = useState(false);
@@ -126,7 +128,7 @@ const NovoExercicioPadrao = () => {
     );
   };
 
-  const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
+  const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'imagem3' | 'video') => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = type === 'video' ? 'video/mp4,video/webm,video/quicktime' : 'image/jpeg, image/png, image/webp, image/gif';
@@ -157,8 +159,8 @@ const NovoExercicioPadrao = () => {
         }
       }
 
-      if (type === 'imagem1' || type === 'imagem2') {
-        const key = type === 'imagem1' ? 'imagem_1_url' : 'imagem_2_url';
+      if (type === 'imagem1' || type === 'imagem2' || type === 'imagem3') {
+        const key = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'imagem_3_url';
 
         // Se for GIF, converte para WebP estático (primeiro frame)
         if (file.type === 'image/gif') {
@@ -217,8 +219,8 @@ const NovoExercicioPadrao = () => {
     setShowVideoRecorder(false);
   };
 
-  const handleDeleteMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
-    const key = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'video_url';
+  const handleDeleteMedia = async (type: 'imagem1' | 'imagem2' | 'imagem3' | 'video') => {
+    const key = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : type === 'imagem3' ? 'imagem_3_url' : 'video_url';
 
     // Se estiver deletando vídeo, também deleta o thumbnail
     if (type === 'video') {
@@ -261,6 +263,9 @@ const NovoExercicioPadrao = () => {
     }
     if (midias.imagem_2_url instanceof File) {
       newSignedUrls.imagem2 = URL.createObjectURL(midias.imagem_2_url);
+    }
+    if (midias.imagem_3_url instanceof File) {
+      newSignedUrls.imagem3 = URL.createObjectURL(midias.imagem_3_url);
     }
     if (midias.video_url instanceof File) {
       newSignedUrls.video = URL.createObjectURL(midias.video_url);
@@ -334,9 +339,10 @@ const NovoExercicioPadrao = () => {
 
     setSaving(true);
     try {
-      const [imagem_1_url_final, imagem_2_url_final, video_url_final, video_thumbnail_path_final] = await Promise.all([
+      const [imagem_1_url_final, imagem_2_url_final, imagem_3_url_final, video_url_final, video_thumbnail_path_final] = await Promise.all([
         uploadFile(midias.imagem_1_url),
         uploadFile(midias.imagem_2_url),
+        uploadFile(midias.imagem_3_url),
         uploadFile(midias.video_url),
         uploadFile(midias.video_thumbnail_path, true), // Thumbnail é opcional
       ]);
@@ -354,6 +360,7 @@ const NovoExercicioPadrao = () => {
           grupos_musculares_secundarios: formData.grupos_musculares_secundarios.trim() || null,
           imagem_1_url: imagem_1_url_final,
           imagem_2_url: imagem_2_url_final,
+          imagem_3_url: imagem_3_url_final,
           video_url: video_url_final,
           video_thumbnail_path: video_thumbnail_path_final,
           youtube_url: midias.youtube_url as string || null,
@@ -528,6 +535,41 @@ const NovoExercicioPadrao = () => {
               </div>
             </div>
             <div>
+              <Label className="text-sm font-medium">Terceira Imagem</Label>
+              <div className="mt-2 space-y-4">
+                {midias.imagem_3_url ? (
+                  <div className="space-y-3">
+                    <div className="relative inline-block w-40 h-40 bg-muted rounded-lg border flex items-center justify-center overflow-hidden">
+                      {signedUrls.imagem3 ? (
+                        <img
+                          src={signedUrls.imagem3}
+                          alt="Terceira imagem"
+                          className="max-w-full max-h-full object-contain"
+                        />
+                      ) : (
+                        <div className="text-sm text-muted-foreground">Carregando...</div>
+                      )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-1 right-1 h-8 w-8 bg-white/30 hover:bg-white/50 backdrop-blur-sm text-gray-800 rounded-full"
+                        onClick={() => setCoverMediaKey('imagem_3_url')}
+                        title="Definir como capa"
+                      >
+                        <Star className={`h-4 w-4 transition-all ${coverMediaKey === 'imagem_3_url' ? 'fill-yellow-400 text-yellow-400' : 'fill-transparent'}`} />
+                      </Button>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={() => signedUrls.imagem3 && window.open(signedUrls.imagem3, '_blank')} className="flex items-center gap-2" disabled={!signedUrls.imagem3 || saving}><Eye className="h-4 w-4" /> Ver</Button><Button type="button" variant="outline" size="sm" onClick={() => handleSelectMedia('imagem3')} className="flex items-center gap-2" disabled={saving}>{isMobile ? <Camera className="h-4 w-4" /> : <Upload className="h-4 w-4" />}{isMobile ? 'Nova Foto' : 'Alterar'}</Button><Button type="button" variant="outline" size="sm" onClick={() => setShowDeleteMediaDialog('imagem3')} className="flex items-center gap-2" disabled={saving}><Trash2 className="h-4 w-4" /> Excluir</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center"><p className="text-sm text-muted-foreground mb-3">Adicione uma terceira imagem (opcional).</p><div className="flex justify-center"><Button type="button" variant="default" onClick={() => handleSelectMedia('imagem3')} className="flex items-center gap-2" disabled={saving}>{isMobile ? <Camera className="h-4 w-4" /> : <Upload className="h-4 w-4" />}{isMobile ? 'Tirar Foto' : 'Selecionar Imagem'}</Button></div></div>
+                )}
+              </div>
+            </div>
+            <div>
               <Label className="text-sm font-medium">Vídeo</Label>
               <div className="mt-2 space-y-4">
                 {midias.video_url ? (
@@ -615,7 +657,7 @@ const NovoExercicioPadrao = () => {
         <div className="pb-24 md:pb-12" />
       </div>
 
-      <ResponsiveDeleteMediaConfirmation open={showDeleteMediaDialog !== null} onOpenChange={(open) => !open && setShowDeleteMediaDialog(null)} onConfirm={() => showDeleteMediaDialog && handleDeleteMedia(showDeleteMediaDialog as 'imagem1' | 'imagem2' | 'video')} title="Excluir mídia" description="Tem certeza que deseja excluir esta mídia? Esta ação não pode ser desfeita." />
+      <ResponsiveDeleteMediaConfirmation open={showDeleteMediaDialog !== null} onOpenChange={(open) => !open && setShowDeleteMediaDialog(null)} onConfirm={() => showDeleteMediaDialog && handleDeleteMedia(showDeleteMediaDialog as 'imagem1' | 'imagem2' | 'imagem3' | 'video')} title="Excluir mídia" description="Tem certeza que deseja excluir esta mídia? Esta ação não pode ser desfeita." />
       <VideoRecorder open={showVideoRecorder} onOpenChange={setShowVideoRecorder} onRecordingComplete={handleRecordingComplete} />
       <VideoInfoModal />
 

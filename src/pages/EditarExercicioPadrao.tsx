@@ -49,6 +49,7 @@ const EditarExercicioPadrao = () => {
   const [midias, setMidias] = useState<{ [key: string]: string | File | null; video_thumbnail_path: string | File | null; }>({
     imagem_1_url: null,
     imagem_2_url: null,
+    imagem_3_url: null,
     video_url: null,
     youtube_url: null,
     video_thumbnail_path: null,
@@ -56,8 +57,8 @@ const EditarExercicioPadrao = () => {
 
   const [coverMediaKey, setCoverMediaKey] = useState<keyof typeof midias | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [signedUrls, setSignedUrls] = useState<{ imagem1?: string; imagem2?: string; video?: string }>({});
-  const [initialMediaUrls, setInitialMediaUrls] = useState({ imagem_1_url: null as string | null, imagem_2_url: null as string | null, video_url: null as string | null, video_thumbnail_path: null as string | null });
+  const [signedUrls, setSignedUrls] = useState<{ imagem1?: string; imagem2?: string; imagem3?: string; video?: string }>({});
+  const [initialMediaUrls, setInitialMediaUrls] = useState({ imagem_1_url: null as string | null, imagem_2_url: null as string | null, imagem_3_url: null as string | null, video_url: null as string | null, video_thumbnail_path: null as string | null });
 
   const [showVideoInfoModal, setShowVideoInfoModal] = useState(false);
   const [showVideoRecorder, setShowVideoRecorder] = useState(false);
@@ -226,6 +227,10 @@ const EditarExercicioPadrao = () => {
         urlsToLoad.push(getSignedImageUrl(midias.imagem_2_url).then(url => ({ key: 'imagem2', url })));
       }
 
+      if (midias.imagem_3_url && typeof midias.imagem_3_url === 'string') {
+        urlsToLoad.push(getSignedImageUrl(midias.imagem_3_url).then(url => ({ key: 'imagem3', url })));
+      }
+
       if (midias.video_url && typeof midias.video_url === 'string') {
         urlsToLoad.push(getSignedImageUrl(midias.video_url).then(url => ({ key: 'video', url })));
       }
@@ -250,7 +255,7 @@ const EditarExercicioPadrao = () => {
     } catch (error) {
       console.error('💥 Erro ao carregar URLs:', error);
     }
-  }, [exercicio?.id, midias.imagem_1_url, midias.imagem_2_url, midias.video_url, getSignedImageUrl, loading]);
+  }, [exercicio?.id, midias.imagem_1_url, midias.imagem_2_url, midias.imagem_3_url, midias.video_url, getSignedImageUrl, loading]);
 
   // ✅ useEffect SIMPLIFICADO - Executa apenas uma vez
   useEffect(() => {
@@ -287,17 +292,18 @@ const EditarExercicioPadrao = () => {
         });
         setInstrucoesList(data.instrucoes ? data.instrucoes.split('#').filter(Boolean).map(i => i.trim()) : []);
         
-        const initialMidias = { 
-          imagem_1_url: data.imagem_1_url, 
-          imagem_2_url: data.imagem_2_url, 
-          video_url: data.video_url, 
-          youtube_url: data.youtube_url, 
-          video_thumbnail_path: data.video_thumbnail_path 
+        const initialMidias = {
+          imagem_1_url: data.imagem_1_url,
+          imagem_2_url: data.imagem_2_url,
+          imagem_3_url: (data as any).imagem_3_url,
+          video_url: data.video_url,
+          youtube_url: data.youtube_url,
+          video_thumbnail_path: data.video_thumbnail_path
         };
-        
+
         setMidias(initialMidias);
         setCoverMediaKey(data.cover_media_url as keyof typeof midias | null);
-        setInitialMediaUrls({ imagem_1_url: data.imagem_1_url, imagem_2_url: data.imagem_2_url, video_url: data.video_url, video_thumbnail_path: data.video_thumbnail_path });
+        setInitialMediaUrls({ imagem_1_url: data.imagem_1_url, imagem_2_url: data.imagem_2_url, imagem_3_url: (data as any).imagem_3_url, video_url: data.video_url, video_thumbnail_path: data.video_thumbnail_path });
       } catch (error) {
         toast.error("Erro ao carregar exercício", { description: (error as Error).message });
         handleVoltar();
@@ -308,7 +314,7 @@ const EditarExercicioPadrao = () => {
     fetchExercicio();
   }, [id, user, navigate, ADMIN_EMAIL, toast]);
 
-  const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
+  const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'imagem3' | 'video') => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = type === 'video' ? 'video/mp4,video/webm,video/quicktime' : 'image/jpeg, image/png, image/webp, image/gif';
@@ -361,7 +367,7 @@ const EditarExercicioPadrao = () => {
           return;
         }
 
-        const key = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'video_url';
+        const key = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : type === 'imagem3' ? 'imagem_3_url' : 'video_url';
         setMidias(prev => ({ ...prev, [key]: processedFile }));
       } catch (error) {
         toast.error("Erro ao processar arquivo");
@@ -377,11 +383,12 @@ const EditarExercicioPadrao = () => {
     setShowVideoRecorder(false);
   };
 
-  const handleDeleteMedia = useCallback((mediaKey: 'imagem1' | 'imagem2' | 'video') => {
+  const handleDeleteMedia = useCallback((mediaKey: 'imagem1' | 'imagem2' | 'imagem3' | 'video') => {
     const stateKeys = [];
     if (mediaKey === 'imagem1') stateKeys.push('imagem_1_url');
     if (mediaKey === 'imagem2') stateKeys.push('imagem_2_url');
-    
+    if (mediaKey === 'imagem3') stateKeys.push('imagem_3_url');
+
     if (mediaKey === 'video') {
       stateKeys.push('video_url');
       stateKeys.push('video_thumbnail_path');
@@ -399,6 +406,9 @@ const EditarExercicioPadrao = () => {
       setCoverMediaKey(null);
     }
     if (mediaKey === 'imagem2' && coverMediaKey === 'imagem_2_url') {
+      setCoverMediaKey(null);
+    }
+    if (mediaKey === 'imagem3' && coverMediaKey === 'imagem_3_url') {
       setCoverMediaKey(null);
     }
     if (mediaKey === 'video' && coverMediaKey === 'video_url') {
@@ -499,7 +509,7 @@ const EditarExercicioPadrao = () => {
 
     try {
       const finalMediaUrls: { [key: string]: string | null } = {};
-      for (const key of ['imagem_1_url', 'imagem_2_url', 'video_url', 'video_thumbnail_path']) {
+      for (const key of ['imagem_1_url', 'imagem_2_url', 'imagem_3_url', 'video_url', 'video_thumbnail_path']) {
         const currentValue = midias[key];
         const initialValue = initialMediaUrls[key as keyof typeof initialMediaUrls];
 
@@ -531,6 +541,7 @@ const EditarExercicioPadrao = () => {
           cover_media_url: coverMediaKey ? String(coverMediaKey) : null,
           imagem_1_url: finalMediaUrls.imagem_1_url,
           imagem_2_url: finalMediaUrls.imagem_2_url,
+          imagem_3_url: finalMediaUrls.imagem_3_url,
           video_url: finalMediaUrls.video_url,
           video_thumbnail_path: finalMediaUrls.video_thumbnail_path,
           youtube_url: midias.youtube_url as string || null,
@@ -718,6 +729,49 @@ const EditarExercicioPadrao = () => {
               </div>
             </div>
 
+            {/* Terceira Imagem */}
+            <div>
+              <Label className="text-sm font-medium">Terceira Imagem</Label>
+              <div className="mt-2 space-y-4">
+                {midias.imagem_3_url ? (
+                  <div className="space-y-3">
+                    <div className="relative inline-block w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
+                      {midias.imagem_3_url instanceof File ? (
+                        <img src={URL.createObjectURL(midias.imagem_3_url)} alt="Preview da terceira imagem" className="max-w-full max-h-full object-contain" />
+                      ) : signedUrls.imagem3 ? (
+                        <img
+                          src={signedUrls.imagem3}
+                          alt="Terceira imagem do exercício"
+                          className="max-w-full max-h-full object-contain"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center text-sm text-muted-foreground">Carregando...</div>
+                      )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-1 right-1 h-8 w-8 bg-white/30 hover:bg-white/50 backdrop-blur-sm text-gray-800 rounded-full"
+                        onClick={() => setCoverMediaKey('imagem_3_url')}
+                        title="Definir como capa"
+                      >
+                        <Star className={`h-4 w-4 transition-all ${coverMediaKey === 'imagem_3_url' ? 'fill-yellow-400 text-yellow-400' : 'fill-transparent'}`} />
+                      </Button>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={() => signedUrls.imagem3 && window.open(signedUrls.imagem3, '_blank')} className="flex items-center gap-2" disabled={!signedUrls.imagem3}><Eye className="h-4 w-4" /> Ver</Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => handleSelectMedia('imagem3')} className="flex items-center gap-2" disabled={saving}><Upload className="h-4 w-4" /> Alterar</Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => setShowDeleteMediaDialog('imagem3')} className="flex items-center gap-2"><Trash2 className="h-4 w-4" /> Excluir</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                    <Button type="button" variant="default" onClick={() => handleSelectMedia('imagem3')} className="flex items-center gap-2" disabled={saving}><Upload className="h-4 w-4" /> Selecionar Imagem</Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Vídeo */}
             <div>
               <Label className="text-sm font-medium">Vídeo</Label>
@@ -794,7 +848,7 @@ const EditarExercicioPadrao = () => {
       <ResponsiveDeleteMediaConfirmation
         open={showDeleteMediaDialog !== null}
         onOpenChange={(open) => !open && setShowDeleteMediaDialog(null)}
-        onConfirm={() => showDeleteMediaDialog && handleDeleteMedia(showDeleteMediaDialog as 'imagem1' | 'imagem2' | 'video')}
+        onConfirm={() => showDeleteMediaDialog && handleDeleteMedia(showDeleteMediaDialog as 'imagem1' | 'imagem2' | 'imagem3' | 'video')}
         title="Confirmar Exclusão"
         description="Tem certeza que deseja excluir esta mídia? Esta ação não pode ser desfeita."
       />
