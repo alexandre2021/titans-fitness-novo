@@ -50,6 +50,7 @@ const EditarExercicio = () => {
   }>({
     imagem_1_url: null,
     imagem_2_url: null,
+    imagem_3_url: null,
     video_url: null,
     youtube_url: null,
     video_thumbnail_path: null,
@@ -61,12 +62,14 @@ const EditarExercicio = () => {
   const [signedUrls, setSignedUrls] = useState<{
     imagem1?: string;
     imagem2?: string;
+    imagem3?: string;
     video?: string;
     videoThumbnail?: string;
   }>({});
   const [initialMediaUrls, setInitialMediaUrls] = useState({
     imagem_1_url: null as string | null,
     imagem_2_url: null as string | null,
+    imagem_3_url: null as string | null,
     video_url: null as string | null,
     video_thumbnail_path: null as string | null,
   });
@@ -221,9 +224,9 @@ const EditarExercicio = () => {
       const newUrls: Record<string, string | undefined> = {};
 
       // Processa imagens e vídeos
-      for (const key of ['imagem_1_url', 'imagem_2_url', 'video_url'] as const) {
+      for (const key of ['imagem_1_url', 'imagem_2_url', 'imagem_3_url', 'video_url'] as const) {
         const mediaValue = midias[key];
-        const urlKey = key.replace('_url', '').replace('_1', '1').replace('_2', '2');
+        const urlKey = key.replace('_url', '').replace('_1', '1').replace('_2', '2').replace('_3', '3');
 
         if (mediaValue instanceof File) {
           newUrls[urlKey] = URL.createObjectURL(mediaValue);
@@ -251,7 +254,7 @@ const EditarExercicio = () => {
     }
   }, [exercicio?.id, loading, loadSignedUrls]); // Apenas estas dependências
 
-  const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
+  const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'imagem3' | 'video') => {
     console.log('🔍 [handleSelectMedia] Iniciado para tipo:', type);
     const input = document.createElement('input');
     input.type = 'file';
@@ -289,7 +292,7 @@ const EditarExercicio = () => {
         }
       }
 
-      if (type === 'imagem1' || type === 'imagem2') {
+      if (type === 'imagem1' || type === 'imagem2' || type === 'imagem3') {
         console.log('🔍 [handleSelectMedia] Chamando resizeAndOptimizeImage...');
         const resized = await resizeAndOptimizeImage(file, 640);
         if (!resized) {
@@ -299,7 +302,7 @@ const EditarExercicio = () => {
           return;
         }
         console.log('✅ [handleSelectMedia] Imagem processada. Atualizando estado `midias`.');
-        const key = type === 'imagem1' ? 'imagem_1_url' : 'imagem_2_url';
+        const key = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'imagem_3_url';
         setMidias(prev => ({ ...prev, [key]: resized }));
       } else if (type === 'video') {
         setMidias(prev => ({ ...prev, video_url: file }));
@@ -320,8 +323,8 @@ const EditarExercicio = () => {
     setShowVideoRecorder(false);
   };
 
-  const handleDeleteMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
-    const urlMap = { imagem1: 'imagem_1_url', imagem2: 'imagem_2_url', video: 'video_url' };
+  const handleDeleteMedia = async (type: 'imagem1' | 'imagem2' | 'imagem3' | 'video') => {
+    const urlMap = { imagem1: 'imagem_1_url', imagem2: 'imagem_2_url', imagem3: 'imagem_3_url', video: 'video_url' };
     const mediaKeyToDelete = urlMap[type];
 
     // Se estiver deletando vídeo, também deleta o thumbnail
@@ -351,7 +354,7 @@ const EditarExercicio = () => {
     if (coverMediaKey) return;
 
     // Encontra a primeira mídia que não é nula.
-    const firstAvailableMedia = (['imagem_1_url', 'imagem_2_url', 'video_url', 'youtube_url'] as const).find(
+    const firstAvailableMedia = (['imagem_1_url', 'imagem_2_url', 'imagem_3_url', 'video_url', 'youtube_url'] as const).find(
       key => midias[key] !== null
     );
 
@@ -392,6 +395,7 @@ const EditarExercicio = () => {
         setMidias({
           imagem_1_url: data.imagem_1_url,
           imagem_2_url: data.imagem_2_url,
+          imagem_3_url: (data as any).imagem_3_url,
           video_url: data.video_url,
           video_thumbnail_path: data.video_thumbnail_path,
           youtube_url: data.youtube_url,
@@ -400,6 +404,7 @@ const EditarExercicio = () => {
         setInitialMediaUrls({
           imagem_1_url: data.imagem_1_url,
           imagem_2_url: data.imagem_2_url,
+          imagem_3_url: (data as any).imagem_3_url,
           video_url: data.video_url,
           video_thumbnail_path: data.video_thumbnail_path,
         });
@@ -494,7 +499,7 @@ const EditarExercicio = () => {
     try {
       const finalMediaUrls: { [key: string]: string | null } = {};
 
-      for (const key of ['imagem_1_url', 'imagem_2_url', 'video_url', 'video_thumbnail_path']) {
+      for (const key of ['imagem_1_url', 'imagem_2_url', 'imagem_3_url', 'video_url', 'video_thumbnail_path']) {
         const currentValue = midias[key];
         const initialValue = initialMediaUrls[key as keyof typeof initialMediaUrls];
 
@@ -778,6 +783,62 @@ const EditarExercicio = () => {
               </div>
             </div>
 
+            {/* Terceira Imagem */}
+            <div>
+              <Label className="text-sm font-medium">Terceira Imagem</Label>
+              <div className="mt-2 space-y-4">
+                {midias.imagem_3_url ? (
+                  <div className="space-y-3">
+                    <div className="relative inline-block w-40 h-40 bg-muted rounded-lg border flex items-center justify-center overflow-hidden">
+                      {signedUrls.imagem3 ? (
+                        <img
+                          src={signedUrls.imagem3}
+                          alt="Terceira imagem"
+                          className="max-w-full max-h-full object-contain rounded-lg"
+                        />
+                      ) : (
+                        <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center"><span className="text-sm text-muted-foreground">Erro ao carregar</span></div>
+                      )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-1 right-1 h-8 w-8 bg-white/30 hover:bg-white/50 backdrop-blur-sm text-gray-800 rounded-full"
+                        onClick={() => setCoverMediaKey('imagem_3_url')}
+                        title="Definir como capa"
+                      >
+                        <Star className={`h-4 w-4 transition-all ${coverMediaKey === 'imagem_3_url' ? 'fill-yellow-400 text-yellow-400' : 'fill-transparent'}`} />
+                      </Button>
+                    </div>
+                      <div className="flex gap-2">
+                        <Button type="button" variant="outline" size="sm" onClick={() => signedUrls.imagem3 && window.open(signedUrls.imagem3, '_blank')} className="flex items-center gap-2" disabled={!signedUrls.imagem3}><Eye className="h-4 w-4" /> Ver</Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => handleSelectMedia('imagem3')} className="flex items-center gap-2" disabled={saving}>
+                          {isMobile ? <Camera className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
+                          {isMobile ? 'Nova Foto' : 'Alterar'}
+                        </Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => setShowDeleteMediaDialog('imagem3')} className="flex items-center gap-2"><Trash2 className="h-4 w-4" /> Excluir</Button>
+                      </div>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                    <p className="text-sm text-muted-foreground mb-3">Adicione uma terceira imagem (opcional).</p>
+                    <div className="flex justify-center">
+                      <Button
+                        type="button"
+                        variant="default"
+                        onClick={() => handleSelectMedia('imagem3')}
+                        className="flex items-center gap-2"
+                        disabled={saving}
+                      >
+                        {isMobile ? <Camera className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
+                        {isMobile ? 'Tirar Foto' : 'Selecionar Imagem'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Vídeo */}
             <div>
               <Label className="text-sm font-medium">Vídeo</Label>
@@ -884,7 +945,7 @@ const EditarExercicio = () => {
       <ResponsiveDeleteMediaConfirmation
         open={showDeleteMediaDialog !== null}
         onOpenChange={(open) => !open && setShowDeleteMediaDialog(null)}
-        onConfirm={() => showDeleteMediaDialog && handleDeleteMedia(showDeleteMediaDialog as 'imagem1' | 'imagem2' | 'video')}
+        onConfirm={() => showDeleteMediaDialog && handleDeleteMedia(showDeleteMediaDialog as 'imagem1' | 'imagem2' | 'imagem3' | 'video')}
         title="Excluir Mídia"
         description="Tem certeza que deseja excluir esta mídia. Esta ação não pode ser desfeita."
       />

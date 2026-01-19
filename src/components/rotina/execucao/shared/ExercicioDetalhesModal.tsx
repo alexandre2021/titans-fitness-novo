@@ -3,10 +3,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Modal from 'react-modal';
 import { Badge } from '@/components/ui/badge';
-import { Dumbbell, Target, AlertCircle, Play, Video, Image as ImageIcon, X } from 'lucide-react';
+import { Dumbbell, AlertCircle, Play, Video, Image as ImageIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { Tables } from '@/integrations/supabase/types';
 
 interface Props {
   visible: boolean;
@@ -26,19 +25,18 @@ interface ExercicioDetalhes {
   tipo: string;
   imagem_1_url?: string;
   imagem_2_url?: string;
+  imagem_3_url?: string;
   video_url?: string;
   youtube_url?: string;
 }
 
-// Tipagem usando os tipos do Supabase
-type ExercicioSupabase = Tables<'exercicios'>;
-
 export const ExercicioDetalhesModal = ({ visible, exercicioId, onClose }: Props) => {
   const [exercicio, setExercicio] = useState<ExercicioDetalhes | null>(null);
   const [loading, setLoading] = useState(false);
-  const [mediaUrls, setMediaUrls] = useState<{ 
-    imagem1?: string; 
-    imagem2?: string; 
+  const [mediaUrls, setMediaUrls] = useState<{
+    imagem1?: string;
+    imagem2?: string;
+    imagem3?: string;
     video?: string;
   }>({});
   const [isLoadingMedia, setIsLoadingMedia] = useState(false);
@@ -127,6 +125,9 @@ export const ExercicioDetalhesModal = ({ visible, exercicioId, onClose }: Props)
         if (exercicio.imagem_2_url) {
           urls.imagem2 = await getMediaUrl(exercicio.imagem_2_url, tipoExercicio);
         }
+        if (exercicio.imagem_3_url) {
+          urls.imagem3 = await getMediaUrl(exercicio.imagem_3_url, tipoExercicio);
+        }
         if (exercicio.video_url) {
           urls.video = await getMediaUrl(exercicio.video_url, tipoExercicio);
         }
@@ -154,7 +155,7 @@ export const ExercicioDetalhesModal = ({ visible, exercicioId, onClose }: Props)
       
       const { data: exercicioRaw, error } = await supabase
         .from('exercicios')
-        .select('id, nome, equipamento, grupo_muscular, grupo_muscular_primario, grupos_musculares_secundarios, descricao, instrucoes, tipo, imagem_1_url, imagem_2_url, video_url, youtube_url')
+        .select('id, nome, equipamento, grupo_muscular, grupo_muscular_primario, grupos_musculares_secundarios, descricao, instrucoes, tipo, imagem_1_url, imagem_2_url, imagem_3_url, video_url, youtube_url')
         .eq('id', exercicioId)
         .single();
 
@@ -169,8 +170,8 @@ export const ExercicioDetalhesModal = ({ visible, exercicioId, onClose }: Props)
         return;
       }
 
-      // Cast com tipagem correta
-      const exercicioData = exercicioRaw as ExercicioSupabase;
+      // Cast com any para suportar imagem_3_url que ainda não está nos tipos gerados
+      const exercicioData = exercicioRaw as any;
 
       // Transformar para a interface esperada
       const exercicioFormatado: ExercicioDetalhes = {
@@ -195,6 +196,7 @@ export const ExercicioDetalhesModal = ({ visible, exercicioId, onClose }: Props)
         tipo: exercicioData.tipo || 'padrao',
         imagem_1_url: exercicioData.imagem_1_url || undefined,
         imagem_2_url: exercicioData.imagem_2_url || undefined,
+        imagem_3_url: exercicioData.imagem_3_url || undefined,
         video_url: exercicioData.video_url || undefined,
         youtube_url: exercicioData.youtube_url || undefined
       };
@@ -299,7 +301,7 @@ export const ExercicioDetalhesModal = ({ visible, exercicioId, onClose }: Props)
             })()}
 
             {/* Mídias do Exercício */}
-            {(exercicio.imagem_1_url || exercicio.imagem_2_url || exercicio.video_url || exercicio.youtube_url) && (
+            {(exercicio.imagem_1_url || exercicio.imagem_2_url || exercicio.imagem_3_url || exercicio.video_url || exercicio.youtube_url) && (
               <div>
                 <h4 className="font-medium text-foreground mb-4 flex items-center space-x-2">
                   <Video className="h-4 w-4" />
@@ -347,7 +349,7 @@ export const ExercicioDetalhesModal = ({ visible, exercicioId, onClose }: Props)
                           <span className="text-sm font-medium">Demonstração 2</span>
                         </div>
                         <div className={`w-full border rounded-lg overflow-hidden flex items-center justify-center ${
-                          isSquareImage('imagem2') 
+                          isSquareImage('imagem2')
                             ? 'h-64 md:h-64 md:w-64 md:mx-auto'
                             : 'h-48'
                         }`}>
@@ -357,6 +359,32 @@ export const ExercicioDetalhesModal = ({ visible, exercicioId, onClose }: Props)
                               alt="Demonstração do exercício 2"
                               className="max-w-full max-h-full object-contain"
                               onLoad={(e) => handleImageLoad('imagem2', e)}
+                            />
+                          ) : (
+                            <span className="text-sm text-muted-foreground">Erro ao carregar imagem</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Imagem 3 */}
+                    {exercicio.imagem_3_url && (
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">Demonstração 3</span>
+                        </div>
+                        <div className={`w-full border rounded-lg overflow-hidden flex items-center justify-center ${
+                          isSquareImage('imagem3')
+                            ? 'h-64 md:h-64 md:w-64 md:mx-auto'
+                            : 'h-48'
+                        }`}>
+                          {mediaUrls.imagem3 ? (
+                            <img
+                              src={mediaUrls.imagem3}
+                              alt="Demonstração do exercício 3"
+                              className="max-w-full max-h-full object-contain"
+                              onLoad={(e) => handleImageLoad('imagem3', e)}
                             />
                           ) : (
                             <span className="text-sm text-muted-foreground">Erro ao carregar imagem</span>

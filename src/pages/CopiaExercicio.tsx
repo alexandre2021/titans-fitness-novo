@@ -57,9 +57,10 @@ const CopiaExercicio = () => {
     [key: string]: string | File | null;
     video_thumbnail_path: string | File | null;
   }>({
-    imagem_1_url: null, 
-    imagem_2_url: null, 
-    video_url: null, 
+    imagem_1_url: null,
+    imagem_2_url: null,
+    imagem_3_url: null,
+    video_url: null,
     youtube_url: null,
     video_thumbnail_path: null,
   });
@@ -70,12 +71,14 @@ const CopiaExercicio = () => {
   const [signedUrls, setSignedUrls] = useState<{
     imagem1?: string;
     imagem2?: string;
+    imagem3?: string;
     video?: string;
     videoThumbnail?: string;
   }>({});
   const [initialMediaUrls, setInitialMediaUrls] = useState({
     imagem_1_url: null as string | null,
     imagem_2_url: null as string | null,
+    imagem_3_url: null as string | null,
     video_url: null as string | null,
     video_thumbnail_path: null as string | null,
   });
@@ -248,6 +251,14 @@ const CopiaExercicio = () => {
         );
       }
 
+      if (midias.imagem_3_url && typeof midias.imagem_3_url === 'string') {
+        urlsToLoad.push(
+          getMediaUrl(midias.imagem_3_url, tipoExercicioOriginal)
+            .then(url => ({ key: 'imagem3', url }))
+            .catch(() => ({ key: 'imagem3', url: undefined }))
+        );
+      }
+
       if (midias.video_url && typeof midias.video_url === 'string') {
         urlsToLoad.push(
           getMediaUrl(midias.video_url, tipoExercicioOriginal)
@@ -262,6 +273,9 @@ const CopiaExercicio = () => {
       }
       if (midias.imagem_2_url instanceof File) {
         newUrls.imagem2 = URL.createObjectURL(midias.imagem_2_url);
+      }
+      if (midias.imagem_3_url instanceof File) {
+        newUrls.imagem3 = URL.createObjectURL(midias.imagem_3_url);
       }
       if (midias.video_url instanceof File) {
         newUrls.video = URL.createObjectURL(midias.video_url);
@@ -285,7 +299,7 @@ const CopiaExercicio = () => {
     } finally {
       setLoadingImages(false);
     }
-  }, [exercicioOriginal?.id, midias.imagem_1_url, midias.imagem_2_url, midias.video_url, getMediaUrl, loading]);
+  }, [exercicioOriginal?.id, midias.imagem_1_url, midias.imagem_2_url, midias.imagem_3_url, midias.video_url, getMediaUrl, loading]);
 
   // ✅ useEffect SIMPLIFICADO - Executa apenas quando necessário
   useEffect(() => {
@@ -296,7 +310,7 @@ const CopiaExercicio = () => {
   }, [exercicioOriginal?.id, exercicioOriginal?.tipo, loading, loadSignedUrls]);
 
   // Função para seleção de mídia (adaptada para desktop)
-  const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
+  const handleSelectMedia = async (type: 'imagem1' | 'imagem2' | 'imagem3' | 'video') => {
     console.log('🔍 [handleSelectMedia] Iniciado para tipo:', type);
     const input = document.createElement('input');
     input.type = 'file';
@@ -334,7 +348,7 @@ const CopiaExercicio = () => {
         }
       }
 
-      if (type === 'imagem1' || type === 'imagem2') {
+      if (type === 'imagem1' || type === 'imagem2' || type === 'imagem3') {
         console.log('🔍 [handleSelectMedia] Chamando resizeAndOptimizeImage...');
         const resized = await resizeAndOptimizeImage(file, 640);
         if (!resized) {
@@ -344,7 +358,7 @@ const CopiaExercicio = () => {
           return;
         }
         console.log('✅ [handleSelectMedia] Imagem processada. Atualizando estado `midias`.');
-        const key = type === 'imagem1' ? 'imagem_1_url' : 'imagem_2_url';
+        const key = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'imagem_3_url';
         setMidias(prev => ({ ...prev, [key]: resized }));
       } else if (type === 'video') {
         setMidias(prev => ({ ...prev, video_url: file }));
@@ -364,9 +378,9 @@ const CopiaExercicio = () => {
     setShowVideoRecorder(false);
   };
 
-  const handleDeleteMedia = async (type: 'imagem1' | 'imagem2' | 'video') => {
+  const handleDeleteMedia = async (type: 'imagem1' | 'imagem2' | 'imagem3' | 'video') => {
     try {
-      const mediaKeyToDelete = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : 'video_url';
+      const mediaKeyToDelete = type === 'imagem1' ? 'imagem_1_url' : type === 'imagem2' ? 'imagem_2_url' : type === 'imagem3' ? 'imagem_3_url' : 'video_url';
 
       // Se estiver deletando vídeo, também deleta o thumbnail
       if (type === 'video') {
@@ -396,7 +410,7 @@ const CopiaExercicio = () => {
   useEffect(() => {
     if (coverMediaKey) return;
 
-    const firstAvailableMedia = (['imagem_1_url', 'imagem_2_url', 'video_url', 'youtube_url'] as const).find(
+    const firstAvailableMedia = (['imagem_1_url', 'imagem_2_url', 'imagem_3_url', 'video_url', 'youtube_url'] as const).find(
       key => midias[key] !== null
     );
 
@@ -468,6 +482,7 @@ const CopiaExercicio = () => {
         setMidias({
           imagem_1_url: exercicio.imagem_1_url || null,
           imagem_2_url: exercicio.imagem_2_url || null,
+          imagem_3_url: (exercicio as any).imagem_3_url || null,
           video_url: exercicio.video_url || null,
           video_thumbnail_path: exercicio.video_thumbnail_path || null,
           youtube_url: exercicio.youtube_url || null,
@@ -475,6 +490,7 @@ const CopiaExercicio = () => {
         setInitialMediaUrls({
           imagem_1_url: exercicio.imagem_1_url,
           imagem_2_url: exercicio.imagem_2_url,
+          imagem_3_url: (exercicio as any).imagem_3_url,
           video_url: exercicio.video_url,
           video_thumbnail_path: exercicio.video_thumbnail_path,
         });
@@ -601,9 +617,10 @@ const CopiaExercicio = () => {
 
     try {
       // 1. Processar e fazer upload/cópia de todas as mídias
-      const [imagem_1_url_final, imagem_2_url_final, video_url_final, video_thumbnail_path_final] = await Promise.all([
+      const [imagem_1_url_final, imagem_2_url_final, imagem_3_url_final, video_url_final, video_thumbnail_path_final] = await Promise.all([
         uploadFile(midias.imagem_1_url),
         uploadFile(midias.imagem_2_url),
+        uploadFile(midias.imagem_3_url),
         uploadFile(midias.video_url),
         uploadFile(midias.video_thumbnail_path),
       ]);
@@ -624,6 +641,7 @@ const CopiaExercicio = () => {
           grupos_musculares_secundarios: formData.grupos_musculares_secundarios.trim() || null,
           imagem_1_url: imagem_1_url_final,
           imagem_2_url: imagem_2_url_final,
+          imagem_3_url: imagem_3_url_final,
           video_url: video_url_final,
           video_thumbnail_path: video_thumbnail_path_final,
           youtube_url: midias.youtube_url as string || null,
@@ -1067,6 +1085,101 @@ const CopiaExercicio = () => {
                 </div>
               </div>
 
+              {/* Terceira Imagem */}
+              <div>
+                <Label className="text-sm font-medium">Terceira Imagem</Label>
+                <div className="mt-2 space-y-4">
+                  {midias.imagem_3_url ? (
+                    <div className="space-y-3">
+                      <div className="relative inline-block w-40 h-40 bg-muted rounded-lg border flex items-center justify-center overflow-hidden">
+                        {midias.imagem_3_url instanceof File ? (
+                          <img
+                            src={URL.createObjectURL(midias.imagem_3_url)}
+                            alt="Preview da terceira imagem"
+                            className="max-w-full max-h-full object-contain"
+                          />
+                        ) : signedUrls.imagem3 ? (
+                          <img
+                            src={signedUrls.imagem3}
+                            alt="Terceira imagem"
+                            className="max-w-full max-h-full object-contain"
+                          />
+                        ) : (
+                          <div className="w-40 h-40 bg-muted rounded-lg border flex items-center justify-center">
+                            <span className="text-sm text-muted-foreground">Carregando...</span>
+                          </div>
+                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute top-1 right-1 h-8 w-8 bg-white/30 hover:bg-white/50 backdrop-blur-sm text-gray-800 rounded-full"
+                          onClick={() => setCoverMediaKey('imagem_3_url')}
+                          title="Definir como capa"
+                        >
+                          <Star
+                            className={`h-4 w-4 transition-all ${coverMediaKey === 'imagem_3_url' ? 'fill-yellow-400 text-yellow-400' : 'fill-transparent'}`}
+                          />
+                        </Button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => signedUrls.imagem3 && window.open(signedUrls.imagem3, '_blank')}
+                          className="flex items-center gap-2"
+                          disabled={!signedUrls.imagem3}
+                        >
+                          <Eye className="h-4 w-4" />
+                          Ver
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSelectMedia('imagem3')}
+                          className="flex items-center gap-2"
+                          disabled={saving}
+                        >
+                          <Camera className="h-4 w-4" /> {isMobile ? 'Nova' : 'Nova Foto'}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowDeleteMediaDialog('imagem3')}
+                          className="flex items-center gap-2"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Excluir
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                      <p className="text-sm text-muted-foreground mb-3">Adicione uma terceira imagem (opcional).</p>
+                      <div className="flex justify-center">
+                        <Button
+                          type="button"
+                          variant="default"
+                          onClick={() => handleSelectMedia('imagem3')}
+                          className="flex items-center gap-2"
+                          disabled={saving}
+                        >
+                          {isMobile ? (
+                            <Camera className="h-4 w-4" />
+                          ) : (
+                            <Upload className="h-4 w-4" />
+                          )}
+                          {isMobile ? 'Tirar Foto' : 'Selecionar Imagem'}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Vídeo */}
               <div>
                 <Label className="text-sm font-medium">Vídeo</Label>
@@ -1249,7 +1362,7 @@ const CopiaExercicio = () => {
         <ResponsiveDeleteMediaConfirmation
           open={showDeleteMediaDialog !== null}
           onOpenChange={(open) => !open && setShowDeleteMediaDialog(null)}
-          onConfirm={() => showDeleteMediaDialog && handleDeleteMedia(showDeleteMediaDialog as 'imagem1' | 'imagem2' | 'video')}
+          onConfirm={() => showDeleteMediaDialog && handleDeleteMedia(showDeleteMediaDialog as 'imagem1' | 'imagem2' | 'imagem3' | 'video')}
           title="Excluir mídia da cópia"
           description="Esta mídia será removida da sua cópia personalizada. O exercício original não será alterado."
         />
