@@ -1,5 +1,5 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Dumbbell, BarChart3, LogOut, User, Home, Copy, LifeBuoy, Settings } from "lucide-react";
+import { LayoutDashboard, Dumbbell, BarChart3, LogOut, User, Home, Copy, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
@@ -42,11 +42,7 @@ const AlunoSidebar = () => {
       href: "/avaliacoes-aluno",
       icon: BarChart3,
     },
-    {
-      title: "Central de Ajuda",
-      href: "/app/ajuda",
-      icon: LifeBuoy,
-    },
+    // Central de Ajuda removida - alunos usam o FAB "Ajuda"
     {
       title: "Home",
       href: "/",

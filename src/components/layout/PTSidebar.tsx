@@ -24,6 +24,8 @@ const PTSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const isAdmin = user?.email === ADMIN_EMAIL;
+
   const navigationItems = [
     {
       title: "Painel",
@@ -55,11 +57,12 @@ const PTSidebar = () => {
       href: "/avaliacoes",
       icon: BarChart3,
     },
-    {
+    // Central de Ajuda - apenas para admin (usuários comuns usam o FAB)
+    ...(isAdmin ? [{
       title: "Central de Ajuda",
       href: "/app/ajuda",
       icon: LifeBuoy,
-    },
+    }] : []),
     {
       title: "Home",
       href: "/",
@@ -67,7 +70,7 @@ const PTSidebar = () => {
     },
   ];
 
-  if (user?.email === ADMIN_EMAIL) {
+  if (isAdmin) {
     const avaliacoesIndex = navigationItems.findIndex(item => item.href === "/avaliacoes");
     if (avaliacoesIndex !== -1) {
       navigationItems.splice(avaliacoesIndex + 1, 0, {
