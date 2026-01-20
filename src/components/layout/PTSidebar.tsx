@@ -57,29 +57,25 @@ const PTSidebar = () => {
       href: "/avaliacoes",
       icon: BarChart3,
     },
-    // Central de Ajuda - apenas para admin (usuários comuns usam o FAB)
-    ...(isAdmin ? [{
-      title: "Central de Ajuda",
-      href: "/app/ajuda",
-      icon: LifeBuoy,
-    }] : []),
     {
       title: "Home",
       href: "/",
       icon: Home,
     },
+    // Itens exclusivos para admin (após Home)
+    ...(isAdmin ? [
+      {
+        title: "Meus Posts (Admin)",
+        href: "/meus-posts",
+        icon: SquarePen,
+      },
+      {
+        title: "Central de Ajuda (Admin)",
+        href: "/app/ajuda",
+        icon: LifeBuoy,
+      },
+    ] : []),
   ];
-
-  if (isAdmin) {
-    const avaliacoesIndex = navigationItems.findIndex(item => item.href === "/avaliacoes");
-    if (avaliacoesIndex !== -1) {
-      navigationItems.splice(avaliacoesIndex + 1, 0, {
-      title: "Meus Posts",
-      href: "/meus-posts",
-      icon: SquarePen,
-    });
-  }
-  }
 
   const isActive = (path: string) => location.pathname === path;
 
