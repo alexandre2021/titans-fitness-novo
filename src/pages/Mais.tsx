@@ -40,30 +40,25 @@ const Mais = () => {
     determineUserType();
   }, [user, authLoading]);
 
+  const isAdmin = user?.email === 'contato@titans.fitness';
+
   const baseProfessorLinks = [
     { href: "/meus-modelos", label: "Modelos", icon: BookCopy },
     { href: "/avaliacoes", label: "Avaliações", icon: BarChart3 },
-  ];
-
-  if (user?.email === 'contato@titans.fitness') {
-    const avaliacoesIndex = baseProfessorLinks.findIndex(
-      (link) => link.href === "/avaliacoes"
-    );
-    if (avaliacoesIndex !== -1) {
-      baseProfessorLinks.splice(avaliacoesIndex + 1, 0, { href: "/meus-posts", label: "Meus Posts", icon: SquarePen });
-    }
-  }
-  baseProfessorLinks.push(
     { href: "/configuracoes-pt", label: "Configurações", icon: Settings },
-    { href: "/app/ajuda", label: "Central de Ajuda", icon: LifeBuoy },
-    { href: "/", label: "Home", icon: Home }
-  );
+    { href: "/", label: "Home", icon: Home },
+    // Itens exclusivos para admin (após Home)
+    ...(isAdmin ? [
+      { href: "/meus-posts", label: "Meus Posts (Admin)", icon: SquarePen },
+      { href: "/app/ajuda", label: "Central de Ajuda (Admin)", icon: LifeBuoy },
+    ] : []),
+  ];
 
   const professorLinks = baseProfessorLinks;
 
+  // Aluno: Central de Ajuda removida - alunos usam o FAB "Ajuda"
   const alunoLinks = [
     { href: "/configuracoes-aluno", label: "Configurações", icon: Settings },
-    { href: "/app/ajuda", label: "Central de Ajuda", icon: LifeBuoy },
     { href: "/", label: "Home", icon: Home },
   ];
 
