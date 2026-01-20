@@ -12,12 +12,12 @@ const FeedbackButton = ({ onClick }: FeedbackButtonProps) => {
   return (
     <div className={cn(
       "fixed z-50",
-      // Posiciona ao lado do FAB de Ajuda
-      isDesktop ? "top-6 right-[8.5rem]" : "bottom-20 left-[9rem]"
+      // Posiciona ao lado do FAB de Ajuda com mesmo espaçamento que há entre Ajuda e Mensagens
+      // Mensagens: right-6, Ajuda: right-20, gap ~8px, então Feedback: right-[10rem]
+      isDesktop ? "top-6 right-[10rem]" : "bottom-20 left-[9rem]"
     )}>
       <Button
-        variant="secondary"
-        className="rounded-full h-12 px-4 shadow-lg flex items-center justify-center text-sm font-medium"
+        className="rounded-full h-12 px-4 shadow-lg flex items-center justify-center text-sm font-medium bg-green-600 hover:bg-green-700 text-white"
         onClick={onClick}
         aria-label="Enviar Feedback"
       >
