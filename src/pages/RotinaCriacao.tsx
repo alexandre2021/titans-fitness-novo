@@ -520,7 +520,7 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, exercicios, treinos, setE
             id: `ex_modelo_${Date.now()}_${Math.random()}`,
             exercicio_1_id: item.exercicio.id,
             tipo: 'simples',
-            series: [{ id: `serie_${Date.now()}`, numero_serie: 1, repeticoes: undefined, carga: undefined, intervalo_apos_serie: 60 }],
+            series: [{ id: `serie_${Date.now()}`, numero_serie: 1, repeticoes: 12, carga: undefined, intervalo_apos_serie: 60 }],
             intervalo_apos_exercicio: 90
           };
         }
@@ -542,7 +542,7 @@ const RotinaExerciciosStep = ({ onFinalizar, onVoltar, exercicios, treinos, setE
             exercicio_1_id: item.exercicios[0].id,
             exercicio_2_id: item.exercicios[1].id,
             tipo: 'combinada',
-            series: [{ id: `serie_comb_${Date.now()}`, numero_serie: 1, repeticoes_1: undefined, carga_1: undefined, repeticoes_2: undefined, carga_2: undefined, intervalo_apos_serie: 90 }],
+            series: [{ id: `serie_comb_${Date.now()}`, numero_serie: 1, repeticoes: 12, repeticoes_1: 12, carga_1: undefined, repeticoes_2: 12, carga_2: undefined, intervalo_apos_serie: 90 }],
             intervalo_apos_exercicio: 120
           };
         }
@@ -1150,7 +1150,8 @@ const RotinaCriacao = () => {
           const seriesParaInserir = exercicio.series.map(serie => ({
             exercicio_id: exercicioCriado.id,
             numero_serie: serie.numero_serie,
-            repeticoes: serie.repeticoes ?? null, carga: serie.carga ?? null,
+            // repeticoes é obrigatório no banco - usa valor default 12 se não definido
+            repeticoes: serie.repeticoes ?? 12, carga: serie.carga ?? null,
             repeticoes_1: serie.repeticoes_1 ?? null, carga_1: serie.carga_1 ?? null,
             repeticoes_2: serie.repeticoes_2 ?? null, carga_2: serie.carga_2 ?? null,
             tem_dropset: serie.tem_dropset ?? false, carga_dropset: serie.carga_dropset ?? null,

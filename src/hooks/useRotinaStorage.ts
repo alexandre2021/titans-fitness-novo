@@ -649,7 +649,7 @@ export const useRotinaStorage = (alunoId: string) => {
             const seriesParaInserir = series.map(s => ({
               exercicio_id: exercicioCriado.id,
               numero_serie: s.numero_serie,
-              repeticoes: s.repeticoes ?? 0,
+              repeticoes: s.repeticoes ?? 12,
               carga: s.carga ?? null,
               tem_dropset: s.tem_dropset ?? false,
               carga_dropset: s.carga_dropset ?? null,
