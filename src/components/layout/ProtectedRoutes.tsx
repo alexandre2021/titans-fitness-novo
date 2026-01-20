@@ -13,11 +13,13 @@ import PTMobileHeader from "./PTMobileHeader";
 import AlunoBottomNav from "./AlunoBottomNav";
 import PTBottomNav from "./PTBottomNav";
 
-// Lazy load message and help components for better performance
+// Lazy load message, help and feedback components for better performance
 const MessagesDrawer = lazy(() => import('@/components/messages/MessageDrawer'));
 const MessagesButton = lazy(() => import('@/components/messages/MessageButton'));
 const HelpDrawer = lazy(() => import('@/components/help/HelpDrawer'));
 const HelpButton = lazy(() => import('@/components/help/HelpButton'));
+const FeedbackButton = lazy(() => import('@/components/feedback/FeedbackButton'));
+const FeedbackModal = lazy(() => import('@/components/feedback/FeedbackModal'));
 
 const ProtectedRoutes = () => {
   const { user, loading: authLoading } = useAuth();
@@ -27,6 +29,7 @@ const ProtectedRoutes = () => {
   const isMobile = useMediaQuery("(max-width: 767px)");
   const [isMessagesDrawerOpen, setMessagesDrawerOpen] = useState(false);
   const [isHelpDrawerOpen, setHelpDrawerOpen] = useState(false);
+  const [isFeedbackModalOpen, setFeedbackModalOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
   const handleDrawerClose = () => {
@@ -168,6 +171,13 @@ const ProtectedRoutes = () => {
                 onClose={() => setHelpDrawerOpen(false)}
                 direction="left"
               />
+              <FeedbackButton
+                onClick={() => setFeedbackModalOpen(true)}
+              />
+              <FeedbackModal
+                isOpen={isFeedbackModalOpen}
+                onClose={() => setFeedbackModalOpen(false)}
+              />
             </Suspense>
           </>
         )}
@@ -202,6 +212,13 @@ const ProtectedRoutes = () => {
               isOpen={isHelpDrawerOpen}
               onClose={() => setHelpDrawerOpen(false)}
               direction="right"
+            />
+            <FeedbackButton
+              onClick={() => setFeedbackModalOpen(true)}
+            />
+            <FeedbackModal
+              isOpen={isFeedbackModalOpen}
+              onClose={() => setFeedbackModalOpen(false)}
             />
           </Suspense>
         </>

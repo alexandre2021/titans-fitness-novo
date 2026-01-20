@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, Dumbbell, LogOut, User, Settings, BookCopy, SquarePen, Home, Copy, MessageCircle, FileText, LifeBuoy, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Users, Dumbbell, LogOut, User, Settings, BookCopy, SquarePen, Home, Copy, MessageCircle, FileText, LifeBuoy, BarChart3, MessageSquareText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
@@ -73,6 +73,11 @@ const PTSidebar = () => {
         title: "Central de Ajuda (Admin)",
         href: "/app/ajuda",
         icon: LifeBuoy,
+      },
+      {
+        title: "Feedbacks (Admin)",
+        href: "/admin/feedbacks",
+        icon: MessageSquareText,
       },
     ] : []),
   ];

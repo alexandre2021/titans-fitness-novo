@@ -60,6 +60,7 @@ import NovoPost from "./pages/NovoPost";
 import EditarPost from "./pages/EditarPost";
 import PostPage from "./pages/Post";
 import MeusPosts from "./pages/MeusPosts";
+import FeedbacksAdmin from "./pages/FeedbacksAdmin";
 import EditarExercicioPadrao from "./pages/EditarExercicioPadrao";
 import CentralDeAjuda from "./pages/CentralDeAjuda";
 import CentralDeAjudaPublica from "./pages/CentralDeAjudaPublica";
@@ -154,6 +155,7 @@ const router = createBrowserRouter([
               { path: "/posts/novo", element: <NovoPost /> },
               { path: "/posts/editar/:slug", element: <EditarPost /> },
               { path: "/admin/ajuda", element: <CentralDeAjuda /> },
+              { path: "/admin/feedbacks", element: <FeedbacksAdmin /> },
             ],
           },
           { path: "/mensagens-pt", element: <MensagensPT /> },

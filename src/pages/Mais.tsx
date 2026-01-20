@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Link } from 'react-router-dom';
-import { ChevronRight, BookCopy, SquarePen, Home, LifeBuoy, BarChart3, Settings } from 'lucide-react';
+import { ChevronRight, BookCopy, SquarePen, Home, LifeBuoy, BarChart3, Settings, MessageSquareText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const Mais = () => {
@@ -51,6 +51,7 @@ const Mais = () => {
     ...(isAdmin ? [
       { href: "/meus-posts", label: "Meus Posts (Admin)", icon: SquarePen },
       { href: "/app/ajuda", label: "Central de Ajuda (Admin)", icon: LifeBuoy },
+      { href: "/admin/feedbacks", label: "Feedbacks (Admin)", icon: MessageSquareText },
     ] : []),
   ];
 
