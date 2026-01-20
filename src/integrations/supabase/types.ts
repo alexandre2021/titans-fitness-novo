@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       admins: {
@@ -627,6 +602,7 @@ export type Database = {
           id: string
           imagem_1_url: string | null
           imagem_2_url: string | null
+          imagem_3_url: string | null
           instrucoes: string | null
           is_ativo: boolean | null
           nome: string
@@ -651,6 +627,7 @@ export type Database = {
           id?: string
           imagem_1_url?: string | null
           imagem_2_url?: string | null
+          imagem_3_url?: string | null
           instrucoes?: string | null
           is_ativo?: boolean | null
           nome: string
@@ -675,6 +652,7 @@ export type Database = {
           id?: string
           imagem_1_url?: string | null
           imagem_2_url?: string | null
+          imagem_3_url?: string | null
           instrucoes?: string | null
           is_ativo?: boolean | null
           nome?: string
@@ -750,6 +728,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      feedbacks: {
+        Row: {
+          created_at: string | null
+          id: string
+          mensagem: string
+          pagina_origem: string | null
+          status: string
+          tipo: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          mensagem: string
+          pagina_origem?: string | null
+          status?: string
+          tipo: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          mensagem?: string
+          pagina_origem?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       knowledge_base_articles: {
         Row: {
@@ -883,7 +894,6 @@ export type Database = {
           descricao: string | null
           dificuldade: string
           duracao_semanas: number
-          genero: string
           id: string
           modelo_padrao_id: string | null
           nome: string
@@ -899,7 +909,6 @@ export type Database = {
           descricao?: string | null
           dificuldade: string
           duracao_semanas: number
-          genero?: string
           id?: string
           modelo_padrao_id?: string | null
           nome: string
@@ -915,7 +924,6 @@ export type Database = {
           descricao?: string | null
           dificuldade?: string
           duracao_semanas?: number
-          genero?: string
           id?: string
           modelo_padrao_id?: string | null
           nome?: string
@@ -1298,7 +1306,6 @@ export type Database = {
           dificuldade: string | null
           duracao_semanas: number
           forma_pagamento: string
-          genero: string
           id: string
           nome: string
           objetivo: string | null
@@ -1320,7 +1327,6 @@ export type Database = {
           dificuldade?: string | null
           duracao_semanas: number
           forma_pagamento: string
-          genero?: string
           id?: string
           nome: string
           objetivo?: string | null
@@ -1342,7 +1348,6 @@ export type Database = {
           dificuldade?: string | null
           duracao_semanas?: number
           forma_pagamento?: string
-          genero?: string
           id?: string
           nome?: string
           objetivo?: string | null
@@ -1882,9 +1887,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       plano_tipo: ["gratuito", "basico", "premium", "profissional"],
