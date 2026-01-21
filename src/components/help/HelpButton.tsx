@@ -13,7 +13,7 @@ const HelpButton = ({ onClick }: HelpButtonProps) => {
     <div className={cn(
       "fixed z-50",
       // Posiciona ao lado do FAB de mensagens
-      isDesktop ? "top-6 right-20" : "bottom-20 left-[4.5rem]"
+      isDesktop ? "top-24 right-20" : "bottom-20 left-[4.5rem]"
     )}>
       <Button
         variant="secondary"
