@@ -17,7 +17,10 @@ const HelpButton = ({ onClick }: HelpButtonProps) => {
     )}>
       <Button
         variant="secondary"
-        className="rounded-full h-9 px-3 shadow-lg flex items-center justify-center text-xs font-medium"
+        className={cn(
+          "rounded-full shadow-lg flex items-center justify-center font-medium",
+          isDesktop ? "h-9 px-3 text-xs" : "h-12 px-4 text-sm"
+        )}
         onClick={onClick}
         aria-label="Abrir Central de Ajuda"
       >

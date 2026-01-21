@@ -17,7 +17,10 @@ const FeedbackButton = ({ onClick }: FeedbackButtonProps) => {
       isDesktop ? "top-1 right-[8.5rem]" : "bottom-20 left-[9rem]"
     )}>
       <Button
-        className="rounded-full h-9 px-3 shadow-lg flex items-center justify-center text-xs font-medium bg-green-600 hover:bg-green-700 text-white"
+        className={cn(
+          "rounded-full shadow-lg flex items-center justify-center font-medium bg-green-600 hover:bg-green-700 text-white",
+          isDesktop ? "h-9 px-3 text-xs" : "h-12 px-4 text-sm"
+        )}
         onClick={onClick}
         aria-label="Enviar Feedback"
       >
