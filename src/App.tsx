@@ -22,6 +22,7 @@ import Privacidade from "./pages/Privacidade";
 import OnboardingAlunoDadosBasicos from "./pages/OnboardingAlunoDadosBasicos";
 import OnboardingAlunoDescricaoSaude from "./pages/OnboardingAlunoQuestionarioSaude";
 import IndexAluno from "./pages/IndexAluno";
+import ComoFuncionaPontos from "./pages/ComoFuncionaPontos";
 import AvaliacoesAluno from "./pages/AvaliacoesAluno";
 import PerfilAluno from "./pages/PerfilAluno";
 import OnboardingPTInformacoesBasicas from "./pages/OnboardingPTInformacoesBasicas";
@@ -179,6 +180,7 @@ const router = createBrowserRouter([
           { path: "/alunos-rotinas/:id/:rotinaId", element: <AlunosRotinaDetalhes /> },
           // Rotas do Aluno
           { path: "/index-aluno", element: <IndexAluno /> },
+          { path: "/como-funciona-pontos", element: <ComoFuncionaPontos /> },
           { path: "/minhas-rotinas", element: <PaginaRotinas modo="aluno" /> },
           { path: "/avaliacoes-aluno", element: <AvaliacoesAluno /> },
           { path: "/perfil-aluno", element: <PerfilAluno /> },

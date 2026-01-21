@@ -95,6 +95,65 @@ export type Database = {
           },
         ]
       }
+      aluno_stats: {
+        Row: {
+          aluno_id: string | null
+          best_month_date: string | null
+          best_month_workouts: number | null
+          created_at: string | null
+          current_level: string | null
+          current_streak: number | null
+          id: string
+          last_workout_date: string | null
+          longest_streak: number | null
+          longest_workout_minutes: number | null
+          total_minutes: number | null
+          total_points: number | null
+          total_workouts: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          aluno_id?: string | null
+          best_month_date?: string | null
+          best_month_workouts?: number | null
+          created_at?: string | null
+          current_level?: string | null
+          current_streak?: number | null
+          id?: string
+          last_workout_date?: string | null
+          longest_streak?: number | null
+          longest_workout_minutes?: number | null
+          total_minutes?: number | null
+          total_points?: number | null
+          total_workouts?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          aluno_id?: string | null
+          best_month_date?: string | null
+          best_month_workouts?: number | null
+          created_at?: string | null
+          current_level?: string | null
+          current_streak?: number | null
+          id?: string
+          last_workout_date?: string | null
+          longest_streak?: number | null
+          longest_workout_minutes?: number | null
+          total_minutes?: number | null
+          total_points?: number | null
+          total_workouts?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aluno_stats_aluno_id_fkey"
+            columns: ["aluno_id"]
+            isOneToOne: true
+            referencedRelation: "alunos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       alunos: {
         Row: {
           altura: number | null

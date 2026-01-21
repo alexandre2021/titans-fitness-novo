@@ -8,10 +8,12 @@ import { toast } from "sonner";
 import { Executor } from '@/components/rotina/execucao/Executor';
 import Modal from 'react-modal';
 import { AlertTriangle, X } from 'lucide-react';
-import { 
-  SessaoData, 
-  UserProfile 
+import {
+  SessaoData,
+  UserProfile
 } from '@/types/exercicio.types';
+import TreinoConcluidoModal from '@/components/gamificacao/TreinoConcluidoModal';
+import { useAlunoStats, TreinoConcluidoResult } from '@/hooks/useAlunoStats';
 
 // ✅ CORREÇÃO: Interface para tipar o retorno bruto do Supabase, incluindo o professor_id
 interface SessaoSupabase {
@@ -48,8 +50,13 @@ export default function ExecucaoExecutarTreino() {
   const [modoExecucao, setModoExecucao] = useState<'professor' | 'aluno' | null>(null);
   const [professorId, setProfessorId] = useState<string | null>(null); // ✅ Estado separado para o ID do professor
   const [showPauseDialog, setShowPauseDialog] = useState(false);
+  const [showCelebracaoModal, setShowCelebracaoModal] = useState(false);
+  const [celebracaoData, setCelebracaoData] = useState<TreinoConcluidoResult | null>(null);
   const hasNavigated = useRef(false);
   const tempoSessaoRef = useRef(0); // ✅ NOVO: Ref para armazenar o tempo atual
+
+  // Hook de gamificação
+  const { processarTreinoConcluido } = useAlunoStats();
   
   const shallowCompareSessao = useCallback((a: SessaoData | null, b: SessaoData | null): boolean => {
     if (!a || !b) return false;
@@ -333,29 +340,41 @@ export default function ExecucaoExecutarTreino() {
   }, [sessaoData]);
 
 
-  const handleSessaoFinalizada = useCallback(() => {
+  const handleSessaoFinalizada = useCallback(async () => {
     if (hasNavigated.current) return;
-    hasNavigated.current = true;
-    
-    if (userProfile?.user_type === 'professor' && sessaoData?.aluno_id) {
+
+    // Se for aluno, processa gamificação e mostra modal de celebração
+    if (userProfile?.user_type === 'aluno' && sessaoData?.aluno_id) {
+      const duracaoMinutos = Math.round(tempoSessaoRef.current / 60) || 1;
+      const resultado = await processarTreinoConcluido(sessaoData.aluno_id, duracaoMinutos);
+
+      if (resultado) {
+        setCelebracaoData(resultado);
+        setShowCelebracaoModal(true);
+        // Não navega ainda - espera o usuário fechar o modal
+      } else {
+        // Se falhar, navega normalmente
+        hasNavigated.current = true;
+        navigate('/index-aluno');
+      }
+    } else if (userProfile?.user_type === 'professor' && sessaoData?.aluno_id) {
+      hasNavigated.current = true;
       navigate(`/alunos-rotinas/${sessaoData?.aluno_id}`);
-    } else {
-      navigate('/index-aluno');
     }
 
     // Verifica se esta era a última sessão da rotina
     const verificarUltimaSessao = async () => {
       if (!sessaoData?.rotina_id || !sessaoData.rotinas) return;
       const { count } = await supabase.from('execucoes_sessao').select('*', { count: 'exact', head: true }).eq('rotina_id', sessaoData.rotina_id).in('status', ['em_aberto', 'pausada']);
-      
+
       if (count === 0) {
         toast.success("Rotina Concluída!", { description: "Parabéns, você finalizou todos os treinos desta rotina." });
         await handleFinalizarRotina();
 
         // ✅ Notificar o professor que a rotina foi concluída (apenas se for aluno executando)
         if (
-          userProfile?.user_type === 'aluno' && 
-          professorId && 
+          userProfile?.user_type === 'aluno' &&
+          professorId &&
           userProfile?.nome_completo &&
           sessaoData.rotinas?.nome
         ) {
@@ -372,8 +391,16 @@ export default function ExecucaoExecutarTreino() {
           }
         }
       }
-    }
-    void verificarUltimaSessao();  }, [userProfile, sessaoData, professorId, navigate, handleFinalizarRotina]);
+    };
+    void verificarUltimaSessao();
+  }, [userProfile, sessaoData, professorId, navigate, handleFinalizarRotina, processarTreinoConcluido]);
+
+  // Handler para fechar o modal de celebração e navegar
+  const handleCloseCelebracao = useCallback(() => {
+    setShowCelebracaoModal(false);
+    hasNavigated.current = true;
+    navigate('/index-aluno');
+  }, [navigate]);
 
   // ✅ EFEITO PARA INTERCEPTAR O BOTÃO "VOLTAR" DO NAVEGADOR
   useEffect(() => {
@@ -532,6 +559,23 @@ export default function ExecucaoExecutarTreino() {
           </Button>
         </div>
       </Modal>
+
+      {/* Modal de Celebração - Gamificação */}
+      {celebracaoData && (
+        <TreinoConcluidoModal
+          isOpen={showCelebracaoModal}
+          onClose={handleCloseCelebracao}
+          treinoNome={sessaoData?.treinos?.nome || "Treino"}
+          duracaoMinutos={Math.round(tempoSessaoRef.current / 60) || 1}
+          pontosGanhos={celebracaoData.pontosGanhos}
+          bonusStreak={celebracaoData.bonusStreak}
+          currentStreak={celebracaoData.stats.current_streak}
+          longestStreak={celebracaoData.stats.longest_streak}
+          totalPoints={celebracaoData.stats.total_points}
+          currentLevel={celebracaoData.stats.current_level as "bronze" | "prata" | "ouro"}
+          novoRecorde={celebracaoData.novoRecorde}
+        />
+      )}
     </div>
   );
 }
