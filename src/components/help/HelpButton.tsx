@@ -13,11 +13,11 @@ const HelpButton = ({ onClick }: HelpButtonProps) => {
     <div className={cn(
       "fixed z-50",
       // Posiciona ao lado do FAB de mensagens
-      isDesktop ? "top-2 right-20" : "bottom-20 left-[4.5rem]"
+      isDesktop ? "top-1 right-[3.25rem]" : "bottom-20 left-[4.5rem]"
     )}>
       <Button
         variant="secondary"
-        className="rounded-full h-12 px-4 shadow-lg flex items-center justify-center text-sm font-medium"
+        className="rounded-full h-9 px-3 shadow-lg flex items-center justify-center text-xs font-medium"
         onClick={onClick}
         aria-label="Abrir Central de Ajuda"
       >

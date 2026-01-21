@@ -14,11 +14,11 @@ const MessagesButton = ({ onClick, unreadCount }: MessagesButtonProps) => {
   return (
     <div className={cn(
       "fixed z-50",
-      isDesktop ? "top-2 right-6" : "bottom-20 left-4"
+      isDesktop ? "top-1 right-6" : "bottom-20 left-4"
     )}>
       <Button
         variant="secondary"
-        className="rounded-full h-12 w-12 p-0 shadow-lg flex items-center justify-center [&_svg]:size-6 relative"
+        className="rounded-full h-9 w-9 p-0 shadow-lg flex items-center justify-center [&_svg]:size-5 relative"
         onClick={onClick}
         aria-label="Abrir Mensagens"
       >
