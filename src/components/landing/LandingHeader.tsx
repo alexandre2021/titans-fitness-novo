@@ -14,7 +14,7 @@ const LandingHeader = () => {
           <img 
             src="https://prvfvlyzfyprjliqniki.supabase.co/storage/v1/object/public/assets/titans-horizontal.png" 
             alt="Titans Fitness" 
-            className={isMobile ? "h-12 w-auto" : "h-10 w-auto"}
+            className={isMobile ? "h-12 w-auto" : "h-14 w-auto"}
           />
         </Link>
         <div className="flex items-center gap-2 md:gap-4">
