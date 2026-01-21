@@ -14,7 +14,7 @@ const MessagesButton = ({ onClick, unreadCount }: MessagesButtonProps) => {
   return (
     <div className={cn(
       "fixed z-50",
-      isDesktop ? "top-24 right-6" : "bottom-20 left-4"
+      isDesktop ? "top-2 right-6" : "bottom-20 left-4"
     )}>
       <Button
         variant="secondary"

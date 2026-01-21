@@ -14,7 +14,7 @@ const FeedbackButton = ({ onClick }: FeedbackButtonProps) => {
       "fixed z-50",
       // Posiciona ao lado do FAB de Ajuda com mesmo espaçamento que há entre Ajuda e Mensagens
       // Mensagens: right-6, Ajuda: right-20, gap ~8px, então Feedback: right-[10rem]
-      isDesktop ? "top-24 right-[10rem]" : "bottom-20 left-[9rem]"
+      isDesktop ? "top-2 right-[10rem]" : "bottom-20 left-[9rem]"
     )}>
       <Button
         className="rounded-full h-12 px-4 shadow-lg flex items-center justify-center text-sm font-medium bg-green-600 hover:bg-green-700 text-white"
