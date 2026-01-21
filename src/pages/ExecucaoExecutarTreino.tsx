@@ -343,8 +343,8 @@ export default function ExecucaoExecutarTreino() {
   const handleSessaoFinalizada = useCallback(async () => {
     if (hasNavigated.current) return;
 
-    // Se for aluno, processa gamificação e mostra modal de celebração
-    if (userProfile?.user_type === 'aluno' && sessaoData?.aluno_id) {
+    // Processa gamificação e mostra modal de celebração (para aluno e professor)
+    if (sessaoData?.aluno_id) {
       const duracaoMinutos = Math.round(tempoSessaoRef.current / 60) || 1;
       const resultado = await processarTreinoConcluido(sessaoData.aluno_id, duracaoMinutos);
 
@@ -355,11 +355,12 @@ export default function ExecucaoExecutarTreino() {
       } else {
         // Se falhar, navega normalmente
         hasNavigated.current = true;
-        navigate('/index-aluno');
+        if (userProfile?.user_type === 'professor') {
+          navigate(`/alunos-rotinas/${sessaoData.aluno_id}`);
+        } else {
+          navigate('/index-aluno');
+        }
       }
-    } else if (userProfile?.user_type === 'professor' && sessaoData?.aluno_id) {
-      hasNavigated.current = true;
-      navigate(`/alunos-rotinas/${sessaoData?.aluno_id}`);
     }
 
     // Verifica se esta era a última sessão da rotina
@@ -399,8 +400,12 @@ export default function ExecucaoExecutarTreino() {
   const handleCloseCelebracao = useCallback(() => {
     setShowCelebracaoModal(false);
     hasNavigated.current = true;
-    navigate('/index-aluno');
-  }, [navigate]);
+    if (userProfile?.user_type === 'professor' && sessaoData?.aluno_id) {
+      navigate(`/alunos-rotinas/${sessaoData.aluno_id}`);
+    } else {
+      navigate('/index-aluno');
+    }
+  }, [navigate, userProfile, sessaoData]);
 
   // ✅ EFEITO PARA INTERCEPTAR O BOTÃO "VOLTAR" DO NAVEGADOR
   useEffect(() => {
@@ -574,6 +579,7 @@ export default function ExecucaoExecutarTreino() {
           totalPoints={celebracaoData.stats.total_points}
           currentLevel={celebracaoData.stats.current_level as "bronze" | "prata" | "ouro"}
           novoRecorde={celebracaoData.novoRecorde}
+          alunoNome={userProfile?.user_type === 'professor' ? sessaoData?.alunos?.nome_completo : undefined}
         />
       )}
     </div>

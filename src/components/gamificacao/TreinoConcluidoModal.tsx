@@ -16,6 +16,7 @@ interface TreinoConcluidoModalProps {
   totalPoints: number;
   currentLevel: "bronze" | "prata" | "ouro";
   novoRecorde?: "streak" | "duracao" | null;
+  alunoNome?: string; // Se preenchido, mostra mensagem para professor
 }
 
 const nivelConfig = {
@@ -57,7 +58,9 @@ const TreinoConcluidoModal = ({
   totalPoints,
   currentLevel,
   novoRecorde,
+  alunoNome,
 }: TreinoConcluidoModalProps) => {
+  const isProfessorView = !!alunoNome;
   const [showContent, setShowContent] = useState(false);
   const nivel = nivelConfig[currentLevel];
   const totalPontosGanhos = pontosGanhos + bonusStreak;
@@ -139,7 +142,11 @@ const TreinoConcluidoModal = ({
               <Trophy className="h-8 w-8" />
             </div>
             <h2 className="text-2xl font-bold">Treino Concluído!</h2>
-            <p className="text-white/80 mt-1">{treinoNome}</p>
+            {isProfessorView ? (
+              <p className="text-white/80 mt-1">Seu aluno <span className="font-semibold">{alunoNome}</span> finalizou</p>
+            ) : (
+              <p className="text-white/80 mt-1">{treinoNome}</p>
+            )}
           </div>
         </div>
 
@@ -166,7 +173,9 @@ const TreinoConcluidoModal = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Star className="h-5 w-5 text-green-600" />
-                <span className="font-medium text-green-800">Pontos ganhos</span>
+                <span className="font-medium text-green-800">
+                  {isProfessorView ? "Pontos do aluno" : "Pontos ganhos"}
+                </span>
               </div>
               <span className="text-xl font-bold text-green-600">+{totalPontosGanhos}</span>
             </div>
@@ -208,7 +217,7 @@ const TreinoConcluidoModal = ({
             <div className="flex items-center justify-between text-sm">
               <div className={cn("flex items-center gap-1.5 font-medium", nivel.color)}>
                 <div className={cn("w-3 h-3 rounded-full", nivel.bgColor, nivel.borderColor, "border")} />
-                Nível {nivel.label}
+                {isProfessorView ? `Nível do aluno: ${nivel.label}` : `Nível ${nivel.label}`}
               </div>
               <span className="text-muted-foreground">{totalPoints} pts</span>
             </div>
