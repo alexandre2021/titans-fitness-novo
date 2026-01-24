@@ -1,144 +1,197 @@
-# 🤖 Central de Ajuda com IA (Planejamento)
+# Central de Ajuda
 
-Este documento descreve a arquitetura e a estratégia para a criação de uma Central de Ajuda inteligente para o Titans Fitness.
-
----
-
-## 1. Visão Geral
-
-O objetivo é criar um sistema de suporte escalável que combine uma base de conhecimento (Knowledge Base - KB) com um chatbot de Inteligência Artificial. A IA será treinada para responder dúvidas dos usuários com base exclusivamente no conteúdo que nós criarmos.
-
-## 2. Componentes da Solução
-
-### 2.1. Base de Conhecimento (Knowledge Base - KB)
-
--   **Fonte da Verdade:** O arquivo `src/docs/base-de-conhecimento.md` será a única fonte de conteúdo para a IA.
--   **Conteúdo (V1):** Foco total em **texto**. Não incluiremos imagens ou GIFs nesta primeira versão para agilizar o desenvolvimento e evitar retrabalho, já que a interface ainda pode mudar.
-
-### 2.2. Chatbot com IA (RAG)
-
--   **Tecnologia:** A IA utilizará a técnica de **Geração Aumentada por Recuperação (RAG)**.
--   **Fluxo de Resposta:**
-    1.  O usuário faz uma pergunta no chat.
-    2.  O sistema **busca (recupera)** na nossa Base de Conhecimento os artigos mais relevantes para a pergunta.
-    3.  Uma LLM **gera** uma resposta em linguagem natural, utilizando *apenas* as informações encontradas nos artigos.
--   **Vantagem:** Isso garante que as respostas sejam sempre precisas e baseadas na nossa documentação, evitando que a IA "alucine" ou dê informações incorretas.
-
-## 3. Ciclo de Melhoria Contínua (Human-in-the-loop)
-
-### 2.3. Geração de Embeddings (Vetores)
-
--   **Ferramenta:** O script `scripts/generate-embeddings.ts` é o responsável por "ensinar" a IA.
--   **Processo:**
-    1.  **Leitura:** O script lê o conteúdo do arquivo `base-de-conhecimento.md`.
-    2.  **Fragmentação (Chunking):** Ele quebra os artigos longos em pedaços menores e mais focados.
-    3.  **Vetorização:** Para cada pedaço, ele usa um modelo de IA local para gerar um "embedding" (vetor numérico).
-    4.  **Armazenamento:** Salva cada pedaço de texto e seu respectivo vetor na tabela `knowledge_base` do Supabase.
-
-> Este script deve ser executado sempre que a base de conhecimento for atualizada.
+Sistema de busca inteligente que usa IA para encontrar artigos relevantes na base de conhecimento.
 
 ---
 
-## 3. Ciclo de Melhoria Contínua (Human-in-the-loop)
+## Arquitetura
 
-Este é o pilar para a evolução do sistema.
-
-### 3.1. Tratamento de "Pontos Cegos"
-
-Quando a IA não encontra uma resposta na KB:
-
-1.  **Não Inventa:** A IA não tentará adivinhar.
-2.  **Informa o Usuário:** Ela responderá que não encontrou a informação, mas que a equipe de suporte já foi notificada e entrará em contato.
-3.  **Notifica a Equipe:** O sistema automaticamente cria um "ticket" para nós (registrando em uma tabela como `unanswered_questions`) e nos notifica ativamente.
-    -   **Mecanismo de Notificação:** A Edge Function do chat invocará nossa própria Edge Function `enviar-notificacao`, enviando uma mensagem para o chat do administrador (`contato@titans.fitness`).
-
-### 3.2. Retroalimentação da Base de Conhecimento
-
-1.  Ao receber a notificação, nossa equipe pesquisa a resposta correta.
-2.  Respondemos ao usuário manualmente (ex: por e-mail ou chat).
-3.  **Crucial:** Usamos essa mesma resposta para **criar um novo artigo** na Base de Conhecimento.
-
-**Resultado:** Da próxima vez que a mesma pergunta for feita, a IA saberá a resposta. O sistema se torna mais inteligente a cada dúvida real do usuário.
-
-## 4. Proteção Contra Abuso
-
--   Perguntas fora de tópico (ex: "Qual o campeão do Brasileirão?") serão identificadas pela baixa relevância na busca da KB.
--   Nesses casos, o sistema dará uma resposta padrão ("Só consigo responder sobre o Titans Fitness...") e **não** criará um ticket para a equipe, evitando ruído e perda de tempo.
+```
+┌─────────────────┐     ┌──────────────────────┐     ┌─────────────┐
+│   HelpDrawer    │────▶│  ask-help-center     │────▶│  Groq API   │
+│   (Frontend)    │◀────│  (Edge Function)     │◀────│  (LLM)      │
+└─────────────────┘     └──────────────────────┘     └─────────────┘
+                               │
+                               ▼
+                        ┌──────────────────┐
+                        │    Supabase      │
+                        │  - articles      │
+                        │  - cache         │
+                        └──────────────────┘
+```
 
 ---
 
-## 5. Fase 2: Implementação da IA (Usuários Logados)
+## Componentes
 
-### 5.1. Backend (Supabase Edge Function)
+### 1. HelpDrawer (Frontend)
 
-1.  **Receber a Pergunta:** A função receberá a pergunta do usuário.
-2.  **Buscar na Base de Conhecimento (RAG):**
-    -   Converterá a pergunta em um "vetor".
-    -   Buscará por similaridade em uma base de vetores gerada a partir do `base-de-conhecimento.md`.
-    -   Retornará os trechos de texto mais relevantes.
-3.  **Gerar a Resposta (LLM):**
-    -   Enviará os trechos para uma LLM com a instrução: "Responda usando apenas este texto".
-4.  **Devolver a Resposta:** Enviará a resposta gerada de volta para o chat.
+**Arquivo:** `src/components/help/HelpDrawer.tsx`
 
-### 5.2. Modelo de LLM Escolhido (V1)
+Drawer lateral que permite ao usuário:
+- Digitar uma pergunta em linguagem natural
+- Receber o artigo mais relevante via IA
+- Navegar manualmente pelas categorias
+- Dar feedback (útil/não útil)
 
--   **Provedor:** Groq (Plano Gratuito)
--   **Modelo:** `llama-3.1-8b-instant`
--   **Justificativa:**
-    -   **Latência:** Otimizado para respostas rápidas, ideal para chat.
-    -   **Custo:** Limites generosos no plano gratuito (500.000 tokens/dia).
-    -   **Capacidade:** Com base em uma estimativa de 300-900 tokens por interação, o plano gratuito suporta entre **600 a 1.600 respostas por dia**, o que é mais do que suficiente para o lançamento e validação.
-    -   **Fidelidade:** É um modelo do tipo `instruct`, treinado para seguir o contexto fornecido, o que é perfeito para RAG.
+**Fluxo:**
+1. Usuário digita pergunta e pressiona Enter (ou clica no botão)
+2. Chama a Edge Function `ask-help-center`
+3. Exibe o artigo encontrado ou mensagem de "não encontrado"
+4. Mostra botões de feedback
 
-### 5.3. Mecanismo de Aprendizado (Human-in-the-loop)
+### 2. Edge Function (Backend)
 
-1.  **Detectar "Ponto Cego":** Se a busca não encontrar trechos relevantes.
-2.  **Registrar Pergunta:** Salvará a pergunta em uma nova tabela `perguntas_nao_respondidas`.
-3.  **Notificar a Equipe:** Chamará a função `enviar-notificacao` para nos avisar no chat de administrador.
-4.  **Responder ao Usuário:** A IA informará que a equipe foi notificada.
+**Arquivo:** `supabase/functions/ask-help-center/index.ts`
+
+Busca artigos usando LLM em 2 etapas:
+
+**Etapa 1 - Identificar Categoria:**
+- Envia lista de categorias + títulos dos artigos
+- LLM responde com o número da categoria mais relevante
+
+**Etapa 2 - Selecionar Artigo:**
+- Envia artigos da categoria selecionada
+- LLM responde com o número do artigo mais relevante
+
+**Características:**
+- 5 chaves Groq em round-robin (distribui carga)
+- Sistema de retry automático em caso de rate limit
+- Cache de perguntas já respondidas
+
+### 3. Sistema de Cache
+
+**Tabela:** `help_search_cache`
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | UUID | Identificador único |
+| question | text | Pergunta original |
+| question_normalized | text | Pergunta normalizada (sem acentos, lowercase) |
+| user_type | text | "professor" ou "aluno" |
+| article_id | UUID | Referência ao artigo encontrado |
+| helpful | boolean | Feedback do usuário (null = sem feedback) |
+| hit_count | integer | Quantas vezes foi reutilizado |
+| created_at | timestamp | Data de criação |
+
+**Comportamento:**
+- Pergunta nova → LLM processa → salva no cache
+- Pergunta repetida → retorna do cache (rápido)
+- Feedback positivo → mantém no cache
+- Feedback negativo → **deleta** do cache (LLM tentará novamente)
 
 ---
 
-## 6. Status Atual e Desafios (Feature Pausada)
+## Configuração
 
-Apesar da arquitetura bem definida, a implementação prática do assistente de IA enfrentou desafios significativos que levaram à decisão de pausar seu desenvolvimento. O objetivo desta seção é documentar o que foi construído e os obstáculos encontrados.
+### Secrets do Supabase
 
-### 6.1. O que foi Implementado
+5 chaves Groq configuradas para round-robin:
+- `GROQ_API_KEY_01`
+- `GROQ_API_KEY_02`
+- `GROQ_API_KEY_03`
+- `GROQ_API_KEY_04`
+- `GROQ_API_KEY_05`
 
-A arquitetura RAG foi totalmente implementada, incluindo:
+### Deploy
 
--   **Frontend (`HelpChat.tsx`):** O componente React responsável pela interface do chat. Ele gerencia o estado da conversa, captura a pergunta do usuário e, crucialmente, utiliza a biblioteca `@xenova/transformers` para gerar o vetor (embedding) da pergunta diretamente no navegador do cliente. Em seguida, ele envia a pergunta e o embedding para a Edge Function.
--   **Edge Function (`ask-ai-help-center`):** Orquestra todo o fluxo: recebe a pergunta e o embedding, consulta o banco de vetores e chama a LLM.
--   **Busca Vetorial (Supabase `pgvector`):** A função `match_knowledge_base` foi criada e utilizada para encontrar os trechos de texto mais relevantes.
--   **Geração de Resposta (Groq):** A integração com a API da Groq para o modelo `llama-3.1-8b-instant` foi concluída e funcionava conforme o esperado quando recebia o contexto correto.
+```bash
+supabase functions deploy ask-help-center
+```
 
-### 6.2. O Ponto Fraco: Qualidade da Busca
+---
 
-O principal problema foi a **baixa eficiência do assistente em encontrar as respostas corretas**, mesmo quando a informação existia claramente na base de conhecimento. A IA frequentemente respondia que "não sabia" para perguntas básicas.
+## Base de Conhecimento
 
-A investigação revelou que a causa raiz não era a LLM, mas sim a **qualidade da busca por similaridade**, que era impactada por dois fatores:
+### Tabela: `knowledge_base_articles`
 
-1.  **Ajuste de Limiar (`match_threshold`):** Tentamos ajustar o limiar de relevância na busca vetorial. Embora tenha trazido melhorias marginais, não resolveu o problema central, indicando que a questão era mais profunda.
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | UUID | Identificador único |
+| title | text | Título do artigo |
+| content | text | Conteúdo HTML |
+| description | text | Descrição curta (usada pelo LLM) |
+| category | text | Nome da categoria |
+| user_type | text | "professor", "aluno" ou "ambos" |
+| category_order | integer | Ordem da categoria |
+| article_order | integer | Ordem do artigo na categoria |
 
-2.  **Qualidade dos Embeddings (A Causa Principal):** Identificamos que o problema real estava na forma como "ensinávamos" a IA. Nossos artigos na `base-de-conhecimento.md` eram longos e misturavam vários assuntos. Isso gerava embeddings "generalistas", que não eram específicos o suficiente para corresponder com alta precisão a uma pergunta focada do usuário.
+### Categorias (ordem atual)
 
-### 6.3. A Tentativa de Solução: "Chunking"
+| Ordem | Categoria |
+|-------|-----------|
+| 0 | Acesso e Cadastro |
+| 1 | Configuração Inicial |
+| 2 | Funcionalidades do Aplicativo |
+| 3 | Mensagens e Notificações |
+| 4 | Meu Perfil |
+| 5 | Painel Inicial |
+| 6 | Alunos |
+| 7 | Exercícios |
+| 8 | Rotinas de Treino (Criação) |
+| 9 | Rotinas de Treino (Execução) |
+| 10 | Pontos e Conquistas |
+| 11 | Avaliações Físicas |
+| 12 | Termos e Privacidade |
 
-Para resolver o problema da qualidade dos embeddings, implementamos a técnica de **"chunking" (fragmentação)**. O script `scripts/generate-embeddings.ts` foi modificado para quebrar os artigos grandes em pedaços menores e mais focados, gerando um embedding para cada "chunk".
+---
 
-### 6.4. O Obstáculo Final e a Decisão de Pausar
+## Fluxo Completo
 
-A implementação do "chunking" nos levou ao obstáculo final: a complexidade de criar um "parser" robusto para o nosso arquivo `base-de-conhecimento.md`. O arquivo evoluiu e passou a ter múltiplos formatos de artigo, e a função `parseKnowledgeBase` no script `generate-embeddings.ts` falhava consistentemente em ler todos os artigos, resultando em uma base de vetores vazia ou incompleta.
+```
+1. Usuário abre Central de Ajuda
+2. Digita: "como cadastro um aluno?"
+3. Frontend chama Edge Function
+4. Edge Function:
+   a. Normaliza pergunta → "como cadastro um aluno"
+   b. Busca no cache → não encontrou
+   c. LLM Etapa 1 → categoria "Alunos" (6)
+   d. LLM Etapa 2 → artigo "Como adiciono um novo aluno?" (1)
+   e. Salva no cache
+   f. Retorna artigo
+5. Frontend exibe artigo + botões de feedback
+6. Usuário clica "Sim" → marca helpful=true no cache
+7. Próxima vez: mesma pergunta → retorna do cache instantaneamente
+```
 
-Devido à dificuldade em garantir uma pipeline de dados confiável (do `.md` para os vetores no Supabase) e o consequente mau desempenho do chatbot, **decidimos pausar o desenvolvimento desta funcionalidade**.
+---
 
-**Ponto de Partida Futuro:** A arquitetura principal (Frontend -> Edge Function -> LLM) está validada. O foco para retomar o projeto deve ser a criação de um sistema de gerenciamento de conteúdo (CMS) ou um processo de ETL (Extração, Transformação e Carga) muito mais robusto e testável para popular a base de conhecimento, garantindo a qualidade e a integridade dos vetores.
+## Modelo de IA
 
-### 5.4. Interface do Chat (Frontend)
+- **Provedor:** Groq
+- **Modelo:** `llama-3.1-8b-instant`
+- **Características:**
+  - Baixa latência (~200ms)
+  - Plano gratuito generoso (500k tokens/dia)
+  - Bom em seguir instruções (ideal para classificação)
 
-1.  **Localização:** Um ícone de "?" flutuante no canto da tela para usuários logados.
-2.  **Funcionalidades:**
-    -   Janela de conversa.
-    -   Campo de texto para a pergunta.
-    -   Indicador de "digitando...".
-    -   A interface se comunicará com a nova Edge Function.
+---
+
+## Ciclo de Melhoria Contínua
+
+Quando um usuário clica em **"Não"** (resposta não foi útil):
+
+1. **Admin recebe notificação** via sistema de mensagens com:
+   - Nome do usuário
+   - Pergunta feita
+   - Artigo sugerido (incorreto)
+
+2. **Admin analisa e age:**
+   - Identifica qual seria o artigo correto
+   - Melhora a `description` do artigo correto (adiciona palavras-chave)
+   - Responde o usuário diretamente pelo sistema de mensagens
+
+3. **Resultado:**
+   - Próxima vez que alguém fizer pergunta similar → IA acerta
+   - Usuário original recebe resposta personalizada → satisfeito
+
+```
+Usuário → Pergunta → IA erra → Feedback "Não"
+                                    ↓
+                    ┌───────────────┴───────────────┐
+                    ↓                               ↓
+           Admin melhora artigo            Admin responde usuário
+           (IA aprende)                    (atendimento humano)
+```
+
+Este ciclo permite que o sistema melhore organicamente com uso real.

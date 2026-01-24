@@ -72,6 +72,9 @@ export const CronometroExercicio = ({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // ✅ Verifica se está nos últimos 10 segundos
+  const tempoUrgente = tempo > 0 && tempo <= 10;
+
   // ✅ COMPONENTE DE CONTEÚDO REUTILIZÁVEL
   const CronometroContent = () => (
     <div className="flex flex-col items-center space-y-6 py-6">
@@ -99,7 +102,11 @@ export const CronometroExercicio = ({
       </div>
 
       {/* Timer */}
-      <div className="font-mono font-bold text-foreground text-6xl">
+      <div className={`font-mono font-bold text-6xl transition-colors ${
+        tempoUrgente
+          ? 'text-red-600 animate-pulse'
+          : 'text-foreground'
+      }`}>
         {formatarTempo(tempo)}
       </div>
       

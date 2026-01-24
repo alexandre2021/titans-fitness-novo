@@ -700,6 +700,66 @@ return (
       </div>
     )}
 
+    {/* Modal de Informações sobre Status das Rotinas */}
+    <Dialog open={showStatusInfoDialog} onOpenChange={setShowStatusInfoDialog}>
+      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-md rounded-md">
+        <DialogHeader>
+          <DialogTitle>Situação das Rotinas</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 pt-2">
+          <div className="flex items-start gap-3">
+            <div className="w-2 h-2 rounded-full bg-gray-500 mt-2 flex-shrink-0"></div>
+            <div>
+              <p className="font-medium text-gray-800 mb-1">Rascunho</p>
+              <p className="text-sm text-muted-foreground">
+                Rotina em processo de criação pelo professor, ainda não finalizada.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
+            <div>
+              <p className="font-medium text-green-800 mb-1">Ativa</p>
+              <p className="text-sm text-muted-foreground">
+                Aluno pode acessar e executar os treinos normalmente.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <div className="w-2 h-2 rounded-full bg-red-500 mt-2 flex-shrink-0"></div>
+            <div>
+              <p className="font-medium text-red-800 mb-1">Bloqueada</p>
+              <p className="text-sm text-muted-foreground">
+                Acesso aos treinos foi suspenso temporariamente pelo professor.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <div className="w-2 h-2 rounded-full bg-orange-500 mt-2 flex-shrink-0"></div>
+            <div>
+              <p className="font-medium text-orange-800 mb-1">Cancelada</p>
+              <p className="text-sm text-muted-foreground">
+                Rotina interrompida por uma ação administrativa.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+            <div>
+              <p className="font-medium text-blue-800 mb-1">Concluída</p>
+              <p className="text-sm text-muted-foreground">
+                Todas as sessões da rotina foram executadas.
+              </p>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+
     {/* Modal de Seleção de Aluno para Nova Rotina */}
     <Dialog open={isCreateModalOpen} onOpenChange={handleModalSelecaoAlunoOpenChange}>
       <DialogContent

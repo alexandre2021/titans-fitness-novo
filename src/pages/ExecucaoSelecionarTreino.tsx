@@ -141,6 +141,8 @@ export default function ExecucaoSelecionarTreino() {
         setSessoes((sessoesData as SessaoParaLista[]) || []);
       }
 
+      // ✅ CORREÇÃO: Buscar última sessão para exibir no contexto da rotina
+      await buscarUltimaSessao(rotinaData.aluno_id, currentRotinaId);
 
     } catch (error: unknown) {
       console.error('Erro ao carregar dados:', error);
@@ -155,7 +157,7 @@ export default function ExecucaoSelecionarTreino() {
     } finally {
       setLoading(false);
     }
-  }, [navigate]);
+  }, [navigate, buscarUltimaSessao]);
 
   // ✅ INICIAR SESSÃO
   const handleIniciarSessao = async (sessao: SessaoParaLista) => {

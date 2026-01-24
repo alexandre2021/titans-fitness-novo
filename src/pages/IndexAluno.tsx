@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAlunoProfile } from '@/hooks/useAlunoProfile';
+import { useAlunoStats, AlunoStats } from '@/hooks/useAlunoStats';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Dumbbell, BarChart3, User, Calendar, Target, TrendingUp, Shield, ClipboardList, Loader2, MoreVertical, Check, X, Ban, AlertTriangle, Trash2, MessageSquareText } from 'lucide-react';
+import { Dumbbell, BarChart3, User, Calendar, Target, TrendingUp, Shield, ClipboardList, Loader2, MoreVertical, Check, X, Ban, AlertTriangle, Trash2, MessageSquareText, Trophy, Flame, Star, ChevronRight } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { format, isToday, isThisWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -40,6 +41,7 @@ const CORES_STATUS_AGENDAMENTO: Record<string, string> = {
 const IndexAluno = () => {
   const { user } = useAuth();
   const { profile: alunoProfile, loading: alunoLoading } = useAlunoProfile();
+  const { getOrCreateStats } = useAlunoStats();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
@@ -50,6 +52,7 @@ const IndexAluno = () => {
   const [agendamentosTab, setAgendamentosTab] = useState('semana');
   const [activeRotinaId, setActiveRotinaId] = useState<string | null>(null);
   const [activeRotinaName, setActiveRotinaName] = useState<string | null>(null);
+  const [gamificacaoStats, setGamificacaoStats] = useState<AlunoStats | null>(null);
 
   // Estados para o modal de recusa
   const [agendamentoParaRecusar, setAgendamentoParaRecusar] = useState<Agendamento | null>(null);
@@ -201,11 +204,17 @@ const IndexAluno = () => {
           .eq('aluno_id', user.id);
 
         setTreinos7dias(sessoesConcluidasCount);
-        setStats({ 
-          rotinas: rotinaAtiva?.length || 0, 
+        setStats({
+          rotinas: rotinaAtiva?.length || 0,
           avaliacoes: avaliacoesCount || 0,
           professores: professoresCount || 0,
         });
+
+        // Busca stats de gamificação
+        const alunoStats = await getOrCreateStats(user.id);
+        if (alunoStats) {
+          setGamificacaoStats(alunoStats);
+        }
 
       } catch (error) {
         console.error("Erro ao carregar dashboard do aluno:", error);
@@ -214,7 +223,7 @@ const IndexAluno = () => {
       }
     };
     fetchData();
-  }, [user, alunoProfile]);
+  }, [user, alunoProfile, getOrCreateStats]);
 
   const handleUpdateStatus = async (agendamentoId: string, status: 'confirmado' | 'recusado' | 'cancelado', motivo?: string) => {
     setSavingId(agendamentoId);
@@ -261,11 +270,7 @@ const IndexAluno = () => {
   }
 
   return (
-    <div className="space-y-6 p-4 md:p-6 pb-24 md:pb-6">
-      <h1 className="text-3xl font-bold">
-        Olá, {alunoProfile?.nome_completo?.split(' ')[0]}!
-      </h1>
-
+    <div className="space-y-4 md:space-y-6 px-2 py-4 md:p-6 pb-24 md:pb-6">
       {/* Botão Flutuante para Agenda */}
       <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50">
         <Button
@@ -278,7 +283,7 @@ const IndexAluno = () => {
       </div>
 
       {/* Cards de Estatísticas */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
         <Link to="/minhas-rotinas">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full flex flex-col">
             <CardHeader className="pb-2 space-y-0"> {/* Remove o espaço entre título e descrição */}
@@ -296,14 +301,12 @@ const IndexAluno = () => {
         </Link>
         <Link to={activeRotinaId ? `/execucao-rotina/selecionar-treino/${activeRotinaId}` : '/minhas-rotinas'}>
           <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full flex flex-col">
-            <CardHeader className="pb-2 space-y-0"> {/* Remove o espaço entre título e descrição */}
+            <CardHeader className="pb-2 space-y-0">
               <CardTitle className="flex flex-row items-center justify-between space-y-0 text-base md:text-lg font-semibold">
                 Sessões
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardTitle>
-              <CardDescription className="text-xs truncate">
-                {activeRotinaName ? `Rotina '${activeRotinaName}'` : <>&nbsp;</>}
-              </CardDescription>
+              <CardDescription className="text-xs truncate">&nbsp;</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">{treinos7dias}</p>
@@ -328,7 +331,7 @@ const IndexAluno = () => {
         </Link>
         <Link to="/avaliacoes-aluno">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full flex flex-col">
-            <CardHeader className="pb-2 space-y-0"> {/* Remove o espaço entre título e descrição */}
+            <CardHeader className="pb-2 space-y-0">
               <CardTitle className="flex flex-row items-center justify-between space-y-0 text-base md:text-lg font-semibold">
                 Avaliações
                 <BarChart3 className="h-4 w-4 text-muted-foreground" />
@@ -338,6 +341,56 @@ const IndexAluno = () => {
             <CardContent>
               <p className="text-2xl font-bold">{stats.avaliacoes}</p>
               <p className="text-sm text-muted-foreground">avaliações realizadas</p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        {/* Card de Gamificação - ocupa largura de 2 colunas */}
+        <Link to="/como-funciona-pontos" className="col-span-2 md:col-span-4">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer bg-gradient-to-r from-orange-50 to-yellow-50 border-orange-200">
+            <CardContent className="p-3 md:p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 md:gap-4 flex-1">
+                  {/* Nível */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">🏆</span>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Nível</p>
+                      <p className="font-bold text-orange-700 capitalize">
+                        {gamificacaoStats?.current_level || 'Bronze'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="w-px h-10 bg-orange-200" />
+
+                  {/* Pontos */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">⭐</span>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Pontos</p>
+                      <p className="font-bold text-orange-700">
+                        {gamificacaoStats?.total_points || 0}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="w-px h-10 bg-orange-200" />
+
+                  {/* Streak */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">🔥</span>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Sequência</p>
+                      <p className="font-bold text-orange-700">
+                        {gamificacaoStats?.current_streak || 0} dias
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <ChevronRight className="h-5 w-5 text-orange-400 flex-shrink-0" />
+              </div>
             </CardContent>
           </Card>
         </Link>

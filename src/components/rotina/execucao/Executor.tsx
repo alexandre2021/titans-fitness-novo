@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Clock, Play, Pause, Square, X, History, Info } from 'lucide-react';
+import { Clock, Play, Pause, Square, X, History, Dumbbell } from 'lucide-react';
 import Modal from 'react-modal';
 import { EXERCICIO_CONSTANTS, MENSAGENS } from '@/constants/exercicio.constants';
 import { useExercicioExecucao } from '@/hooks/useExercicioExecucao';
@@ -295,7 +295,7 @@ export const Executor = ({
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b bg-card">
-        <div className="container max-w-4xl mx-auto p-6">
+        <div className="container max-w-4xl mx-auto px-4 py-4 md:p-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-foreground">
@@ -324,7 +324,7 @@ export const Executor = ({
       </div>
 
       {/* Exercícios */}
-      <div className="container max-w-4xl mx-auto p-6 space-y-6">
+      <div className="container max-w-4xl mx-auto px-2 py-3 md:p-6 space-y-3 md:space-y-6">
         {exercicios.map((exercicio, exIndex) => {
           // Lookup dos nomes
           const nome1 = lookup[exercicio.exercicio_1_id]?.nome || 'Exercício';
@@ -332,7 +332,7 @@ export const Executor = ({
           
           return (
             <Card key={`exercicio-${exIndex}`}>
-              <CardContent className="p-6">
+              <CardContent className="p-3 md:p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-semibold text-secondary">
                     {nome2 ? `${nome1} + ${nome2}` : nome1}
@@ -342,28 +342,26 @@ export const Executor = ({
                       {temHistorico(exercicio.exercicio_1_id) && (
                         <Button
                           size="sm"
-                          variant="outline"
                           onClick={() => {
                             setExercicioSelecionado(exercicio.exercicio_1_id);
                             setModalHistoricoVisible(true);
                           }}
-                          className="h-8 w-8 p-0"
+                          className="h-8 w-8 p-0 [&_svg]:!size-5"
                           aria-label="Ver histórico do exercício"
                         >
-                          <History className="h-4 w-4" />
+                          <History />
                         </Button>
                       )}
                       <Button
                         size="sm"
-                        variant="outline"
                         onClick={() => {
                           setExercicioSelecionado(exercicio.exercicio_1_id);
                           setModalDetalhesVisible(true);
                         }}
-                        className="h-8 w-8 p-0"
+                        className="h-8 w-8 p-0 [&_svg]:!size-5"
                         aria-label="Ver detalhes do exercício"
                       >
-                        <Info className="h-4 w-4" />
+                        <Dumbbell />
                       </Button>
                     </div>
                   )}

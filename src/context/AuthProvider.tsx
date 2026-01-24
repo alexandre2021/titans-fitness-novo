@@ -172,25 +172,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Remove o ID do último usuário
       localStorage.removeItem('last_user_id');
 
-      // Limpa a sessão do Supabase ANTES de limpar cache/SW
+      // Limpa a sessão do Supabase
       await supabase.auth.signOut();
 
-      // Limpa todo o cache, storage e desregistra Service Worker
-      await clearAllCacheAndStorage();
+      // Limpa React Query cache
+      queryClient.clear();
 
-      // Aguarda um momento para garantir que tudo foi limpo
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Limpa TUDO do localStorage (incluindo token do Supabase)
+      localStorage.clear();
+
+      // Limpa sessionStorage
+      sessionStorage.clear();
+
+      // Limpa cache do Service Worker se disponível
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
+
+      // Desregistra o Service Worker
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map(reg => reg.unregister()));
+      }
 
       console.log('✅ Logout completo, redirecionando...');
 
-      // Força reload completo (não apenas navegação) para garantir estado limpo
-      window.location.href = '/login';
-      window.location.reload();
+      // Usa replace para evitar histórico e redireciona
+      window.location.replace('/login');
     } catch (error) {
       console.error('❌ Erro ao fazer logout:', error);
-      // Mesmo com erro, força reload completo
-      window.location.href = '/login';
-      window.location.reload();
+      // Mesmo com erro, limpa tudo e redireciona
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.replace('/login');
     }
   };
 

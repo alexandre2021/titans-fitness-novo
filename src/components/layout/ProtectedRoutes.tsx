@@ -18,6 +18,7 @@ const MessagesDrawer = lazy(() => import('@/components/messages/MessageDrawer'))
 const MessagesButton = lazy(() => import('@/components/messages/MessageButton'));
 const HelpDrawer = lazy(() => import('@/components/help/HelpDrawer'));
 const HelpButton = lazy(() => import('@/components/help/HelpButton'));
+const HelpSpotlight = lazy(() => import('@/components/help/HelpSpotlight'));
 const FeedbackButton = lazy(() => import('@/components/feedback/FeedbackButton'));
 const FeedbackModal = lazy(() => import('@/components/feedback/FeedbackModal'));
 
@@ -171,6 +172,7 @@ const ProtectedRoutes = () => {
                 onClose={() => setHelpDrawerOpen(false)}
                 direction="left"
               />
+              <HelpSpotlight />
               <FeedbackButton
                 onClick={() => setFeedbackModalOpen(true)}
               />
@@ -213,6 +215,7 @@ const ProtectedRoutes = () => {
               onClose={() => setHelpDrawerOpen(false)}
               direction="right"
             />
+            <HelpSpotlight />
             <FeedbackButton
               onClick={() => setFeedbackModalOpen(true)}
             />

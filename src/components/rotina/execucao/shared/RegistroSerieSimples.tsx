@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Props {
   numero: number;
@@ -47,7 +48,19 @@ export const RegistroSerieSimples = ({
     const reps = parseInt(inputReps) || 0;
     const peso = isPesoCorporal ? 0 : (parseInt(inputCarga) || 0);
     const dropsetPeso = temDropset ? (parseInt(inputDropsetCarga) || 0) : undefined;
-    
+
+    // Validação: repetições sempre obrigatórias
+    if (reps <= 0) {
+      toast.error('Preencha o número de repetições');
+      return;
+    }
+
+    // Validação: carga obrigatória apenas se não for peso corporal
+    if (!isPesoCorporal && peso <= 0) {
+      toast.error('Preencha a carga utilizada');
+      return;
+    }
+
     onSave(reps, peso, dropsetPeso, obs);
   };
 
@@ -57,7 +70,7 @@ export const RegistroSerieSimples = ({
         ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950' 
         : 'border-border hover:border-primary/50'
     }`}>
-      <CardContent className="p-4">
+      <CardContent className="p-3 md:p-4">
         {/* Header da Série */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2">
@@ -85,7 +98,7 @@ export const RegistroSerieSimples = ({
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
             <label className="text-sm font-medium text-muted-foreground block mb-2">
-              Repetições executadas
+              Repetições
             </label>
             <Input
               type="number"
@@ -98,7 +111,7 @@ export const RegistroSerieSimples = ({
           </div>
           <div>
             <label className="text-sm font-medium text-muted-foreground block mb-2">
-              Carga executada (kg)
+              Carga (kg)
             </label>
             <Input
               type={isPesoCorporal ? 'text' : 'number'}

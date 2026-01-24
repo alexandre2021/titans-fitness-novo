@@ -5,6 +5,7 @@ import Modal from 'react-modal';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ArrowLeft, 
@@ -160,6 +161,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
   const [loading, setLoading] = useState(true);
   const [showDetalhesModal, setShowDetalhesModal] = useState(false);
   const [dropdownAberto, setDropdownAberto] = useState<string | null>(null);
+  const [progressoRotinas, setProgressoRotinas] = useState<Record<string, { concluidas: number; total: number }>>({});
   
   const handleNovaRotinaClick = async () => {
     // ✅ NOVA VERIFICAÇÃO: Checar se já existe uma rotina ativa ou bloqueada
@@ -327,9 +329,31 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
         
         // ✅ Separar rotinas por status
         const rotinasDoAluno = (rotinasResult.data as Rotina[] || []);
-        setRotinasAtivas(rotinasDoAluno.filter(r => r.status === 'Ativa' || r.status === 'Bloqueada'));
+        const ativas = rotinasDoAluno.filter(r => r.status === 'Ativa' || r.status === 'Bloqueada');
+        setRotinasAtivas(ativas);
         setRotinasRascunho(rotinasDoAluno.filter(r => r.status === 'Rascunho' && r.professor_id === user.id));
-        setRotinasEncerradas(rotinasDoAluno.filter(r => r.status === 'Concluída' || r.status === 'Cancelada')); // Mantém a lógica correta aqui
+        setRotinasEncerradas(rotinasDoAluno.filter(r => r.status === 'Concluída' || r.status === 'Cancelada'));
+
+        // ✅ Buscar progresso das rotinas ativas (sessões concluídas vs total)
+        if (ativas.length > 0) {
+          const progressoMap: Record<string, { concluidas: number; total: number }> = {};
+
+          for (const rotina of ativas) {
+            const { data: sessoesData } = await supabase
+              .from('execucoes_sessao')
+              .select('status')
+              .eq('rotina_id', rotina.id)
+              .eq('aluno_id', alunoId);
+
+            if (sessoesData) {
+              const total = sessoesData.length;
+              const concluidas = sessoesData.filter(s => s.status === 'concluida').length;
+              progressoMap[rotina.id] = { concluidas, total };
+            }
+          }
+
+          setProgressoRotinas(progressoMap);
+        }
 
       } catch (error) {
         console.error('Erro ao buscar dados:', error);
@@ -595,10 +619,6 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
           </DropdownMenuItem>
         {rotina.status === 'Ativa' && modo === 'professor' && rotina.professor_id === user?.id && (
             <>
-              <DropdownMenuItem onClick={() => handleTreinar(rotina.id)}>
-                <Play className="mr-2 h-5 w-5" />
-                <span className="text-base">Treinar</span>
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleUpdateRotinaStatus(rotina, 'Bloqueada')}>
                 <Ban className="mr-2 h-5 w-5" />
                 <span className="text-base">Bloquear</span>
@@ -613,13 +633,7 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
             </>
           )}
 
-          {rotina.status === 'Ativa' && modo === 'aluno' && (
-            <DropdownMenuItem onClick={() => handleTreinar(rotina.id)}>
-              <Play className="mr-2 h-5 w-5" />
-              <span className="text-base">Treinar</span>
-            </DropdownMenuItem>
-          )}
-
+          
           {(rotina.status === 'Ativa' || rotina.status === 'Bloqueada') && modo === 'aluno' && (
             <DropdownMenuItem
               onClick={() => handleExcluirRotina(rotina)}
@@ -794,10 +808,34 @@ const PaginaRotinas = ({ modo }: PaginaRotinasProps) => {
             ) : (
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <FileText className="h-5 w-5" />
-                    Rotina Atual
-                  </CardTitle>
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <CardTitle className="flex items-center gap-3">
+                      <FileText className="h-5 w-5" />
+                      Rotina Atual
+                    </CardTitle>
+                    {/* Barra de progresso e botão Treinar */}
+                    {rotinasAtivas.length > 0 && progressoRotinas[rotinasAtivas[0].id] && (
+                      <div className="flex items-center justify-between md:justify-end gap-4 flex-1">
+                        <div className="flex items-center gap-2">
+                          <Progress
+                            value={(progressoRotinas[rotinasAtivas[0].id].concluidas / progressoRotinas[rotinasAtivas[0].id].total) * 100}
+                            className="h-2 w-24 md:w-32"
+                          />
+                          <span className="text-sm text-muted-foreground whitespace-nowrap">
+                            {progressoRotinas[rotinasAtivas[0].id].concluidas}/{progressoRotinas[rotinasAtivas[0].id].total} sessões
+                          </span>
+                        </div>
+                        {rotinasAtivas[0].status === 'Ativa' && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleTreinar(rotinasAtivas[0].id)}
+                          >
+                            Treinar
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">

@@ -32,8 +32,8 @@ data/atualizar_imagens/
 ### 2. Execução
 
 ```bash
-npx tsx src/scripts/atualizar-imagens-exercicios.ts
-```
+
+```npx tsx src/scripts/atualizar-imagens-exercicios.ts
 
 ### 3. Processo automático
 

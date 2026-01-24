@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, BarChart3, Info } from 'lucide-react';
+import { CheckCircle, BarChart3, Dumbbell } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Props {
   numero: number;
@@ -63,7 +64,31 @@ export const RegistroSerieCombinada = ({
     const peso1 = isPesoCorporal1 ? 0 : (parseInt(inputPeso1) || 0);
     const reps2 = parseInt(inputReps2) || 0;
     const peso2 = isPesoCorporal2 ? 0 : (parseInt(inputPeso2) || 0);
-    
+
+    // Validação exercício 1: repetições sempre obrigatórias
+    if (reps1 <= 0) {
+      toast.error(`Preencha as repetições de ${exercicio1Nome}`);
+      return;
+    }
+
+    // Validação exercício 1: carga obrigatória apenas se não for peso corporal
+    if (!isPesoCorporal1 && peso1 <= 0) {
+      toast.error(`Preencha a carga de ${exercicio1Nome}`);
+      return;
+    }
+
+    // Validação exercício 2: repetições sempre obrigatórias
+    if (reps2 <= 0) {
+      toast.error(`Preencha as repetições de ${exercicio2Nome}`);
+      return;
+    }
+
+    // Validação exercício 2: carga obrigatória apenas se não for peso corporal
+    if (!isPesoCorporal2 && peso2 <= 0) {
+      toast.error(`Preencha a carga de ${exercicio2Nome}`);
+      return;
+    }
+
     onSave(reps1, peso1, reps2, peso2, obs);
   };
 
@@ -73,7 +98,7 @@ export const RegistroSerieCombinada = ({
         ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950' 
         : 'border-border hover:border-primary/50'
     }`}>
-      <CardContent className="p-4">
+      <CardContent className="p-3 md:p-4">
         {/* Header da Série */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2">
@@ -91,25 +116,23 @@ export const RegistroSerieCombinada = ({
         </div>
 
         {/* Exercício 1 */}
-        <div className="mb-6 p-4 border rounded-lg bg-muted/30">
+        <div className="mb-4 md:mb-6 p-3 md:p-4 border rounded-lg bg-muted/30">
           <div className="flex items-center justify-between mb-3">
             <h5 className="font-medium text-secondary">{exercicio1Nome}</h5>
             <div className="flex items-center space-x-1">
               <Button
                 size="sm"
-                variant="outline"
                 onClick={onShowHistorico1}
-                className="h-8 w-8 p-0"
+                className="h-8 w-8 p-0 [&_svg]:!size-5"
               >
-                <BarChart3 className="h-3 w-3" />
+                <BarChart3 />
               </Button>
               <Button
                 size="sm"
-                variant="outline"
                 onClick={onShowDetalhes1}
-                className="h-8 w-8 p-0"
+                className="h-8 w-8 p-0 [&_svg]:!size-5"
               >
-                <Info className="h-3 w-3" />
+                <Dumbbell />
               </Button>
             </div>
           </div>
@@ -162,25 +185,23 @@ export const RegistroSerieCombinada = ({
         </div>
 
         {/* Exercício 2 */}
-        <div className="mb-6 p-4 border rounded-lg bg-muted/30">
+        <div className="mb-4 md:mb-6 p-3 md:p-4 border rounded-lg bg-muted/30">
           <div className="flex items-center justify-between mb-3">
             <h5 className="font-medium text-secondary">{exercicio2Nome}</h5>
             <div className="flex items-center space-x-1">
               <Button
                 size="sm"
-                variant="outline"
                 onClick={onShowHistorico2}
-                className="h-8 w-8 p-0"
+                className="h-8 w-8 p-0 [&_svg]:!size-5"
               >
-                <BarChart3 className="h-3 w-3" />
+                <BarChart3 />
               </Button>
               <Button
                 size="sm"
-                variant="outline"
                 onClick={onShowDetalhes2}
-                className="h-8 w-8 p-0"
+                className="h-8 w-8 p-0 [&_svg]:!size-5"
               >
-                <Info className="h-3 w-3" />
+                <Dumbbell />
               </Button>
             </div>
           </div>
