@@ -1,122 +1,95 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-// 5 chaves Groq em round-robin
-const GROQ_API_KEYS = [
-  Deno.env.get('GROQ_API_KEY_01')!,
-  Deno.env.get('GROQ_API_KEY_02')!,
-  Deno.env.get('GROQ_API_KEY_03')!,
-  Deno.env.get('GROQ_API_KEY_04')!,
-  Deno.env.get('GROQ_API_KEY_05')!,
-].filter(Boolean);
-
+// Configurações - Cloudflare Workers AI
+const CLOUDFLARE_ACCOUNT_ID = Deno.env.get('CLOUDFLARE_ACCOUNT_ID')!;
+const CLOUDFLARE_API_TOKEN = Deno.env.get('CLOUDFLARE_API_TOKEN')!;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-const GROQ_MODEL = 'llama-3.1-8b-instant';
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-
-// Contador para round-robin (persiste entre requests na mesma instância)
-let keyIndex = 0;
-
-interface Article {
-  id: string;
-  title: string;
-  content: string;
-  category: string;
-  user_type: 'professor' | 'aluno' | 'ambos';
-  description: string | null;
-}
+const CF_MODEL = '@cf/meta/llama-3.1-8b-instruct';
+const CF_API_URL = `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/run/${CF_MODEL}`;
 
 interface AskRequest {
   question: string;
   userType: 'professor' | 'aluno';
 }
 
-/**
- * Normaliza pergunta para busca no cache
- */
 function normalizeQuestion(q: string): string {
   return q
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-    .replace(/[^a-z0-9\s]/g, '')     // Remove pontuação
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, '')
     .trim();
 }
 
-/**
- * Obtém próxima chave API em round-robin
- */
-function getNextApiKey(): string {
-  if (GROQ_API_KEYS.length === 0) {
-    throw new Error('Nenhuma chave Groq configurada');
-  }
-  const key = GROQ_API_KEYS[keyIndex];
-  keyIndex = (keyIndex + 1) % GROQ_API_KEYS.length;
-  return key;
+function extractNumber(text: string): number {
+  const match = text.match(/\d+/);
+  return match ? parseInt(match[0], 10) : -1;
 }
 
+
 /**
- * Chama a API do Groq
+ * Chama o Cloudflare Workers AI (Llama 3.1 8B)
  */
-async function callGroq(prompt: string, retries = 3): Promise<string> {
+async function callCloudflareAI(prompt: string, retries = 3): Promise<string> {
   for (let attempt = 1; attempt <= retries; attempt++) {
-    const apiKey = getNextApiKey();
+    try {
+      const response = await fetch(CF_API_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${CLOUDFLARE_API_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: [
+            {
+              role: 'system',
+              content: 'Você é um classificador de artigos de ajuda. Responda APENAS com um número inteiro, nada mais.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 10,
+          temperature: 0.1,
+        }),
+      });
 
-    const response = await fetch(GROQ_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: GROQ_MODEL,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.1,
-        max_tokens: 10,
-      }),
-    });
+      if (response.ok) {
+        const data = await response.json();
+        const text = data.result?.response?.trim() || '';
+        console.log(`[Cloudflare AI] Resposta: "${text}"`);
+        return text;
+      }
 
-    if (response.ok) {
-      const data = await response.json();
-      return data.choices?.[0]?.message?.content?.trim() || '';
+      const errorText = await response.text();
+      console.error(`[Cloudflare AI ERRO ${response.status}] Tentativa ${attempt}:`, errorText);
+
+      if ((response.status === 429 || response.status >= 500) && attempt < retries) {
+        console.log(`[Retry ${attempt}/${retries}] Aguardando ${attempt}s...`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        continue;
+      }
+
+      return '-1';
+    } catch (e) {
+      console.error(`[Cloudflare AI EXCEPTION] Tentativa ${attempt}:`, e);
+      if (attempt < retries) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        continue;
+      }
+      return '-1';
     }
-
-    // Retry em caso de rate limit ou erro temporário
-    if ((response.status === 429 || response.status >= 500) && attempt < retries) {
-      console.log(`[Retry ${attempt}/${retries}] Status ${response.status}, tentando próxima chave...`);
-      continue;
-    }
-
-    const errorText = await response.text();
-    console.error('Erro Groq:', errorText);
-    throw new Error('Falha ao consultar LLM');
   }
 
-  throw new Error('Falha após todas as tentativas');
-}
-
-/**
- * Agrupa artigos por categoria
- */
-function groupByCategory(articles: Article[]): Map<string, Article[]> {
-  const grouped = new Map<string, Article[]>();
-  for (const article of articles) {
-    const list = grouped.get(article.category) || [];
-    list.push(article);
-    grouped.set(article.category, list);
-  }
-  return grouped;
+  return '-1';
 }
 
 /**
  * Edge Function para buscar artigos relevantes na Central de Ajuda
- *
- * Fluxo:
- * 1. Verifica cache
- * 2. Se não tiver, usa LLM em 2 etapas (categoria → artigo)
- * 3. Salva resultado no cache
  */
 serve(async (req) => {
   const corsHeaders = {
@@ -144,16 +117,18 @@ serve(async (req) => {
     console.log(`[Busca] "${question}" (${userType}) → normalized: "${normalizedQuestion}"`);
 
     // 1. Verificar cache
-    const { data: cacheHit } = await supabase
+    const { data: cacheResults } = await supabase
       .from('help_search_cache')
       .select('id, article_id')
       .eq('question_normalized', normalizedQuestion)
       .eq('user_type', userType)
-      .not('helpful', 'eq', false) // Ignorar respostas marcadas como não úteis
-      .single();
+      .not('helpful', 'eq', false)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    const cacheHit = cacheResults?.[0];
 
     if (cacheHit?.article_id) {
-      // Buscar artigo do cache
       const { data: cachedArticle } = await supabase
         .from('knowledge_base_articles')
         .select('id, title, content, category')
@@ -161,14 +136,7 @@ serve(async (req) => {
         .single();
 
       if (cachedArticle) {
-        // Incrementar hit_count
-        await supabase
-          .from('help_search_cache')
-          .update({ hit_count: supabase.rpc('increment_hit_count', { row_id: cacheHit.id }), updated_at: new Date().toISOString() })
-          .eq('id', cacheHit.id);
-
         console.log(`[Cache HIT] "${cachedArticle.title}"`);
-
         return new Response(
           JSON.stringify({
             found: true,
@@ -201,92 +169,39 @@ serve(async (req) => {
       );
     }
 
-    // 3. ETAPA 1: Identificar categoria
-    const categoriesMap = groupByCategory(articles);
-    const categoryNames = Array.from(categoriesMap.keys());
+    // 3. ETAPA ÚNICA: Selecionar artigo diretamente
+    const articleListPrompt = articles.map((a, index) =>
+      `${index + 1}. [${a.category}] ${a.title}${a.description ? ` | ${a.description.substring(0, 80)}` : ''}`
+    ).join('\n');
 
-    let categoryListPrompt = '';
-    categoryNames.forEach((catName, catIndex) => {
-      const catArticles = categoriesMap.get(catName) || [];
-      categoryListPrompt += `\n${catIndex + 1}. CATEGORIA: ${catName}\n`;
-      catArticles.forEach(a => {
-        categoryListPrompt += `   - ${a.title}${a.description ? ` → ${a.description}` : ''}\n`;
-      });
-    });
-
-    const step1Prompt = `Você identifica categorias de ajuda em um app de personal trainers.
-
-TAREFA: Qual categoria contém a resposta para a pergunta do usuário?
-
-REGRAS:
-1. Responda APENAS com o número da categoria (ex: "3")
-2. Se nenhuma categoria for relevante, responda "0"
-3. Sinônimos: treino=rotina=sessão, cadastrar=adicionar=vincular, criar=fazer=montar
-
-CATEGORIAS E SEUS ARTIGOS:
-${categoryListPrompt}
-
-Pergunta: "${question}"
-
-Número:`;
-
-    const step1Answer = await callGroq(step1Prompt);
-    const categoryNumber = parseInt(step1Answer.replace(/\D/g, ''), 10);
-
-    console.log(`[Etapa 1] Categoria: ${categoryNumber} (${categoryNames[categoryNumber - 1] || 'N/A'})`);
-
-    if (categoryNumber <= 0 || categoryNumber > categoryNames.length) {
-      return new Response(
-        JSON.stringify({
-          found: false,
-          message: 'Não encontrei uma categoria relevante. Tente reformular ou navegue pelas categorias.'
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // 4. ETAPA 2: Selecionar artigo
-    const selectedCategory = categoryNames[categoryNumber - 1];
-    const categoryArticles = categoriesMap.get(selectedCategory) || [];
-
-    const articleListPrompt = categoryArticles.map((a, index) =>
-      `${index + 1}. ${a.title}\n   Descrição: ${a.description || 'Sem descrição'}`
-    ).join('\n\n');
-
-    const step2Prompt = `Você seleciona artigos de ajuda.
-
-CATEGORIA: ${selectedCategory}
-
-TAREFA: Qual artigo responde melhor à pergunta do usuário?
-
-REGRAS:
-1. Responda APENAS com o número do artigo (ex: "2")
-2. Artigos marcados como "ARTIGO GERAL" são preferidos para perguntas genéricas
+    const prompt = `Qual artigo responde melhor à pergunta do usuário?
 
 ARTIGOS:
 ${articleListPrompt}
 
-Pergunta: "${question}"
+PERGUNTA: "${question}"
 
-Número:`;
+Responda APENAS com o número do artigo (ex: "14"):`;
 
-    const step2Answer = await callGroq(step2Prompt);
-    const articleNumber = parseInt(step2Answer.replace(/\D/g, ''), 10);
+    console.log(`[Busca] Total de artigos: ${articles.length}`);
+    const answer = await callCloudflareAI(prompt);
+    console.log(`[Busca] Resposta da IA: "${answer}"`);
 
-    console.log(`[Etapa 2] Artigo: ${articleNumber} (${categoryArticles[articleNumber - 1]?.title || 'N/A'})`);
+    const articleNumber = extractNumber(answer);
+    console.log(`[Busca] Artigo selecionado: ${articleNumber} (${articles[articleNumber - 1]?.title || 'N/A'})`);
 
-    if (articleNumber <= 0 || articleNumber > categoryArticles.length) {
+    if (articleNumber <= 0 || articleNumber > articles.length) {
       return new Response(
         JSON.stringify({
           found: false,
-          message: 'Não encontrei um artigo específico. Tente reformular ou navegue pelas categorias.'
+          message: 'Não encontrei um artigo relevante. Tente reformular ou navegue pelas categorias.'
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // 5. Salvar no cache
-    const foundArticle = categoryArticles[articleNumber - 1];
+    // 4. Salvar no cache
+    const foundArticle = articles[articleNumber - 1];
 
     const { data: newCache } = await supabase
       .from('help_search_cache')
